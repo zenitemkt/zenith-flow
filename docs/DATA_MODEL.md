@@ -105,6 +105,16 @@ Implementa a seção 19 do manual, substituindo `ContentComment` e `RequestComme
 - **Remoção é tombstone, não `DELETE`**: `Comment.status = REMOVIDO` + `body` esvaziado, a linha continua existindo (preserva `threadId`/`authorUserId`/timestamps, e o texto original fica recuperável via `CommentEdit`). Consistente com o resto do projeto nunca apagar histórico de fato.
 - **Menção por seletor de pessoas, não parsing de `@nome` no texto**: nomes compostos e coincidências tornam parsing de texto livre ambíguo sem uma gramática de menção real (ex.: `@[Nome](id)`, como Slack/Linear fazem por trás dos panos). Pra esta fatia, a UI oferece chips clicáveis dos membros da equipe — o resultado (`mentionedUserIds`) já chega estruturado na API, sem precisar interpretar texto.
 
+## RH básico — `Employee`, `EmployeeStatusHistory`, `LeaveRequest`, `LeaveRequestStatusHistory`
+
+Implementa a seção 20 do manual (parcialmente — ver `docs/STATUS.md` para o que falta):
+
+- **`Employee` é deliberadamente separado de `Membership`**: `Membership` é acesso/login (RBAC), `Employee` é dado de contratação (cargo, data de admissão, status de vínculo). A mesma pessoa pode ter os dois (via `Employee.userId`, opcional e único) ou só o `Employee` (freelancer sem login) — nunca o contrário seria estranho (um `Membership` sem `Employee` correspondente é o caso comum hoje: qualquer membro de equipe convidado antes desta fatia).
+- **`Employee.role` é texto livre, não uma tabela `positions`**: o manual lista "cargos" como entidade própria, mas sem um caso real pedindo listagem/gestão de cargos (filtros, relatórios por cargo), um campo de texto já cobre "saber o cargo de alguém" — mesma lógica pragmática usada em `ClientContact.role`.
+- **Sem campo de salário**: a seção 20 exige "dados pessoais e salário usam permissões separadas" — em vez de modelar isso sem um caso de uso real (que permissão? quem vê o quê?), o dado simplesmente não existe ainda. Adicionar depois é uma migration aditiva, não uma mudança estrutural.
+- **Desligamento é código, não trigger de banco**: a rota `POST /api/employees/:id/status` faz três coisas na mesma transação ao desligar — muda `Employee.status`, deleta as `Session` do `userId` vinculado, e suspende o(s) `Membership`(s) ativo(s) dessa pessoa (`status: SUSPENDED`, nunca deletado). Isso satisfaz "revoga sessões e preserva autoria histórica" literalmente: `Task.assigneeUserId`, `Comment.authorUserId`, `ContentVersion.createdByUserId` etc. continuam apontando pro mesmo `userId`, que nunca é removido.
+- **Indisponibilidade é uma consulta, não um campo desnormalizado**: "afastado agora" não é uma coluna em `Employee` — é calculado a cada leitura via `LeaveRequest` com `status: APROVADA` e `startDate <= hoje <= endDate`. Evita o problema clássico de campo desnormalizado que fica dessincronizado (ex.: esquecer de zerar `afastado: true` quando a licença termina) — a fonte de verdade é sempre a `LeaveRequest`, nunca duplicada.
+
 ## Decisões de modelagem que não são óbvias pelo schema
 
 - **Sem `outbox_events` ainda**: a Release 1A não tem nenhum efeito colateral assíncrono que justifique o padrão outbox (nada consome eventos de domínio ainda). Ele entra na Release 1B junto com a primeira automação real (ex.: ativar cliente cria estrutura). Ver `docs/DECISIONS.md`.

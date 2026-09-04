@@ -30,7 +30,8 @@ export default async function SquadDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [agencyMembers, clients, workloadCounts] = await Promise.all([
+  const now = new Date();
+  const [agencyMembers, clients, workloadCounts, activeLeaves] = await Promise.all([
     getAgencyMembers(membership.agencyId),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
@@ -45,9 +46,21 @@ export default async function SquadDetailPage({ params }: PageProps) {
       },
       _count: { _all: true },
     }),
+    prisma.leaveRequest.findMany({
+      where: {
+        agencyId: membership.agencyId,
+        status: "APROVADA",
+        startDate: { lte: now },
+        endDate: { gte: now },
+      },
+      include: { employee: { select: { userId: true } } },
+    }),
   ]);
 
   const workloadByUserId = new Map(workloadCounts.map((row) => [row.assigneeUserId, row._count._all]));
+  const leaveEndByUserId = new Map(
+    activeLeaves.filter((l) => l.employee.userId).map((l) => [l.employee.userId as string, l.endDate]),
+  );
   const currentMemberUserIds = new Set(squad.members.map((m) => m.userId));
   const memberOptions = agencyMembers.filter((m) => !currentMemberUserIds.has(m.userId));
 
@@ -71,23 +84,31 @@ export default async function SquadDetailPage({ params }: PageProps) {
             )}
             {squad.members.map((member) => {
               const load = workloadByUserId.get(member.userId) ?? 0;
+              const leaveEnd = leaveEndByUserId.get(member.userId);
               return (
                 <div
                   key={member.id}
                   className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2"
                 >
                   <span className="text-sm font-medium text-[#101828]">{member.user.name}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      load >= 8
-                        ? "bg-[#FEE4E2] text-[#B42318]"
-                        : load >= 4
-                          ? "bg-[#FEF3C7] text-[#92600A]"
-                          : "bg-[#F2F4F7] text-[#475467]"
-                    }`}
-                  >
-                    {load} tarefa{load === 1 ? "" : "s"} aberta{load === 1 ? "" : "s"}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {leaveEnd && (
+                      <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-xs font-medium text-[#92600A]">
+                        Afastado até {leaveEnd.toLocaleDateString("pt-BR")}
+                      </span>
+                    )}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        load >= 8
+                          ? "bg-[#FEE4E2] text-[#B42318]"
+                          : load >= 4
+                            ? "bg-[#FEF3C7] text-[#92600A]"
+                            : "bg-[#F2F4F7] text-[#475467]"
+                      }`}
+                    >
+                      {load} tarefa{load === 1 ? "" : "s"} aberta{load === 1 ? "" : "s"}
+                    </span>
+                  </div>
                 </div>
               );
             })}

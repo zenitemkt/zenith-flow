@@ -24,6 +24,7 @@ model User {
   accounts         Account[]
   memberships      Membership[]
   squadMemberships SquadMember[]
+  employee         Employee?
 
   @@map("user")
 }
@@ -122,6 +123,8 @@ model Agency {
   vendors             Vendor[]
   contentItems        ContentItem[]
   commentThreads      CommentThread[]
+  employees           Employee[]
+  leaveRequests       LeaveRequest[]
 
   @@map("agency")
 }
@@ -865,4 +868,107 @@ model CommentMention {
   @@index([commentId])
   @@index([mentionedUserId])
   @@map("comment_mention")
+}
+
+// ---------------------------------------------------------------------------
+// RH e pessoas — Release 1E, parte 1 (seção 20 do manual)
+// ---------------------------------------------------------------------------
+
+enum EmployeeStatus {
+  ATIVO
+  AFASTADO
+  DESLIGADO
+}
+
+/// Dado de contratação — separado de Membership (acesso/login) de propósito,
+/// ver docs/DECISIONS.md ("Convite de equipe mora em Configurações, não em
+/// Pessoas"). userId é opcional: nem toda pessoa cadastrada em RH tem conta
+/// no sistema (ex.: freelancer sem login).
+model Employee {
+  id           String         @id @default(cuid())
+  agencyId     String
+  agency       Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId       String?        @unique
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name         String
+  email        String?
+  role         String?
+  status       EmployeeStatus @default(ATIVO)
+  hiredAt      DateTime?
+  terminatedAt DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  leaveRequests LeaveRequest[]
+  statusHistory EmployeeStatusHistory[]
+
+  @@index([agencyId])
+  @@map("employee")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model EmployeeStatusHistory {
+  id          String          @id @default(cuid())
+  employeeId  String
+  employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  fromStatus  EmployeeStatus?
+  toStatus    EmployeeStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime        @default(now())
+
+  @@index([employeeId])
+  @@map("employee_status_history")
+}
+
+enum LeaveType {
+  FERIAS
+  AUSENCIA
+}
+
+enum LeaveRequestStatus {
+  SOLICITADA
+  APROVADA
+  REJEITADA
+  REALIZADA
+}
+
+model LeaveRequest {
+  id                String             @id @default(cuid())
+  agencyId          String
+  agency            Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type              LeaveType
+  startDate         DateTime
+  endDate           DateTime
+  status            LeaveRequestStatus @default(SOLICITADA)
+  reason            String?
+  rejectionReason   String?
+  requestedByUserId String?
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  statusHistory LeaveRequestStatusHistory[]
+
+  @@index([agencyId])
+  @@index([employeeId])
+  @@map("leave_request")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model LeaveRequestStatusHistory {
+  id             String              @id @default(cuid())
+  leaveRequestId String
+  leaveRequest   LeaveRequest        @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  fromStatus     LeaveRequestStatus?
+  toStatus       LeaveRequestStatus
+  reason         String?
+  actorUserId    String?
+  createdAt      DateTime            @default(now())
+
+  @@index([leaveRequestId])
+  @@map("leave_request_status_history")
 }

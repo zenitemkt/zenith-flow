@@ -1,5 +1,15 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — RH: `Employee` separado de `Membership`; desligamento revoga sessão de verdade
+
+**Contexto**: essa separação já tinha sido anunciada desde a Release 1A ("Convite de equipe mora em Configurações, não em Pessoas — são conceitos diferentes: acesso/login vs. dado de contratação, Fase 1E"). Chegou a hora de construir o lado que faltava. A seção 20 do manual tem duas regras obrigatórias que não são só "boas intenções" — são comportamento verificável: "desligamento revoga sessões e preserva autoria histórica" e "ausência alimenta capacidade, não apaga atribuições".
+
+**Decisão**: `Employee` é uma tabela nova, com `userId` opcional apontando pro `User` do Better Auth (nulo para quem não tem login, ex. freelancer). Desligar alguém (`Employee.status → DESLIGADO`) dispara, na mesma transação: apagar as `Session` ativas do `userId` (login morre na hora, sem esperar o cookie expirar) e suspender o(s) `Membership`(s) (`status: SUSPENDED`) — mas o `User` e o `Membership` em si nunca são apagados, então tudo que a pessoa criou continua com autoria correta. Verifiquei isso na prática (não só por inspeção de código): depois de desligar, consultei o banco direto (0 sessões restantes pro usuário) e recarreguei a página logada da pessoa desligada, que caiu no login.
+
+Sobre "ausência alimenta capacidade, não apaga atribuições": em vez de um campo `disponivel: boolean` em `Employee` (que exigiria alguém lembrar de zerá-lo quando a licença acaba), a disponibilidade é sempre calculada na hora, consultando `LeaveRequest` com status `APROVADA` cujo período inclui hoje. O quadro de squads (`/operacao/squads/[id]`, já existente desde a Release 1C) ganhou um badge "Afastado até DD/MM" ao lado da carga de tarefas de quem está fora — a pessoa continua no squad, as tarefas dela continuam atribuídas, só fica visível que ela não está disponível agora.
+
+**Consequência**: cargos (`positions`), vagas/candidatos (`jobs`/`candidates`) e dados de salário ficaram de fora desta fatia — `docs/STATUS.md` documenta isso como pendência explícita, não esquecida. Quando salário for modelado, vai precisar de um sistema de permissão por campo que ainda não existe no projeto (hoje RBAC é só por papel, seção 7.1) — decisão pra quando houver um caso real pedindo.
+
 ## 2026-09-04 — Comentários genéricos substituem os isolados por módulo; menção por seletor, não parsing de texto
 
 **Contexto**: a seção 19 do manual pede um sistema de comunicação único (`comments`, `mentions`, `threads`) reaproveitável por qualquer entidade, em vez do padrão que a Release 1C/1D vinha seguindo até aqui — um comentário simples por módulo (`ContentComment`, `RequestComment`), cada um com sua própria tabela e API.
