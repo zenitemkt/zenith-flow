@@ -4,16 +4,26 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { CONTENT_STATUS_LABELS, CONTENT_CHANNEL_LABELS, CONTENT_STATUS_BADGE_CLASS } from "@/lib/content";
 import { prisma } from "@zenith/db";
 import { NewContentModal } from "./NewContentModal";
+import { ContentClientFilter } from "../ContentClientFilter";
 
-export default async function PlanejamentoPage() {
+interface PageProps {
+  searchParams: { clientId?: string };
+}
+
+export default async function PlanejamentoPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
+  const activeClientId = searchParams.clientId;
+
   const [items, clients] = await Promise.all([
     prisma.contentItem.findMany({
-      where: { agencyId: membership.agencyId },
+      where: {
+        agencyId: membership.agencyId,
+        ...(activeClientId ? { clientId: activeClientId } : {}),
+      },
       include: { client: { select: { name: true } } },
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
     }),
@@ -24,18 +34,24 @@ export default async function PlanejamentoPage() {
     }),
   ]);
 
+  const activeClient = clients.find((c) => c.id === activeClientId);
+  const calendarHref = activeClientId
+    ? `/conteudo/calendario?clientId=${activeClientId}`
+    : "/conteudo/calendario";
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">Planejamento de conteúdo</h1>
           <p className="text-sm text-[#667085]">
-            {items.length} peça{items.length === 1 ? "" : "s"} em {membership.agency.name}.
+            {items.length} peça{items.length === 1 ? "" : "s"}{" "}
+            {activeClient ? `de ${activeClient.name}` : `em ${membership.agency.name}`}.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href="/conteudo/calendario"
+            href={calendarHref}
             className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
           >
             Ver calendário
@@ -44,9 +60,19 @@ export default async function PlanejamentoPage() {
         </div>
       </div>
 
+      <ContentClientFilter
+        clients={clients}
+        activeClientId={activeClientId}
+        buildHref={(clientId) =>
+          clientId ? `/conteudo/planejamento?clientId=${clientId}` : "/conteudo/planejamento"
+        }
+      />
+
       {items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
-          <p className="text-sm text-[#667085]">Nenhuma peça ainda. Crie a primeira.</p>
+          <p className="text-sm text-[#667085]">
+            {activeClient ? `Nenhuma peça ainda para ${activeClient.name}.` : "Nenhuma peça ainda. Crie a primeira."}
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">

@@ -31,6 +31,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
         include: { items: { orderBy: { order: "asc" } } },
       },
       allocations: { where: { status: "ATIVA" }, include: { squad: true }, take: 1 },
+      _count: { select: { contentItems: true } },
     },
   });
 
@@ -92,6 +93,15 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 nenhum ainda — alocar
               </Link>
             )}
+          </p>
+          <p className="mt-1 text-sm text-[#98A2B3]">
+            <Link
+              href={`/conteudo/planejamento?clientId=${client.id}`}
+              className="font-medium text-[#6847F5] hover:underline"
+            >
+              Conteúdo: {client._count.contentItems} peça
+              {client._count.contentItems === 1 ? "" : "s"}
+            </Link>
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
