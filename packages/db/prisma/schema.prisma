@@ -1,0 +1,574 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth (Better Auth core schema — nomes e formato exigidos pelo adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions    Session[]
+  accounts    Account[]
+  memberships Membership[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  /// Chave de linkagem segura entre provedores (ex.: "local:credential"),
+  /// exigida pelo Better Auth >=1.3 — não documentada no gerador de schema
+  /// oficial, que está descontinuado (ver docs/DECISIONS.md).
+  issuer                String?
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Domínio ZENITH FLOW — Agência, workspace, membros e RBAC (seção 7 do manual)
+// ---------------------------------------------------------------------------
+
+enum WorkspaceKind {
+  AGENCY
+  CLIENT
+}
+
+enum MembershipRole {
+  SUPER_ADMIN
+  AGENCY_ADMIN
+  MANAGER
+  ANALYST
+  FINANCE
+  HR
+  CLIENT_ADMIN
+  CLIENT_VIEWER
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+model Agency {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces  Workspace[]
+  memberships Membership[]
+  auditLogs   AuditLog[]
+  clients     Client[]
+  onboardingTemplates OnboardingTemplate[]
+  requests    Request[]
+  projects    Project[]
+  routineTemplates RoutineTemplate[]
+
+  @@map("agency")
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  agencyId  String
+  agency    Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  kind      WorkspaceKind @default(CLIENT)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  memberships Membership[]
+  client      Client?
+
+  @@index([agencyId])
+  @@map("workspace")
+}
+
+/// Vínculo usuário-agência/workspace-papel (seção 7 do manual). Toda membership
+/// aponta para um workspace específico — inclusive o workspace interno (kind
+/// AGENCY) criado junto com a agência, que representa a própria equipe.
+model Membership {
+  id          String           @id @default(cuid())
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email       String
+  agencyId    String
+  agency      Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role        MembershipRole
+  status      MembershipStatus @default(INVITED)
+  invitedByUserId String?
+  inviteToken     String?      @unique
+  inviteExpiresAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([workspaceId, email])
+  @@index([userId])
+  @@index([agencyId])
+  @@map("membership")
+}
+
+/// Append-only. Nunca editar ou apagar uma linha existente (seção 48.1 do manual).
+model AuditLog {
+  id           String   @id @default(cuid())
+  agencyId     String?
+  agency       Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  actorUserId  String?
+  actorType    String
+  action       String
+  resourceType String
+  resourceId   String?
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([resourceType, resourceId])
+  @@map("audit_log")
+}
+
+// ---------------------------------------------------------------------------
+// Clientes e onboarding — Release 1B (seções 10 e 11 do manual)
+// ---------------------------------------------------------------------------
+
+enum ClientStatus {
+  PROSPECT
+  ONBOARDING
+  ATIVO
+  PAUSADO
+  EM_ENCERRAMENTO
+  ENCERRADO
+  REATIVADO
+}
+
+model Client {
+  id          String       @id @default(cuid())
+  agencyId    String
+  agency      Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  /// Criado somente na ativação (seção 10: "ao ativar: ... criar portal").
+  /// Antes disso o cliente não tem escopo de acesso próprio.
+  workspaceId String?      @unique
+  workspace   Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  name        String
+  document    String?
+  email       String?
+  phone       String?
+  whatsapp    String?
+  status      ClientStatus @default(PROSPECT)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  contacts      ClientContact[]
+  statusHistory ClientStatusHistory[]
+  notes         ClientNote[]
+  onboardingRuns OnboardingRun[]
+  requests      Request[]
+  projects      Project[]
+  routineTemplates RoutineTemplate[]
+
+  @@index([agencyId])
+  @@map("client")
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  /// Finalidade do contato (ex.: "Geral", "Financeiro", "Aprovação").
+  role      String   @default("Geral")
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+  @@map("client_contact")
+}
+
+/// Append-only — mudança crítica de status sempre exige motivo (seção 10).
+model ClientStatusHistory {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  fromStatus  ClientStatus?
+  toStatus    ClientStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime      @default(now())
+
+  @@index([clientId])
+  @@map("client_status_history")
+}
+
+model ClientNote {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorUserId String
+  body         String
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+  @@map("client_note")
+}
+
+model OnboardingTemplate {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  items OnboardingTemplateItem[]
+  runs  OnboardingRun[]
+
+  @@index([agencyId])
+  @@map("onboarding_template")
+}
+
+model OnboardingTemplateItem {
+  id          String              @id @default(cuid())
+  templateId  String
+  template    OnboardingTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+
+  @@index([templateId])
+  @@map("onboarding_template_item")
+}
+
+enum OnboardingRunStatus {
+  EM_ANDAMENTO
+  BLOQUEADO
+  PRONTO
+  CONCLUIDO
+  CANCELADO
+}
+
+model OnboardingRun {
+  id          String              @id @default(cuid())
+  clientId    String
+  client      Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  templateId  String?
+  template    OnboardingTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  status      OnboardingRunStatus @default(EM_ANDAMENTO)
+  startedAt   DateTime            @default(now())
+  completedAt DateTime?
+
+  items OnboardingItem[]
+
+  @@index([clientId])
+  @@map("onboarding_run")
+}
+
+enum OnboardingItemStatus {
+  PENDENTE
+  BLOQUEADO
+  CONCLUIDO
+}
+
+/// Dependência entre itens é sequencial por `order` (decisão pragmática do
+/// MVP — não é um grafo arbitrário de dependências). Ver docs/DECISIONS.md.
+model OnboardingItem {
+  id              String                @id @default(cuid())
+  runId           String
+  run             OnboardingRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  order           Int
+  status          OnboardingItemStatus  @default(PENDENTE)
+  completedAt     DateTime?
+  completedByUserId String?
+
+  @@index([runId])
+  @@map("onboarding_item")
+}
+
+// ---------------------------------------------------------------------------
+// Demandas — Release 1C, parte 1 (seção 13 do manual)
+// ---------------------------------------------------------------------------
+
+enum RequestStatus {
+  NOVA
+  TRIAGEM
+  AGUARDANDO_INFORMACAO
+  APROVADA
+  REJEITADA
+  CONVERTIDA
+  CONCLUIDA
+}
+
+enum RequestPriority {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+/// "Convertida" cria uma Task real via POST /api/requests/:id/convert
+/// (endpoint dedicado, não a rota genérica de status — precisa saber em qual
+/// projeto a tarefa entra). convertedTaskId guarda o resultado da conversão.
+model Request {
+  id               String           @id @default(cuid())
+  agencyId         String
+  agency           Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String?
+  client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  status           RequestStatus    @default(NOVA)
+  priority         RequestPriority?
+  /// Nome de quem pediu — pessoa da agência ou contato do cliente; ainda não
+  /// há portal do cliente (Fase 1D), então hoje é sempre preenchido manualmente.
+  requesterName    String?
+  requestedByUserId String?
+  rejectionReason  String?
+  convertedTaskId  String?          @unique
+  convertedTask    Task?            @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  comments      RequestComment[]
+  statusHistory RequestStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("request")
+}
+
+model RequestComment {
+  id           String   @id @default(cuid())
+  requestId    String
+  request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorUserId String
+  body         String
+  createdAt    DateTime @default(now())
+
+  @@index([requestId])
+  @@map("request_comment")
+}
+
+/// Append-only, mesmo padrão de ClientStatusHistory.
+model RequestStatusHistory {
+  id          String         @id @default(cuid())
+  requestId   String
+  request     Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStatus  RequestStatus?
+  toStatus    RequestStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime       @default(now())
+
+  @@index([requestId])
+  @@map("request_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Projetos e tarefas — Release 1C, parte 2 (seção 14 do manual)
+// ---------------------------------------------------------------------------
+
+/// Estado único compartilhado por Project e Task (o manual descreve uma única
+/// cadeia — seção 14 — sem diferenciar as duas entidades).
+enum WorkItemStatus {
+  BACKLOG
+  PLANEJADA
+  EM_ANDAMENTO
+  BLOQUEADA
+  REVISAO
+  CONCLUIDA
+  CANCELADA
+}
+
+/// Projeto pertence a cliente ou à agência (seção 14: "projeto pertence a
+/// cliente ou a agência") — clientId nulo = projeto interno.
+model Project {
+  id        String         @id @default(cuid())
+  agencyId  String
+  agency    Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId  String?
+  client    Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name      String
+  status    WorkItemStatus @default(BACKLOG)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  tasks Task[]
+  routineRuns RoutineRun[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("project")
+}
+
+/// Dependência simplificada como bloqueio único (`blockedByTaskId`), mesmo
+/// espírito pragmático do checklist de onboarding — não é um grafo arbitrário.
+model Task {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  status          WorkItemStatus @default(BACKLOG)
+  blockedByTaskId String?
+  blockedBy       Task?          @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
+  blocks          Task[]         @relation("TaskBlocks")
+  assigneeUserId  String?
+  dueDate         DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  statusHistory  TaskStatusHistory[]
+  sourceRequest  Request?
+
+  @@index([projectId])
+  @@map("task")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model TaskStatusHistory {
+  id          String          @id @default(cuid())
+  taskId      String
+  task        Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromStatus  WorkItemStatus?
+  toStatus    WorkItemStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime        @default(now())
+
+  @@index([taskId])
+  @@map("task_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Rotinas recorrentes — Release 1C, parte 3 (seção 15 do manual)
+// ---------------------------------------------------------------------------
+
+enum RoutineStatus {
+  RASCUNHO
+  ATIVO
+  PAUSADO
+  ARQUIVADO
+}
+
+enum RoutineRunStatus {
+  AGENDADA
+  CRIADA
+  IGNORADA
+  FALHOU
+}
+
+/// Só recorrência mensal (dia fixo do mês) nesta fatia — semanal/dias úteis
+/// ficam para quando houver caso real pedindo. Ver docs/DECISIONS.md.
+model RoutineTemplate {
+  id         String        @id @default(cuid())
+  agencyId   String
+  agency     Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name       String
+  status     RoutineStatus @default(RASCUNHO)
+  /// Dia do mês em que a rotina deve gerar (1-28, evita problema com meses curtos).
+  dayOfMonth Int           @default(1)
+  timezone   String        @default("America/Sao_Paulo")
+  startDate  DateTime      @default(now())
+  endDate    DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  tasks RoutineTemplateTask[]
+  runs  RoutineRun[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("routine_template")
+}
+
+model RoutineTemplateTask {
+  id          String          @id @default(cuid())
+  templateId  String
+  template    RoutineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  order       Int
+
+  @@index([templateId])
+  @@map("routine_template_task")
+}
+
+/// `@@unique([templateId, period])` É a chave de idempotência (seção 15:
+/// "idempotency key impede duplicidade por rotina+período") — não é só
+/// uma otimização, é a garantia contra rodar a mesma rotina duas vezes.
+model RoutineRun {
+  id           String           @id @default(cuid())
+  templateId   String
+  template     RoutineTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  /// Rótulo do período, ex.: "2026-09" para rotina mensal.
+  period       String
+  status       RoutineRunStatus @default(AGENDADA)
+  projectId    String?
+  project      Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+
+  @@unique([templateId, period])
+  @@index([templateId])
+  @@map("routine_run")
+}

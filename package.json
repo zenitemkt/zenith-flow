@@ -1,0 +1,25 @@
+{
+  "name": "zenith-flow",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web",
+    "test": "npm run test --workspace=packages/ui && npm run test --workspace=packages/db",
+    "test:watch": "npm run test:watch --workspace=packages/ui"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "esbuild@0.21.5": true,
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true
+  }
+}
