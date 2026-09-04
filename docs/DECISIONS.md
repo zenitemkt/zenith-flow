@@ -1,5 +1,13 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Conteúdo: fila de aprovação e reabertura pós-aprovação (fecha a seção 17)
+
+**Contexto**: as próximas fatias tinham dois itens do `nav-config` ("Posts", "Publicação") criados numa sessão anterior sem checar o manual — a extração direta do texto do PDF (a ferramenta de renderização de página não está disponível neste ambiente Windows, sem `poppler-utils`; usamos `pdf-parse` via npm no scratchpad como alternativa) mostrou que a seção 17 na verdade lista como telas: "Planejamento mensal; calendario; item de conteudo; biblioteca; versoes; fila de aprovacao" — ou seja, "Posts" e "Publicação" não existem como conceito no manual; o que faltava de verdade era **Biblioteca** e **Fila de aprovação**.
+
+**Decisão**: construir `/conteudo/aprovacoes` (fila de aprovação — pendentes de decisão do cliente por prazo, mais os que voltaram pedindo ajuste) e corrigir uma regra obrigatória da seção 17 que não estava implementada: *"Mudança após aprovação reabre aprovação quando campo material mudar"*. Agora, subir uma nova `ContentVersion` enquanto o item está `APROVADO`/`AGENDADO`/`PUBLICADO` volta o status para `PRODUCAO` automaticamente, com o motivo registrado no histórico. Biblioteca não foi construída — depende da mesma decisão de storage (S3/R2) que trava Arquivos (seção 9.3).
+
+**Consequência**: os itens de `nav-config` "Posts" (`/conteudo/posts`) e "Publicação" (`/conteudo/publicacao`) continuam no ar como "em desenvolvimento" mas sem correspondência real no manual — ficam candidatos a serem renomeados (ex.: "Posts" → "Biblioteca") ou removidos numa limpeza futura, sem pressa, já que não bloqueiam nada.
+
 ## 2026-09-04 — Conteúdo: aprovação por link público, não portal do cliente com login
 
 **Contexto**: a seção 17 do manual pede um fluxo de aprovação de conteúdo pelo cliente. A seção 3.2 (critério de saída da Fase 1D) diz explicitamente "cliente aprova por link **ou** portal" — ou seja, o próprio manual já prevê o link como alternativa válida, não como atalho informal. Construir o Portal do Cliente completo (seção 18: login próprio, histórico consolidado, múltiplas telas) é um projeto bem maior que esta fatia.

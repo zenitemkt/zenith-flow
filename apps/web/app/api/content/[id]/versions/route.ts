@@ -35,27 +35,51 @@ export async function POST(request: Request, { params }: RouteParams) {
   });
   const versionNumber = (lastVersion?.versionNumber ?? 0) + 1;
 
-  const version = await prisma.contentVersion.create({
-    data: {
-      contentItemId: item.id,
-      versionNumber,
-      assetUrl,
-      notes,
-      createdByUserId: session.user.id,
-    },
+  // Seção 17 do manual: "mudança após aprovação reabre aprovação quando campo
+  // material mudar" — subir um material novo depois que o cliente já aprovou
+  // (ou depois de agendado/publicado) invalida o que estava combinado e volta
+  // o item pra produção, exigindo um novo envio/aprovação.
+  const REOPENS_ON_NEW_VERSION = ["APROVADO", "AGENDADO", "PUBLICADO"] as const;
+  const shouldReopen = REOPENS_ON_NEW_VERSION.includes(item.status as (typeof REOPENS_ON_NEW_VERSION)[number]);
+
+  const version = await prisma.$transaction(async (tx) => {
+    const created = await tx.contentVersion.create({
+      data: {
+        contentItemId: item.id,
+        versionNumber,
+        assetUrl,
+        notes,
+        createdByUserId: session.user.id,
+      },
+    });
+
+    if (shouldReopen) {
+      await tx.contentItem.update({ where: { id: item.id }, data: { status: "PRODUCAO" } });
+      await tx.contentStatusHistory.create({
+        data: {
+          contentItemId: item.id,
+          fromStatus: item.status,
+          toStatus: "PRODUCAO",
+          reason: "Material alterado após aprovação — aprovação anterior reaberta",
+          actorUserId: session.user.id,
+        },
+      });
+    }
+
+    await tx.auditLog.create({
+      data: {
+        agencyId: membership.agencyId,
+        actorUserId: session.user.id,
+        actorType: "user",
+        action: "content.version_created",
+        resourceType: "content_version",
+        resourceId: created.id,
+        metadata: { contentItemId: item.id, versionNumber, reopened: shouldReopen },
+      },
+    });
+
+    return created;
   });
 
-  await prisma.auditLog.create({
-    data: {
-      agencyId: membership.agencyId,
-      actorUserId: session.user.id,
-      actorType: "user",
-      action: "content.version_created",
-      resourceType: "content_version",
-      resourceId: version.id,
-      metadata: { contentItemId: item.id, versionNumber },
-    },
-  });
-
-  return NextResponse.json({ id: version.id, versionNumber }, { status: 201 });
+  return NextResponse.json({ id: version.id, versionNumber, reopened: shouldReopen }, { status: 201 });
 }

@@ -51,6 +51,12 @@ export default async function PlanejamentoPage({ searchParams }: PageProps) {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/conteudo/aprovacoes"
+            className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
+          >
+            Fila de aprovação
+          </Link>
+          <Link
             href={calendarHref}
             className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
           >
