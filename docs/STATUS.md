@@ -1,6 +1,6 @@
 # Status de implementação — ZENITH FLOW
 
-Última atualização: 2026-09-04 (madrugada).
+Última atualização: 2026-09-04.
 
 ## Implementado
 
@@ -60,22 +60,32 @@
   - Cliente 360 agora mostra "Squad responsável" (link pro squad) no cabeçalho.
   - Só squad principal por cliente nesta fatia — "especialistas" individuais (regra do manual) ficam para quando houver caso real pedindo.
   - Testado ponta a ponta via Playwright: criar squad → adicionar membro → alocar cliente (aparece nos dois lados: squad e perfil do cliente) → criar tarefa atribuída à pessoa → contagem de carga do squad atualiza de 0 para 1. Dados de teste limpos do banco depois.
-- Testes automatizados: 9 (Sidebar) + 15 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff de cliente — Vitest contra o Neon real) = 24/24 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
+- **Release 1C (parte 5) — Fornecedores** (seção 16 do manual):
+  - `packages/db`: `Vendor` (nome, categoria, contato, status `homologado/bloqueado`), `VendorOrder` (ordem ao fornecedor, opcionalmente ligada a uma `Task` interna — "tarefa externa gera ordem ao fornecedor").
+  - `/operacao/fornecedores`: lista + criação (só nome obrigatório). `/operacao/fornecedores/[id]`: contato, homologar/bloquear, ordens com status próprio (`solicitada → em andamento → concluída/cancelada`).
+  - **Bloquear um fornecedor preserva as ordens existentes** e só impede abrir novas — testado e confirmado (a API rejeita nova ordem com fornecedor bloqueado, 400).
+  - **Isso fecha a Release 1C inteira**, exceto Notificações (adiada — depende de um sistema de notificação in-app/e-mail mais amplo, que faz mais sentido junto com outros módulos que também precisam notificar).
+  - Testado ponta a ponta via Playwright: criar fornecedor + tarefa vinculada → nova ordem → mover até "Concluída" → bloquear fornecedor → ordem continua visível → nova ordem é rejeitada enquanto bloqueado. Dados de teste limpos do banco depois.
+- Testes automatizados: 9 (Sidebar) + 17 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens — Vitest contra o Neon real) = 26/26 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
 
 - Convite de membro: só cobre "pessoa nova" (cria conta na hora). Alguém que já tem conta em outra agência precisa primeiro logar e depois pedir vínculo manual — aceite automático para conta existente é um gap conhecido.
 - Release 1B: falta **Contratos** (produtos, itens, vigência — em espera, o usuário vai decidir o formato) e **Arquivos** (upload, seção 9.3 — depende de adapter S3/R2, ainda não escolhido). `/clientes/onboarding` (visão cross-cliente), `/clientes/contratos`, `/clientes/nps`, `/clientes/reativacoes` continuam Empty State.
 - Edição de contato (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
-- Release 1C: falta **Fornecedores** e **Notificações**. `/operacao/fornecedores` continua Empty State. Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda). Squads: só squad principal (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
+- Release 1C: falta só **Notificações** (adiada, ver acima). Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda). Squads: só squad principal (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
 - Demais módulos (Financeiro, Conteúdo etc.) continuam Empty States sem lógica de negócio.
 
 ## Pendente (por fase, ver manual)
 
-- Fase 1: contratos/produtos, arquivos, fornecedores, notificações, conteúdo, portal, RH, financeiro manual.
+- Fase 1: contratos/produtos, arquivos, notificações, conteúdo, portal, RH, financeiro manual.
 - Fase 2: financeiro avançado, Asaas, Health Score, churn, NPS/eNPS, cohort, envio real de e-mail (convites).
 - Fase 3: tracking, GTM/GA4, Meta Ads/CAPI, CRM/leads, automações, e-mail/WhatsApp, Zenith AI.
 - Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas moraria).
+
+## Ideias futuras (ainda não implementadas)
+
+- **Funções/papéis por pessoa** (sugestão do usuário, 2026-09-04): cada colaborador poderia ter uma ou mais "funções" (ex.: Gestor de Tráfego, Designer, Editor de Vídeo, Contato com Cliente) — um catálogo definido pela própria agência, não um enum fixo. Demandas indicariam a função necessária, permitindo uma visão "minhas demandas" por pessoa/função, além do squad. Não está na Release 1C atual; avaliar quando chegarmos em RH (seção 20) ou numa revisão de Demandas/Squads.
 
 ## Bloqueios
 
@@ -83,7 +93,7 @@ Nenhum no momento.
 
 ## Próximo slice sugerido
 
-Fornecedores (seção 16 do manual) fecha o resto da Release 1C de vez — cadastro de parceiros externos homologados/bloqueados. Depois disso, o natural é avançar pra Release 1D (Conteúdo, calendário, aprovações, portal do cliente) ou retomar Contratos, que segue em espera aguardando decisão do usuário.
+Release 1C está praticamente fechada (só falta Notificações, adiada de propósito). Os próximos caminhos naturais: Release 1D (Conteúdo, calendário, aprovações, portal do cliente) ou retomar Contratos, que segue em espera aguardando decisão do usuário.
 
 ## Ambiente local
 

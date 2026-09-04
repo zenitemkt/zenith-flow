@@ -23,3 +23,5 @@
 - Testes de isolamento e idempotência de rotinas (`packages/db`).
 - **Release 1C (parte 4)**: Squads e capacidade (`Squad`, `SquadMember`, `ClientAllocation`) — `/operacao/squads` (lista + criação) e `/operacao/squads/[id]` (membros com carga, clientes atendidos, realocação com histórico preservado). `Task` ganhou responsável real (atribuir na criação e reatribuir direto no quadro). Cliente 360 mostra o squad responsável.
 - Testes de isolamento de squads e handoff de cliente (`packages/db`).
+- **Release 1C (parte 5)**: Fornecedores (`Vendor`, `VendorOrder`) — `/operacao/fornecedores` (lista + criação) e `/operacao/fornecedores/[id]` (homologar/bloquear, ordens vinculáveis a tarefas internas, status próprio). Bloquear fornecedor preserva ordens existentes, só impede novas. Fecha a Release 1C (exceto Notificações, adiada).
+- Testes de isolamento de fornecedores (`packages/db`).

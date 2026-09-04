@@ -119,6 +119,7 @@ model Agency {
   projects    Project[]
   routineTemplates RoutineTemplate[]
   squads      Squad[]
+  vendors     Vendor[]
 
   @@map("agency")
 }
@@ -480,6 +481,7 @@ model Task {
 
   statusHistory  TaskStatusHistory[]
   sourceRequest  Request?
+  vendorOrders   VendorOrder[]
 
   @@index([projectId])
   @@map("task")
@@ -631,4 +633,55 @@ model ClientAllocation {
   @@index([clientId])
   @@index([squadId])
   @@map("client_allocation")
+}
+
+// ---------------------------------------------------------------------------
+// Fornecedores — Release 1C, parte 5 (seção 16 do manual)
+// ---------------------------------------------------------------------------
+
+enum VendorStatus {
+  HOMOLOGADO
+  BLOQUEADO
+}
+
+enum VendorOrderStatus {
+  SOLICITADA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+model Vendor {
+  id            String       @id @default(cuid())
+  agencyId      String
+  agency        Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name          String
+  category      String?
+  contactEmail  String?
+  contactPhone  String?
+  status        VendorStatus @default(HOMOLOGADO)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  orders VendorOrder[]
+
+  @@index([agencyId])
+  @@map("vendor")
+}
+
+/// "Tarefa externa gera ordem ao fornecedor" (seção 16) — taskId é opcional
+/// porque nem toda ordem nasce de uma tarefa interna já criada.
+model VendorOrder {
+  id          String            @id @default(cuid())
+  vendorId    String
+  vendor      Vendor            @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  description String
+  status      VendorOrderStatus @default(SOLICITADA)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([vendorId])
+  @@map("vendor_order")
 }
