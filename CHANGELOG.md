@@ -25,3 +25,4 @@
 - Testes de isolamento de squads e handoff de cliente (`packages/db`).
 - **Release 1C (parte 5)**: Fornecedores (`Vendor`, `VendorOrder`) — `/operacao/fornecedores` (lista + criação) e `/operacao/fornecedores/[id]` (homologar/bloquear, ordens vinculáveis a tarefas internas, status próprio). Bloquear fornecedor preserva ordens existentes, só impede novas. Fecha a Release 1C (exceto Notificações, adiada).
 - Testes de isolamento de fornecedores (`packages/db`).
+- Contratos (`/clientes/contratos`): por decisão do usuário, botão simples abrindo a pasta de contratos no Google Drive numa aba nova, em vez do módulo completo da seção 12 do manual.

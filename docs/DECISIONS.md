@@ -1,5 +1,13 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Contratos: link fixo pro Google Drive, não o modelo do manual
+
+**Contexto**: a seção 12 do manual descreve um módulo completo de Contratos (catálogo de produtos, versionamento, ativação gerando estrutura operacional). O usuário decidiu explicitamente não construir isso agora — prefere manter contratos organizados no Google Drive por enquanto.
+
+**Decisão**: `/clientes/contratos` é uma página estática com um botão que abre `https://drive.google.com/drive/folders/...` numa aba nova (`target="_blank"`). Sem tabela no banco, sem API, o link fica hardcoded em `apps/web/app/(app)/clientes/contratos/page.tsx`.
+
+**Consequência**: se no futuro o usuário quiser voltar ao modelo completo do manual (ou até só tornar o link configurável por agência, já que hoje é fixo pra todo mundo — o que só é aceitável enquanto existir uma única agência real usando o sistema), a seção 12 do manual continua sendo a referência funcional; nada foi descartado, só adiado.
+
 ## 2026-09-04 — "Carga" é contagem de tarefas, não horas
 
 **Contexto**: a seção 16 do manual pede comparar "horas/pontos disponíveis e planejados" para medir capacidade. Isso pressupõe apontamento de horas e estimativas por tarefa — que é a seção 21 (Fase 1E), ainda não implementada.
