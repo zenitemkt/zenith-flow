@@ -10,43 +10,42 @@ function optionalString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+/**
+ * Demanda aberta pelo próprio cliente no portal — seção 18 do manual
+ * ("nova solicitação entra na triagem"). O cliente nunca escolhe qual
+ * cliente/prioridade: clientId vem do workspace da sessão, prioridade só é
+ * definida pelo time na triagem (mesma regra da seção 13).
+ */
 export async function POST(request: Request) {
   const session = await getServerSession();
   if (!session) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
   const membership = await getCurrentMembership(session.user.id);
-  if (!membership) {
-    return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  if (!membership || !isClientRole(membership.role)) {
+    return NextResponse.json({ error: "Acesso restrito ao portal do cliente." }, { status: 403 });
   }
-  if (isClientRole(membership.role)) {
-    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
+
+  const client = await prisma.client.findUnique({ where: { workspaceId: membership.workspaceId } });
+  if (!client) {
+    return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
 
   const body = await request.json().catch(() => null);
   const title = optionalString(body?.title);
   if (!title) {
-    return NextResponse.json({ error: "Informe um título para a demanda." }, { status: 400 });
+    return NextResponse.json({ error: "Informe um título para a solicitação." }, { status: 400 });
   }
-
   const description = optionalString(body?.description);
-  const requesterName = optionalString(body?.requesterName);
-  const clientId = optionalString(body?.clientId);
-
-  if (clientId) {
-    const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client || client.agencyId !== membership.agencyId) {
-      return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
-    }
-  }
 
   const created = await createRequestRecord({
-    agencyId: membership.agencyId,
-    clientId,
+    agencyId: client.agencyId,
+    clientId: client.id,
     title,
     description,
-    requesterName,
+    requesterName: session.user.name,
     requestedByUserId: session.user.id,
+    auditActorType: "client_portal",
   });
 
   return NextResponse.json({ id: created.id }, { status: 201 });

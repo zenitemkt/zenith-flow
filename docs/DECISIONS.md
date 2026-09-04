@@ -1,5 +1,13 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Auditoria de segurança: rotas internas passaram a rejeitar sessão de cliente
+
+**Contexto**: até esta fatia, "sessão autenticada" só existia pra staff — nenhuma rota interna verificava o papel do membership, só se ele existia e pertencia à agência certa (`membership.agencyId === recurso.agencyId`). Isso nunca foi um risco real porque não havia como uma sessão de cliente existir. O Portal do Cliente (decisão acima) mudou isso: agora um contato de cliente pode logar de verdade. Ao construir Solicitações do portal, percebi que isso reabria uma superfície de ataque — uma sessão de cliente logada poderia, em tese, chamar `POST /api/content`, `/api/requests/:id/status`, `/api/tasks/:id/assign` e qualquer outra rota interna diretamente (via fetch no devtools, por exemplo), já que o `Membership` do cliente pertence à mesma `agencyId` da agência — só o `workspaceId`/`role` são diferentes.
+
+**Decisão**: antes de considerar o Portal "pronto", auditei todas as rotas em `apps/web/app/api` que seguiam o padrão `getCurrentMembership` + checagem só de `agencyId`. Eram 32 rotas (conteúdo, demandas, tarefas, projetos, rotinas, squads, fornecedores, clientes, convites de equipe, convite de portal). Todas ganharam uma linha a mais logo após resolver o `membership`: `if (isClientRole(membership.role)) return 403`. A única rota que precisa aceitar papel de cliente de propósito (`/api/portal/*`) já fazia o inverso (`if (!isClientRole(...)) return 403`) desde que foi criada.
+
+**Consequência**: qualquer rota interna nova precisa lembrar dessa checagem — não é automática, já que o `middleware.ts` continua fazendo só a checagem leve de cookie por design (ver decisão de 2026-09-04 sobre `getSessionCookie`), nunca de papel. Vale considerar, numa limpeza futura, extrair um `requireStaffMembership()` em `lib/session.ts` que já faça as duas checagens de uma vez (existe + não é cliente), pra próximas rotas não repetirem o padrão manualmente. Confirmado via Playwright: sessão de cliente chamando `POST /api/requests` e `POST /api/content` diretamente recebe 403 nos dois casos.
+
 ## 2026-09-04 — Portal do Cliente: mesma sessão, mesmo Membership, roteamento por papel
 
 **Contexto**: a seção 18 do manual pede um Portal do Cliente com login próprio, mas com escopo controlado (só o workspace do cliente, sem ver custo/margem interno). O schema desde a Release 1A já tinha `Workspace(kind: CLIENT)` e os papéis `CLIENT_ADMIN`/`CLIENT_VIEWER` em `MembershipRole` — nunca usados, mas claramente desenhados pra isso.

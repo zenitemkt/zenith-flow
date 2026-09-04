@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
+import { isClientRole } from "@/lib/rbac";
 import { prisma, type MembershipRole } from "@zenith/db";
 
 interface RouteParams {
@@ -18,6 +19,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership) {
     return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  }
+  if (isClientRole(membership.role)) {
+    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
   const client = await prisma.client.findUnique({ where: { id: params.id } });

@@ -89,6 +89,11 @@ Implementa (parte 1) a seção 18 do manual:
 - **Roteamento por papel, não por subdomínio/app separado**: mesma sessão Better Auth para todo mundo. `(app)/layout.tsx` e `/portal/layout.tsx` decidem pra onde mandar o usuário olhando `membership.role` via `isClientRole()` (`lib/rbac.ts`). Mais simples que ter dois apps ou dois logins, e já é o suficiente pro "acessa somente seu workspace" do critério de aceite da seção 18.
 - **Aprovação por sessão reaproveita a mesma regra do link público**: `applyApprovalDecision()` (`lib/content-approval.ts`) é chamada tanto por `/api/approvals/:token` (anônimo) quanto por `/api/portal/content/:id/decide` (autenticado) — a única diferença é o `actorUserId` (null vs. o usuário real) e o `actorType` no `AuditLog` (`"client"` vs. `"client_portal"`). O link público continua funcionando mesmo depois que o cliente ganha portal — não são mutuamente exclusivos, e o manual não pede que sejam.
 
+## Solicitações via Portal — reaproveita `Request` sem mudança de schema
+
+- **`Request.clientId`/`requesterName`/`requestedByUserId` já existiam desde a Release 1C** e já eram exatamente o que uma solicitação de portal precisa — o comentário antigo no schema ("ainda não há portal do cliente") ficou desatualizado com esta fatia, mas o modelo não precisou mudar nada. `POST /api/portal/requests` só força `clientId` a ser sempre o do próprio cliente (nunca vindo do corpo da requisição) e preenche `requesterName`/`requestedByUserId` com os dados reais da sessão.
+- **Mesmo pipeline de triagem**: uma solicitação aberta pelo portal cai no mesmo inbox (`/operacao/demandas`), com o mesmo `RequestStatus` e as mesmas transições — não existe um "status especial de portal". A única diferença observável é o `AuditLog.actorType` (`"client_portal"` em vez de `"user"`).
+
 ## Decisões de modelagem que não são óbvias pelo schema
 
 - **Sem `outbox_events` ainda**: a Release 1A não tem nenhum efeito colateral assíncrono que justifique o padrão outbox (nada consome eventos de domínio ainda). Ele entra na Release 1B junto com a primeira automação real (ex.: ativar cliente cria estrutura). Ver `docs/DECISIONS.md`.

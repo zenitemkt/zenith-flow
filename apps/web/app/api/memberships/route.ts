@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
-import { canManageTeam } from "@/lib/rbac";
+import { canManageTeam, isClientRole } from "@/lib/rbac";
 import { prisma, type MembershipRole } from "@zenith/db";
 
 const INVITABLE_ROLES: MembershipRole[] = ["AGENCY_ADMIN", "MANAGER", "ANALYST", "FINANCE", "HR"];
@@ -16,6 +16,9 @@ export async function POST(request: Request) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership) {
     return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  }
+  if (isClientRole(membership.role)) {
+    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
   if (!canManageTeam(membership.role)) {
     return NextResponse.json(

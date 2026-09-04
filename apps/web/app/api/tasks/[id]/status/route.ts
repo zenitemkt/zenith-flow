@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
+import { isClientRole } from "@/lib/rbac";
 import { canTransitionWorkItem, isBlockedByDependency } from "@/lib/tasks";
 import { prisma, type WorkItemStatus } from "@zenith/db";
 
@@ -15,6 +16,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership) {
     return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  }
+  if (isClientRole(membership.role)) {
+    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
   const task = await prisma.task.findUnique({
