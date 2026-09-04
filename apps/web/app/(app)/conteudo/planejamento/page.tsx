@@ -1,22 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { CONTENT_STATUS_LABELS, CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { CONTENT_STATUS_LABELS, CONTENT_CHANNEL_LABELS, CONTENT_STATUS_BADGE_CLASS } from "@/lib/content";
 import { prisma } from "@zenith/db";
 import { NewContentModal } from "./NewContentModal";
-
-const STATUS_BADGE_CLASS: Record<string, string> = {
-  IDEIA: "bg-[#F2F4F7] text-[#475467]",
-  PAUTA: "bg-[#F2F4F7] text-[#475467]",
-  PRODUCAO: "bg-[#EEF2FF] text-[#3730A3]",
-  REVISAO_INTERNA: "bg-[#EEF2FF] text-[#3730A3]",
-  AGUARDANDO_CLIENTE: "bg-[#FEF3C7] text-[#92600A]",
-  AJUSTES: "bg-[#FEE4E2] text-[#B42318]",
-  APROVADO: "bg-[#DCFCE7] text-[#166534]",
-  AGENDADO: "bg-[#DCFCE7] text-[#166534]",
-  PUBLICADO: "bg-[#DCFCE7] text-[#166534]",
-  ARQUIVADO: "bg-[#F2F4F7] text-[#98A2B3]",
-};
 
 export default async function PlanejamentoPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -46,7 +33,15 @@ export default async function PlanejamentoPage() {
             {items.length} peça{items.length === 1 ? "" : "s"} em {membership.agency.name}.
           </p>
         </div>
-        <NewContentModal clients={clients} />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/conteudo/calendario"
+            className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
+          >
+            Ver calendário
+          </Link>
+          <NewContentModal clients={clients} />
+        </div>
       </div>
 
       {items.length === 0 ? (
@@ -83,7 +78,7 @@ export default async function PlanejamentoPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[item.status]}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}
                     >
                       {CONTENT_STATUS_LABELS[item.status]}
                     </span>

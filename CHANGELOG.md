@@ -28,3 +28,4 @@
 - Contratos (`/clientes/contratos`): por decisão do usuário, botão simples abrindo a pasta de contratos no Google Drive numa aba nova, em vez do módulo completo da seção 12 do manual.
 - **Release 1D (parte 1)**: Conteúdo e aprovação (`ContentItem`, `ContentVersion`, `ContentApproval`, `ContentComment`, `ContentStatusHistory`) — `/conteudo/planejamento` (lista + criação) e `/conteudo/[id]` (versões, comentários, histórico, envio para aprovação do cliente). Aprovação por link público sem login (`/aprovar/[token]`, expira em 14 dias, uma aprovação por versão) — satisfaz o critério de saída da Fase 1D sem exigir o Portal do Cliente completo.
 - Testes de isolamento de conteúdo e de aprovação por versão específica (`packages/db`).
+- **Release 1D (parte 2)**: Calendário editorial (`/conteudo/calendario`) — grade mensal das peças por data agendada, navegação entre meses, sem schema novo (segunda visualização sobre `ContentItem`).

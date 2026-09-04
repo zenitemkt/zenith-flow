@@ -47,3 +47,16 @@ export function canTransitionContent(from: ContentStatus, to: ContentStatus): bo
 
 /** Estados a partir dos quais dá pra enviar a versão mais recente para aprovação do cliente. */
 export const SUBMITTABLE_STATUSES: ContentStatus[] = ["REVISAO_INTERNA", "AJUSTES"];
+
+export const CONTENT_STATUS_BADGE_CLASS: Record<ContentStatus, string> = {
+  IDEIA: "bg-[#F2F4F7] text-[#475467]",
+  PAUTA: "bg-[#F2F4F7] text-[#475467]",
+  PRODUCAO: "bg-[#EEF2FF] text-[#3730A3]",
+  REVISAO_INTERNA: "bg-[#EEF2FF] text-[#3730A3]",
+  AGUARDANDO_CLIENTE: "bg-[#FEF3C7] text-[#92600A]",
+  AJUSTES: "bg-[#FEE4E2] text-[#B42318]",
+  APROVADO: "bg-[#DCFCE7] text-[#166534]",
+  AGENDADO: "bg-[#DCFCE7] text-[#166534]",
+  PUBLICADO: "bg-[#DCFCE7] text-[#166534]",
+  ARQUIVADO: "bg-[#F2F4F7] text-[#98A2B3]",
+};
