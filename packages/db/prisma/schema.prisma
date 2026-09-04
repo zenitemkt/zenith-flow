@@ -23,6 +23,7 @@ model User {
   sessions    Session[]
   accounts    Account[]
   memberships Membership[]
+  squadMemberships SquadMember[]
 
   @@map("user")
 }
@@ -117,6 +118,7 @@ model Agency {
   requests    Request[]
   projects    Project[]
   routineTemplates RoutineTemplate[]
+  squads      Squad[]
 
   @@map("agency")
 }
@@ -220,6 +222,7 @@ model Client {
   requests      Request[]
   projects      Project[]
   routineTemplates RoutineTemplate[]
+  allocations   ClientAllocation[]
 
   @@index([agencyId])
   @@map("client")
@@ -571,4 +574,61 @@ model RoutineRun {
   @@unique([templateId, period])
   @@index([templateId])
   @@map("routine_run")
+}
+
+// ---------------------------------------------------------------------------
+// Squads e capacidade — Release 1C, parte 4 (seção 16 do manual)
+// ---------------------------------------------------------------------------
+
+enum AllocationStatus {
+  ATIVA
+  ENCERRADA
+}
+
+model Squad {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     SquadMember[]
+  allocations ClientAllocation[]
+
+  @@index([agencyId])
+  @@map("squad")
+}
+
+model SquadMember {
+  id       String   @id @default(cuid())
+  squadId  String
+  squad    Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([squadId, userId])
+  @@map("squad_member")
+}
+
+/// Histórico de squad responsável por cliente — reatribuir encerra a linha
+/// anterior (status ENCERRADA + endDate) e cria uma nova, nunca apaga
+/// ("troca de responsável registra handoff", seção 16 do manual). Só squad
+/// principal nesta fatia — especialistas individuais ficam para depois.
+model ClientAllocation {
+  id        String           @id @default(cuid())
+  clientId  String
+  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  squadId   String
+  squad     Squad            @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  status    AllocationStatus @default(ATIVA)
+  startDate DateTime         @default(now())
+  endDate   DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([clientId])
+  @@index([squadId])
+  @@map("client_allocation")
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS, CLIENT_STATUS_TRANSITIONS } from "@/lib/clients";
@@ -29,6 +30,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
         take: 1,
         include: { items: { orderBy: { order: "asc" } } },
       },
+      allocations: { where: { status: "ATIVA" }, include: { squad: true }, take: 1 },
     },
   });
 
@@ -37,6 +39,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
   }
 
   const latestRun = client.onboardingRuns[0];
+  const currentAllocation = client.allocations[0];
 
   type TimelineEntry = {
     id: string;
@@ -74,6 +77,21 @@ export default async function ClientProfilePage({ params }: PageProps) {
             {[client.email, client.phone, client.whatsapp ? `WhatsApp ${client.whatsapp}` : null]
               .filter(Boolean)
               .join(" · ") || "E-mail, telefone e WhatsApp ainda não cadastrados"}
+          </p>
+          <p className="mt-1 text-sm text-[#98A2B3]">
+            Squad responsável:{" "}
+            {currentAllocation ? (
+              <Link
+                href={`/operacao/squads/${currentAllocation.squad.id}`}
+                className="font-medium text-[#6847F5] hover:underline"
+              >
+                {currentAllocation.squad.name}
+              </Link>
+            ) : (
+              <Link href="/operacao/squads" className="text-[#6847F5] hover:underline">
+                nenhum ainda — alocar
+              </Link>
+            )}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">

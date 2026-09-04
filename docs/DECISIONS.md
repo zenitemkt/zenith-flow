@@ -1,5 +1,13 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — "Carga" é contagem de tarefas, não horas
+
+**Contexto**: a seção 16 do manual pede comparar "horas/pontos disponíveis e planejados" para medir capacidade. Isso pressupõe apontamento de horas e estimativas por tarefa — que é a seção 21 (Fase 1E), ainda não implementada.
+
+**Decisão**: em vez de esperar a Fase 1E ou inventar um sistema de estimativa só para preencher esta tela, "carga" nesta fatia é a contagem de tarefas abertas (`Task.status` fora de `CONCLUIDA`/`CANCELADA`) atribuídas a cada pessoa — calculada on-the-fly, sem tabela nova. É uma proxy honesta: não mede esforço real, mas já aponta quem está com muita coisa na mão. Os limiares visuais (4+ = atenção, 8+ = sobrecarga) são arbitrários, ajustáveis depois.
+
+**Consequência**: quando `time_entries`/`estimates` existirem (Fase 1E), essa tela pode evoluir para horas reais sem quebrar nada — é só trocar a query de `groupBy` por tarefa para `sum` por horas estimadas.
+
 ## 2026-09-04 — Rotinas: só mensal, geração manual, sem worker ainda
 
 **Contexto**: a seção 15 do manual pede recorrência com timezone, dias úteis e data final, gatilho automático "no dia 1" e resiliência a falha (fila + alerta). Isso pressupõe um worker/scheduler rodando em produção (`apps/worker`, seção 44 do manual), que ainda não existe no monorepo.

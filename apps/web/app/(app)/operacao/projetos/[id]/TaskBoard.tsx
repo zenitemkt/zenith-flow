@@ -11,13 +11,21 @@ export interface BoardTask {
   title: string;
   description: string | null;
   status: WorkItemStatus;
+  assigneeUserId: string | null;
   blockedBy: { id: string; title: string; status: WorkItemStatus } | null;
 }
 
-export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
+interface PersonOption {
+  userId: string;
+  name: string;
+}
+
+export function TaskBoard({ tasks, people }: { tasks: BoardTask[]; people: PersonOption[] }) {
   const router = useRouter();
   const [movingId, setMovingId] = useState<string | null>(null);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const peopleByUserId = new Map(people.map((p) => [p.userId, p.name]));
 
   async function move(taskId: string, toStatus: WorkItemStatus) {
     setError(null);
@@ -31,6 +39,23 @@ export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
     if (!response.ok) {
       const body = await response.json().catch(() => null);
       setError(body?.error ?? "Não foi possível mover a tarefa.");
+      return;
+    }
+    router.refresh();
+  }
+
+  async function reassign(taskId: string, userId: string) {
+    setError(null);
+    setAssigningId(taskId);
+    const response = await fetch(`/api/tasks/${taskId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: userId || null }),
+    });
+    setAssigningId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Não foi possível reatribuir a tarefa.");
       return;
     }
     router.refresh();
@@ -68,6 +93,23 @@ export function TaskBoard({ tasks }: { tasks: BoardTask[] }) {
                           Bloqueada por &quot;{task.blockedBy!.title}&quot;
                         </p>
                       )}
+                      <select
+                        aria-label={`Responsável por ${task.title}`}
+                        value={task.assigneeUserId ?? ""}
+                        disabled={assigningId === task.id}
+                        onChange={(e) => void reassign(task.id, e.target.value)}
+                        className="mt-2 h-8 w-full rounded-md border border-[#E4E7EC] bg-[#F9FAFB] px-1.5 text-xs text-[#475467] outline-none focus:border-[#6847F5]"
+                      >
+                        <option value="">Sem responsável</option>
+                        {people.map((person) => (
+                          <option key={person.userId} value={person.userId}>
+                            {person.name}
+                          </option>
+                        ))}
+                        {task.assigneeUserId && !peopleByUserId.has(task.assigneeUserId) && (
+                          <option value={task.assigneeUserId}>Pessoa removida</option>
+                        )}
+                      </select>
                       {nextOptions.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {nextOptions.map((option) => {

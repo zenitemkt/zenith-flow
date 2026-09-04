@@ -1,6 +1,6 @@
 # Status de implementação — ZENITH FLOW
 
-Última atualização: 2026-09-04 (fim de noite).
+Última atualização: 2026-09-04 (madrugada).
 
 ## Implementado
 
@@ -52,19 +52,27 @@
   - Ativar rotina → cria `Project` novo a cada geração (nome com o período, ex.: "Rotina mensal de conteúdo · Setembro de 2026") com as tarefas do template clonadas. **Pausar não apaga gerações passadas** (seção 15) — só bloqueia novas.
   - `/operacao/rotinas`: lista + popup de criação (nome, cliente, dia do mês, lista dinâmica de tarefas). `/operacao/rotinas/[id]`: tarefas do template, histórico de gerações (com link pro projeto criado), ativar/pausar/gerar.
   - Testado ponta a ponta via Playwright: criar rotina em rascunho ("Gerar agora" corretamente escondido) → ativar → gerar (projeto criado) → gerar de novo → mensagem de idempotência, sem duplicar. Dados de teste limpos do banco depois.
-- Testes automatizados: 9 (Sidebar) + 12 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência + pausa preserva histórico — Vitest contra o Neon real) = 21/21 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
+- **Release 1C (parte 4) — Squads e capacidade** (seção 16 do manual):
+  - `packages/db`: `Squad`, `SquadMember`, `ClientAllocation` (histórico de squad responsável por cliente — reatribuir encerra a linha anterior, nunca apaga).
+  - `/operacao/squads`: lista + criação. `/operacao/squads/[id]`: membros com **carga** (contagem de tarefas abertas por pessoa, com destaque visual quando ≥4/≥8), adicionar membro, clientes atendidos (alocação ativa) + realocar.
+  - **"Carga" é uma proxy leve** (contagem de tarefas abertas do `Task.assigneeUserId`, não horas) — apontamento de horas de verdade é Fase 1E (seção 21 do manual), documentado em `docs/DECISIONS.md`.
+  - `Task` ganhou responsável de verdade: seletor ao criar (`NewTaskModal`) e reatribuição direta no quadro (`TaskBoard`, um `<select>` por card) — toda reatribuição grava `AuditLog` (`task.reassigned`), preservando histórico sem precisar de uma tabela nova.
+  - Cliente 360 agora mostra "Squad responsável" (link pro squad) no cabeçalho.
+  - Só squad principal por cliente nesta fatia — "especialistas" individuais (regra do manual) ficam para quando houver caso real pedindo.
+  - Testado ponta a ponta via Playwright: criar squad → adicionar membro → alocar cliente (aparece nos dois lados: squad e perfil do cliente) → criar tarefa atribuída à pessoa → contagem de carga do squad atualiza de 0 para 1. Dados de teste limpos do banco depois.
+- Testes automatizados: 9 (Sidebar) + 15 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff de cliente — Vitest contra o Neon real) = 24/24 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
 
 - Convite de membro: só cobre "pessoa nova" (cria conta na hora). Alguém que já tem conta em outra agência precisa primeiro logar e depois pedir vínculo manual — aceite automático para conta existente é um gap conhecido.
 - Release 1B: falta **Contratos** (produtos, itens, vigência — em espera, o usuário vai decidir o formato) e **Arquivos** (upload, seção 9.3 — depende de adapter S3/R2, ainda não escolhido). `/clientes/onboarding` (visão cross-cliente), `/clientes/contratos`, `/clientes/nps`, `/clientes/reativacoes` continuam Empty State.
 - Edição de contato (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
-- Release 1C: falta Squads, Fornecedores e Notificações. `/operacao/squads`, `/operacao/fornecedores` continuam Empty State. Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda).
+- Release 1C: falta **Fornecedores** e **Notificações**. `/operacao/fornecedores` continua Empty State. Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda). Squads: só squad principal (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
 - Demais módulos (Financeiro, Conteúdo etc.) continuam Empty States sem lógica de negócio.
 
 ## Pendente (por fase, ver manual)
 
-- Fase 1: contratos/produtos, arquivos, squads, fornecedores, notificações, conteúdo, portal, RH, financeiro manual.
+- Fase 1: contratos/produtos, arquivos, fornecedores, notificações, conteúdo, portal, RH, financeiro manual.
 - Fase 2: financeiro avançado, Asaas, Health Score, churn, NPS/eNPS, cohort, envio real de e-mail (convites).
 - Fase 3: tracking, GTM/GA4, Meta Ads/CAPI, CRM/leads, automações, e-mail/WhatsApp, Zenith AI.
 - Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas moraria).
@@ -75,7 +83,7 @@ Nenhum no momento.
 
 ## Próximo slice sugerido
 
-Squads e capacidade (seção 16 do manual) fecha o resto da Release 1C — mostra quem atende cada cliente e quanto trabalho cada pessoa/squad está segurando. Contratos (seção 12) segue em espera, aguardando decisão do usuário.
+Fornecedores (seção 16 do manual) fecha o resto da Release 1C de vez — cadastro de parceiros externos homologados/bloqueados. Depois disso, o natural é avançar pra Release 1D (Conteúdo, calendário, aprovações, portal do cliente) ou retomar Contratos, que segue em espera aguardando decisão do usuário.
 
 ## Ambiente local
 

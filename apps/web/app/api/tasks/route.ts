@@ -18,6 +18,8 @@ export async function POST(request: Request) {
   const description = typeof body?.description === "string" ? body.description.trim() || null : null;
   const blockedByTaskId =
     typeof body?.blockedByTaskId === "string" && body.blockedByTaskId ? body.blockedByTaskId : null;
+  const assigneeUserId =
+    typeof body?.assigneeUserId === "string" && body.assigneeUserId ? body.assigneeUserId : null;
 
   if (!title) {
     return NextResponse.json({ error: "Informe o título da tarefa." }, { status: 400 });
@@ -35,9 +37,23 @@ export async function POST(request: Request) {
     }
   }
 
+  if (assigneeUserId) {
+    const targetMembership = await prisma.membership.findFirst({
+      where: {
+        userId: assigneeUserId,
+        agencyId: membership.agencyId,
+        status: "ACTIVE",
+        workspace: { kind: "AGENCY" },
+      },
+    });
+    if (!targetMembership) {
+      return NextResponse.json({ error: "Responsável inválido para esta agência." }, { status: 400 });
+    }
+  }
+
   const task = await prisma.$transaction(async (tx) => {
     const created = await tx.task.create({
-      data: { projectId: project.id, title, description, blockedByTaskId },
+      data: { projectId: project.id, title, description, blockedByTaskId, assigneeUserId },
     });
     await tx.taskStatusHistory.create({
       data: { taskId: created.id, toStatus: "BACKLOG", actorUserId: session.user.id },

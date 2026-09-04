@@ -10,12 +10,26 @@ interface TaskOption {
   title: string;
 }
 
-export function NewTaskModal({ projectId, existingTasks }: { projectId: string; existingTasks: TaskOption[] }) {
+interface PersonOption {
+  userId: string;
+  name: string;
+}
+
+export function NewTaskModal({
+  projectId,
+  existingTasks,
+  people,
+}: {
+  projectId: string;
+  existingTasks: TaskOption[];
+  people: PersonOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [blockedByTaskId, setBlockedByTaskId] = useState("");
+  const [assigneeUserId, setAssigneeUserId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -23,6 +37,7 @@ export function NewTaskModal({ projectId, existingTasks }: { projectId: string; 
     setTitle("");
     setDescription("");
     setBlockedByTaskId("");
+    setAssigneeUserId("");
     setError(null);
     setOpen(false);
   }
@@ -35,7 +50,13 @@ export function NewTaskModal({ projectId, existingTasks }: { projectId: string; 
     const response = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, title, description, blockedByTaskId: blockedByTaskId || null }),
+      body: JSON.stringify({
+        projectId,
+        title,
+        description,
+        blockedByTaskId: blockedByTaskId || null,
+        assigneeUserId: assigneeUserId || null,
+      }),
     });
 
     setLoading(false);
@@ -80,6 +101,24 @@ export function NewTaskModal({ projectId, existingTasks }: { projectId: string; 
               rows={3}
               className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="task-assignee" className="text-sm font-medium text-[#344054]">
+              Responsável (opcional)
+            </label>
+            <select
+              id="task-assignee"
+              value={assigneeUserId}
+              onChange={(e) => setAssigneeUserId(e.target.value)}
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+            >
+              <option value="">Sem responsável</option>
+              {people.map((person) => (
+                <option key={person.userId} value={person.userId}>
+                  {person.name}
+                </option>
+              ))}
+            </select>
           </div>
           {existingTasks.length > 0 && (
             <div className="flex flex-col gap-1.5">

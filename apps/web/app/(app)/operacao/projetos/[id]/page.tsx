@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { getAgencyMembers } from "@/lib/team";
 import { WORK_ITEM_STATUS_LABELS } from "@/lib/tasks";
 import { prisma } from "@zenith/db";
 import { NewTaskModal } from "./NewTaskModal";
@@ -31,6 +32,8 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const people = await getAgencyMembers(membership.agencyId);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -51,6 +54,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         <NewTaskModal
           projectId={project.id}
           existingTasks={project.tasks.map((t) => ({ id: t.id, title: t.title }))}
+          people={people}
         />
       </div>
 
@@ -65,8 +69,10 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             title: t.title,
             description: t.description,
             status: t.status,
+            assigneeUserId: t.assigneeUserId,
             blockedBy: t.blockedBy,
           }))}
+          people={people}
         />
       )}
     </div>
