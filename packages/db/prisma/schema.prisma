@@ -120,6 +120,7 @@ model Agency {
   routineTemplates RoutineTemplate[]
   squads      Squad[]
   vendors     Vendor[]
+  contentItems ContentItem[]
 
   @@map("agency")
 }
@@ -224,6 +225,7 @@ model Client {
   projects      Project[]
   routineTemplates RoutineTemplate[]
   allocations   ClientAllocation[]
+  contentItems  ContentItem[]
 
   @@index([agencyId])
   @@map("client")
@@ -684,4 +686,125 @@ model VendorOrder {
 
   @@index([vendorId])
   @@map("vendor_order")
+}
+
+// ---------------------------------------------------------------------------
+// Conteúdo e calendário editorial — Release 1D, parte 1 (seção 17 do manual)
+// ---------------------------------------------------------------------------
+
+enum ContentStatus {
+  IDEIA
+  PAUTA
+  PRODUCAO
+  REVISAO_INTERNA
+  AGUARDANDO_CLIENTE
+  AJUSTES
+  APROVADO
+  AGENDADO
+  PUBLICADO
+  ARQUIVADO
+}
+
+enum ContentChannel {
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  LINKEDIN
+  YOUTUBE
+  OUTRO
+}
+
+enum ApprovalStatus {
+  PENDENTE
+  APROVADO
+  AJUSTES_SOLICITADOS
+}
+
+model ContentItem {
+  id            String         @id @default(cuid())
+  agencyId      String
+  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId      String
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title         String
+  channel       ContentChannel
+  format        String?
+  campaign      String?
+  caption       String?
+  scheduledDate DateTime?
+  status        ContentStatus  @default(IDEIA)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  versions      ContentVersion[]
+  comments      ContentComment[]
+  statusHistory ContentStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("content_item")
+}
+
+/// Cada envio de material cria uma versão nova; a aprovação vale só para
+/// aquela versão específica (seção 17: "cada upload cria versão; aprovação
+/// vale para uma versão específica"). `assetUrl` é um link externo (Drive,
+/// Figma, Canva...) — sem upload de arquivo nesta fatia (ver docs/DECISIONS.md).
+model ContentVersion {
+  id              String   @id @default(cuid())
+  contentItemId   String
+  contentItem     ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  versionNumber   Int
+  assetUrl        String?
+  notes           String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  approval ContentApproval?
+
+  @@unique([contentItemId, versionNumber])
+  @@map("content_version")
+}
+
+/// Token público de aprovação (mesmo padrão do convite de membro): sem
+/// login, expira, e o cliente só vê o que essa versão específica expõe —
+/// "links públicos usam token curto, expiração... escopo mínimo" (seção 18).
+model ContentApproval {
+  id               String         @id @default(cuid())
+  contentVersionId String         @unique
+  contentVersion   ContentVersion @relation(fields: [contentVersionId], references: [id], onDelete: Cascade)
+  token            String         @unique
+  status           ApprovalStatus @default(PENDENTE)
+  decisionNote     String?
+  decidedAt        DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime       @default(now())
+
+  @@map("content_approval")
+}
+
+model ContentComment {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  authorUserId  String
+  body          String
+  createdAt     DateTime    @default(now())
+
+  @@index([contentItemId])
+  @@map("content_comment")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model ContentStatusHistory {
+  id          String         @id @default(cuid())
+  contentItemId String
+  contentItem ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  fromStatus  ContentStatus?
+  toStatus    ContentStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime       @default(now())
+
+  @@index([contentItemId])
+  @@map("content_status_history")
 }

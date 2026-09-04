@@ -69,6 +69,17 @@ Implementa a seção 16 do manual (a parte de `vendors`/`vendor_orders`):
 - **Bloquear fornecedor não apaga nem cancela ordens existentes** — só impede abrir novas (`POST /api/vendors/:id/orders` retorna 400 se `status = BLOQUEADO`). Mesmo princípio de preservar histórico usado em `ClientAllocation` e `OnboardingTemplate`.
 - **`VendorOrderStatus` é um fluxo simples e próprio** (`solicitada → em andamento → concluída/cancelada`), separado de `WorkItemStatus` (Task/Project) — são conceitos diferentes: a ordem é o pedido *para fora*, a tarefa é o trabalho *interno*. Ligar os dois é opcional (`taskId`), não uma fusão de modelos.
 
+## Conteúdo e aprovação — `ContentItem`, `ContentVersion`, `ContentApproval`, `ContentComment`, `ContentStatusHistory`
+
+Implementa a seção 17 do manual (parcialmente — ver `docs/STATUS.md` para o que falta):
+
+- **`ContentVersion` é o histórico de envios, `ContentApproval` é a decisão sobre um deles**: cada vez que a equipe sobe um novo material para revisão, isso é uma `ContentVersion` nova (não um `UPDATE` na anterior) — preserva o que exatamente foi aprovado ou rejeitado, mesmo depois de novas versões existirem.
+- **`@@unique([contentVersionId])` em `ContentApproval`**: uma aprovação pertence a exatamente uma versão. Pedir ajustes numa versão não "reabre" a aprovação antiga para nova decisão — a próxima versão gera uma `ContentApproval` nova, com token novo. Isso torna impossível, por construção, um cliente aprovar a versão errada por engano num link antigo reaproveitado.
+- **`ContentVersion.assetUrl` é link externo (Drive/Figma/Canva), não upload real**: mesma decisão pragmática já tomada para Contratos — upload de arquivo depende de escolher provedor de storage (S3/R2), ainda não decidido. Nada no schema impede trocar por um campo de arquivo interno depois; a coluna já é só uma URL.
+- **Aprovação por link público (token), não portal do cliente com login**: o manual (seção 3.2) define o critério de saída da Fase 1D como "aprova por link **ou** portal" — o link satisfaz o critério sozinho. `ContentApproval.token` é um UUID único, com `expiresAt` (14 dias) e semântica de uso único garantida pelo próprio `status` (`PENDENTE` → `APROVADO`/`AJUSTES_SOLICITADOS`, nunca volta a `PENDENTE`). O ator da decisão é o cliente sem sessão — por isso `ContentStatusHistory.actorUserId` aceita `null` (já era opcional desde a Release 1C, reaproveitado aqui pela primeira vez com um autor real "externo").
+- **`ContentStatus` tem 10 estados** cobrindo a cadeia inteira da seção 17 (`ideia → pauta → produção → revisão interna → aguardando cliente → ajustes → aprovado → agendado → publicado → arquivado`). `AGUARDANDO_CLIENTE` só é alcançado via `POST /api/content/:id/submit` (que também cria a `ContentApproval`) e só sai dali via a decisão registrada pelo próprio cliente no link — nenhuma rota interna pode pular esse passo.
+- **Comentários são por `ContentItem`, não por versão**: uma discussão interna sobre a peça como um todo não precisa se reatar a cada nova versão. Mesmo padrão simples já usado em `RequestComment`.
+
 ## Decisões de modelagem que não são óbvias pelo schema
 
 - **Sem `outbox_events` ainda**: a Release 1A não tem nenhum efeito colateral assíncrono que justifique o padrão outbox (nada consome eventos de domínio ainda). Ele entra na Release 1B junto com a primeira automação real (ex.: ativar cliente cria estrutura). Ver `docs/DECISIONS.md`.

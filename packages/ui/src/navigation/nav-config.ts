@@ -86,9 +86,9 @@ export const navigationGroups: NavigationGroup[] = [
         label: "Conteúdo",
         icon: FileText,
         href: "/conteudo",
-        comingSoon: true,
+        comingSoon: false,
         children: [
-          { id: "content-planning", label: "Planejamento", href: "/conteudo/planejamento", comingSoon: true },
+          { id: "content-planning", label: "Planejamento", href: "/conteudo/planejamento", comingSoon: false },
           { id: "content-calendar", label: "Calendário", href: "/conteudo/calendario", comingSoon: true },
           { id: "content-posts", label: "Posts", href: "/conteudo/posts", comingSoon: true },
           { id: "content-approvals", label: "Aprovações", href: "/conteudo/aprovacoes", comingSoon: true },

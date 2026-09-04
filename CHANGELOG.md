@@ -26,3 +26,5 @@
 - **Release 1C (parte 5)**: Fornecedores (`Vendor`, `VendorOrder`) — `/operacao/fornecedores` (lista + criação) e `/operacao/fornecedores/[id]` (homologar/bloquear, ordens vinculáveis a tarefas internas, status próprio). Bloquear fornecedor preserva ordens existentes, só impede novas. Fecha a Release 1C (exceto Notificações, adiada).
 - Testes de isolamento de fornecedores (`packages/db`).
 - Contratos (`/clientes/contratos`): por decisão do usuário, botão simples abrindo a pasta de contratos no Google Drive numa aba nova, em vez do módulo completo da seção 12 do manual.
+- **Release 1D (parte 1)**: Conteúdo e aprovação (`ContentItem`, `ContentVersion`, `ContentApproval`, `ContentComment`, `ContentStatusHistory`) — `/conteudo/planejamento` (lista + criação) e `/conteudo/[id]` (versões, comentários, histórico, envio para aprovação do cliente). Aprovação por link público sem login (`/aprovar/[token]`, expira em 14 dias, uma aprovação por versão) — satisfaz o critério de saída da Fase 1D sem exigir o Portal do Cliente completo.
+- Testes de isolamento de conteúdo e de aprovação por versão específica (`packages/db`).

@@ -1,5 +1,13 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Conteúdo: aprovação por link público, não portal do cliente com login
+
+**Contexto**: a seção 17 do manual pede um fluxo de aprovação de conteúdo pelo cliente. A seção 3.2 (critério de saída da Fase 1D) diz explicitamente "cliente aprova por link **ou** portal" — ou seja, o próprio manual já prevê o link como alternativa válida, não como atalho informal. Construir o Portal do Cliente completo (seção 18: login próprio, histórico consolidado, múltiplas telas) é um projeto bem maior que esta fatia.
+
+**Decisão**: implementar `ContentApproval` com token público (`/aprovar/[token]`), sem exigir login — página server-side que valida token existe, está `PENDENTE` e não expirou (14 dias), e permite Aprovar ou Solicitar ajuste (com nota obrigatória). Cada versão do conteúdo tem sua própria aprovação (`@@unique(contentVersionId)`), então um link antigo nunca pode ser reaproveitado para aprovar uma versão diferente da que foi enviada.
+
+**Consequência**: o critério de saída da Fase 1D já está satisfeito por este mecanismo sozinho. O Portal do Cliente com login (seção 18) continua no roadmap como iniciativa própria — quando for construído, pode conviver com o link público (nem toda agência vai querer dar login a todo cliente) em vez de substituí-lo. `docs/STATUS.md` documenta isso como parcial, não como pendência bloqueante da Fase 1D.
+
 ## 2026-09-04 — Contratos: link fixo pro Google Drive, não o modelo do manual
 
 **Contexto**: a seção 12 do manual descreve um módulo completo de Contratos (catálogo de produtos, versionamento, ativação gerando estrutura operacional). O usuário decidiu explicitamente não construir isso agora — prefere manter contratos organizados no Google Drive por enquanto.

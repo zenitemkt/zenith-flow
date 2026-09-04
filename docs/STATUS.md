@@ -67,7 +67,14 @@
   - **Isso fecha a Release 1C inteira**, exceto Notificações (adiada — depende de um sistema de notificação in-app/e-mail mais amplo, que faz mais sentido junto com outros módulos que também precisam notificar).
   - Testado ponta a ponta via Playwright: criar fornecedor + tarefa vinculada → nova ordem → mover até "Concluída" → bloquear fornecedor → ordem continua visível → nova ordem é rejeitada enquanto bloqueado. Dados de teste limpos do banco depois.
 - **Contratos** (`/clientes/contratos`): por decisão do usuário, não é o modelo completo do manual (seção 12) — é um botão simples que abre a pasta de contratos da agência no Google Drive numa aba nova. Sem banco de dados envolvido; o link está fixo no código (`apps/web/app/(app)/clientes/contratos/page.tsx`), documentado em `docs/DECISIONS.md`.
-- Testes automatizados: 9 (Sidebar) + 17 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens — Vitest contra o Neon real) = 26/26 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
+- **Release 1D (parte 1) — Conteúdo e aprovação por link** (seção 17 do manual):
+  - `packages/db`: `ContentItem` (título, cliente, canal, formato, campanha, legenda, data), `ContentVersion` (cada envio de material vira uma versão nova), `ContentApproval` (token público de aprovação, uma por versão), `ContentComment`, `ContentStatusHistory` (append-only).
+  - Estados: `ideia → pauta → produção → revisão interna → aguardando cliente → ajustes → aprovado → agendado → publicado → arquivado` (cadeia completa da seção 17). `AGUARDANDO_CLIENTE` só sai via decisão do cliente no link, nunca por botão interno.
+  - `/conteudo/planejamento`: lista de peças + criação. `/conteudo/[id]`: versões (link externo — Drive/Figma/Canva, sem upload real ainda), "Enviar para aprovação do cliente" (gera link público), comentários internos, histórico completo.
+  - **`/aprovar/[token]`: página pública, sem login** — é a resposta ao "cliente aprova por link **ou** portal" do manual (seção 3.2, critério de saída da Fase 1D); implementamos o link, que é a opção mais simples e já satisfaz o critério. Portal do cliente com login próprio (seção 18) é um projeto à parte, maior, ainda não iniciado.
+  - Aprovação vale só para a versão específica enviada (`@@unique` em `ContentApproval.contentVersionId`) — uma nova versão sempre precisa de um novo envio/token.
+  - Testado ponta a ponta via Playwright, incluindo a parte do cliente: criar peça → mover até revisão interna → adicionar versão (link) → enviar para aprovação → **abrir o link público numa aba anônima, sem sessão nenhuma** → aprovar → conferir que o painel interno mostra "Aprovado" com trilha completa no histórico. Dados de teste limpos do banco depois.
+- Testes automatizados: 9 (Sidebar) + 20 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens, conteúdo + aprovação por versão — Vitest contra o Neon real) = 29/29 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
 
@@ -75,11 +82,12 @@
 - Release 1B: **Contratos** resolvido por decisão do usuário — não é o modelo completo da seção 12 do manual (produtos, versionamento, ativação gerando estrutura operacional), é só um botão em `/clientes/contratos` que abre a pasta do Google Drive da agência numa aba nova (link fixo no código por enquanto). Falta **Arquivos** (upload, seção 9.3 — depende de adapter S3/R2, ainda não escolhido). `/clientes/onboarding` (visão cross-cliente), `/clientes/nps`, `/clientes/reativacoes` continuam Empty State.
 - Edição de contato (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
 - Release 1C: falta só **Notificações** (adiada, ver acima). Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda). Squads: só squad principal (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
-- Demais módulos (Financeiro, Conteúdo etc.) continuam Empty States sem lógica de negócio.
+- Release 1D: falta **Calendário editorial visual** (grade por mês — hoje é uma lista ordenada por data), **Portal do cliente** com login próprio (seção 18 — hoje o cliente só interage via link público de aprovação, sem histórico consolidado nem outras telas do portal), e **Comunicação/menções genéricas** (seção 19 — hoje cada módulo tem seu próprio comentário simples, sem menções nem thread resolvível). `/conteudo/calendario`, `/conteudo/posts`, `/conteudo/publicacao`, `/portal`, `/aprovacoes` (inbox cross-módulo) continuam Empty State. Upload real de arquivo (sempre link externo por enquanto) segue dependendo da escolha de storage (S3/R2).
+- Demais módulos (Financeiro etc.) continuam Empty States sem lógica de negócio.
 
 ## Pendente (por fase, ver manual)
 
-- Fase 1: contratos/produtos, arquivos, notificações, conteúdo, portal, RH, financeiro manual.
+- Fase 1: contratos/produtos, arquivos, notificações, portal do cliente, comunicação genérica, RH, financeiro manual.
 - Fase 2: financeiro avançado, Asaas, Health Score, churn, NPS/eNPS, cohort, envio real de e-mail (convites).
 - Fase 3: tracking, GTM/GA4, Meta Ads/CAPI, CRM/leads, automações, e-mail/WhatsApp, Zenith AI.
 - Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas moraria).
