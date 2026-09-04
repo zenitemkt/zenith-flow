@@ -1,5 +1,15 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Portal do Cliente: mesma sessão, mesmo Membership, roteamento por papel
+
+**Contexto**: a seção 18 do manual pede um Portal do Cliente com login próprio, mas com escopo controlado (só o workspace do cliente, sem ver custo/margem interno). O schema desde a Release 1A já tinha `Workspace(kind: CLIENT)` e os papéis `CLIENT_ADMIN`/`CLIENT_VIEWER` em `MembershipRole` — nunca usados, mas claramente desenhados pra isso.
+
+**Decisão**: não criar um sistema de login separado nem um app à parte. Um contato de cliente convidado pro portal vira um `Membership` comum, com `workspaceId` apontando pro workspace do cliente. A mesma sessão Better Auth serve os dois públicos; o que muda é o layout: `(app)/layout.tsx` manda sessões com papel de cliente pra `/portal`, e `/portal/layout.tsx` faz o inverso. O convite e o aceite (`/convite/[token]`) são exatamente os mesmos usados pra convidar equipe interna — nenhum código novo ali, só uma rota nova pra *criar* o convite apontando pro workspace certo.
+
+A decisão de aprovação (aprovar/pedir ajuste) foi extraída pra uma função compartilhada (`applyApprovalDecision`, `lib/content-approval.ts`) usada tanto pelo link público quanto pela rota autenticada do portal — evita duplicar a regra de negócio em dois lugares. O link público de aprovação **continua funcionando** mesmo depois que o cliente ganha acesso ao portal; não é uma migração, é uma opção a mais (o próprio manual, seção 3.2, já tratava os dois como alternativas: "link OU portal").
+
+**Consequência**: Solicitações (cliente abrir uma Demanda pelo portal), Arquivos e Relatórios do portal ficam pra uma parte 2 — `docs/STATUS.md` marca isso explicitamente. O item de sidebar interno "Portal do Cliente" continua `comingSoon: true` de propósito: hoje não existe um caso de uso de staff acessando `/portal` (ex.: modo "ver como o cliente vê"), então habilitá-lo seria só um link morto.
+
 ## 2026-09-04 — Conteúdo: fila de aprovação e reabertura pós-aprovação (fecha a seção 17)
 
 **Contexto**: as próximas fatias tinham dois itens do `nav-config` ("Posts", "Publicação") criados numa sessão anterior sem checar o manual — a extração direta do texto do PDF (a ferramenta de renderização de página não está disponível neste ambiente Windows, sem `poppler-utils`; usamos `pdf-parse` via npm no scratchpad como alternativa) mostrou que a seção 17 na verdade lista como telas: "Planejamento mensal; calendario; item de conteudo; biblioteca; versoes; fila de aprovacao" — ou seja, "Posts" e "Publicação" não existem como conceito no manual; o que faltava de verdade era **Biblioteca** e **Fila de aprovação**.

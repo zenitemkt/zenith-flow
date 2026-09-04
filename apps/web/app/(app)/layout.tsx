@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { ROLE_LABELS } from "@/lib/rbac";
+import { ROLE_LABELS, isClientRole } from "@/lib/rbac";
 import { Shell } from "../_components/Shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +12,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!membership) {
     redirect("/nova-agencia");
+  }
+
+  if (isClientRole(membership.role)) {
+    redirect("/portal");
   }
 
   const currentUser = {

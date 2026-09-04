@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, type ApprovalStatus } from "@zenith/db";
+import { applyApprovalDecision } from "@/lib/content-approval";
 
 interface RouteParams {
   params: { token: string };
@@ -37,34 +38,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Descreva o ajuste necessário." }, { status: 400 });
   }
 
-  const contentItem = approval.contentVersion.contentItem;
-  const nextStatus = decision === "APROVADO" ? "APROVADO" : "AJUSTES";
-
-  await prisma.$transaction(async (tx) => {
-    await tx.contentApproval.update({
-      where: { id: approval.id },
-      data: { status: decision, decisionNote: note, decidedAt: new Date() },
-    });
-    await tx.contentItem.update({ where: { id: contentItem.id }, data: { status: nextStatus } });
-    await tx.contentStatusHistory.create({
-      data: {
-        contentItemId: contentItem.id,
-        fromStatus: contentItem.status,
-        toStatus: nextStatus,
-        reason: note,
-        actorUserId: null,
-      },
-    });
-    await tx.auditLog.create({
-      data: {
-        agencyId: contentItem.agencyId,
-        actorType: "client",
-        action: decision === "APROVADO" ? "content.approved" : "content.changes_requested",
-        resourceType: "content_item",
-        resourceId: contentItem.id,
-        metadata: { versionId: approval.contentVersionId, note },
-      },
-    });
+  const nextStatus = await applyApprovalDecision({
+    approvalId: approval.id,
+    contentVersionId: approval.contentVersionId,
+    decision,
+    note,
+    actorUserId: null,
   });
 
   return NextResponse.json({ ok: true, status: nextStatus });

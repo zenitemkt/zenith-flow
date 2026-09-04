@@ -8,6 +8,7 @@ import { OnboardingChecklist } from "./OnboardingChecklist";
 import { AddContactForm } from "./AddContactForm";
 import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
+import { ClientPortalSection } from "./ClientPortalSection";
 
 interface PageProps {
   params: { id: string };
@@ -38,6 +39,19 @@ export default async function ClientProfilePage({ params }: PageProps) {
   if (!client || client.agencyId !== membership.agencyId) {
     notFound();
   }
+
+  const portalMembers = client.workspaceId
+    ? (
+        await prisma.membership.findMany({
+          where: { workspaceId: client.workspaceId },
+          select: { id: true, email: true, role: true, status: true },
+          orderBy: { createdAt: "asc" },
+        })
+      ).filter(
+        (m): m is typeof m & { role: "CLIENT_ADMIN" | "CLIENT_VIEWER" } =>
+          m.role === "CLIENT_ADMIN" || m.role === "CLIENT_VIEWER",
+      )
+    : [];
 
   const latestRun = client.onboardingRuns[0];
   const currentAllocation = client.allocations[0];
@@ -160,6 +174,12 @@ export default async function ClientProfilePage({ params }: PageProps) {
               />
             </section>
           )}
+
+          <ClientPortalSection
+            clientId={client.id}
+            clientIsActive={Boolean(client.workspaceId)}
+            members={portalMembers}
+          />
         </div>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
