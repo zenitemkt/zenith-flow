@@ -8,10 +8,11 @@ import {
   SUBMITTABLE_STATUSES,
 } from "@/lib/content";
 import { prisma } from "@zenith/db";
+import { loadCommentThreadView, getMentionableMembers } from "@/lib/comments";
+import { CommentThreadPanel } from "@/app/_components/CommentThreadPanel";
 import { ContentStatusActions } from "./ContentStatusActions";
 import { NewVersionModal } from "./NewVersionModal";
 import { SubmitForApprovalButton } from "./SubmitForApprovalButton";
-import { AddContentCommentForm } from "./AddContentCommentForm";
 
 interface PageProps {
   params: { id: string };
@@ -31,7 +32,6 @@ export default async function ContentDetailPage({ params }: PageProps) {
         orderBy: { versionNumber: "desc" },
         include: { approval: true },
       },
-      comments: { orderBy: { createdAt: "asc" } },
       statusHistory: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -41,6 +41,10 @@ export default async function ContentDetailPage({ params }: PageProps) {
   }
 
   const canSubmit = SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
+  const [thread, mentionableMembers] = await Promise.all([
+    loadCommentThreadView("content_item", item.id),
+    getMentionableMembers(membership.agencyId),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,21 +121,13 @@ export default async function ContentDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Comentários internos</h2>
-            <div className="mb-4 flex flex-col gap-2">
-              {item.comments.length === 0 && (
-                <p className="text-sm text-[#98A2B3]">Nenhum comentário ainda.</p>
-              )}
-              {item.comments.map((comment) => (
-                <div key={comment.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
-                  <p className="text-sm text-[#101828]">{comment.body}</p>
-                  <p className="text-xs text-[#98A2B3]">{comment.createdAt.toLocaleString("pt-BR")}</p>
-                </div>
-              ))}
-            </div>
-            <AddContentCommentForm contentId={item.id} />
-          </section>
+          <CommentThreadPanel
+            entityType="content_item"
+            entityId={item.id}
+            thread={thread}
+            mentionableMembers={mentionableMembers}
+            currentUserId={session.user.id}
+          />
         </div>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

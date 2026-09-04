@@ -1,5 +1,15 @@
 # Decisões — ZENITH FLOW
 
+## 2026-09-04 — Comentários genéricos substituem os isolados por módulo; menção por seletor, não parsing de texto
+
+**Contexto**: a seção 19 do manual pede um sistema de comunicação único (`comments`, `mentions`, `threads`) reaproveitável por qualquer entidade, em vez do padrão que a Release 1C/1D vinha seguindo até aqui — um comentário simples por módulo (`ContentComment`, `RequestComment`), cada um com sua própria tabela e API.
+
+**Decisão**: substituir os dois modelos existentes por `CommentThread`/`Comment`/`CommentEdit`/`CommentMention`, com `entityType` como texto livre em vez de FK polimórfica (Prisma não tem um jeito nativo de fazer isso), e um único componente de UI (`CommentThreadPanel`) e uma única API (`/api/comments`, `/api/comments/:id`, `/api/comment-threads/:id/resolve`) que qualquer entidade nova pode reaproveitar sem código extra. Como o projeto ainda não tem dado de produção real (só dados de teste, sempre limpos após cada fatia), a migration **dropa** `content_comment`/`request_comment` de vez em vez de tentar migrar linhas — não haveria dado real pra migrar mesmo.
+
+Sobre menções: em vez de parsing de `@nome` em texto livre (ambíguo — nomes compostos, dois "João" na mesma agência), a UI usa chips clicáveis dos membros da equipe. O resultado (`mentionedUserIds`) já chega estruturado, sem precisar de uma gramática de menção (tipo `@[Nome](id)`) nem de autocomplete decodificando texto.
+
+**Consequência**: "converter mensagem em tarefa/demanda" (parte do critério de aceite da seção 19) ficou de fora — depende de definir o que "usuário autorizado" significa nesse contexto, e prefiro não inventar essa regra sem um caso real pedindo. Notificação de menção também fica só registrada (`CommentMention` existe, mas nada dispara alerta) até o módulo de Notificações (adiado desde a Release 1C) existir. `docs/STATUS.md` documenta os dois como pendências explícitas, não esquecidas.
+
 ## 2026-09-04 — Auditoria de segurança: rotas internas passaram a rejeitar sessão de cliente
 
 **Contexto**: até esta fatia, "sessão autenticada" só existia pra staff — nenhuma rota interna verificava o papel do membership, só se ele existia e pertencia à agência certa (`membership.agencyId === recurso.agencyId`). Isso nunca foi um risco real porque não havia como uma sessão de cliente existir. O Portal do Cliente (decisão acima) mudou isso: agora um contato de cliente pode logar de verdade. Ao construir Solicitações do portal, percebi que isso reabria uma superfície de ataque — uma sessão de cliente logada poderia, em tese, chamar `POST /api/content`, `/api/requests/:id/status`, `/api/tasks/:id/assign` e qualquer outra rota interna diretamente (via fetch no devtools, por exemplo), já que o `Membership` do cliente pertence à mesma `agencyId` da agência — só o `workspaceId`/`role` são diferentes.

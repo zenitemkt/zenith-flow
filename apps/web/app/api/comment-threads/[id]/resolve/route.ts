@@ -7,6 +7,7 @@ interface RouteParams {
   params: { id: string };
 }
 
+/** Alterna aberta/resolvida — seção 19: "estados thread aberta/resolvida". */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
   if (!session) {
@@ -20,20 +21,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const existing = await prisma.request.findUnique({ where: { id: params.id } });
-  if (!existing || existing.agencyId !== membership.agencyId) {
-    return NextResponse.json({ error: "Demanda não encontrada." }, { status: 404 });
+  const thread = await prisma.commentThread.findUnique({ where: { id: params.id } });
+  if (!thread || thread.agencyId !== membership.agencyId) {
+    return NextResponse.json({ error: "Thread não encontrada." }, { status: 404 });
   }
 
   const body = await request.json().catch(() => null);
-  const commentBody = typeof body?.body === "string" ? body.body.trim() : "";
-  if (!commentBody) {
-    return NextResponse.json({ error: "Escreva algo para o comentário." }, { status: 400 });
-  }
+  const resolved = body?.resolved !== false;
 
-  await prisma.requestComment.create({
-    data: { requestId: existing.id, authorUserId: session.user.id, body: commentBody },
+  const updated = await prisma.commentThread.update({
+    where: { id: thread.id },
+    data: resolved
+      ? { status: "RESOLVIDA", resolvedAt: new Date(), resolvedByUserId: session.user.id }
+      : { status: "ABERTA", resolvedAt: null, resolvedByUserId: null },
   });
 
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ status: updated.status });
 }

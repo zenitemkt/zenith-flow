@@ -3,8 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { REQUEST_STATUS_LABELS, REQUEST_PRIORITY_LABELS, REQUEST_STATUS_TRANSITIONS } from "@/lib/requests";
 import { prisma } from "@zenith/db";
+import { loadCommentThreadView, getMentionableMembers } from "@/lib/comments";
+import { CommentThreadPanel } from "@/app/_components/CommentThreadPanel";
 import { RequestStatusActions } from "./RequestStatusActions";
-import { AddCommentForm } from "./AddCommentForm";
 import { ConvertToTaskButton } from "./ConvertToTaskButton";
 
 interface PageProps {
@@ -21,7 +22,6 @@ export default async function RequestDetailPage({ params }: PageProps) {
     where: { id: params.id },
     include: {
       client: { select: { id: true, name: true } },
-      comments: { orderBy: { createdAt: "asc" } },
       statusHistory: { orderBy: { createdAt: "desc" } },
       convertedTask: { select: { id: true, projectId: true } },
     },
@@ -30,6 +30,11 @@ export default async function RequestDetailPage({ params }: PageProps) {
   if (!req || req.agencyId !== membership.agencyId) {
     notFound();
   }
+
+  const [thread, mentionableMembers] = await Promise.all([
+    loadCommentThreadView("request", req.id),
+    getMentionableMembers(membership.agencyId),
+  ]);
 
   const projects =
     req.status === "APROVADA"
@@ -85,21 +90,13 @@ export default async function RequestDetailPage({ params }: PageProps) {
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Comentários</h2>
-          <div className="mb-4 flex flex-col gap-3">
-            {req.comments.length === 0 && (
-              <p className="text-sm text-[#98A2B3]">Nenhum comentário ainda.</p>
-            )}
-            {req.comments.map((comment) => (
-              <div key={comment.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
-                <p className="text-sm text-[#101828]">{comment.body}</p>
-                <p className="text-xs text-[#98A2B3]">{comment.createdAt.toLocaleString("pt-BR")}</p>
-              </div>
-            ))}
-          </div>
-          <AddCommentForm requestId={req.id} />
-        </section>
+        <CommentThreadPanel
+          entityType="request"
+          entityId={req.id}
+          thread={thread}
+          mentionableMembers={mentionableMembers}
+          currentUserId={session.user.id}
+        />
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-[#101828]">Histórico</h2>

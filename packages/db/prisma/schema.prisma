@@ -20,9 +20,9 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  sessions    Session[]
-  accounts    Account[]
-  memberships Membership[]
+  sessions         Session[]
+  accounts         Account[]
+  memberships      Membership[]
   squadMemberships SquadMember[]
 
   @@map("user")
@@ -110,17 +110,18 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces  Workspace[]
-  memberships Membership[]
-  auditLogs   AuditLog[]
-  clients     Client[]
+  workspaces          Workspace[]
+  memberships         Membership[]
+  auditLogs           AuditLog[]
+  clients             Client[]
   onboardingTemplates OnboardingTemplate[]
-  requests    Request[]
-  projects    Project[]
-  routineTemplates RoutineTemplate[]
-  squads      Squad[]
-  vendors     Vendor[]
-  contentItems ContentItem[]
+  requests            Request[]
+  projects            Project[]
+  routineTemplates    RoutineTemplate[]
+  squads              Squad[]
+  vendors             Vendor[]
+  contentItems        ContentItem[]
+  commentThreads      CommentThread[]
 
   @@map("agency")
 }
@@ -145,21 +146,21 @@ model Workspace {
 /// aponta para um workspace específico — inclusive o workspace interno (kind
 /// AGENCY) criado junto com a agência, que representa a própria equipe.
 model Membership {
-  id          String           @id @default(cuid())
-  userId      String?
-  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  email       String
-  agencyId    String
-  agency      Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  workspaceId String
-  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  role        MembershipRole
-  status      MembershipStatus @default(INVITED)
+  id              String           @id @default(cuid())
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email           String
+  agencyId        String
+  agency          Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  workspaceId     String
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role            MembershipRole
+  status          MembershipStatus @default(INVITED)
   invitedByUserId String?
-  inviteToken     String?      @unique
+  inviteToken     String?          @unique
   inviteExpiresAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@unique([workspaceId, email])
   @@index([userId])
@@ -217,15 +218,15 @@ model Client {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  contacts      ClientContact[]
-  statusHistory ClientStatusHistory[]
-  notes         ClientNote[]
-  onboardingRuns OnboardingRun[]
-  requests      Request[]
-  projects      Project[]
+  contacts         ClientContact[]
+  statusHistory    ClientStatusHistory[]
+  notes            ClientNote[]
+  onboardingRuns   OnboardingRun[]
+  requests         Request[]
+  projects         Project[]
   routineTemplates RoutineTemplate[]
-  allocations   ClientAllocation[]
-  contentItems  ContentItem[]
+  allocations      ClientAllocation[]
+  contentItems     ContentItem[]
 
   @@index([agencyId])
   @@map("client")
@@ -289,9 +290,9 @@ model OnboardingTemplate {
 }
 
 model OnboardingTemplateItem {
-  id          String              @id @default(cuid())
+  id          String             @id @default(cuid())
   templateId  String
-  template    OnboardingTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template    OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   title       String
   description String?
   order       Int
@@ -333,14 +334,14 @@ enum OnboardingItemStatus {
 /// Dependência entre itens é sequencial por `order` (decisão pragmática do
 /// MVP — não é um grafo arbitrário de dependências). Ver docs/DECISIONS.md.
 model OnboardingItem {
-  id              String                @id @default(cuid())
-  runId           String
-  run             OnboardingRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  order           Int
-  status          OnboardingItemStatus  @default(PENDENTE)
-  completedAt     DateTime?
+  id                String               @id @default(cuid())
+  runId             String
+  run               OnboardingRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  order             Int
+  status            OnboardingItemStatus @default(PENDENTE)
+  completedAt       DateTime?
   completedByUserId String?
 
   @@index([runId])
@@ -372,43 +373,30 @@ enum RequestPriority {
 /// (endpoint dedicado, não a rota genérica de status — precisa saber em qual
 /// projeto a tarefa entra). convertedTaskId guarda o resultado da conversão.
 model Request {
-  id               String           @id @default(cuid())
-  agencyId         String
-  agency           Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  clientId         String?
-  client           Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  title            String
-  description      String?
-  status           RequestStatus    @default(NOVA)
-  priority         RequestPriority?
+  id                String           @id @default(cuid())
+  agencyId          String
+  agency            Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId          String?
+  client            Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title             String
+  description       String?
+  status            RequestStatus    @default(NOVA)
+  priority          RequestPriority?
   /// Nome de quem pediu — pessoa da agência ou contato do cliente; ainda não
   /// há portal do cliente (Fase 1D), então hoje é sempre preenchido manualmente.
-  requesterName    String?
+  requesterName     String?
   requestedByUserId String?
-  rejectionReason  String?
-  convertedTaskId  String?          @unique
-  convertedTask    Task?            @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  rejectionReason   String?
+  convertedTaskId   String?          @unique
+  convertedTask     Task?            @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  comments      RequestComment[]
   statusHistory RequestStatusHistory[]
 
   @@index([agencyId])
   @@index([clientId])
   @@map("request")
-}
-
-model RequestComment {
-  id           String   @id @default(cuid())
-  requestId    String
-  request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  authorUserId String
-  body         String
-  createdAt    DateTime @default(now())
-
-  @@index([requestId])
-  @@map("request_comment")
 }
 
 /// Append-only, mesmo padrão de ClientStatusHistory.
@@ -455,7 +443,7 @@ model Project {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  tasks Task[]
+  tasks       Task[]
   routineRuns RoutineRun[]
 
   @@index([agencyId])
@@ -481,9 +469,9 @@ model Task {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  statusHistory  TaskStatusHistory[]
-  sourceRequest  Request?
-  vendorOrders   VendorOrder[]
+  statusHistory TaskStatusHistory[]
+  sourceRequest Request?
+  vendorOrders  VendorOrder[]
 
   @@index([projectId])
   @@map("task")
@@ -654,16 +642,16 @@ enum VendorOrderStatus {
 }
 
 model Vendor {
-  id            String       @id @default(cuid())
-  agencyId      String
-  agency        Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name          String
-  category      String?
-  contactEmail  String?
-  contactPhone  String?
-  status        VendorStatus @default(HOMOLOGADO)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  agencyId     String
+  agency       Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name         String
+  category     String?
+  contactEmail String?
+  contactPhone String?
+  status       VendorStatus @default(HOMOLOGADO)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   orders VendorOrder[]
 
@@ -737,7 +725,6 @@ model ContentItem {
   updatedAt     DateTime       @updatedAt
 
   versions      ContentVersion[]
-  comments      ContentComment[]
   statusHistory ContentStatusHistory[]
 
   @@index([agencyId])
@@ -750,14 +737,14 @@ model ContentItem {
 /// vale para uma versão específica"). `assetUrl` é um link externo (Drive,
 /// Figma, Canva...) — sem upload de arquivo nesta fatia (ver docs/DECISIONS.md).
 model ContentVersion {
-  id              String   @id @default(cuid())
+  id              String      @id @default(cuid())
   contentItemId   String
   contentItem     ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
   versionNumber   Int
   assetUrl        String?
   notes           String?
   createdByUserId String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime    @default(now())
 
   approval ContentApproval?
 
@@ -782,29 +769,100 @@ model ContentApproval {
   @@map("content_approval")
 }
 
-model ContentComment {
-  id            String      @id @default(cuid())
-  contentItemId String
-  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  authorUserId  String
-  body          String
-  createdAt     DateTime    @default(now())
-
-  @@index([contentItemId])
-  @@map("content_comment")
-}
-
 /// Append-only, mesmo padrão das demais *StatusHistory.
 model ContentStatusHistory {
-  id          String         @id @default(cuid())
+  id            String         @id @default(cuid())
   contentItemId String
-  contentItem ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
-  fromStatus  ContentStatus?
-  toStatus    ContentStatus
-  reason      String?
-  actorUserId String?
-  createdAt   DateTime       @default(now())
+  contentItem   ContentItem    @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  fromStatus    ContentStatus?
+  toStatus      ContentStatus
+  reason        String?
+  actorUserId   String?
+  createdAt     DateTime       @default(now())
 
   @@index([contentItemId])
   @@map("content_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Comunicação e comentários — Release 1D (seção 19 do manual)
+// ---------------------------------------------------------------------------
+
+enum CommentThreadStatus {
+  ABERTA
+  RESOLVIDA
+}
+
+enum CommentStatus {
+  ATIVO
+  EDITADO
+  REMOVIDO
+}
+
+/// Uma thread por entidade (entityType+entityId) — seção 19: "comentário
+/// pertence a uma entidade e workspace". Criada sob demanda no primeiro
+/// comentário; entityType é texto livre ("content_item", "request" etc.),
+/// não uma FK — a mesma tabela serve qualquer entidade comentável sem
+/// precisar de uma coluna nova por módulo.
+model CommentThread {
+  id               String              @id @default(cuid())
+  agencyId         String
+  agency           Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  entityType       String
+  entityId         String
+  status           CommentThreadStatus @default(ABERTA)
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  createdAt        DateTime            @default(now())
+
+  comments Comment[]
+
+  @@unique([entityType, entityId])
+  @@index([agencyId])
+  @@map("comment_thread")
+}
+
+model Comment {
+  id           String        @id @default(cuid())
+  threadId     String
+  thread       CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorUserId String
+  body         String
+  status       CommentStatus @default(ATIVO)
+  editedAt     DateTime?
+  createdAt    DateTime      @default(now())
+
+  edits    CommentEdit[]
+  mentions CommentMention[]
+
+  @@index([threadId])
+  @@map("comment")
+}
+
+/// Append-only — "edição mantém histórico; exclusão sensível vira tombstone"
+/// (seção 19): cada edição E cada remoção gravam o texto anterior aqui antes
+/// de mudar o Comment; remover não apaga a linha, só limpa o body e marca
+/// status REMOVIDO, deixando um tombstone visível no lugar.
+model CommentEdit {
+  id             String   @id @default(cuid())
+  commentId      String
+  comment        Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  previousBody   String
+  editedByUserId String
+  createdAt      DateTime @default(now())
+
+  @@index([commentId])
+  @@map("comment_edit")
+}
+
+model CommentMention {
+  id              String   @id @default(cuid())
+  commentId       String
+  comment         Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mentionedUserId String
+  createdAt       DateTime @default(now())
+
+  @@index([commentId])
+  @@index([mentionedUserId])
+  @@map("comment_mention")
 }

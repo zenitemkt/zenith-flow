@@ -94,6 +94,17 @@ Implementa (parte 1) a seção 18 do manual:
 - **`Request.clientId`/`requesterName`/`requestedByUserId` já existiam desde a Release 1C** e já eram exatamente o que uma solicitação de portal precisa — o comentário antigo no schema ("ainda não há portal do cliente") ficou desatualizado com esta fatia, mas o modelo não precisou mudar nada. `POST /api/portal/requests` só força `clientId` a ser sempre o do próprio cliente (nunca vindo do corpo da requisição) e preenche `requesterName`/`requestedByUserId` com os dados reais da sessão.
 - **Mesmo pipeline de triagem**: uma solicitação aberta pelo portal cai no mesmo inbox (`/operacao/demandas`), com o mesmo `RequestStatus` e as mesmas transições — não existe um "status especial de portal". A única diferença observável é o `AuditLog.actorType` (`"client_portal"` em vez de `"user"`).
 
+## Comunicação e comentários — `CommentThread`, `Comment`, `CommentEdit`, `CommentMention`
+
+Implementa a seção 19 do manual, substituindo `ContentComment` e `RequestComment` (removidos nesta fatia):
+
+- **`entityType`/`entityId` são texto livre, não uma FK polimórfica**: Prisma não suporta relations polimórficas nativamente (não tem um equivalente limpo ao `polymorphic` do Rails). Guardar `entityType` como string fechada em código (`CommentEntityType` em `lib/comments.ts`) e validar posse manualmente (`resolveCommentableEntity`) é mais simples que modelar uma tabela de junção ou uma FK por tipo de entidade — e escala bem: adicionar uma entidade comentável nova é só uma linha a mais no union type e no `resolveCommentableEntity`, zero migration.
+- **`@@unique([entityType, entityId])` em `CommentThread`**: força "uma thread por entidade" nesta fatia (mais simples que múltiplas threads paralelas por entidade, que o manual também não detalha como distinguir). A thread nasce sob demanda no primeiro comentário via `upsert`, não precisa ser criada antecipadamente.
+- **Autor e menção guardam só `userId`, sem relation direta pro `User`**: resolver nome pra exibição é um join leve feito em `lib/comments.ts` (`loadCommentThreadView`), não no schema — evita uma FK que teria que sobreviver a `onDelete: SetNull` como em `Membership.userId`, e mantém `Comment`/`CommentMention` agnósticos de Better Auth.
+- **`CommentEdit` é append-only, mesmo padrão de `*StatusHistory`**: cada edição E cada remoção gravam o texto anterior aqui antes de mudar o `Comment.body` — "edição mantém histórico" da seção 19 não é uma frase solta, é uma garantia de dado.
+- **Remoção é tombstone, não `DELETE`**: `Comment.status = REMOVIDO` + `body` esvaziado, a linha continua existindo (preserva `threadId`/`authorUserId`/timestamps, e o texto original fica recuperável via `CommentEdit`). Consistente com o resto do projeto nunca apagar histórico de fato.
+- **Menção por seletor de pessoas, não parsing de `@nome` no texto**: nomes compostos e coincidências tornam parsing de texto livre ambíguo sem uma gramática de menção real (ex.: `@[Nome](id)`, como Slack/Linear fazem por trás dos panos). Pra esta fatia, a UI oferece chips clicáveis dos membros da equipe — o resultado (`mentionedUserIds`) já chega estruturado na API, sem precisar interpretar texto.
+
 ## Decisões de modelagem que não são óbvias pelo schema
 
 - **Sem `outbox_events` ainda**: a Release 1A não tem nenhum efeito colateral assíncrono que justifique o padrão outbox (nada consome eventos de domínio ainda). Ele entra na Release 1B junto com a primeira automação real (ex.: ativar cliente cria estrutura). Ver `docs/DECISIONS.md`.
