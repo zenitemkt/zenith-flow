@@ -1,3 +1,17 @@
+## 2026-09-05 — Pipeline comercial (seção 39, parte 2): estágios configuráveis, não enum fixo; ganhar/perder é status, não estágio
+
+**Contexto**: com Leads fechado, Pipeline/Oportunidades é a continuação natural da mesma seção 39 do manual — o próprio texto já lista "Lead 360 reúne... oportunidades" como parte do mesmo conjunto, e o item de nav "Pipeline" já estava reservado desde o início do projeto, junto com "Leads".
+
+**Decisão 1 — `PipelineStage` é uma tabela configurável, não um enum como todo o resto do sistema**: até aqui, toda cadeia de estados do projeto (`ClientStatus`, `WorkItemStatus`, `LeadStatus`, `SurveyStatus`...) é um enum fixo definido no schema, porque o manual descreve cadeias específicas pra cada um. A seção 39 quebra esse padrão de propósito: "Opportunity: **custom pipeline**; open -> won/lost" — o funil em si (as colunas do board) é da agência, não do produto. Respeitei essa diferença modelando `PipelineStage` como dado, não como tipo.
+
+**Decisão 2 — status (aberta/ganha/perdida) é ortogonal ao estágio, não "mais uma coluna do board"**: pensei em modelar Ganho/Perdido como estágios especiais no fim do funil (mais simples de implementar), mas isso misturaria dois conceitos diferentes — "em qual etapa da negociação" (múltiplos, editáveis, específicos da agência) vs. "o resultado final" (sempre um dos dois, universal). Separar os dois evita, por exemplo, uma agência acidentalmente apagando o estágio "Ganho" e perdendo a capacidade de fechar negócios.
+
+**Decisão 3 — estágios padrão semeados no signup, mesmo padrão do onboarding de clientes**: uma agência nova nunca deveria ficar bloqueada configurando colunas de funil antes de conseguir criar a primeira oportunidade — os 4 estágios padrão ("Novo contato", "Qualificação", "Proposta enviada", "Negociação") dão um pipeline funcional imediatamente, editável depois.
+
+**Reaproveitamento deliberado**: o board kanban é visualmente e estruturalmente o mesmo padrão já usado no quadro de tarefas (`/operacao/projetos/[id]`) — colunas, mover por botão, sem drag-and-drop (decisão de acessibilidade já registrada há muito tempo neste projeto). Não reinventei a interação só porque o domínio mudou de tarefas pra oportunidades.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia. `docs/ROADMAP.md` marca Pipeline como ✅ dentro da seção 39; Propostas (`Proposal`, "draft -> sent -> viewed -> accepted/rejected/expired") é o próximo candidato natural pra fechar a seção inteira, junto com tags/consentimento/Lead Scoring que ainda ficam de fora.
+
 ## 2026-09-05 — Abre a Fase 3 por Leads/CRM (seção 39): a única parte sem bloqueio externo
 
 **Contexto**: o usuário pediu explicitamente para pular Asaas e os indicadores dependentes de MRR (ambos bloqueados por decisões/contas que só ele pode resolver) e seguir para o próximo passo. Isso fecha a Fase 2 na prática e abre a Fase 3 do manual — que é pesada em dependências externas: tracking (seção 34) e GTM/Meta Ads (37-38) precisam de contas/pixels reais; motor de automações (seção 40) é um projeto grande por si só (workflow visual, versionamento imutável, idempotência, dead-letter); e-mail/WhatsApp (41) dependem exatamente do mesmo tipo de decisão de provedor externo já adiada pro NPS; Zenith AI (42) é uma camada de IA sobre o produto inteiro, não uma fatia isolada.

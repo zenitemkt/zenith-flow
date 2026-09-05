@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@zenith/db";
 import { slugify, randomSuffix } from "@/lib/slug";
 import { DEFAULT_ONBOARDING_TEMPLATE_NAME, DEFAULT_ONBOARDING_ITEMS } from "@/lib/onboarding";
+import { DEFAULT_PIPELINE_STAGE_NAMES } from "@/lib/pipeline";
 
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -46,6 +47,9 @@ export async function POST(request: Request) {
           })),
         },
       },
+    });
+    await tx.pipelineStage.createMany({
+      data: DEFAULT_PIPELINE_STAGE_NAMES.map((name, index) => ({ agencyId: agency.id, name, order: index })),
     });
     await tx.auditLog.create({
       data: {

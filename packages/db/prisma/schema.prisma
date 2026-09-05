@@ -138,6 +138,8 @@ model Agency {
   enpsCampaigns        EnpsCampaign[]
   enpsSnapshots        EnpsSnapshot[]
   leads                Lead[]
+  pipelineStages       PipelineStage[]
+  opportunities        Opportunity[]
 
   @@map("agency")
 }
@@ -255,6 +257,7 @@ model Client {
   retentionPlans       RetentionPlan[]
   surveyRecipients     SurveyRecipient[]
   convertedFromLead    Lead?
+  opportunities        Opportunity[]
 
   @@index([agencyId])
   @@map("client")
@@ -1576,6 +1579,7 @@ model Lead {
 
   statusHistory LeadStatusHistory[]
   notes         LeadNote[]
+  opportunities Opportunity[]
 
   @@unique([agencyId, email])
   @@index([agencyId])
@@ -1607,4 +1611,83 @@ model LeadNote {
 
   @@index([leadId])
   @@map("lead_note")
+}
+
+// ---------------------------------------------------------------------------
+// Pipeline comercial — Fase 3, parte 2 (seção 39 do manual)
+// ---------------------------------------------------------------------------
+
+/// "Custom pipeline" (seção 39) — colunas do funil configuráveis por
+/// agência, semeadas com um padrão de 4 no signup (mesmo padrão do
+/// OnboardingTemplate). Só existem estágios "abertos"; Ganho/Perdido é
+/// `Opportunity.status`, não uma coluna do board.
+model PipelineStage {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int
+  createdAt DateTime @default(now())
+
+  opportunities Opportunity[]
+
+  @@unique([agencyId, order])
+  @@index([agencyId])
+  @@map("pipeline_stage")
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+}
+
+/// Seção 39: "Opportunity: custom pipeline; open -> won/lost." Vinculada a
+/// um Lead e/ou Client (uma oportunidade pode nascer de um lead convertido,
+/// ou direto de um cliente já ativo pedindo um novo serviço).
+model Opportunity {
+  id                String            @id @default(cuid())
+  agencyId          String
+  agency            Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name              String
+  clientId          String?
+  client            Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId            String?
+  lead              Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  valueCents        Int?
+  stageId           String
+  stage             PipelineStage     @relation(fields: [stageId], references: [id])
+  status            OpportunityStatus @default(OPEN)
+  lostReason        String?
+  expectedCloseDate DateTime?
+  ownerUserId       String?
+  createdByUserId   String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  statusHistory OpportunityStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@index([leadId])
+  @@index([stageId])
+  @@map("opportunity")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory — registra tanto
+/// movimentação de estágio (status continua OPEN, `toStageId` muda) quanto
+/// mudança de status (Ganho/Perdido, `toStageId` nulo).
+model OpportunityStatusHistory {
+  id            String            @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  fromStageId   String?
+  toStageId     String?
+  toStatus      OpportunityStatus
+  reason        String?
+  actorUserId   String?
+  createdAt     DateTime          @default(now())
+
+  @@index([opportunityId])
+  @@map("opportunity_status_history")
 }
