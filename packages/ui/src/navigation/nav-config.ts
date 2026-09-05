@@ -133,7 +133,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "people-hours", label: "Horas", href: "/pessoas/horas", comingSoon: false },
           { id: "people-vacations", label: "Férias", href: "/pessoas/ferias", comingSoon: false },
           { id: "people-jobs", label: "Vagas", href: "/pessoas/vagas", comingSoon: true },
-          { id: "people-enps", label: "eNPS", href: "/pessoas/enps", comingSoon: true },
+          { id: "people-enps", label: "eNPS", href: "/pessoas/enps", comingSoon: false },
         ],
       },
       { id: "reports", label: "Relatórios", icon: BarChart3, href: "/relatorios", comingSoon: true },

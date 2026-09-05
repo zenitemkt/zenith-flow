@@ -135,6 +135,8 @@ model Agency {
   retentionPlans       RetentionPlan[]
   surveyCampaigns      SurveyCampaign[]
   npsSnapshots         NpsSnapshot[]
+  enpsCampaigns        EnpsCampaign[]
+  enpsSnapshots        EnpsSnapshot[]
 
   @@map("agency")
 }
@@ -926,6 +928,7 @@ model Employee {
 
   leaveRequests LeaveRequest[]
   statusHistory EmployeeStatusHistory[]
+  enpsInvites   EnpsInvite[]
 
   @@index([agencyId])
   @@map("employee")
@@ -1421,4 +1424,107 @@ model NpsSnapshot {
   @@index([agencyId])
   @@index([campaignId])
   @@map("nps_snapshot")
+}
+
+// ---------------------------------------------------------------------------
+// eNPS — Fase 2, parte 5 (seção 32.1 do manual)
+// ---------------------------------------------------------------------------
+
+enum EnpsCampaignStatus {
+  RASCUNHO
+  ENVIADA
+  ENCERRADA
+}
+
+enum EnpsInviteStatus {
+  PENDENTE
+  ENVIADO
+  RESPONDIDO
+}
+
+/// Seção 32.1: "eNPS é separado e acesso é restrito; resultado de equipe não
+/// pode expor respondente quando anonimato for prometido." Acesso restrito
+/// implementado em `lib/rbac.ts` (`canViewEnps`). Anonimato implementado no
+/// próprio desenho do schema — ver EnpsResponse abaixo — não é só uma regra
+/// de UI.
+model EnpsCampaign {
+  id              String             @id @default(cuid())
+  agencyId        String
+  agency          Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  question        String
+  commentPrompt   String?
+  headerText      String?
+  footerText      String?
+  status          EnpsCampaignStatus @default(RASCUNHO)
+  sentAt          DateTime?
+  closedAt        DateTime?
+  createdByUserId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  invites   EnpsInvite[]
+  responses EnpsResponse[]
+  snapshots EnpsSnapshot[]
+
+  @@index([agencyId])
+  @@map("enps_campaign")
+}
+
+/// Controla só PARTICIPAÇÃO (quem foi convidado, se já respondeu) — nunca a
+/// nota. Existe pra evitar convite duplicado e mostrar taxa de resposta sem
+/// nunca ligar uma pessoa a uma nota específica.
+model EnpsInvite {
+  id          String           @id @default(cuid())
+  campaignId  String
+  campaign    EnpsCampaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  email       String
+  token       String           @unique
+  status      EnpsInviteStatus @default(PENDENTE)
+  sentAt      DateTime?
+  respondedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@unique([campaignId, employeeId])
+  @@index([campaignId])
+  @@map("enps_invite")
+}
+
+/// Anônima por desenho: SEM employeeId, SEM referência ao EnpsInvite que
+/// originou a resposta. Uma linha aqui só prova "alguém convidado
+/// respondeu", nunca quem — mesmo para quem tem acesso direto ao banco.
+/// Limite honesto documentado em docs/DECISIONS.md: correlação por horário
+/// de resposta ainda é tecnicamente possível numa campanha com pouquíssimos
+/// respondentes, como em qualquer pesquisa "anônima" real.
+model EnpsResponse {
+  id         String       @id @default(cuid())
+  campaignId String
+  campaign   EnpsCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  score      Int
+  comment    String?
+  createdAt  DateTime     @default(now())
+
+  @@index([campaignId])
+  @@map("enps_response")
+}
+
+/// Append-only, mesmo padrão de NpsSnapshot — eNPS = % promotores - % detratores entre os funcionários.
+model EnpsSnapshot {
+  id             String       @id @default(cuid())
+  agencyId       String
+  agency         Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  campaignId     String
+  campaign       EnpsCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  score          Int
+  promoters      Int
+  passives       Int
+  detractors     Int
+  totalResponses Int
+  computedAt     DateTime     @default(now())
+
+  @@index([agencyId])
+  @@index([campaignId])
+  @@map("enps_snapshot")
 }

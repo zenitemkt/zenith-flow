@@ -14,6 +14,7 @@ export const ROLE_LABELS: Record<MembershipRole, string> = {
 
 const TEAM_MANAGEMENT_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN"];
 const TIMESHEET_APPROVAL_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN", "MANAGER"];
+const ENPS_VIEW_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN", "HR"];
 
 export function hasRole(role: MembershipRole, allowed: MembershipRole[]): boolean {
   return allowed.includes(role);
@@ -30,4 +31,9 @@ export function canApproveTimesheets(role: MembershipRole): boolean {
 
 export function isClientRole(role: MembershipRole): boolean {
   return role === "CLIENT_ADMIN" || role === "CLIENT_VIEWER";
+}
+
+/** Seção 32.1: "eNPS... acesso é restrito" — só quem cuida de gente vê resultado de equipe. */
+export function canViewEnps(role: MembershipRole): boolean {
+  return hasRole(role, ENPS_VIEW_ROLES);
 }

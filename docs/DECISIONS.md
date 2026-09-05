@@ -1,3 +1,17 @@
+## 2026-09-05 — eNPS (seção 32.1): anonimato garantido no schema, não só na UI; acesso restrito por RBAC
+
+**Contexto**: fechada a fatia de NPS de clientes com eNPS explicitamente adiado (decisão anterior, ver entrada abaixo), esta fatia completa a seção 32.1 do manual — que já avisava que eNPS é "separado" e tem "acesso restrito", com anonimato prometido ao respondente.
+
+**Decisão 1 — anonimato é uma garantia de schema, não de UI**: a tentação óbvia seria reaproveitar 100% o modelo de `SurveyCampaign`/`SurveyRecipient` do NPS de clientes, só trocando "cliente" por "funcionário" — mas isso deixaria o `employeeId` disponível na mesma linha da nota, e "não mostrar a nota do fulano na tela" seria uma regra de UI que qualquer acesso direto ao banco (ou um bug futuro numa query) poderia vazar. Em vez disso, desenhei três tabelas propositalmente desconectadas: `EnpsInvite` sabe quem foi convidado e SE respondeu (nunca a nota); `EnpsResponse` guarda a nota e o comentário SEM NENHUMA referência a quem — nem `employeeId`, nem `inviteId`. A rota pública de resposta grava as duas informações como escritas separadas na mesma transação, e depois de commitado não existe mais como reconstruir o vínculo. Testei isso de propósito no nível do banco (não só via UI): uma consulta direta a `EnpsResponse` depois de uma resposta real confirma a ausência estrutural dessas colunas.
+
+**Decisão 2 — limite do anonimato documentado, não escondido**: com poucos respondentes, correlação por horário de resposta ainda é tecnicamente possível (ex.: 2 convites, 2 respostas, dá pra supor qual é qual por ordem temporal) — mesma limitação de qualquer pesquisa anônima real com N pequeno. Não overengenheirei uma solução (ex.: atraso artificial nas respostas) para um problema que nenhuma pesquisa "anônima" de mercado resolve de verdade; documentei o limite honestamente em vez de prometer um anonimato perfeito que o desenho não entrega.
+
+**Decisão 3 — "acesso restrito" via RBAC de aplicação, complementar ao anonimato de schema**: `canViewEnps()` (`SUPER_ADMIN`/`AGENCY_ADMIN`/`HR`) bloqueia Gestores e Analistas de acessar `/pessoas/enps` e as rotas de API — papéis operacionais não precisam ver resultado de clima organizacional. Isso é checagem de aplicação (poderia, em teoria, ter um bug), diferente da garantia de schema do anonimato — os dois mecanismos resolvem problemas diferentes e se complementam.
+
+**Reaproveitamento deliberado**: a fórmula do NPS (`computeNpsBreakdown`) foi extraída de `lib/nps.ts` e reexportada em `lib/enps.ts` como `computeEnpsBreakdown` — é a mesma matemática, então duplicar o código só pelo nome diferente do público seria puro acidente de organização, não uma escolha de design.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia fechada — item de nav "eNPS" que já existia como placeholder desde a Release 1E agora tem tela de verdade. `docs/ROADMAP.md` marca eNPS como ✅; restam cohort (32.2) e reativação (32.3, parcial via `marketingOptOut`) na seção 32, além de indicadores financeiros/MRR e Asaas.
+
 ## 2026-09-05 — NPS de clientes (seção 32.1): envio real de e-mail adiado por escolha do usuário; eNPS fica de fora
 
 **Contexto**: o usuário pediu explicitamente a seção 32 ("a pesquisa NPS, pode ser personalizada, cabeçalho rodapé, perguntas, etc.. enviada ao email de clientes escolhidos"), com dois requisitos concretos: personalização real (não só a pergunta 0-10 fixa) e envio por e-mail — o primeiro recurso deste projeto a pedir explicitamente disparo de e-mail de verdade.
