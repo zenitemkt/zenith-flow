@@ -1,3 +1,11 @@
+## 2026-09-05 — Home v2: KPIs financeiros reais entram, MRR e Churn ficam de fora por não termos base pra eles
+
+**Contexto**: a Home v1 (decisão acima) deixou explicitamente para a v2 os cards financeiros do wireframe do manual (seção 6.1) — MRR, Clientes, Churn, Atrasos — assim que o Financeiro (seção 22) existisse. Agora existe.
+
+**Decisão**: adicionei os KPIs que têm base de dado real — clientes ativos (`Client.status = ATIVO`, já existia), a receber/a pagar em aberto e saldo do mês (agregações de `FinanceEntry`, tudo novo desta fatia), e "faturas vencidas" como um 5º card de atenção. **Deliberadamente não implementei MRR nem Churn**, mesmo estando no wireframe do manual: MRR pressupõe reconhecer receita *recorrente* de assinaturas/contratos, e este projeto decidiu (Release 1B) não modelar contrato como entidade própria — fica só um link do Drive. Sem um conceito de "contrato ativo com valor recorrente" no schema, qualquer "MRR" calculado a partir de lançamentos financeiros avulsos seria uma aproximação sem lastro, exatamente o tipo de "métrica inventada" que a Home v1 já tinha se comprometido a evitar. Churn depende do motor de Health Score (Fase 2), que não existe.
+
+**Consequência**: se/quando contratos recorrentes forem modelados de verdade (uma decisão que já está em aberto desde a Release 1B — hoje é só um link fixo pro Drive), MRR se torna calculável e pode entrar na Home então. Documentado aqui pra não ser reaberto como "esquecido" — foi uma escolha, não uma lacuna.
+
 ## 2026-09-05 — Financeiro: estorno em vez de edição pós-liquidação; sem contas bancárias nem Asaas
 
 **Contexto**: a seção 22 do manual é explícita em duas regras que juntas formam o núcleo do módulo: "valores são imutáveis após conciliação; correção por estorno/ajuste" e "não criar integração Asaas nesta etapa além dos contratos técnicos preparados".
