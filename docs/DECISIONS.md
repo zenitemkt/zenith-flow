@@ -1,3 +1,15 @@
+## 2026-09-05 — Abre a Fase 3 por Leads/CRM (seção 39): a única parte sem bloqueio externo
+
+**Contexto**: o usuário pediu explicitamente para pular Asaas e os indicadores dependentes de MRR (ambos bloqueados por decisões/contas que só ele pode resolver) e seguir para o próximo passo. Isso fecha a Fase 2 na prática e abre a Fase 3 do manual — que é pesada em dependências externas: tracking (seção 34) e GTM/Meta Ads (37-38) precisam de contas/pixels reais; motor de automações (seção 40) é um projeto grande por si só (workflow visual, versionamento imutável, idempotência, dead-letter); e-mail/WhatsApp (41) dependem exatamente do mesmo tipo de decisão de provedor externo já adiada pro NPS; Zenith AI (42) é uma camada de IA sobre o produto inteiro, não uma fatia isolada.
+
+**Decisão — Leads e CRM (seção 39) é o único capítulo da Fase 3 sem bloqueio externo nem escopo desproporcional**: é modelagem de dados + fluxo de estados, exatamente o tipo de trabalho que este projeto já sabe fazer bem (mesmo padrão de `Client`/`Request`/`ClientStatusHistory`). Optei por escopar só o núcleo do "Lead 360" descrito na seção 39 — dados, origem, timeline, ciclo de vida, duplicidade por e-mail e conversão em cliente — deixando explicitamente de fora tags, consentimento, Lead Scoring (39.2, precisa de job de decaimento) e Pipeline/Oportunidades (que é claramente a próxima fatia natural, não algo pra empacotar junto só porque "CRM" é uma palavra só).
+
+**Duplicidade por e-mail implementada como constraint de banco, não checagem de aplicação**: a seção 39.1 é explícita ("e-mail normalizado é chave primária operacional") — `@@unique([agencyId, email])` garante isso de verdade, com uma checagem amigável na API antes (pra devolver uma mensagem clara em vez de deixar estourar erro de constraint pro usuário).
+
+**Conversão sempre cria um Client novo, não busca um existente**: a seção 39 diz "pode converter para Client existente", sugerindo também a opção de vincular a um cliente já cadastrado (ex.: lead de um contato novo numa empresa que já é cliente). Não implementei essa segunda opção nesta fatia — sem um caso de uso real pedindo "vincular lead a cliente existente" ainda, e a tela de conversão ficaria bem mais complexa (precisaria de busca/seleção de cliente). Documentado como pendência, não esquecimento.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia. `docs/ROADMAP.md` marca Leads como "✅ parcial" dentro da Fase 3, com Pipeline/Propostas/Lead Scoring como próximos candidatos naturais dentro da mesma seção 39, e o resto da Fase 3 (tracking, ads, automação, mensageria, IA) explicitamente listado como bloqueado por conta externa ou escopo grande.
+
 ## 2026-09-05 — Indicadores financeiros (seção 29): só DSO e Logo churn, os únicos sem dependência de MRR
 
 **Contexto**: com a seção 32 fechada, a seção 29 (Indicadores financeiros) é o próximo item natural — e, diferente do que parecia à primeira vista, não está 100% bloqueada. Reli a tabela dos 10 indicadores da seção 29 com atenção a QUAL depende de MRR de verdade, em vez de descartar a seção inteira.

@@ -127,6 +127,15 @@ Implementa (parcialmente) a seção 29 do manual:
 
 - **Nenhum modelo novo, mesmo raciocínio do Cohort**: DSO e Logo churn são derivados sob demanda de `FinanceEntry` e `ClientStatusHistory` já existentes (`apps/web/lib/finance-indicators.ts`), nunca persistidos — são recálculos, não decisões pontuais que mereçam virar snapshot como Health Score/Churn Risk/NPS.
 - **`statusAsOf()` foi promovida de helper privado de `lib/cohort.ts` pra função exportada**, reaproveitada aqui pra "este cliente estava ativo nesta data de referência?" — mesmo problema que o Cohort já resolvia, evitando duplicar a lógica de "última transição de status até uma data".
+
+## Leads — `Lead`, `LeadStatusHistory`, `LeadNote`
+
+Implementa a seção 39 do manual (abre a Fase 3):
+
+- **`@@unique([agencyId, email])` é a garantia real de duplicidade** (seção 39.1: "e-mail normalizado é chave primária operacional") — não é só uma checagem em código, é uma constraint do banco. `email` é sempre normalizado (`lib/leads.ts`, `normalizeEmail()`) antes de gravar. Postgres permite múltiplos `NULL` na coluna de uma unique constraint, então leads sem e-mail nunca colidem entre si.
+- **`Lead.convertedClientId` é `@unique`, não uma lista**: um lead só pode gerar um cliente (não faz sentido um lead virar dois clientes). `onDelete: SetNull` — apagar o `Client` convertido não apaga o histórico do lead, só desfaz o link.
+- **Mesmo padrão de `ClientStatusHistory`/`ClientNote`**: `LeadStatusHistory` (append-only) e `LeadNote` espelham exatamente os equivalentes de `Client` — é literalmente o mesmo problema (timeline de um registro que muda de estado ao longo do tempo), resolvido com o mesmo desenho, sem inventar nada novo.
+- **Sem `tags`, `consentimentos`, `score` ou `oportunidades` nesta fatia** (todos citados na seção 39 como parte do "Lead 360"): tags e consentimento não têm um caso de uso real ainda pedindo; score (seção 39.2) precisaria de uma tabela `score_events` e um job de decaimento periódico — mesmo bloqueio de "sem `apps/worker` ainda" de outras partes do sistema; oportunidades dependem do Pipeline (seção 39, "Opportunity"), que é a próxima fatia natural de CRM, ainda não construída.
 - **`Task.assigneeUserId` já existia no schema desde a Release 1C parte 2** (Projetos/Tarefas), só não tinha UI. Reatribuição não tem tabela de histórico própria — usa o `AuditLog` genérico (`task.reassigned`), consistente com como outras mutações menores já são auditadas no projeto.
 - **Só squad principal por cliente**: o manual permite "squad principal e especialistas" (pessoas avulsas além do squad). Modelamos só o principal (`ClientAllocation.squadId`); especialistas individuais ficam para quando houver caso real.
 

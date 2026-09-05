@@ -137,6 +137,7 @@ model Agency {
   npsSnapshots         NpsSnapshot[]
   enpsCampaigns        EnpsCampaign[]
   enpsSnapshots        EnpsSnapshot[]
+  leads                Lead[]
 
   @@map("agency")
 }
@@ -253,6 +254,7 @@ model Client {
   churnRiskSnapshots   ChurnRiskSnapshot[]
   retentionPlans       RetentionPlan[]
   surveyRecipients     SurveyRecipient[]
+  convertedFromLead    Lead?
 
   @@index([agencyId])
   @@map("client")
@@ -1532,4 +1534,77 @@ model EnpsSnapshot {
   @@index([agencyId])
   @@index([campaignId])
   @@map("enps_snapshot")
+}
+
+// ---------------------------------------------------------------------------
+// Leads e CRM — Fase 3, parte 1 (seção 39 do manual)
+// ---------------------------------------------------------------------------
+
+enum LeadStatus {
+  NOVO
+  EM_ANDAMENTO
+  QUALIFICADO
+  DESQUALIFICADO
+  CONVERTIDO
+}
+
+/// Seção 39: "Lead 360 reúne origem, campos, tags, consentimentos, score,
+/// timeline, oportunidades e comunicações." Nesta primeira fatia: origem,
+/// campos básicos e timeline (histórico + notas) — tags, score e
+/// oportunidades ficam para fatias seguintes (Pipeline ainda não existe).
+model Lead {
+  id                String     @id @default(cuid())
+  agencyId          String
+  agency            Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name              String
+  /// Seção 39.1: "e-mail normalizado é chave primária operacional" — sempre
+  /// salvo em minúsculas; `@@unique([agencyId, email])` abaixo é a garantia
+  /// real de duplicidade (Postgres permite múltiplos NULL, então lead sem
+  /// e-mail nunca colide).
+  email             String?
+  phone             String?
+  company           String?
+  source            String?
+  status            LeadStatus @default(NOVO)
+  disqualifiedReason String?
+  ownerUserId       String?
+  convertedClientId String?    @unique
+  convertedClient   Client?    @relation(fields: [convertedClientId], references: [id], onDelete: SetNull)
+  createdByUserId   String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  statusHistory LeadStatusHistory[]
+  notes         LeadNote[]
+
+  @@unique([agencyId, email])
+  @@index([agencyId])
+  @@map("lead")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model LeadStatusHistory {
+  id          String      @id @default(cuid())
+  leadId      String
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fromStatus  LeadStatus?
+  toStatus    LeadStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime    @default(now())
+
+  @@index([leadId])
+  @@map("lead_status_history")
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  body      String
+  authorUserId String?
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@map("lead_note")
 }
