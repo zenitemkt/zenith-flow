@@ -12,7 +12,15 @@ export interface MediaAssetRow {
   clientName?: string | null;
 }
 
-export function MediaAssetList({ assets, showClient }: { assets: MediaAssetRow[]; showClient?: boolean }) {
+export function MediaAssetList({
+  assets,
+  showClient,
+  readOnly,
+}: {
+  assets: MediaAssetRow[];
+  showClient?: boolean;
+  readOnly?: boolean;
+}) {
   const router = useRouter();
 
   async function handleDelete(id: string) {
@@ -48,13 +56,15 @@ export function MediaAssetList({ assets, showClient }: { assets: MediaAssetRow[]
               {showClient && asset.clientName ? `${asset.clientName} · ` : ""}
               {formatBytes(asset.sizeBytes)} · {new Date(asset.createdAt).toLocaleDateString("pt-BR")}
             </span>
-            <button
-              type="button"
-              onClick={() => void handleDelete(asset.id)}
-              className="text-xs font-medium text-[#D94343] hover:underline"
-            >
-              Remover
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => void handleDelete(asset.id)}
+                className="text-xs font-medium text-[#D94343] hover:underline"
+              >
+                Remover
+              </button>
+            )}
           </div>
         </div>
       ))}

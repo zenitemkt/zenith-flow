@@ -256,3 +256,11 @@ Implementa a seção 26.1/26.2 do manual:
 - **Migração com backfill de categorias existentes**: a coluna nasceu com `@default(DESPESA_OPERACIONAL)` (suposição mais razoável sem dado histórico), e a migration incluiu um `UPDATE` explícito pra corrigir categorias `type: RECEITA` já existentes pra `nature: RECEITA` (o default genérico não fazia sentido pra elas).
 - **`lib/dre.ts` não persiste nada — é sempre um recálculo sob demanda**, mesmo raciocínio do Cohort e dos Indicadores Financeiros (DSO/Logo churn): a demonstração é uma reagregação de dado que já existe (`FinanceEntry` + `FinanceCategory.nature`), não uma decisão pontual que precise de histórico próprio.
 - **Lançamento sem categoria cai no padrão por tipo** (`effectiveNature()` em `lib/dre.ts`): Receita sem categoria vira receita bruta, Despesa sem categoria vira despesa operacional — em vez de desaparecer do relatório, que seria mais confuso e mais fácil de esconder um problema real de categorização.
+
+## Portal do Cliente — Arquivos e Financeiro (sem tabela nova)
+
+Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na Release 1D):
+
+- **Nenhum modelo novo** — `/portal/arquivos` e `/portal/financeiro` são leituras filtradas de `MediaAsset` e `FinanceEntry` que já existiam, sempre `WHERE clientId = <cliente do portal>`.
+- **A garantia de isolamento entre clientes mora na rota de download (`GET /api/media/:id`), não só na query da página que lista os arquivos**: antes desta fatia, essa rota rejeitava qualquer sessão de papel de cliente (`isClientRole`) por completo — mesmo pra baixar o próprio arquivo. Agora ela resolve o `Client` da sessão (via `Membership.workspaceId`) e só libera o presign quando `asset.clientId` bate com esse cliente. Qualquer outro caso (arquivo de outro cliente, ou item de biblioteca com `clientId: null`) devolve **404, não 403** — um cliente nunca deve saber que um recurso existe se não é dele.
+- **`/portal/financeiro` só consulta `type: RECEITA`**, nunca `DESPESA` — implementa ao pé da letra a regra obrigatória "custo/margem internos nunca aparecem" (seção 18). Não existe uma versão "financeiro completo" pro portal, de propósito.

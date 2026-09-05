@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { href: "/portal/calendario", label: "Calendário" },
   { href: "/portal/aprovacoes", label: "Aprovações" },
   { href: "/portal/solicitacoes", label: "Solicitações" },
+  { href: "/portal/arquivos", label: "Arquivos" },
+  { href: "/portal/financeiro", label: "Financeiro" },
 ];
 
 export function PortalShell({

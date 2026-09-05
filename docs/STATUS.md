@@ -212,35 +212,52 @@
   - **Lançamento sem categoria não desaparece do DRE**: cai no padrão mais honesto por tipo (Receita → receita bruta, Despesa → despesa operacional) em vez de sumir silenciosamente — mesma régua pragmática de "falta de dado não é 0" já usada em Health Score.
   - `NewFinanceEntryModal` ganhou um seletor de natureza ao criar uma categoria nova de despesa (receita nunca precisa perguntar — natureza é sempre `RECEITA` automaticamente).
   - Testado via Playwright: uma receita de R$10.000 e quatro despesas de naturezas diferentes (imposto, custo direto, despesa operacional, despesa financeira) mais uma de investimento — a cascata bateu exatamente com o cálculo manual em cada linha (Receita líquida R$9.500, Margem de contribuição R$7.500, EBITDA R$6.000, Resultado R$5.700), confirmando que o investimento de R$5.000 realmente não entra em nenhuma linha. Sem teste novo em `packages/db` — `computeDre()` é lógica pura verificada via Playwright, mesmo padrão de `cohort.ts`/`finance-indicators.ts`. Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
+- **Portal do Cliente — Arquivos e Financeiro** (seção 18 do manual, fecha a "parte 2" documentada como pendência desde a Release 1D): `/portal/arquivos` e `/portal/financeiro`, ambos reaproveitando dado e infraestrutura que já existiam (`MediaAsset`/R2, `FinanceEntry`) — nenhuma tabela nova.
+  - **Regra obrigatória da seção 18 implementada de verdade, não só como um filtro de UI**: "visibilidade por módulo e workspace; custo/margem internos nunca aparecem." `/portal/financeiro` só consulta `FinanceEntry` do próprio `clientId`, tipo `RECEITA` — nunca `DESPESA`, nunca custo/margem (que nem existe como consulta aqui). `/portal/arquivos` só lista `MediaAsset` do próprio `clientId`.
+  - **A garantia de isolamento entre clientes foi movida pra dentro da rota de download** (`GET /api/media/:id`), não só pra query da página: antes, essa rota rejeitava qualquer sessão de papel de cliente (`isClientRole`) — mesmo pra baixar o próprio arquivo, o portal não tinha acesso nenhum. Agora ela permite o download só quando `asset.clientId` bate com o cliente da própria sessão (resolvido via `workspaceId` → `Client`), devolvendo **404 (não 403)** pra qualquer outro caso — arquivo de outro cliente ou item de biblioteca sem cliente (`clientId: null`) — pra nunca revelar a um cliente que aquele arquivo existe. Upload e exclusão continuam exclusivos da equipe interna, decisão não revisitada nesta fatia.
+  - `MediaAssetList` ganhou um modo `readOnly` (esconde o botão "Remover") reaproveitado pelo portal, em vez de duplicar o componente.
+  - Testado via Playwright com um cenário de dois clientes: convite de portal aceito por um contato do Cliente A, arquivo do Cliente A visível e baixável (redirect real confirmado), arquivo do Cliente B **não aparece na lista e retorna 404 se acessado direto por URL**, arquivo de biblioteca sem cliente também retorna 404 — e a fatura RECEITA do Cliente A aparece certinha em `/portal/financeiro` com valor e status corretos. Sem teste novo em `packages/db` — a garantia de isolamento é uma regra de rota (API), verificada via Playwright, não uma constraint de banco. Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
 - Testes automatizados: 9 (Sidebar) + 20 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens, conteúdo + aprovação por versão — Vitest contra o Neon real) = 29/29 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
 
+*(Atualizado em 2026-09-05 — esta seção tinha ficado bem desatualizada por várias fatias; reescrita do zero pra refletir o estado real.)*
+
 - Convite de membro: só cobre "pessoa nova" (cria conta na hora). Alguém que já tem conta em outra agência precisa primeiro logar e depois pedir vínculo manual — aceite automático para conta existente é um gap conhecido.
-- Release 1B: **Contratos** resolvido por decisão do usuário — não é o modelo completo da seção 12 do manual (produtos, versionamento, ativação gerando estrutura operacional), é só um botão em `/clientes/contratos` que abre a pasta do Google Drive da agência numa aba nova (link fixo no código por enquanto). Falta **Arquivos** (upload, seção 9.3 — depende de adapter S3/R2, ainda não escolhido). `/clientes/onboarding` (visão cross-cliente), `/clientes/nps`, `/clientes/reativacoes` continuam Empty State.
-- Edição de contato (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
-- Release 1C: falta só **Notificações** (adiada, ver acima). Quadro de tarefas é clique-para-mover, não drag-and-drop. Tarefa não tem página de detalhe própria nem apontamento de horas (Fase 1E). Rotinas: só recorrência mensal, geração é manual (sem worker/cron real ainda). Squads: só squad principal (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
-- Release 1D: a seção 17 (Conteúdo) está fechada, exceto **Biblioteca** (depende da mesma decisão de storage que trava Arquivos). **Portal do cliente** (seção 18) tem login, início, calendário, aprovações e solicitações — faltam Arquivos e Relatórios do portal (parte 2). **Comunicação/comentários** (seção 19) tem thread por entidade, edição com histórico, tombstone e menções por seletor — falta só "converter mensagem em tarefa/demanda" (adiado, precisa definir "usuário autorizado" primeiro) e estender pro Portal do Cliente. `/aprovacoes` (o item de nível superior, inbox cross-módulo interno — diferente de `/conteudo/aprovacoes` e de `/portal/aprovacoes`, que já existem) continua Empty State. `/conteudo/posts` e `/conteudo/publicacao` no `nav-config` são rótulos sem tela correspondente no manual, candidatos a limpeza futura. Upload real de arquivo (sempre link externo por enquanto) segue dependendo da escolha de storage (S3/R2).
-- Demais módulos (Financeiro etc.) continuam Empty States sem lógica de negócio.
+- **Contratos** (seção 12) segue por decisão do usuário como um botão fixo pro Google Drive — não é o modelo completo (produtos, versionamento). Não será revisitado sem pedido explícito.
+- Edição de contato de cliente (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
+- **Notificações** (seção 13/Release 1C) seguem adiadas de propósito — seria um sistema in-app/e-mail atravessando vários módulos, melhor construir quando houver um caso real acumulado pedindo.
+- Quadro de tarefas é clique-para-mover, não drag-and-drop (decisão de acessibilidade, não revisitar sem pedido). Tarefa não tem página de detalhe própria.
+- Rotinas: só recorrência mensal, geração é manual (sem `apps/worker`/cron real ainda).
+- Squads: só squad principal por cliente (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
+- **Comunicação/comentários** (seção 19): falta só "converter mensagem em tarefa/demanda" (adiado, precisa definir "usuário autorizado" antes) e estender o componente pro Portal do Cliente (que ainda não tem comentários).
+- `/aprovacoes` (item de nível superior do nav, inbox cross-módulo interno — diferente de `/conteudo/aprovacoes` e `/portal/aprovacoes`, que já existem) continua Empty State.
+- `/conteudo/publicacao`, `/clientes/onboarding` (visão cross-cliente) no `nav-config` são rótulos sem tela correspondente ainda — candidatos a fechar ou limpar.
+- RH (seção 20): cargos como entidade própria, vagas/candidatos e dados de salário seguem fora de escopo (evitado de propósito até haver caso real pedindo permissões separadas).
+- Envio real de e-mail (convites, NPS, eNPS, propostas) segue adiado — todos os fluxos que precisariam disso hoje geram um link público copiável em vez de disparo automático, por escolha do usuário.
+- Lead Scoring (seção 39.2) e tags/consentimento de Lead ficam de fora do CRM — score precisaria de job de decaimento (`apps/worker`), tags/consentimento não têm caso de uso real pedindo ainda.
+- Pipeline: reordenar estágios não tem UI (só a ordem semeada no signup). Propostas: sem versionamento de conteúdo (uma proposta RASCUNHO é editável livremente, sem histórico de "versões" da proposta em si, só do status).
 
 ## Pendente (por fase, ver manual)
 
-- Fase 1: contratos/produtos (decisão explícita do usuário — Drive, não vamos revisitar), notificações, vagas/candidatos e eNPS (parte da seção 20, adiada). Com Home v2, Arquivos e Biblioteca fechados, isso é praticamente tudo que resta da Fase 1.
-- Fase 2: financeiro avançado, Asaas, Health Score, churn, NPS/eNPS, cohort, envio real de e-mail (convites).
-- Fase 3: tracking, GTM/GA4, Meta Ads/CAPI, CRM/leads, automações, e-mail/WhatsApp, Zenith AI.
-- Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas moraria).
+- **Fase 1**: praticamente fechada. Resta só: contratos/produtos completos (decisão do usuário — não revisitar), notificações, vagas/candidatos e eNPS-de-RH-vagas (parte da seção 20 — diferente do eNPS de satisfação, seção 32.1, que já está pronto).
+- **Fase 2**: fechada na maior parte. Resta: **Asaas** (seção 27, bloqueado — precisa de conta sandbox externa do usuário) e os indicadores dependentes de receita recorrente (MRR, ARR, ARPA, Gross/Net Revenue Churn, LTV simples — seção 29, bloqueado — precisa de um modelo de contrato/assinatura que o projeto decidiu não construir ainda). Tudo o mais da Fase 2 (Health Score, Risco de churn, Régua de cobrança, NPS, eNPS, Cohort, Reativações, DSO/Logo churn, DRE) está pronto.
+- **Fase 3**: seção 39 (Leads/Pipeline/Propostas) fechada, exceto tags/consentimento/Lead Scoring. Tracking (34), GTM/GA4 (37), Meta Ads/CAPI (38), motor de automações (40), e-mail/WhatsApp (41) e Zenith AI (42) não iniciados — todos precisam de conta/infra externa (pixels, APIs de anúncio, WhatsApp Business API, provedor de e-mail) ou são projetos grandes por si só (motor de automação, camada de IA).
+- Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas/decaimento de score moraria).
 
 ## Ideias futuras (ainda não implementadas)
 
-- **Funções/papéis por pessoa** (sugestão do usuário, 2026-09-04): cada colaborador poderia ter uma ou mais "funções" (ex.: Gestor de Tráfego, Designer, Editor de Vídeo, Contato com Cliente) — um catálogo definido pela própria agência, não um enum fixo. Demandas indicariam a função necessária, permitindo uma visão "minhas demandas" por pessoa/função, além do squad. Não está na Release 1C atual; avaliar quando chegarmos em RH (seção 20) ou numa revisão de Demandas/Squads.
+- **Funções/papéis por pessoa** (sugestão do usuário, 2026-09-04): cada colaborador poderia ter uma ou mais "funções" (ex.: Gestor de Tráfego, Designer, Editor de Vídeo, Contato com Cliente) — um catálogo definido pela própria agência, não um enum fixo. Demandas indicariam a função necessária, permitindo uma visão "minhas demandas" por pessoa/função, além do squad. Avaliar numa revisão de Demandas/Squads/RH.
 
 ## Bloqueios
 
-Nenhum no momento.
+- **Asaas** (seção 27): precisa de conta sandbox externa que só o usuário pode criar.
+- **MRR e indicadores dependentes** (seção 29): precisa de uma decisão de modelagem de contrato/assinatura recorrente que o projeto adiou desde a Release 1B.
+- **Tracking/GTM/Meta Ads/WhatsApp/e-mail transacional** (Fase 3): cada um precisa de conta/credencial externa própria.
 
 ## Próximo slice sugerido
 
-Release 1C está praticamente fechada (só falta Notificações, adiada de propósito). Os próximos caminhos naturais: Release 1D (Conteúdo, calendário, aprovações, portal do cliente) ou retomar Contratos, que segue em espera aguardando decisão do usuário.
+Com Fase 1 quase fechada, Fase 2 fechada exceto os dois itens bloqueados acima, e a seção 39 da Fase 3 fechada, os próximos candidatos sem bloqueio são: itens pequenos da lista "Parcial" (edição de contato, remover membro de squad, `/aprovacoes` cross-módulo) ou decidir com o usuário se vale destravar Asaas/modelo de contrato agora.
 
 ## Ambiente local
 

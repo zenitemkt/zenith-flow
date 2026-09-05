@@ -24,13 +24,23 @@ export async function GET(_request: Request, { params }: RouteParams) {
   if (!membership) {
     return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
   }
-  if (isClientRole(membership.role)) {
-    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
-  }
 
   const asset = await prisma.mediaAsset.findUnique({ where: { id: params.id } });
   if (!asset || asset.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+  }
+
+  /**
+   * Seção 18: cliente só vê o próprio workspace — um contato de cliente pode
+   * baixar um arquivo já enviado pra ele (upload continua staff-only), mas
+   * nunca um arquivo de outro cliente nem um item de biblioteca sem cliente
+   * (`clientId: null` nunca bate com `ownClient.id`, negado por padrão).
+   */
+  if (isClientRole(membership.role)) {
+    const ownClient = await prisma.client.findUnique({ where: { workspaceId: membership.workspaceId } });
+    if (!ownClient || asset.clientId !== ownClient.id) {
+      return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
+    }
   }
 
   const url = await getSignedUrl(
