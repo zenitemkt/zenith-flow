@@ -1,3 +1,11 @@
+## 2026-09-05 — Home v1 construída: só com dado que já existe, gráfico sem biblioteca
+
+**Contexto**: seguindo o plano registrado mais cedo (decisão "Home executiva: seguir a seção 6.1..."), chegou a vez de construir a v1.
+
+**Decisão**: montei a Home só com o que já está implementado — nada de card vazio fingindo dado, nada de placeholder "em breve" dentro da própria página (isso é o que o `ComingSoon` de módulo inteiro já faz). Onde o wireframe do manual pede algo que não existe ainda (MRR, atrasos financeiros, Health Score), simplesmente não incluí o card — a Home v2 adiciona essas seções quando os módulos que os alimentam existirem, não antes. O mini-gráfico "tarefas concluídas por semana" foi feito só com `<div>`s de altura proporcional (sem instalar biblioteca de gráficos) — é o primeiro gráfico do projeto, e não vale trazer uma dependência nova pra um bar chart de 6 colunas.
+
+**Consequência**: se/quando a Home ganhar gráficos mais elaborados (ex.: linha de tendência com múltiplas séries, como o wireframe do manual pede pra "Receita e margem"), aí sim vale avaliar uma biblioteca — o padrão de agora não escala bem além de barras simples. Registrado aqui pra não repetir a decisão do zero.
+
 ## 2026-09-05 — Folha de horas é um ciclo (não uma linha reta); correção reabre automaticamente
 
 **Contexto**: a seção 21 do manual lista os estados como "rascunho -> enviado -> aprovado -> corrigido", uma sequência linear que, lida ao pé da letra, sugeriria que "corrigido" é um estado final depois de aprovado — o que não faz sentido operacional (uma folha corrigida precisa voltar a ser enviada e aprovada de novo, senão "corrigido" é um beco sem saída).

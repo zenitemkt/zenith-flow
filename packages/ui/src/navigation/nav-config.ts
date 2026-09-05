@@ -31,7 +31,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "overview",
     label: "Visão geral",
     items: [
-      { id: "home", label: "Home", icon: Home, href: "/", comingSoon: true },
+      { id: "home", label: "Home", icon: Home, href: "/", comingSoon: false },
       {
         id: "clients",
         label: "Clientes",
