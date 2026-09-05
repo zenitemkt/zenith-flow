@@ -118,7 +118,7 @@
 
 ## Pendente (por fase, ver manual)
 
-- Fase 1: contratos/produtos, arquivos, notificações, financeiro manual, apontamento de horas/produtividade (seção 21), vagas/candidatos e eNPS (parte da seção 20, adiada).
+- Fase 1: contratos/produtos, arquivos, notificações, financeiro manual, apontamento de horas/produtividade (seção 21), vagas/candidatos e eNPS (parte da seção 20, adiada), **Home executiva** (seção 6.1 — hoje a rota `/` só mostra o Empty State "Em desenvolvimento"; plano em duas partes documentado em `docs/DECISIONS.md` de 2026-09-05, fila: v1 logo após a seção 21, v2 depois do Financeiro).
 - Fase 2: financeiro avançado, Asaas, Health Score, churn, NPS/eNPS, cohort, envio real de e-mail (convites).
 - Fase 3: tracking, GTM/GA4, Meta Ads/CAPI, CRM/leads, automações, e-mail/WhatsApp, Zenith AI.
 - Pacotes do manual ainda não criados: `packages/core`, `packages/integrations`, `packages/automation`, `packages/tracking`, `packages/ai`, `apps/worker` (é onde um cron real para rotinas moraria).

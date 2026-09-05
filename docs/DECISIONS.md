@@ -1,4 +1,13 @@
-# Decisões — ZENITH FLOW
+## 2026-09-05 — Home executiva: seguir a seção 6.1 do manual, fatiada em v1 (agora) e v2 (pós-Financeiro)
+
+**Contexto**: o usuário mandou um print de anúncio do AgencyFlow (um SaaS concorrente) pedindo que a Home e o menu lateral tenham "estrutura parecida". Antes de decidir, conferi a seção 6.1 do manual ("Home executiva") — e o próprio manual já cita o AgencyFlow como referência: *"Os wireframes abaixo... incorporam a clareza operacional observada no AgencyFlow e a leitura financeira do Organify, mas usam a arquitetura visual própria do Zenith Flow"* (seção 6, introdução aos wireframes). Ou seja, a referência do usuário já é a mesma que o manual usou — não é um desvio de escopo, é uma confirmação.
+
+**Decisão**: construir a Home em duas fatias, mesmo padrão pragmático usado em toda fatia grande deste projeto:
+- **Home v1** (fica logo após a seção 21 — Apontamento e produtividade, antes do Financeiro): saudação personalizada, banner de rotinas do dia (`RoutineRun`), fila "precisa de atenção" (aprovações de conteúdo pendentes, tarefas atrasadas), próximas tarefas (`Task`), squads e carga (`Squad`) — tudo usando dado que já existe hoje, sem inventar métrica nenhuma.
+- **Home v2** (depois do Financeiro manual, seção 22): adiciona os KPIs financeiros do wireframe do manual (MRR, atrasos, faturas vencidas). Health Score e LTV (também presentes no wireframe do manual E no print do AgencyFlow) ficam pra Fase 2 — são métricas que dependem de um motor de cálculo que ainda não existe, não são um "campo a mais".
+- **Menu lateral**: a estrutura de categorias do print (Home, Clientes, Operação, Conteúdo, Financeiro, Equipe) já bate com o `nav-config` atual. A interação (recolhido por padrão, expande em hover/clique) é uma decisão permanente já registrada em 2026-09-03 e não muda — o print mostra uma barra só de ícones, que é justamente o nosso estado padrão recolhido.
+
+**Consequência**: identidade visual (cores, tipografia, ícones) continua 100% ZENITH FLOW — a decisão de 2026-09-03 sobre isso permanece válida; o que muda é hierarquia de informação e organização de cards, não pixel a pixel do concorrente. `docs/STATUS.md` e `docs/ROADMAP.md` marcam a Home como pendência com plano concreto, não mais um item genérico "em desenvolvimento".
 
 ## 2026-09-04 — RH: `Employee` separado de `Membership`; desligamento revoga sessão de verdade
 
