@@ -133,6 +133,8 @@ model Agency {
   healthScoreSnapshots HealthScoreSnapshot[]
   churnRiskSnapshots   ChurnRiskSnapshot[]
   retentionPlans       RetentionPlan[]
+  surveyCampaigns      SurveyCampaign[]
+  npsSnapshots         NpsSnapshot[]
 
   @@map("agency")
 }
@@ -243,6 +245,7 @@ model Client {
   healthScoreSnapshots HealthScoreSnapshot[]
   churnRiskSnapshots   ChurnRiskSnapshot[]
   retentionPlans       RetentionPlan[]
+  surveyRecipients     SurveyRecipient[]
 
   @@index([agencyId])
   @@map("client")
@@ -258,6 +261,9 @@ model ClientContact {
   /// Finalidade do contato (ex.: "Geral", "Financeiro", "Aprovação").
   role      String   @default("Geral")
   isPrimary Boolean  @default(false)
+  /// Seção 32: "contatos com opt-out não recebem marketing" — inclui
+  /// pesquisas de NPS. Nunca selecionável como destinatário enquanto true.
+  marketingOptOut Boolean @default(false)
   createdAt DateTime @default(now())
 
   @@index([clientId])
@@ -1321,4 +1327,98 @@ model RetentionPlanStatusHistory {
 
   @@index([planId])
   @@map("retention_plan_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// NPS — Fase 2, parte 4 (seção 32.1 do manual)
+// ---------------------------------------------------------------------------
+
+enum SurveyStatus {
+  RASCUNHO
+  ENVIADA
+  ENCERRADA
+}
+
+enum SurveyRecipientStatus {
+  PENDENTE
+  ENVIADO
+  RESPONDIDO
+}
+
+/// Seção 32.1: "pesquisas possuem campanha, pergunta 0-10, comentário,
+/// público, janela, anonimato e consentimento." eNPS (funcionários) é
+/// deliberadamente fora de escopo desta fatia — o próprio manual pede acesso
+/// restrito e cuidado de anonimato diferente do NPS de cliente, então tratar
+/// os dois com o mesmo modelo seria misturar dois níveis de sensibilidade.
+model SurveyCampaign {
+  id              String       @id @default(cuid())
+  agencyId        String
+  agency          Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  /// Pergunta 0-10 customizável — vem com um texto padrão sugerido, mas a
+  /// agência pode reescrever livremente (seção 32: "pode ser personalizada").
+  question        String
+  commentPrompt   String?
+  headerText      String?
+  footerText      String?
+  status          SurveyStatus @default(RASCUNHO)
+  sentAt          DateTime?
+  closedAt        DateTime?
+  createdByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  recipients   SurveyRecipient[]
+  npsSnapshots NpsSnapshot[]
+
+  @@index([agencyId])
+  @@map("survey_campaign")
+}
+
+/// Um lançamento por cliente por campanha (`@@unique`) — "público" da seção
+/// 32.1. Resposta é gravada na própria linha (score/comment/respondedAt) em
+/// vez de uma tabela `survey_responses` separada porque, para NPS de
+/// cliente, é sempre 1 destinatário = no máximo 1 resposta; não há o cenário
+/// de "várias respostas por convite" que justificaria separar as tabelas.
+model SurveyRecipient {
+  id          String                @id @default(cuid())
+  campaignId  String
+  campaign    SurveyCampaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contactName String
+  email       String
+  token       String                @unique
+  status      SurveyRecipientStatus @default(PENDENTE)
+  sentAt      DateTime?
+  score       Int?
+  comment     String?
+  respondedAt DateTime?
+  createdAt   DateTime              @default(now())
+
+  @@unique([campaignId, clientId])
+  @@index([campaignId])
+  @@index([clientId])
+  @@map("survey_recipient")
+}
+
+/// Append-only, mesmo padrão de HealthScoreSnapshot/ChurnRiskSnapshot — cada
+/// recálculo grava uma linha nova. "NPS = % promotores - % detratores"
+/// (seção 32.1), sempre relativo a uma campanha específica.
+model NpsSnapshot {
+  id             String         @id @default(cuid())
+  agencyId       String
+  agency         Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  campaignId     String
+  campaign       SurveyCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  score          Int
+  promoters      Int
+  passives       Int
+  detractors     Int
+  totalResponses Int
+  computedAt     DateTime       @default(now())
+
+  @@index([agencyId])
+  @@index([campaignId])
+  @@map("nps_snapshot")
 }

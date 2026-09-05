@@ -44,7 +44,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: true },
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
           { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
-          { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: true },
+          { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
           { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: true },
         ],
       },

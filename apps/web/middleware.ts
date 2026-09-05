@@ -6,8 +6,10 @@ const PUBLIC_PATH_PREFIXES = [
   "/signup",
   "/convite",
   "/aprovar",
+  "/pesquisa",
   "/api/auth",
   "/api/approvals",
+  "/api/public/survey",
 ];
 
 function isPublicPath(pathname: string): boolean {

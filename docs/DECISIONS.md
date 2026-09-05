@@ -1,3 +1,17 @@
+## 2026-09-05 — NPS de clientes (seção 32.1): envio real de e-mail adiado por escolha do usuário; eNPS fica de fora
+
+**Contexto**: o usuário pediu explicitamente a seção 32 ("a pesquisa NPS, pode ser personalizada, cabeçalho rodapé, perguntas, etc.. enviada ao email de clientes escolhidos"), com dois requisitos concretos: personalização real (não só a pergunta 0-10 fixa) e envio por e-mail — o primeiro recurso deste projeto a pedir explicitamente disparo de e-mail de verdade.
+
+**Decisão 1 — envio real de e-mail é uma dependência externa, mesma categoria de bloqueio do R2/Asaas**: enviar e-mail de verdade exige uma conta num provedor (Resend, SendGrid, SMTP) com API key/credenciais que só o usuário pode criar — não é algo que dá pra decidir e simplesmente seguir sozinho, mesmo raciocínio já aplicado à escolha de storage (R2) e à decisão de adiar Asaas. Perguntei via `AskUserQuestion` (Resend recomendado, SMTP existente, SendGrid, ou pular por enquanto) e o usuário escolheu **pular o envio real por enquanto**.
+
+**Decisão 2 — a fatia inteira foi construída mesmo sem envio real, com um ponto de plugue isolado**: em vez de bloquear a seção 32.1 inteira esperando a escolha de provedor, "Enviar" (`POST /api/nps/campaigns/:id/send`) transiciona a campanha e gera links públicos copiáveis por destinatário (`/pesquisa/[token]`) — a agência copia e manda pelo canal que preferir (WhatsApp, e-mail manual, etc.) até um provedor ser escolhido. Essa é a única rota que precisaria mudar quando o provedor for integrado; todo o resto (campanha, personalização, cálculo do NPS, link de resposta) já está completo e não depende disso.
+
+**Decisão 3 — eNPS fica fora desta fatia, não é a mesma coisa com o rótulo trocado**: a seção 32.1 do manual já avisa que eNPS é "separado" e "acesso é restrito", com uma exigência de anonimato que não existe pro NPS de cliente ("resultado de equipe não pode expor respondente quando anonimato for prometido"). Implementar os dois com o mesmo modelo (`SurveyCampaign`/`SurveyRecipient`, que sempre sabe quem é o destinatário) seria prometer implicitamente uma privacidade que o modelo não entrega. eNPS fica pendente até haver tempo de desenhar esse requisito de anonimato de verdade.
+
+**Bug real de prioridade de mensagem, achado só ao testar o fluxo completo (não por inspeção)**: a página pública de resposta checava "campanha encerrada" antes de "você já respondeu" — um destinatário que já tinha respondido, numa campanha que depois foi encerrada, via a mensagem genérica de "pesquisa encerrada" em vez da confirmação da própria resposta dele. Corrigido invertendo a ordem das checagens.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia fechada — item de nav "NPS" que já existia como placeholder desde a Release 1B agora tem tela de verdade. `docs/ROADMAP.md` marca NPS de clientes (32.1) como ✅; eNPS, cohort (32.2) e reativação (32.3, parcialmente coberta pelo `marketingOptOut`) continuam pendentes.
+
 ## 2026-09-05 — Régua de cobrança (seção 28): estágios em faixas calculados sob demanda; nenhuma ação automática, nem suspensão
 
 **Contexto**: terceira fatia consecutiva de Fase 2 sem bloqueio externo — a régua de cobrança usa só `FinanceEntry`, que já existe desde a Fase 1. O item de nav "Cobranças" (`/financeiro/cobrancas`) já estava reservado como `comingSoon: true` desde a Release 1E, então esta fatia entra exatamente na vaga já planejada.
