@@ -13,6 +13,11 @@ import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
 import { RecalculateHealthScoreButton } from "./RecalculateHealthScoreButton";
 import { HEALTH_BAND_LABELS, HEALTH_BAND_BADGE_CLASS, bandForScore, type HealthScoreBreakdown } from "@/lib/health-score";
+import { RecalculateChurnRiskButton } from "./RecalculateChurnRiskButton";
+import { CHURN_BAND_LABELS, CHURN_BAND_BADGE_CLASS, type ChurnRiskSignals } from "@/lib/churn-risk";
+import { NewRetentionPlanModal } from "./NewRetentionPlanModal";
+import { RetentionPlanActions } from "./RetentionPlanActions";
+import { getAgencyMembers } from "@/lib/team";
 
 interface PageProps {
   params: { id: string };
@@ -50,6 +55,14 @@ export default async function ClientProfilePage({ params }: PageProps) {
     orderBy: { createdAt: "desc" },
   });
   const healthBreakdown = latestHealthScore?.breakdown as unknown as HealthScoreBreakdown | undefined;
+
+  const [latestChurnRisk, retentionPlans, teamMembersRaw] = await Promise.all([
+    prisma.churnRiskSnapshot.findFirst({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    prisma.retentionPlan.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    getAgencyMembers(membership.agencyId),
+  ]);
+  const churnSignals = latestChurnRisk?.signals as unknown as ChurnRiskSignals | undefined;
+  const teamMemberById = new Map(teamMembersRaw.map((m) => [m.userId, m.name]));
 
   const portalMembers = client.workspaceId
     ? (
@@ -102,6 +115,13 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${HEALTH_BAND_BADGE_CLASS[bandForScore(latestHealthScore.score)]}`}
               >
                 Health {latestHealthScore.score} · {HEALTH_BAND_LABELS[bandForScore(latestHealthScore.score)]}
+              </span>
+            )}
+            {latestChurnRisk && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${CHURN_BAND_BADGE_CLASS[latestChurnRisk.band]}`}
+              >
+                Risco de churn: {CHURN_BAND_LABELS[latestChurnRisk.band]}
               </span>
             )}
           </h1>
@@ -198,6 +218,105 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 </p>
               </div>
             )}
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#101828]">Risco de churn</h2>
+              <RecalculateChurnRiskButton clientId={client.id} />
+            </div>
+            {!latestChurnRisk || !churnSignals ? (
+              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em "Recalcular".</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[#98A2B3]">
+                  Calculado em {latestChurnRisk.createdAt.toLocaleString("pt-BR")} · Score {latestChurnRisk.score} ·{" "}
+                  {latestChurnRisk.modelVersion}
+                </p>
+                {(
+                  [
+                    ["Health baixo/queda recente (+25)", churnSignals.health],
+                    ["Faturas atrasadas (+20)", churnSignals.faturasAtrasadas],
+                    ["Entregas atrasadas (+15)", churnSignals.entregasAtrasadas],
+                  ] as const
+                ).map(([label, signal]) => (
+                  <div key={label} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-[#101828]">{label}</p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          signal.triggered ? "bg-[#FEE4E2] text-[#B42318]" : "bg-[#F2F4F7] text-[#475467]"
+                        }`}
+                      >
+                        {signal.triggered ? "Disparado" : "Ok"}
+                      </span>
+                    </div>
+                    {!signal.hasData ? (
+                      <p className="text-xs text-[#98A2B3]">Sem dado suficiente ainda.</p>
+                    ) : (
+                      <p className="text-xs text-[#667085]">
+                        {Object.entries(signal.details)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {churnSignals.recoveryPlanActive && (
+                  <p className="text-xs font-medium text-[#3730A3]">
+                    Plano de recuperação ativo — não somado ao score, só sinalizado como contexto.
+                  </p>
+                )}
+                <p className="text-xs text-[#98A2B3]">
+                  Sinais ainda sem dado real no sistema (não entram no cálculo): {churnSignals.pendente.join(", ")}.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#101828]">Planos de retenção</h2>
+              <NewRetentionPlanModal clientId={client.id} teamMembers={teamMembersRaw} />
+            </div>
+            <div className="flex flex-col gap-2">
+              {retentionPlans.length === 0 && <p className="text-sm text-[#98A2B3]">Nenhum plano ainda.</p>}
+              {retentionPlans.map((plan) => (
+                <div key={plan.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-[#101828]">{plan.alertReason}</p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        plan.status === "ATIVO"
+                          ? "bg-[#EEF2FF] text-[#3730A3]"
+                          : plan.status === "CONCLUIDO"
+                            ? "bg-[#DCFCE7] text-[#166534]"
+                            : "bg-[#F2F4F7] text-[#475467]"
+                      }`}
+                    >
+                      {plan.status === "ATIVO" ? "Ativo" : plan.status === "CONCLUIDO" ? "Concluído" : "Cancelado"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#667085]">Diagnóstico: {plan.diagnosis}</p>
+                  <p className="text-xs text-[#667085]">
+                    Responsável: {teamMemberById.get(plan.responsibleUserId) ?? "—"} · Plano: {plan.planDescription}
+                  </p>
+                  {(plan.meetingDate || plan.reassessDate) && (
+                    <p className="text-xs text-[#98A2B3]">
+                      {plan.meetingDate ? `Reunião: ${plan.meetingDate.toLocaleDateString("pt-BR")}` : ""}
+                      {plan.meetingDate && plan.reassessDate ? " · " : ""}
+                      {plan.reassessDate ? `Reavaliação: ${plan.reassessDate.toLocaleDateString("pt-BR")}` : ""}
+                    </p>
+                  )}
+                  {plan.result && <p className="text-xs text-[#667085]">Resultado: {plan.result}</p>}
+                  {plan.status === "ATIVO" && (
+                    <div className="mt-2">
+                      <RetentionPlanActions planId={plan.id} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </section>
 
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

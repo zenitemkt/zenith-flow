@@ -131,6 +131,8 @@ model Agency {
   financeEntries       FinanceEntry[]
   mediaAssets          MediaAsset[]
   healthScoreSnapshots HealthScoreSnapshot[]
+  churnRiskSnapshots   ChurnRiskSnapshot[]
+  retentionPlans       RetentionPlan[]
 
   @@map("agency")
 }
@@ -239,6 +241,8 @@ model Client {
   financeEntries       FinanceEntry[]
   mediaAssets          MediaAsset[]
   healthScoreSnapshots HealthScoreSnapshot[]
+  churnRiskSnapshots   ChurnRiskSnapshot[]
+  retentionPlans       RetentionPlan[]
 
   @@index([agencyId])
   @@map("client")
@@ -1228,4 +1232,87 @@ model HealthScoreSnapshot {
   @@index([agencyId])
   @@index([clientId])
   @@map("health_score_snapshot")
+}
+
+// ---------------------------------------------------------------------------
+// Risco de churn — Fase 2, parte 2 (seção 31 do manual)
+// ---------------------------------------------------------------------------
+
+enum ChurnRiskBand {
+  BAIXO
+  MEDIO
+  ALTO
+}
+
+/// Foto do cálculo de risco de churn — mesmo padrão append-only do
+/// HealthScoreSnapshot. Diferente do Health Score (média ponderada), o manual
+/// descreve um modelo aditivo de sinais explicáveis (seção 31: "regras
+/// explicáveis; modelo estatístico/ML só depois de volume suficiente") — cada
+/// sinal disparado soma pontos fixos, sem normalização.
+model ChurnRiskSnapshot {
+  id               String        @id @default(cuid())
+  agencyId         String
+  agency           Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  score            Int
+  band             ChurnRiskBand
+  modelVersion     String
+  signals          Json
+  computedByUserId String?
+  createdAt        DateTime      @default(now())
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("churn_risk_snapshot")
+}
+
+enum RetentionPlanStatus {
+  ATIVO
+  CONCLUIDO
+  CANCELADO
+}
+
+/// Playbook de retenção (seção 31.1): "toda recomendação precisa de
+/// responsável, prazo, próxima revisão e resultado". `responsibleUserId` e
+/// `createdByUserId` são Strings simples sem relation formal ao User — mesmo
+/// padrão já usado em `Task.assigneeUserId`.
+model RetentionPlan {
+  id                String               @id @default(cuid())
+  agencyId          String
+  agency            Agency               @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId          String
+  client            Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  alertReason       String
+  diagnosis         String
+  responsibleUserId String
+  planDescription   String
+  meetingDate       DateTime?
+  reassessDate      DateTime?
+  status            RetentionPlanStatus  @default(ATIVO)
+  result            String?
+  createdByUserId   String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  statusHistory RetentionPlanStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("retention_plan")
+}
+
+/// Append-only — reavaliação/conclusão do plano nunca apaga o histórico.
+model RetentionPlanStatusHistory {
+  id          String               @id @default(cuid())
+  planId      String
+  plan        RetentionPlan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  fromStatus  RetentionPlanStatus?
+  toStatus    RetentionPlanStatus
+  note        String?
+  actorUserId String?
+  createdAt   DateTime             @default(now())
+
+  @@index([planId])
+  @@map("retention_plan_status_history")
 }

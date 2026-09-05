@@ -40,6 +40,7 @@ export const navigationGroups: NavigationGroup[] = [
         comingSoon: false,
         children: [
           { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
+          { id: "clients-risk", label: "Risco de churn", href: "/clientes/risco", comingSoon: false },
           { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: true },
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
           { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },

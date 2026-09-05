@@ -1,3 +1,17 @@
+## 2026-09-05 — Risco de churn (seção 31): modelo aditivo de sinais, não média ponderada; plano de recuperação não soma ao score
+
+**Contexto**: com o Health Score (seção 30) fechado, a seção 31 (Risco de churn) ficou desbloqueada — é o primeiro módulo de Fase 2 que depende diretamente de outro módulo de Fase 2, não só de dado da Fase 1.
+
+**Decisão 1 — modelo aditivo, fiel ao texto do manual, não reaproveitar o padrão de média ponderada do Health Score**: a seção 31 descreve uma tabela "Sinal / Exemplo de peso" onde cada sinal disparado soma pontos fixos (Health baixo +25, faturas atrasadas +20, entregas atrasadas +15...), bem diferente da média ponderada por dimensão do Health Score. Copiar o padrão do Health Score aqui seria inventar uma mecânica que o manual não pede — implementei literalmente como soma de sinais, sem normalizar para 0-100.
+
+**Decisão 2 — só 3 dos 6 sinais entram no cálculo, mesmo critério do Health Score**: "Health < 55 ou queda > 15 pontos em 30 dias" (usa `HealthScoreSnapshot`, que já existe), "duas ou mais faturas atrasadas em 90 dias" (usa `FinanceEntry`) e "três entregas atrasadas" (usa `Task`) têm dado real hoje. Os outros 3 (contrato termina em ≤45 dias sem renovação, NPS detrator, ausência de reunião/resposta no prazo) dependem de módulos que não existem — contrato como entidade própria (decisão já tomada de não modelar), NPS (seção 32, ainda não construída) e SLA/registro de atendimento (não existe). Ficam listados como "pendente" no breakdown, mesmo tratamento dado às 4 dimensões pendentes do Health Score.
+
+**Decisão 3 — bandas de risco são uma escolha nossa, documentada, não do manual**: a seção 31 não define cortes numéricos de "baixo/médio/alto", só os pesos de cada sinal. Com os 3 sinais implementados, o score máximo possível é 60 (25+20+15). Defini 0-24 Baixo, 25-44 Médio, 45+ Alto — "Alto" só é alcançável com pelo menos dois sinais fortes disparados simultaneamente, o que é coerente com a ideia de "alto risco" real, não um limiar arbitrário baixo demais.
+
+**Decisão 4 — "plano de recuperação ativo: não somar; sinalizar contexto" é regra literal do manual, implementada ao pé da letra**: um cliente com um `RetentionPlan` `ATIVO` não tem esse fato somado ao score de churn — ele só aparece como um aviso à parte (`recoveryPlanActive: true`) no breakdown. A lógica por trás (que o manual não explica, mas é a leitura óbvia): já existe uma ação humana em andamento, então o score não deveria parecer "resolvido" artificialmente nem "pior" por já estar sob intervenção — é só contexto para quem está lendo.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia fechada com o playbook de retenção (seção 31.1) incluído — responsável, plano, datas de reunião/reavaliação e resultado obrigatório para concluir. `docs/ROADMAP.md` marca risco de churn como ✅ na Fase 2.
+
 ## 2026-09-05 — Health Score entra a Fase 2 antes de Asaas; 3 de 7 dimensões, score neutro por falta de dado, e um bug real de fuso/data pego só por teste visual
 
 **Contexto**: fechada a Fase 1 (Home v2, Financeiro, Arquivos/Biblioteca), a próxima etapa é a Fase 2 do manual (seções 26-33: custo/margem, Asaas, régua de cobrança, indicadores financeiros, Health Score, risco de churn, NPS/eNPS/cohort). Extraí o texto das seções 26-33 do PDF (via `pdf-parse`, já que `poppler-utils` continua indisponível neste ambiente) para decidir por onde começar.
