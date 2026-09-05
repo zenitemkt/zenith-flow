@@ -1,3 +1,17 @@
+## 2026-09-05 — DRE gerencial (seção 26.2): retomando a Fase 2 — o bloqueio não era MRR, era falta de "natureza" na categoria
+
+**Contexto**: com a seção 39 fechada (Leads/Pipeline/Propostas), voltei à Fase 2 pra ver se algo do Financeiro avançado, além dos indicadores dependentes de MRR já documentados como bloqueados, era alcançável. O DRE (seção 26.2) parecia à primeira vista mais um item preso ao mesmo bloqueio de "receita recorrente" — não é. Reli a seção 26.1 com atenção e o bloqueio real era outro: "categorias suportam... natureza: receita, custo direto, despesa operacional, imposto, investimento e transferência" — essa segunda dimensão simplesmente não existia no schema. `FinanceCategory` só tinha `type` (RECEITA/DESPESA), insuficiente pra montar a cascata do DRE (que distingue imposto de despesa operacional, por exemplo, mesmo os dois sendo `type: DESPESA`).
+
+**Decisão 1 — `nature` é uma coluna nova em `FinanceCategory`, não um campo em `FinanceEntry`**: a natureza é uma propriedade da categoria (ex.: "Impostos sobre serviço" é sempre `IMPOSTO_DEDUCAO`), não de cada lançamento individual — colocar em `FinanceEntry` obrigaria escolher a natureza toda vez que alguém lança uma despesa, girando decisão contábil repetida onde uma escolha só (na categoria) já resolve pra sempre.
+
+**Decisão 2 — migração com backfill, não só um default genérico**: adicionar uma coluna obrigatória nova exige um valor pras linhas existentes. Usei `DESPESA_OPERACIONAL` como default de schema (a suposição mais neutra), mas isso deixaria toda categoria de RECEITA já cadastrada com natureza errada — corrigi com um `UPDATE` explícito na própria migration (`WHERE type = 'RECEITA'`), não deixando esse ajuste pra depois.
+
+**Decisão 3 — lançamento sem categoria usa o tipo como aproximação, em vez de sumir do relatório**: nem todo lançamento tem categoria (é opcional desde a Release 1E). Excluir esses lançamentos do DRE citaria números menores que a realidade, sem nenhum aviso — mais perigoso que uma aproximação honesta. Caiu no mesmo padrão de "falta de sinal não é sinal ruim" já usado no Health Score: Receita sem categoria vira receita bruta, Despesa sem categoria vira despesa operacional, documentado na tela.
+
+**Decisão 4 — investimento e transferência ficam de fora do resultado, seguindo literalmente a seção 33**: o critério de aceite da Fase 2 já dizia "transferência não altera DRE" — implementei isso ao pé da letra (nenhuma das duas naturezas entra em nenhuma linha da cascata), testado de propósito com um lançamento de investimento de R$5.000 que não move o resultado final em nada.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia. `docs/ROADMAP.md` marca DRE como ✅ dentro da Fase 2 — junto com Health Score, Risco de churn, Régua de cobrança, NPS/eNPS/Cohort/Reativações e DSO/Logo churn, a Fase 2 fica só com MRR (bloqueado) e Asaas (bloqueado por conta externa) pendentes.
+
 ## 2026-09-05 — Propostas (seção 39, parte 3): fecha a seção; "expirada" cobre os dois casos (por data e manual)
 
 **Contexto**: com Leads e Pipeline fechados, Proposal era a última peça faltando pra fechar a seção 39 inteira do manual — "Lead 360 reúne... oportunidades e comunicações" já cobria lead+pipeline; propostas fecham o ciclo comercial completo até a decisão do cliente.

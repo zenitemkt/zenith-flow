@@ -1,10 +1,31 @@
-import type { FinanceEntryType, FinanceEntryStatus } from "@zenith/db";
+import type { FinanceEntryType, FinanceEntryStatus, FinanceCategoryNature } from "@zenith/db";
 import { isPastDueDate } from "./dates";
 
 export const FINANCE_TYPE_LABELS: Record<FinanceEntryType, string> = {
   RECEITA: "Receita",
   DESPESA: "Despesa",
 };
+
+/** Seção 26.1: natureza da categoria (não o tipo) decide a linha do DRE. */
+export const FINANCE_CATEGORY_NATURE_LABELS: Record<FinanceCategoryNature, string> = {
+  RECEITA: "Receita",
+  IMPOSTO_DEDUCAO: "Imposto/dedução (reduz a receita bruta)",
+  CUSTO_DIRETO: "Custo direto de entrega",
+  DESPESA_OPERACIONAL: "Despesa operacional",
+  DESPESA_FINANCEIRA: "Despesa financeira",
+  INVESTIMENTO: "Investimento (fora do DRE)",
+  TRANSFERENCIA: "Transferência (não altera o DRE)",
+};
+
+/** Naturezas válidas quando o lançamento é DESPESA — RECEITA nunca aparece aqui, é sempre automática pra categorias de receita. */
+export const DESPESA_CATEGORY_NATURES: FinanceCategoryNature[] = [
+  "CUSTO_DIRETO",
+  "DESPESA_OPERACIONAL",
+  "DESPESA_FINANCEIRA",
+  "IMPOSTO_DEDUCAO",
+  "INVESTIMENTO",
+  "TRANSFERENCIA",
+];
 
 /** LIQUIDADO muda de rótulo conforme o tipo — "recebido" pra receita, "pago" pra despesa. */
 export const FINANCE_STATUS_LABELS: Record<FinanceEntryType, Record<FinanceEntryStatus, string>> = {

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { reaisToCents } from "@/lib/finance";
-import { prisma, type FinanceEntryType } from "@zenith/db";
+import { reaisToCents, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
+import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenith/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
   const dueDate = new Date(body?.dueDate);
   const categoryId = optionalString(body?.categoryId);
   const categoryName = optionalString(body?.categoryName);
+  const categoryNatureRaw = body?.categoryNature as FinanceCategoryNature | undefined;
   const clientId = optionalString(body?.clientId);
   const projectId = optionalString(body?.projectId);
 
@@ -65,9 +66,15 @@ export async function POST(request: Request) {
   const entry = await prisma.$transaction(async (tx) => {
     let finalCategoryId = categoryId;
     if (!finalCategoryId && categoryName) {
+      const nature: FinanceCategoryNature =
+        type === "RECEITA"
+          ? "RECEITA"
+          : categoryNatureRaw && DESPESA_CATEGORY_NATURES.includes(categoryNatureRaw)
+            ? categoryNatureRaw
+            : "DESPESA_OPERACIONAL";
       const category = await tx.financeCategory.upsert({
         where: { agencyId_name_type: { agencyId: membership.agencyId, name: categoryName, type } },
-        create: { agencyId: membership.agencyId, name: categoryName, type },
+        create: { agencyId: membership.agencyId, name: categoryName, type, nature },
         update: {},
       });
       finalCategoryId = category.id;

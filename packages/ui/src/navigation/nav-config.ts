@@ -117,7 +117,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "finance-receivables", label: "Contas a receber", href: "/financeiro/receber", comingSoon: false },
           { id: "finance-payables", label: "Contas a pagar", href: "/financeiro/pagar", comingSoon: false },
           { id: "finance-billing", label: "Cobranças", href: "/financeiro/cobrancas", comingSoon: false },
-          { id: "finance-dre", label: "DRE", href: "/financeiro/dre", comingSoon: true },
+          { id: "finance-dre", label: "DRE", href: "/financeiro/dre", comingSoon: false },
           { id: "finance-cashflow", label: "Fluxo de caixa", href: "/financeiro/caixa", comingSoon: false },
           { id: "finance-indicators", label: "Indicadores", href: "/financeiro/indicadores", comingSoon: false },
         ],

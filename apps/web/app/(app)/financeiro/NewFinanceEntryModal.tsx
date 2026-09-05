@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenith/ui";
 import { FormField } from "@/app/_components/FormField";
-import type { FinanceEntryType } from "@zenith/db";
+import { FINANCE_CATEGORY_NATURE_LABELS, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
+import type { FinanceEntryType, FinanceCategoryNature } from "@zenith/db";
 
 interface Option {
   id: string;
@@ -32,6 +33,7 @@ export function NewFinanceEntryModal({
   const [dueDate, setDueDate] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryNature, setNewCategoryNature] = useState<FinanceCategoryNature>("DESPESA_OPERACIONAL");
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export function NewFinanceEntryModal({
     setDueDate("");
     setCategoryId("");
     setNewCategoryName("");
+    setNewCategoryNature("DESPESA_OPERACIONAL");
     setClientId("");
     setProjectId("");
     setError(null);
@@ -67,6 +70,7 @@ export function NewFinanceEntryModal({
         dueDate,
         categoryId: categoryId && categoryId !== NEW_CATEGORY ? categoryId : null,
         categoryName: categoryId === NEW_CATEGORY ? newCategoryName : null,
+        categoryNature: categoryId === NEW_CATEGORY && type === "DESPESA" ? newCategoryNature : null,
         clientId: clientId || null,
         projectId: projectId || null,
       }),
@@ -158,6 +162,20 @@ export function NewFinanceEntryModal({
                 placeholder="Nome da categoria"
                 className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
               />
+            )}
+            {categoryId === NEW_CATEGORY && type === "DESPESA" && (
+              <select
+                aria-label="Natureza da nova categoria"
+                value={newCategoryNature}
+                onChange={(e) => setNewCategoryNature(e.target.value as FinanceCategoryNature)}
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              >
+                {DESPESA_CATEGORY_NATURES.map((nature) => (
+                  <option key={nature} value={nature}>
+                    {FINANCE_CATEGORY_NATURE_LABELS[nature]}
+                  </option>
+                ))}
+              </select>
             )}
           </div>
 

@@ -1116,6 +1116,22 @@ enum FinanceEntryType {
   DESPESA
 }
 
+/// Seção 26.1: "categorias suportam hierarquia e natureza: receita, custo
+/// direto, despesa operacional, imposto, investimento e transferência." É a
+/// natureza (não o `FinanceEntryType`) que decide em qual linha do DRE
+/// (seção 26.2) um lançamento entra — ex.: um imposto é tecnicamente uma
+/// DESPESA, mas por natureza reduz a receita bruta, não é "despesa
+/// operacional".
+enum FinanceCategoryNature {
+  RECEITA
+  IMPOSTO_DEDUCAO
+  CUSTO_DIRETO
+  DESPESA_OPERACIONAL
+  DESPESA_FINANCEIRA
+  INVESTIMENTO
+  TRANSFERENCIA
+}
+
 /// Seção 22: "previsto -> pendente -> pago/recebido -> vencido -> cancelado".
 /// LIQUIDADO cobre tanto "pago" (DESPESA) quanto "recebido" (RECEITA) — o
 /// rótulo na UI muda conforme FinanceEntryType, mesmo padrão já usado em
@@ -1129,12 +1145,13 @@ enum FinanceEntryStatus {
 }
 
 model FinanceCategory {
-  id        String           @id @default(cuid())
+  id        String                @id @default(cuid())
   agencyId  String
-  agency    Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency    Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name      String
   type      FinanceEntryType
-  createdAt DateTime         @default(now())
+  nature    FinanceCategoryNature @default(DESPESA_OPERACIONAL)
+  createdAt DateTime              @default(now())
 
   entries FinanceEntry[]
 
