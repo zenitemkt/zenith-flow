@@ -11,6 +11,8 @@ import { EditClientButton } from "./EditClientButton";
 import { ClientPortalSection } from "./ClientPortalSection";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
+import { RecalculateHealthScoreButton } from "./RecalculateHealthScoreButton";
+import { HEALTH_BAND_LABELS, HEALTH_BAND_BADGE_CLASS, bandForScore, type HealthScoreBreakdown } from "@/lib/health-score";
 
 interface PageProps {
   params: { id: string };
@@ -42,6 +44,12 @@ export default async function ClientProfilePage({ params }: PageProps) {
   if (!client || client.agencyId !== membership.agencyId) {
     notFound();
   }
+
+  const latestHealthScore = await prisma.healthScoreSnapshot.findFirst({
+    where: { clientId: client.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const healthBreakdown = latestHealthScore?.breakdown as unknown as HealthScoreBreakdown | undefined;
 
   const portalMembers = client.workspaceId
     ? (
@@ -87,7 +95,16 @@ export default async function ClientProfilePage({ params }: PageProps) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-[#101828]">{client.name}</h1>
+          <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">
+            {client.name}
+            {latestHealthScore && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${HEALTH_BAND_BADGE_CLASS[bandForScore(latestHealthScore.score)]}`}
+              >
+                Health {latestHealthScore.score} · {HEALTH_BAND_LABELS[bandForScore(latestHealthScore.score)]}
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-[#667085]">
             {client.document ?? "Sem CNPJ cadastrado"} · {CLIENT_STATUS_LABELS[client.status]}
           </p>
@@ -138,6 +155,51 @@ export default async function ClientProfilePage({ params }: PageProps) {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#101828]">Health Score</h2>
+              <RecalculateHealthScoreButton clientId={client.id} />
+            </div>
+            {!latestHealthScore || !healthBreakdown ? (
+              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em "Recalcular".</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-[#98A2B3]">
+                  Calculado em {latestHealthScore.createdAt.toLocaleString("pt-BR")} ·{" "}
+                  {latestHealthScore.modelVersion}
+                </p>
+                {(
+                  [
+                    ["Financeiro", healthBreakdown.financeiro],
+                    ["Entregas", healthBreakdown.entregas],
+                    ["Aprovações", healthBreakdown.aprovacoes],
+                  ] as const
+                ).map(([label, dim]) => (
+                  <div key={label} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-[#101828]">{label}</p>
+                      <p className="text-sm font-semibold text-[#101828]">
+                        {dim.score} <span className="text-xs font-normal text-[#98A2B3]">({Math.round(dim.weight * 100)}%)</span>
+                      </p>
+                    </div>
+                    {!dim.hasData ? (
+                      <p className="text-xs text-[#98A2B3]">Sem dado suficiente ainda — usando neutro.</p>
+                    ) : (
+                      <p className="text-xs text-[#667085]">
+                        {Object.entries(dim.signals)
+                          .map(([k, v]) => `${k}: ${v}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <p className="text-xs text-[#98A2B3]">
+                  Dimensões ainda sem dado real no sistema (não entram no cálculo): {healthBreakdown.pendente.join(", ")}.
+                </p>
+              </div>
+            )}
+          </section>
+
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-[#101828]">Contatos</h2>
             <div className="flex flex-col gap-2">

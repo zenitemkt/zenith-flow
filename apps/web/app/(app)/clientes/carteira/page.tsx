@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS } from "@/lib/clients";
+import { HEALTH_BAND_BADGE_CLASS, bandForScore } from "@/lib/health-score";
 import { prisma } from "@zenith/db";
 import { NewClientForm } from "./NewClientForm";
 
@@ -21,11 +22,25 @@ export default async function CarteiraPage() {
     redirect("/login");
   }
 
-  const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId },
-    include: { contacts: { where: { isPrimary: true }, take: 1 } },
-    orderBy: { createdAt: "desc" },
-  });
+  const [clients, healthSnapshots] = await Promise.all([
+    prisma.client.findMany({
+      where: { agencyId: membership.agencyId },
+      include: { contacts: { where: { isPrimary: true }, take: 1 } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.healthScoreSnapshot.findMany({
+      where: { agencyId: membership.agencyId },
+      orderBy: { createdAt: "desc" },
+      select: { clientId: true, score: true },
+    }),
+  ]);
+
+  const latestScoreByClientId = new Map<string, number>();
+  for (const snapshot of healthSnapshots) {
+    if (!latestScoreByClientId.has(snapshot.clientId)) {
+      latestScoreByClientId.set(snapshot.clientId, snapshot.score);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,35 +67,50 @@ export default async function CarteiraPage() {
               <tr>
                 <th className="px-4 py-3">Cliente</th>
                 <th className="px-4 py-3">Contato principal</th>
+                <th className="px-4 py-3">Health</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
             <tbody>
-              {clients.map((client) => (
-                <tr key={client.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/clientes/${client.id}`}
-                      className="font-medium text-[#101828] hover:text-[#6847F5]"
-                    >
-                      {client.name}
-                    </Link>
-                    {client.document && (
-                      <span className="ml-2 text-xs text-[#98A2B3]">{client.document}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-[#475467]">
-                    {client.contacts[0]?.name ?? <span className="text-[#98A2B3]">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[client.status]}`}
-                    >
-                      {CLIENT_STATUS_LABELS[client.status]}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {clients.map((client) => {
+                const score = latestScoreByClientId.get(client.id);
+                return (
+                  <tr key={client.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/clientes/${client.id}`}
+                        className="font-medium text-[#101828] hover:text-[#6847F5]"
+                      >
+                        {client.name}
+                      </Link>
+                      {client.document && (
+                        <span className="ml-2 text-xs text-[#98A2B3]">{client.document}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[#475467]">
+                      {client.contacts[0]?.name ?? <span className="text-[#98A2B3]">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {score === undefined ? (
+                        <span className="text-xs text-[#98A2B3]">Não calculado</span>
+                      ) : (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${HEALTH_BAND_BADGE_CLASS[bandForScore(score)]}`}
+                        >
+                          {score}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[client.status]}`}
+                      >
+                        {CLIENT_STATUS_LABELS[client.status]}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

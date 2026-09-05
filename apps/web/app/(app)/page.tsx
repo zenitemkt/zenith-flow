@@ -5,6 +5,8 @@ import { currentPeriod } from "@/lib/routines";
 import { startOfWeekUTC } from "@/lib/timesheets";
 import { WORK_ITEM_STATUS_LABELS } from "@/lib/tasks";
 import { formatCents } from "@/lib/finance";
+import { bandForScore } from "@/lib/health-score";
+import { startOfDayUTC } from "@/lib/dates";
 import { prisma } from "@zenith/db";
 
 const MONTH_LABELS_SHORT = [
@@ -31,6 +33,7 @@ export default async function HomePage() {
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const sixMonthsAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+  const todayStart = startOfDayUTC(now);
 
   const [
     activeRoutines,
@@ -48,6 +51,7 @@ export default async function HomePage() {
     recebidoMesAgg,
     pagoMesAgg,
     revenueEntries,
+    latestHealthSnapshots,
   ] = await Promise.all([
     prisma.routineTemplate.findMany({
       where: { agencyId: membership.agencyId, status: "ATIVO" },
@@ -56,7 +60,7 @@ export default async function HomePage() {
     prisma.task.count({
       where: {
         project: { agencyId: membership.agencyId },
-        dueDate: { lt: now },
+        dueDate: { lt: todayStart },
         status: { notIn: ["CONCLUIDA", "CANCELADA"] },
       },
     }),
@@ -68,7 +72,7 @@ export default async function HomePage() {
     prisma.financeEntry.count({
       where: {
         agencyId: membership.agencyId,
-        OR: [{ status: "VENCIDO" }, { status: "PENDENTE", dueDate: { lt: now } }],
+        OR: [{ status: "VENCIDO" }, { status: "PENDENTE", dueDate: { lt: todayStart } }],
       },
     }),
     prisma.task.findMany({
@@ -136,7 +140,22 @@ export default async function HomePage() {
       },
       select: { settledDate: true, amountCents: true },
     }),
+    prisma.healthScoreSnapshot.findMany({
+      where: { agencyId: membership.agencyId },
+      orderBy: { createdAt: "desc" },
+      select: { clientId: true, score: true },
+    }),
   ]);
+
+  const latestScoreByClientId = new Map<string, number>();
+  for (const snapshot of latestHealthSnapshots) {
+    if (!latestScoreByClientId.has(snapshot.clientId)) {
+      latestScoreByClientId.set(snapshot.clientId, snapshot.score);
+    }
+  }
+  const clientsAtRiskCount = Array.from(latestScoreByClientId.values()).filter(
+    (score) => bandForScore(score) === "ALTO_RISCO",
+  ).length;
 
   const aReceberAberto = aReceberAgg._sum.amountCents ?? 0;
   const aPagarAberto = aPagarAgg._sum.amountCents ?? 0;
@@ -169,6 +188,7 @@ export default async function HomePage() {
     { label: "demanda(s) nova(s) aguardando triagem", count: newRequestsCount, href: "/operacao/demandas" },
     { label: "férias/ausência(s) aguardando decisão", count: pendingLeavesCount, href: "/pessoas/ferias" },
     { label: "fatura(s) vencida(s)", count: overdueInvoicesCount, href: "/financeiro/visao-geral" },
+    { label: "cliente(s) em alto risco (Health Score)", count: clientsAtRiskCount, href: "/clientes/carteira" },
   ];
 
   // Últimas 6 semanas, cada bucket é a segunda-feira daquela semana.
@@ -260,7 +280,7 @@ export default async function HomePage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {attentionCards.map((card) => (
           <Link
             key={card.href}

@@ -1,4 +1,5 @@
 import type { FinanceEntryType, FinanceEntryStatus } from "@zenith/db";
+import { isPastDueDate } from "./dates";
 
 export const FINANCE_TYPE_LABELS: Record<FinanceEntryType, string> = {
   RECEITA: "Receita",
@@ -56,5 +57,5 @@ export function reaisToCents(value: number): number {
 }
 
 export function isOverdue(entry: { status: FinanceEntryStatus; dueDate: Date }): boolean {
-  return entry.status === "PENDENTE" && entry.dueDate.getTime() < Date.now();
+  return entry.status === "PENDENTE" && isPastDueDate(entry.dueDate);
 }

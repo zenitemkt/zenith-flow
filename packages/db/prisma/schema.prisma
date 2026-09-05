@@ -111,25 +111,26 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces          Workspace[]
-  memberships         Membership[]
-  auditLogs           AuditLog[]
-  clients             Client[]
-  onboardingTemplates OnboardingTemplate[]
-  requests            Request[]
-  projects            Project[]
-  routineTemplates    RoutineTemplate[]
-  squads              Squad[]
-  vendors             Vendor[]
-  contentItems        ContentItem[]
-  commentThreads      CommentThread[]
-  employees           Employee[]
-  leaveRequests       LeaveRequest[]
-  timesheets          Timesheet[]
-  timeEntries         TimeEntry[]
-  financeCategories   FinanceCategory[]
-  financeEntries      FinanceEntry[]
-  mediaAssets         MediaAsset[]
+  workspaces           Workspace[]
+  memberships          Membership[]
+  auditLogs            AuditLog[]
+  clients              Client[]
+  onboardingTemplates  OnboardingTemplate[]
+  requests             Request[]
+  projects             Project[]
+  routineTemplates     RoutineTemplate[]
+  squads               Squad[]
+  vendors              Vendor[]
+  contentItems         ContentItem[]
+  commentThreads       CommentThread[]
+  employees            Employee[]
+  leaveRequests        LeaveRequest[]
+  timesheets           Timesheet[]
+  timeEntries          TimeEntry[]
+  financeCategories    FinanceCategory[]
+  financeEntries       FinanceEntry[]
+  mediaAssets          MediaAsset[]
+  healthScoreSnapshots HealthScoreSnapshot[]
 
   @@map("agency")
 }
@@ -226,17 +227,18 @@ model Client {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  contacts         ClientContact[]
-  statusHistory    ClientStatusHistory[]
-  notes            ClientNote[]
-  onboardingRuns   OnboardingRun[]
-  requests         Request[]
-  projects         Project[]
-  routineTemplates RoutineTemplate[]
-  allocations      ClientAllocation[]
-  contentItems     ContentItem[]
-  financeEntries   FinanceEntry[]
-  mediaAssets      MediaAsset[]
+  contacts             ClientContact[]
+  statusHistory        ClientStatusHistory[]
+  notes                ClientNote[]
+  onboardingRuns       OnboardingRun[]
+  requests             Request[]
+  projects             Project[]
+  routineTemplates     RoutineTemplate[]
+  allocations          ClientAllocation[]
+  contentItems         ContentItem[]
+  financeEntries       FinanceEntry[]
+  mediaAssets          MediaAsset[]
+  healthScoreSnapshots HealthScoreSnapshot[]
 
   @@index([agencyId])
   @@map("client")
@@ -1199,4 +1201,31 @@ model MediaAsset {
   @@index([agencyId])
   @@index([clientId])
   @@map("media_asset")
+}
+
+// ---------------------------------------------------------------------------
+// Health Score — Fase 2, parte 1 (seção 30 do manual)
+// ---------------------------------------------------------------------------
+
+/// Foto do cálculo do Health Score num momento — nunca sobrescrita, sempre uma
+/// linha nova (seção 30.2: "guardar score total, dimensões, sinais, pesos,
+/// versão do modelo, data e explicação" — histórico é o próprio requisito).
+/// `breakdown` é JSON em vez de tabela normalizada (`health_factors` do
+/// manual): nesta fatia ninguém precisa consultar fatores individuais entre
+/// clientes, só exibir o "porquê" de um score específico — ver DATA_MODEL.md.
+model HealthScoreSnapshot {
+  id               String   @id @default(cuid())
+  agencyId         String
+  agency           Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  score            Int
+  modelVersion     String
+  breakdown        Json
+  computedByUserId String?
+  createdAt        DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("health_score_snapshot")
 }
