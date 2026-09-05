@@ -104,6 +104,22 @@ Implementa a seção 32.1 do manual (a parte de eNPS deixada de fora da fatia de
 - **Limite honesto do anonimato, documentado e não escondido**: numa campanha com pouquíssimos respondentes (ex.: 2 de 10 convidados responderam), ainda é tecnicamente possível inferir quem respondeu por correlação de horário entre `EnpsInvite.respondedAt` e `EnpsResponse.createdAt` — a mesma limitação de qualquer pesquisa "anônima" do mundo real com N pequeno. O schema garante que **a identidade nunca é armazenada**, não que a anonimato estatístico é perfeito contra esse tipo de inferência.
 - **Acesso restrito via RBAC, não via schema**: diferente do anonimato (que é estrutural), "acesso é restrito" é uma regra de aplicação (`canViewEnps()` em `lib/rbac.ts`, checada em toda rota e página) — `SUPER_ADMIN`/`AGENCY_ADMIN`/`HR` apenas. Um Gestor ou Analista não vê `/pessoas/enps` nem consegue chamar as rotas de API diretamente.
 - **Reaproveita a fórmula do NPS de clientes** (`computeNpsBreakdown` de `lib/nps.ts`, reexportada como `computeEnpsBreakdown` em `lib/enps.ts`) — mesma matemática (% promotores − % detratores), sem duplicar código só porque o público é diferente.
+
+## Cohort — sem tabela nova, tudo derivado
+
+Implementa a seção 32.2 do manual:
+
+- **Nenhum modelo novo**: cohort é 100% derivado de `Client`, `ClientStatusHistory` (pra saber o mês de ativação e se/quando foi encerrado) e `FinanceEntry` (receita liquidada por mês) — calculado sob demanda em `apps/web/lib/cohort.ts`, nunca persistido. Diferente de `HealthScoreSnapshot`/`ChurnRiskSnapshot`/`NpsSnapshot` (que fazem sentido persistir porque representam uma decisão/cálculo pontual auditável no tempo), um cohort é só uma reagregação dos mesmos dados brutos — persistir traria o risco de ficar desatualizado sem ninguém perceber.
+- **A lógica assume histórico de status estritamente cronológico** (`ClientStatusHistory.createdAt` sempre crescente por cliente, nunca editado) — é uma garantia real do sistema em produção (`createdAt` é `@default(now())`, nunca há rota que o edite), então o cálculo de "qual era o status do cliente num mês de referência" (`statusAsOf` em `lib/cohort.ts`) pode confiar em iterar em ordem e pegar o último evento até aquele ponto. Isso só quebraria se algo backdatasse uma linha de histórico manualmente — o que não existe em nenhuma rota do produto (só aconteceu de propósito no smoke test, pra simular múltiplos meses sem esperar meses de verdade).
+- **Só a dimensão "mês de início" está implementada** — "canal" e "produto" (também citados na seção 32.2) não têm campo nenhum no schema hoje; "squad" existe (`ClientAllocation`) mas uma segunda dimensão de agrupamento fica pra quando houver um caso de uso real pedindo, mesma régua pragmática do Health Score.
+
+## Reativações — `Client.competitorName`, `Client.reactivationEligible`
+
+Implementa a seção 32.3 do manual:
+
+- **Só dois campos novos, direto em `Client`, sem tabela própria**: `competitorName` (opcional) e `reactivationEligible` (boolean, default `true`) — não precisam de histórico próprio (diferente de status, que já tem `ClientStatusHistory`), então viraram colunas simples, mesmo padrão pragmático de `ClientContact.marketingOptOut`.
+- **"Motivo" e "última nota" não precisaram de nada novo**: motivo já é `ClientStatusHistory.reason` (capturado obrigatoriamente na transição pra `EM_ENCERRAMENTO`, não em `ENCERRADO`); última nota é só a `ClientNote` mais recente do cliente. Reaproveitar dado que já existe em vez de duplicá-lo em campos novos.
+- **"MRR perdido" foi deliberadamente deixado de fora**: mesmo bloqueio da seção 29 (indicadores financeiros) — sem um modelo de receita recorrente/contrato, não há "MRR" real pra perder, só uma aproximação inventada a partir de lançamentos avulsos.
 - **`Task.assigneeUserId` já existia no schema desde a Release 1C parte 2** (Projetos/Tarefas), só não tinha UI. Reatribuição não tem tabela de histórico própria — usa o `AuditLog` genérico (`task.reassigned`), consistente com como outras mutações menores já são auditadas no projeto.
 - **Só squad principal por cliente**: o manual permite "squad principal e especialistas" (pessoas avulsas além do squad). Modelamos só o principal (`ClientAllocation.squadId`); especialistas individuais ficam para quando houver caso real.
 

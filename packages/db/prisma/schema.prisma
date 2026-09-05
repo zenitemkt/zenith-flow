@@ -230,6 +230,11 @@ model Client {
   phone       String?
   whatsapp    String?
   status      ClientStatus @default(PROSPECT)
+  /// Seção 32.3: "clientes encerrados mantêm motivo [já em ClientStatusHistory.reason],
+  /// concorrente quando informado... elegibilidade." MRR perdido fica de fora —
+  /// não há modelo de receita recorrente ainda (mesmo bloqueio da seção 29).
+  competitorName        String?
+  reactivationEligible  Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

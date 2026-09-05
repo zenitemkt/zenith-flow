@@ -45,7 +45,8 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
           { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
           { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
-          { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: true },
+          { id: "clients-cohort", label: "Cohort", href: "/clientes/cohort", comingSoon: false },
+          { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: false },
         ],
       },
       {
