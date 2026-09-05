@@ -137,6 +137,14 @@ Implementa a seção 22 do manual (parcialmente — ver `docs/STATUS.md`):
 - **"Vencido" nem sempre é um status gravado**: a UI calcula "está vencido" ao vivo (`PENDENTE` com `dueDate` no passado) pra colorir o badge, mesmo padrão já usado pra disponibilidade de RH e capacidade de squad — nunca desnormalizar o que dá pra calcular na leitura. `VENCIDO` como status gravado no enum continua existindo pra quem quiser marcar formalmente (ex.: pra relatório), mas não é obrigatório passar por ele visualmente.
 - **Sem `financial_accounts` nem `cost_centers`**: o manual lista essas entidades, mas pra uma agência pequena nesta fase, cliente e projeto já segmentam o suficiente — não modelamos "contas bancárias" (nenhuma reconciliação bancária real ainda, isso é Fase 2/Asaas) nem centro de custo separado.
 
+## Arquivos e biblioteca — `MediaAsset`
+
+Implementa as seções 9.3 (Arquivos) e 17 (Biblioteca, parte da Conteúdo) do manual:
+
+- **Um único model pras duas necessidades**: "arquivo do cliente" e "item de biblioteca de conteúdo" são, na prática, a mesma coisa — um arquivo com metadado, dono (agência) e opcionalmente um cliente. Em vez de duas tabelas quase idênticas, `MediaAsset.clientId` (opcional) é o que diferencia: com cliente, aparece em `/clientes/[id]` e `/clientes/arquivos`; sem ou com cliente, aparece em `/conteudo/biblioteca` (que lista tudo, filtrável).
+- **`key` é o dado permanente; a URL nunca é guardada**: o bucket R2 é privado, então a única forma seria guardar uma URL assinada — mas essas expiram. Guardamos só a `key` (`@@unique`, nunca colide) e geramos uma URL assinada nova a cada download, por trás de um redirect estável (`GET /api/media/:id`). O link que aparece pro usuário nunca muda; o destino por trás, sim.
+- **`onDelete: SetNull` em `clientId`, `Cascade` em `agencyId`**: apagar um cliente não apaga os arquivos dele (útil demais pra perder por engano) — só desvincula. Apagar a agência inteira (só acontece em teste, nunca em uso real) apaga tudo, mesmo padrão de todo o resto do schema.
+
 ## Decisões de modelagem que não são óbvias pelo schema
 
 - **Sem `outbox_events` ainda**: a Release 1A não tem nenhum efeito colateral assíncrono que justifique o padrão outbox (nada consome eventos de domínio ainda). Ele entra na Release 1B junto com a primeira automação real (ex.: ativar cliente cria estrutura). Ver `docs/DECISIONS.md`.

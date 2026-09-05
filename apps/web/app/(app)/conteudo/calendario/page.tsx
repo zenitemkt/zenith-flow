@@ -5,7 +5,7 @@ import { CONTENT_CHANNEL_LABELS, CONTENT_STATUS_BADGE_CLASS, CONTENT_STATUS_LABE
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { CalendarGrid } from "@/app/_components/CalendarGrid";
 import { prisma } from "@zenith/db";
-import { ContentClientFilter } from "../ContentClientFilter";
+import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 
 interface PageProps {
   searchParams: { month?: string; clientId?: string };
@@ -87,7 +87,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <ContentClientFilter
+      <ClientFilterPills
         clients={clients}
         activeClientId={activeClientId}
         buildHref={(clientId) => calendarHref(monthParam(year, month), clientId)}

@@ -42,6 +42,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
           { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: true },
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
+          { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
           { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: true },
           { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: true },
         ],
@@ -90,7 +91,7 @@ export const navigationGroups: NavigationGroup[] = [
         children: [
           { id: "content-planning", label: "Planejamento", href: "/conteudo/planejamento", comingSoon: false },
           { id: "content-calendar", label: "Calendário", href: "/conteudo/calendario", comingSoon: false },
-          { id: "content-posts", label: "Posts", href: "/conteudo/posts", comingSoon: true },
+          { id: "content-library", label: "Biblioteca", href: "/conteudo/biblioteca", comingSoon: false },
           { id: "content-approvals", label: "Aprovações", href: "/conteudo/aprovacoes", comingSoon: false },
           { id: "content-publishing", label: "Publicação", href: "/conteudo/publicacao", comingSoon: true },
         ],

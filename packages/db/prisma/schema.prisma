@@ -129,6 +129,7 @@ model Agency {
   timeEntries         TimeEntry[]
   financeCategories   FinanceCategory[]
   financeEntries      FinanceEntry[]
+  mediaAssets         MediaAsset[]
 
   @@map("agency")
 }
@@ -235,6 +236,7 @@ model Client {
   allocations      ClientAllocation[]
   contentItems     ContentItem[]
   financeEntries   FinanceEntry[]
+  mediaAssets      MediaAsset[]
 
   @@index([agencyId])
   @@map("client")
@@ -1169,4 +1171,32 @@ model FinanceEntryStatusHistory {
 
   @@index([financeEntryId])
   @@map("finance_entry_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Arquivos e biblioteca de mídia — seções 9.3 e 17 do manual
+// ---------------------------------------------------------------------------
+
+/// Um arquivo enviado (Cloudflare R2) — serve tanto "Arquivos do cliente"
+/// (seção 9.3) quanto "Biblioteca" de conteúdo (seção 17): mesma necessidade
+/// (guardar um arquivo com metadado e servir com segurança), sem duplicar
+/// tabela. `clientId` opcional distingue arquivo de cliente de material
+/// interno/genérico.
+model MediaAsset {
+  id               String   @id @default(cuid())
+  agencyId         String
+  agency           Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String?
+  client           Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  /// Chave do objeto no bucket R2 — nunca a URL final (que expira, ver lib/r2.ts).
+  key              String   @unique
+  fileName         String
+  contentType      String
+  sizeBytes        Int
+  uploadedByUserId String?
+  createdAt        DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@map("media_asset")
 }

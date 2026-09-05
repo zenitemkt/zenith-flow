@@ -1,3 +1,17 @@
+## 2026-09-05 — Storage: Cloudflare R2 em vez de Neon Object Storage; dois bugs reais corrigidos com upload de verdade
+
+**Contexto**: Arquivos (seção 9.3) e Biblioteca (seção 17) estavam pendentes desde a Release 1B por falta de uma decisão de storage. O usuário mandou um print de anúncio do AgencyFlow (decisão anterior sobre a Home) e depois pediu pra seguir — ao chegar a vez de resolver storage, testei primeiro o Neon Object Storage (já estamos no Neon pra tudo) via a skill oficial, mas descobri que **só está disponível em `us-east-2` e `eu-central-1` (beta)** — o projeto Neon deste app está em `sa-east-1` (confirmado via `describe_project`). Migrar a região do banco só por causa de storage seria desproporcional e arriscado.
+
+**Decisão**: Cloudflare R2 (S3-compatible, sem taxa de saída de dados, funciona de qualquer região). Isso exige uma conta e credenciais que só o usuário pode criar — não é algo que dá pra decidir e simplesmente seguir sozinho, então perguntei antes (R2 vs. AWS S3 sa-east-1 vs. pular). Guiei o usuário pelo cadastro do bucket e geração do token de API passo a passo, pedindo que colasse as credenciais direto nos arquivos `.env` em vez de no chat (o usuário colou de qualquer forma — nesse caso, salvei direto, mas o pedido de não colar segredo em chat continua valendo pra próximas vezes).
+
+**Dois bugs reais, achados só ao testar upload de verdade contra o bucket** (não por inspeção de código nem pelos testes unitários, que não tocam o R2 real):
+1. `lib/media.ts` (usado por um client component) importava `node:crypto` — quebrava o build do browser. Corrigido separando a função que usa `crypto` pra `lib/media-server.ts`.
+2. Upload retornava `SignatureDoesNotMatch` — incompatibilidade conhecida entre AWS SDK v3 recente (calcula checksum CRC32 por padrão, assina a requisição incluindo esse header) e R2 (não suporta). Corrigido com `requestChecksumCalculation: "WHEN_REQUIRED"` no `S3Client`.
+
+Também descobri, por contagem de caracteres, que a primeira cópia do Secret Access Key veio com 63 caracteres em vez dos 64 esperados (perdeu um caractere na cópia) — mesmo sintoma (`SignatureDoesNotMatch`), causa diferente. Resolvido gerando um token novo.
+
+**Consequência**: `docs/STATUS.md` documenta as duas fatias (Arquivos + Biblioteca) como fechadas, testadas com upload/download reais contra o bucket. `.env.example` ganhou as quatro variáveis `R2_*` documentadas.
+
 ## 2026-09-05 — Home v2: KPIs financeiros reais entram, MRR e Churn ficam de fora por não termos base pra eles
 
 **Contexto**: a Home v1 (decisão acima) deixou explicitamente para a v2 os cards financeiros do wireframe do manual (seção 6.1) — MRR, Clientes, Churn, Atrasos — assim que o Financeiro (seção 22) existisse. Agora existe.

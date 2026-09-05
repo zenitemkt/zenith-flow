@@ -9,6 +9,8 @@ import { AddContactForm } from "./AddContactForm";
 import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
 import { ClientPortalSection } from "./ClientPortalSection";
+import { UploadFileForm } from "@/app/_components/UploadFileForm";
+import { MediaAssetList } from "@/app/_components/MediaAssetList";
 
 interface PageProps {
   params: { id: string };
@@ -32,6 +34,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
         include: { items: { orderBy: { order: "asc" } } },
       },
       allocations: { where: { status: "ATIVA" }, include: { squad: true }, take: 1 },
+      mediaAssets: { orderBy: { createdAt: "desc" } },
       _count: { select: { contentItems: true } },
     },
   });
@@ -180,6 +183,22 @@ export default async function ClientProfilePage({ params }: PageProps) {
             clientIsActive={Boolean(client.workspaceId)}
             members={portalMembers}
           />
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Arquivos</h2>
+            <div className="mb-3">
+              <MediaAssetList
+                assets={client.mediaAssets.map((a) => ({
+                  id: a.id,
+                  fileName: a.fileName,
+                  contentType: a.contentType,
+                  sizeBytes: a.sizeBytes,
+                  createdAt: a.createdAt.toISOString(),
+                }))}
+              />
+            </div>
+            <UploadFileForm clientId={client.id} />
+          </section>
         </div>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

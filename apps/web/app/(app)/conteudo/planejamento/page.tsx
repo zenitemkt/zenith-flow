@@ -4,7 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { CONTENT_STATUS_LABELS, CONTENT_CHANNEL_LABELS, CONTENT_STATUS_BADGE_CLASS } from "@/lib/content";
 import { prisma } from "@zenith/db";
 import { NewContentModal } from "./NewContentModal";
-import { ContentClientFilter } from "../ContentClientFilter";
+import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -66,7 +66,7 @@ export default async function PlanejamentoPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <ContentClientFilter
+      <ClientFilterPills
         clients={clients}
         activeClientId={activeClientId}
         buildHref={(clientId) =>

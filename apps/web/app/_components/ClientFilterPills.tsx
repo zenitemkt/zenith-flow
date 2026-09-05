@@ -5,7 +5,7 @@ interface ClientOption {
   name: string;
 }
 
-export function ContentClientFilter({
+export function ClientFilterPills({
   clients,
   activeClientId,
   buildHref,
