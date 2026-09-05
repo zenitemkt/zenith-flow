@@ -493,6 +493,7 @@ model Task {
   sourceRequest Request?
   vendorOrders  VendorOrder[]
   timeEntries   TimeEntry[]
+  collectionFor FinanceEntry?
 
   @@index([projectId])
   @@map("task")
@@ -1152,6 +1153,11 @@ model FinanceEntry {
   reversalOfId    String?            @unique
   reversalOf      FinanceEntry?      @relation("EntryReversal", fields: [reversalOfId], references: [id], onDelete: SetNull)
   reversedBy      FinanceEntry?      @relation("EntryReversal")
+  /// Seção 28 (régua de cobrança): tarefa de acompanhamento criada quando o
+  /// lançamento entra em atraso (D+1 ou depois). Nulo até alguém clicar em
+  /// "Criar tarefa de cobrança" — nunca automático (sem apps/worker ainda).
+  collectionTaskId String?           @unique
+  collectionTask   Task?              @relation(fields: [collectionTaskId], references: [id], onDelete: SetNull)
   createdByUserId String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt

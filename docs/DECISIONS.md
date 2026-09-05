@@ -1,3 +1,17 @@
+## 2026-09-05 — Régua de cobrança (seção 28): estágios em faixas calculados sob demanda; nenhuma ação automática, nem suspensão
+
+**Contexto**: terceira fatia consecutiva de Fase 2 sem bloqueio externo — a régua de cobrança usa só `FinanceEntry`, que já existe desde a Fase 1. O item de nav "Cobranças" (`/financeiro/cobrancas`) já estava reservado como `comingSoon: true` desde a Release 1E, então esta fatia entra exatamente na vaga já planejada.
+
+**Decisão 1 — estágios são faixas, não os 6 dias exatos da tabela do manual**: a tabela do manual (D-5, D0, D+1, D+3, D+7, D+15) descreve um job diário batendo em cada marco exato. Sem `apps/worker`, o cálculo aqui acontece sob demanda (a cada carregamento da página) — se eu checasse dia exato, uma fatura vista em D+2 (não D+1 nem D+3) não cairia em estágio nenhum. Resolvido tratando os marcos como início de faixa: D+1/D+2 = "Primeiro atraso", D+3 a D+6 = "Segundo contato", D+7 a D+14 = "Escalonar", D+15+ = "Plano de recuperação".
+
+**Decisão 2 — nenhuma ação automática, incluindo nenhuma automação de "notificar" ou "escalonar"**: o manual já avisa explicitamente "um atraso isolado não suspende automaticamente serviço sem grace period e autorização" — a cautela contra automação é do próprio manual, não uma limitação nossa disfarçada de decisão. Some a isso que não existe canal de envio real (e-mail/SMS/WhatsApp) — as linhas "notificar financeiro e gestor" (D+3) e "escalonar" (D+7) da tabela do manual viram, nesta fatia, só uma badge visível na régua. A régua sendo vista por um humano de carne e osso É a notificação hoje.
+
+**Decisão 3 — não duplicar o que Health Score e Risco de Churn já fazem**: as colunas "Status/efeito" da tabela do manual dizem "Health financeiro reduz" (D+3) e "risco de churn/crédito aumenta" (D+7) — isso já é literalmente o sinal de fatura atrasada que `lib/health-score.ts` e `lib/churn-risk.ts` calculam desde as duas fatias anteriores. Esta fatia não recalcula nada disso de novo, só adiciona a visualização de estágio que faltava.
+
+**Decisão 4 — tarefa de cobrança é sempre manual (botão), nunca criada sozinha ao entrar em atraso**: mesmo padrão de todo o projeto sem `apps/worker` (Rotinas, recálculo de Health Score, recálculo de Risco de churn) — o botão é a peça que um cron futuro chamaria. Idempotência garantida por `FinanceEntry.collectionTaskId` (`@unique`): impossível criar duas tarefas pro mesmo lançamento.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia fechada — o item de nav "Cobranças" que já existia como placeholder desde a Release 1E agora tem tela de verdade. `docs/ROADMAP.md` marca régua de cobrança como ✅ na Fase 2; restam MRR/indicadores (bloqueado por falta de modelo de contrato recorrente), NPS/eNPS/cohort e Asaas (bloqueado por conta sandbox externa).
+
 ## 2026-09-05 — Risco de churn (seção 31): modelo aditivo de sinais, não média ponderada; plano de recuperação não soma ao score
 
 **Contexto**: com o Health Score (seção 30) fechado, a seção 31 (Risco de churn) ficou desbloqueada — é o primeiro módulo de Fase 2 que depende diretamente de outro módulo de Fase 2, não só de dado da Fase 1.
