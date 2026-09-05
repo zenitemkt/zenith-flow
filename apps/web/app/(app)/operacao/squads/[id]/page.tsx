@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { getAgencyMembers } from "@/lib/team";
+import { startOfWeekUTC, formatMinutes } from "@/lib/timesheets";
 import { prisma } from "@zenith/db";
 import { AddMemberForm } from "./AddMemberForm";
 import { AllocateClientForm } from "./AllocateClientForm";
@@ -31,7 +32,10 @@ export default async function SquadDetailPage({ params }: PageProps) {
   }
 
   const now = new Date();
-  const [agencyMembers, clients, workloadCounts, activeLeaves] = await Promise.all([
+  const weekStart = startOfWeekUTC(now);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+  const [agencyMembers, clients, workloadCounts, activeLeaves, minutesThisWeek] = await Promise.all([
     getAgencyMembers(membership.agencyId),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
@@ -55,12 +59,18 @@ export default async function SquadDetailPage({ params }: PageProps) {
       },
       include: { employee: { select: { userId: true } } },
     }),
+    prisma.timeEntry.groupBy({
+      by: ["userId"],
+      where: { agencyId: membership.agencyId, date: { gte: weekStart, lt: weekEnd } },
+      _sum: { minutes: true },
+    }),
   ]);
 
   const workloadByUserId = new Map(workloadCounts.map((row) => [row.assigneeUserId, row._count._all]));
   const leaveEndByUserId = new Map(
     activeLeaves.filter((l) => l.employee.userId).map((l) => [l.employee.userId as string, l.endDate]),
   );
+  const minutesByUserId = new Map(minutesThisWeek.map((row) => [row.userId, row._sum.minutes ?? 0]));
   const currentMemberUserIds = new Set(squad.members.map((m) => m.userId));
   const memberOptions = agencyMembers.filter((m) => !currentMemberUserIds.has(m.userId));
 
@@ -85,6 +95,7 @@ export default async function SquadDetailPage({ params }: PageProps) {
             {squad.members.map((member) => {
               const load = workloadByUserId.get(member.userId) ?? 0;
               const leaveEnd = leaveEndByUserId.get(member.userId);
+              const minutes = minutesByUserId.get(member.userId) ?? 0;
               return (
                 <div
                   key={member.id}
@@ -97,6 +108,9 @@ export default async function SquadDetailPage({ params }: PageProps) {
                         Afastado até {leaveEnd.toLocaleDateString("pt-BR")}
                       </span>
                     )}
+                    <span className="rounded-full bg-[#F1EDFE] px-2 py-0.5 text-xs font-medium text-[#6847F5]">
+                      {formatMinutes(minutes)} esta semana
+                    </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         load >= 8

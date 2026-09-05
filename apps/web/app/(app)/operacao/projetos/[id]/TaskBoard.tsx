@@ -12,6 +12,7 @@ export interface BoardTask {
   description: string | null;
   status: WorkItemStatus;
   assigneeUserId: string | null;
+  estimatedMinutes: number | null;
   blockedBy: { id: string; title: string; status: WorkItemStatus } | null;
 }
 
@@ -24,8 +25,25 @@ export function TaskBoard({ tasks, people }: { tasks: BoardTask[]; people: Perso
   const router = useRouter();
   const [movingId, setMovingId] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const [estimating, setEstimating] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const peopleByUserId = new Map(people.map((p) => [p.userId, p.name]));
+
+  async function saveEstimate(taskId: string, value: string) {
+    setError(null);
+    const estimatedMinutes = value.trim() === "" ? null : Number(value);
+    const response = await fetch(`/api/tasks/${taskId}/estimate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estimatedMinutes }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Não foi possível salvar a estimativa.");
+      return;
+    }
+    router.refresh();
+  }
 
   async function move(taskId: string, toStatus: WorkItemStatus) {
     setError(null);
@@ -110,6 +128,18 @@ export function TaskBoard({ tasks, people }: { tasks: BoardTask[]; people: Perso
                           <option value={task.assigneeUserId}>Pessoa removida</option>
                         )}
                       </select>
+                      <div className="mt-1.5 flex items-center gap-1">
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder="Estimativa (min)"
+                          aria-label={`Estimativa de ${task.title} em minutos`}
+                          value={estimating[task.id] ?? task.estimatedMinutes ?? ""}
+                          onChange={(e) => setEstimating((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                          onBlur={(e) => void saveEstimate(task.id, e.target.value)}
+                          className="h-7 w-full rounded-md border border-[#E4E7EC] bg-[#F9FAFB] px-1.5 text-xs text-[#475467] outline-none focus:border-[#6847F5]"
+                        />
+                      </div>
                       {nextOptions.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {nextOptions.map((option) => {

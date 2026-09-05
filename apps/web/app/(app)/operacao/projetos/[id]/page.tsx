@@ -70,6 +70,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             description: t.description,
             status: t.status,
             assigneeUserId: t.assigneeUserId,
+            estimatedMinutes: t.estimatedMinutes,
             blockedBy: t.blockedBy,
           }))}
           people={people}

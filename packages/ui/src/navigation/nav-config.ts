@@ -127,8 +127,8 @@ export const navigationGroups: NavigationGroup[] = [
         comingSoon: false,
         children: [
           { id: "people-team", label: "Equipe", href: "/pessoas/equipe", comingSoon: false },
-          { id: "people-capacity", label: "Capacidade", href: "/pessoas/capacidade", comingSoon: true },
-          { id: "people-hours", label: "Horas", href: "/pessoas/horas", comingSoon: true },
+          { id: "people-capacity", label: "Capacidade", href: "/pessoas/capacidade", comingSoon: false },
+          { id: "people-hours", label: "Horas", href: "/pessoas/horas", comingSoon: false },
           { id: "people-vacations", label: "Férias", href: "/pessoas/ferias", comingSoon: false },
           { id: "people-jobs", label: "Vagas", href: "/pessoas/vagas", comingSoon: true },
           { id: "people-enps", label: "eNPS", href: "/pessoas/enps", comingSoon: true },

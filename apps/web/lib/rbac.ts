@@ -13,6 +13,7 @@ export const ROLE_LABELS: Record<MembershipRole, string> = {
 };
 
 const TEAM_MANAGEMENT_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN"];
+const TIMESHEET_APPROVAL_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN", "MANAGER"];
 
 export function hasRole(role: MembershipRole, allowed: MembershipRole[]): boolean {
   return allowed.includes(role);
@@ -20,6 +21,11 @@ export function hasRole(role: MembershipRole, allowed: MembershipRole[]): boolea
 
 export function canManageTeam(role: MembershipRole): boolean {
   return hasRole(role, TEAM_MANAGEMENT_ROLES);
+}
+
+/** Seção 21: "pessoa acessa seus dados; gestor acessa escopo autorizado." */
+export function canApproveTimesheets(role: MembershipRole): boolean {
+  return hasRole(role, TIMESHEET_APPROVAL_ROLES);
 }
 
 export function isClientRole(role: MembershipRole): boolean {

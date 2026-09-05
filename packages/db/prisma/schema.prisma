@@ -125,6 +125,8 @@ model Agency {
   commentThreads      CommentThread[]
   employees           Employee[]
   leaveRequests       LeaveRequest[]
+  timesheets          Timesheet[]
+  timeEntries         TimeEntry[]
 
   @@map("agency")
 }
@@ -457,24 +459,28 @@ model Project {
 /// Dependência simplificada como bloqueio único (`blockedByTaskId`), mesmo
 /// espírito pragmático do checklist de onboarding — não é um grafo arbitrário.
 model Task {
-  id              String         @id @default(cuid())
-  projectId       String
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title           String
-  description     String?
-  status          WorkItemStatus @default(BACKLOG)
-  blockedByTaskId String?
-  blockedBy       Task?          @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
-  blocks          Task[]         @relation("TaskBlocks")
-  assigneeUserId  String?
-  dueDate         DateTime?
-  completedAt     DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  projectId        String
+  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  status           WorkItemStatus @default(BACKLOG)
+  blockedByTaskId  String?
+  blockedBy        Task?          @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
+  blocks           Task[]         @relation("TaskBlocks")
+  assigneeUserId   String?
+  /// Seção 21 do manual — usado pra comparar estimado x realizado com o
+  /// somatório de TimeEntry.minutes. Opcional: nem toda tarefa tem estimativa.
+  estimatedMinutes Int?
+  dueDate          DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   statusHistory TaskStatusHistory[]
   sourceRequest Request?
   vendorOrders  VendorOrder[]
+  timeEntries   TimeEntry[]
 
   @@index([projectId])
   @@map("task")
@@ -971,4 +977,98 @@ model LeaveRequestStatusHistory {
 
   @@index([leaveRequestId])
   @@map("leave_request_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Apontamento e produtividade — Release 1E, parte 2 (seção 21 do manual)
+// ---------------------------------------------------------------------------
+
+enum TimesheetStatus {
+  RASCUNHO
+  ENVIADA
+  APROVADA
+  CORRIGIDA
+}
+
+/// Folha semanal — container de TimeEntry por pessoa+semana. Criada sob
+/// demanda (mesmo padrão de CommentThread) no primeiro apontamento da semana.
+model Timesheet {
+  id               String          @id @default(cuid())
+  agencyId         String
+  agency           Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId           String
+  /// Segunda-feira da semana que esta folha cobre.
+  weekStart        DateTime
+  status           TimesheetStatus @default(RASCUNHO)
+  submittedAt      DateTime?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  entries       TimeEntry[]
+  statusHistory TimesheetStatusHistory[]
+
+  @@unique([userId, weekStart])
+  @@index([agencyId])
+  @@map("timesheet")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model TimesheetStatusHistory {
+  id          String           @id @default(cuid())
+  timesheetId String
+  timesheet   Timesheet        @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  fromStatus  TimesheetStatus?
+  toStatus    TimesheetStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime         @default(now())
+
+  @@index([timesheetId])
+  @@map("timesheet_status_history")
+}
+
+enum TimeEntrySource {
+  MANUAL
+  TIMER
+}
+
+model TimeEntry {
+  id          String          @id @default(cuid())
+  agencyId    String
+  agency      Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId      String
+  taskId      String?
+  task        Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  timesheetId String
+  timesheet   Timesheet       @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  date        DateTime
+  minutes     Int
+  description String?
+  source      TimeEntrySource @default(MANUAL)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  edits TimeEntryEdit[]
+
+  @@index([agencyId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([timesheetId])
+  @@map("time_entry")
+}
+
+/// Append-only — "correção posterior guarda autor e motivo" (seção 21).
+model TimeEntryEdit {
+  id              String    @id @default(cuid())
+  timeEntryId     String
+  timeEntry       TimeEntry @relation(fields: [timeEntryId], references: [id], onDelete: Cascade)
+  previousMinutes Int
+  reason          String?
+  editedByUserId  String
+  createdAt       DateTime  @default(now())
+
+  @@index([timeEntryId])
+  @@map("time_entry_edit")
 }

@@ -1,3 +1,13 @@
+## 2026-09-05 — Folha de horas é um ciclo (não uma linha reta); correção reabre automaticamente
+
+**Contexto**: a seção 21 do manual lista os estados como "rascunho -> enviado -> aprovado -> corrigido", uma sequência linear que, lida ao pé da letra, sugeriria que "corrigido" é um estado final depois de aprovado — o que não faz sentido operacional (uma folha corrigida precisa voltar a ser enviada e aprovada de novo, senão "corrigido" é um beco sem saída).
+
+**Decisão**: modelei como um ciclo: `RASCUNHO → ENVIADA → {APROVADA, CORRIGIDA} → ENVIADA` (de `CORRIGIDA` só existe o caminho de volta pra `ENVIADA`). Além disso, uma correção não é só uma ação manual do gestor — **editar um apontamento que pertence a uma folha `ENVIADA` ou já `APROVADA` transiciona a folha pra `CORRIGIDA` automaticamente**, exigindo motivo (`TimeEntryEdit.reason`). Isso implementa literalmente a regra obrigatória "correção posterior guarda autor e motivo": não é uma anotação em texto livre em algum lugar, é uma transição de estado rastreável com autor e motivo gravados em `TimesheetStatusHistory` e `TimeEntryEdit`.
+
+**Consequência**: um gestor que aprovou uma folha e depois percebe (ou o próprio colaborador percebe) que um número estava errado sempre encontra a folha em `CORRIGIDA` esperando reenvio — nunca um estado "aprovado com erro" silencioso. `docs/DATA_MODEL.md` documenta a mesma lógica pro schema.
+
+**Bug pego durante o teste, não por inspeção**: o arredondamento padrão (múltiplos de 15 min, seção 21: "arredondamento configurável") tinha um problema real — uma duração de 1 a 7 minutos (ex.: cronômetro parado rápido demais) arredondava matematicamente pra **0**, e o apontamento sumia da lista sem erro nenhum. Só foi encontrado rodando o smoke test de verdade (cronômetro de ~2 segundos), não durante a implementação. Corrigido com um piso mínimo de 15 min em `roundMinutes()` — qualquer duração positiva vale pelo menos um incremento.
+
 ## 2026-09-05 — Home executiva: seguir a seção 6.1 do manual, fatiada em v1 (agora) e v2 (pós-Financeiro)
 
 **Contexto**: o usuário mandou um print de anúncio do AgencyFlow (um SaaS concorrente) pedindo que a Home e o menu lateral tenham "estrutura parecida". Antes de decidir, conferi a seção 6.1 do manual ("Home executiva") — e o próprio manual já cita o AgencyFlow como referência: *"Os wireframes abaixo... incorporam a clareza operacional observada no AgencyFlow e a leitura financeira do Organify, mas usam a arquitetura visual própria do Zenith Flow"* (seção 6, introdução aos wireframes). Ou seja, a referência do usuário já é a mesma que o manual usou — não é um desvio de escopo, é uma confirmação.

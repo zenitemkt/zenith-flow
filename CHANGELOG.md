@@ -38,3 +38,6 @@
 - Novo teste de isolamento e integridade de comentários (`packages/db`).
 - **Release 1E (parte 1)**: RH básico (seção 20) — `Employee`/`EmployeeStatusHistory`/`LeaveRequest`/`LeaveRequestStatusHistory`, separados de `Membership` de propósito. `/pessoas/equipe` (lista + cadastro, com ou sem login vinculado) e `/pessoas/equipe/[id]` (status, férias/ausências, histórico); `/pessoas/ferias` (inbox de triagem cross-pessoa). Desligar alguém revoga sessões ativas e suspende o Membership, sem apagar autoria histórica. Squad (`/operacao/squads/[id]`) mostra "Afastado até" pra quem está em licença aprovada vigente.
 - Novo teste de isolamento, desligamento e disponibilidade de RH (`packages/db`).
+- **Release 1E (parte 2)**: Apontamento e produtividade (seção 21) — `Timesheet`/`TimesheetStatusHistory`/`TimeEntry`/`TimeEntryEdit` + `Task.estimatedMinutes`. `/pessoas/horas` (cronômetro real + apontamento manual, folha semanal com envio), `/pessoas/capacidade` (gestor: horas por pessoa, aprovar/corrigir folha, estimado × realizado por projeto). Estimativa inline no quadro de tarefas; squad mostra horas reais da semana além da contagem de tarefas.
+- Corrigido bug de arredondamento que zerava apontamentos curtos de cronômetro (`roundMinutes` agora tem piso de 15min).
+- Novo teste de isolamento, unicidade de folha por semana e correção com histórico (`packages/db`).
