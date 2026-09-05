@@ -1,3 +1,13 @@
+## 2026-09-05 — Indicadores financeiros (seção 29): só DSO e Logo churn, os únicos sem dependência de MRR
+
+**Contexto**: com a seção 32 fechada, a seção 29 (Indicadores financeiros) é o próximo item natural — e, diferente do que parecia à primeira vista, não está 100% bloqueada. Reli a tabela dos 10 indicadores da seção 29 com atenção a QUAL depende de MRR de verdade, em vez de descartar a seção inteira.
+
+**Decisão — separar os indicadores por dependência real, implementar só os livres**: MRR, ARR, ARPA, Gross Revenue Churn, Net Revenue Churn e LTV simples formam uma cadeia de dependência direta de "receita mensal recorrente ativa normalizada" — sem contrato/assinatura como entidade própria (decisão da Release 1B), não existe base honesta pra esse número, mesmo bloqueio já documentado pra Home v2. CAC precisa de dado de aquisição/marketing (Fase 3, ainda não existe). Margem cliente precisa de custo por hora ou rateio aprovado — que tocaria em dado de salário, evitado de propósito desde a seção 20 (RH) até haver um caso real pedindo. **DSO e Logo churn não têm nenhuma dessas dependências** — são calculáveis hoje, de verdade, com `FinanceEntry` (contas a receber, receita por competência) e `ClientStatusHistory` (mesma base que já alimenta o Cohort). Implementei só esses dois, com os outros 8 listados explicitamente na própria tela como "ainda bloqueados" e o motivo de cada bloqueio — não escondidos, não fingidos como "em breve" genérico.
+
+**Reaproveitamento deliberado**: `statusAsOf()` (a função que responde "este cliente estava em que status numa data X?") já existia em `lib/cohort.ts` pra resolver exatamente o mesmo problema que Logo churn precisa — promovida de helper interno pra exportada, em vez de duplicar a lógica.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia. `docs/ROADMAP.md` marca a seção 29 como "✅ parcial" — os 2 indicadores possíveis estão prontos, os 8 restantes continuam bloqueados por dependências reais (não por falta de tempo), documentados individualmente. Isso deixa a Fase 2 inteira só com Asaas (seção 27) pendente, que precisa de uma conta sandbox externa do usuário.
+
 ## 2026-09-05 — Cohort e Reativações (seção 32.2/32.3): fecha a seção 32; só dimensões com dado real; MRR perdido fica de fora
 
 **Contexto**: com NPS e eNPS fechados, restava só Cohort (32.2) e Reativação (32.3) pra fechar a seção 32 inteira do manual. Os dois cabem numa fatia só porque nenhum dos dois precisa de tabela nova — são extensões pequenas sobre dado que já existe.

@@ -119,7 +119,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "finance-billing", label: "Cobranças", href: "/financeiro/cobrancas", comingSoon: false },
           { id: "finance-dre", label: "DRE", href: "/financeiro/dre", comingSoon: true },
           { id: "finance-cashflow", label: "Fluxo de caixa", href: "/financeiro/caixa", comingSoon: false },
-          { id: "finance-indicators", label: "Indicadores", href: "/financeiro/indicadores", comingSoon: true },
+          { id: "finance-indicators", label: "Indicadores", href: "/financeiro/indicadores", comingSoon: false },
         ],
       },
       {

@@ -120,6 +120,13 @@ Implementa a seção 32.3 do manual:
 - **Só dois campos novos, direto em `Client`, sem tabela própria**: `competitorName` (opcional) e `reactivationEligible` (boolean, default `true`) — não precisam de histórico próprio (diferente de status, que já tem `ClientStatusHistory`), então viraram colunas simples, mesmo padrão pragmático de `ClientContact.marketingOptOut`.
 - **"Motivo" e "última nota" não precisaram de nada novo**: motivo já é `ClientStatusHistory.reason` (capturado obrigatoriamente na transição pra `EM_ENCERRAMENTO`, não em `ENCERRADO`); última nota é só a `ClientNote` mais recente do cliente. Reaproveitar dado que já existe em vez de duplicá-lo em campos novos.
 - **"MRR perdido" foi deliberadamente deixado de fora**: mesmo bloqueio da seção 29 (indicadores financeiros) — sem um modelo de receita recorrente/contrato, não há "MRR" real pra perder, só uma aproximação inventada a partir de lançamentos avulsos.
+
+## Indicadores financeiros — sem tabela nova
+
+Implementa (parcialmente) a seção 29 do manual:
+
+- **Nenhum modelo novo, mesmo raciocínio do Cohort**: DSO e Logo churn são derivados sob demanda de `FinanceEntry` e `ClientStatusHistory` já existentes (`apps/web/lib/finance-indicators.ts`), nunca persistidos — são recálculos, não decisões pontuais que mereçam virar snapshot como Health Score/Churn Risk/NPS.
+- **`statusAsOf()` foi promovida de helper privado de `lib/cohort.ts` pra função exportada**, reaproveitada aqui pra "este cliente estava ativo nesta data de referência?" — mesmo problema que o Cohort já resolvia, evitando duplicar a lógica de "última transição de status até uma data".
 - **`Task.assigneeUserId` já existia no schema desde a Release 1C parte 2** (Projetos/Tarefas), só não tinha UI. Reatribuição não tem tabela de histórico própria — usa o `AuditLog` genérico (`task.reassigned`), consistente com como outras mutações menores já são auditadas no projeto.
 - **Só squad principal por cliente**: o manual permite "squad principal e especialistas" (pessoas avulsas além do squad). Modelamos só o principal (`ClientAllocation.squadId`); especialistas individuais ficam para quando houver caso real.
 

@@ -61,9 +61,11 @@ export interface CohortRow {
   revenueRetention: (number | null)[];
 }
 
-/// Status da última transição de um cliente até (e incluindo) um mês de
-/// referência — reativação depois de encerrado volta a contar como "vivo".
-function statusAsOf(events: { toStatus: string; createdAt: Date }[], referenceMonthEnd: Date): string | null {
+/// Status da última transição de um cliente até (e incluindo) uma data de
+/// referência qualquer — reativação depois de encerrado volta a contar como
+/// "vivo". Exportado porque `lib/finance-indicators.ts` (logo churn) precisa
+/// da mesma checagem "estava ativo nesta data?", não só o cohort.
+export function statusAsOf(events: { toStatus: string; createdAt: Date }[], referenceMonthEnd: Date): string | null {
   let last: string | null = null;
   for (const event of events) {
     if (event.createdAt <= referenceMonthEnd) {
