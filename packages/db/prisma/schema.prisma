@@ -127,6 +127,8 @@ model Agency {
   leaveRequests       LeaveRequest[]
   timesheets          Timesheet[]
   timeEntries         TimeEntry[]
+  financeCategories   FinanceCategory[]
+  financeEntries      FinanceEntry[]
 
   @@map("agency")
 }
@@ -232,6 +234,7 @@ model Client {
   routineTemplates RoutineTemplate[]
   allocations      ClientAllocation[]
   contentItems     ContentItem[]
+  financeEntries   FinanceEntry[]
 
   @@index([agencyId])
   @@map("client")
@@ -448,8 +451,9 @@ model Project {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  tasks       Task[]
-  routineRuns RoutineRun[]
+  tasks          Task[]
+  routineRuns    RoutineRun[]
+  financeEntries FinanceEntry[]
 
   @@index([agencyId])
   @@index([clientId])
@@ -1071,4 +1075,98 @@ model TimeEntryEdit {
 
   @@index([timeEntryId])
   @@map("time_entry_edit")
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro básico manual — Release 1E, parte 3 (seção 22 do manual)
+// ---------------------------------------------------------------------------
+
+enum FinanceEntryType {
+  RECEITA
+  DESPESA
+}
+
+/// Seção 22: "previsto -> pendente -> pago/recebido -> vencido -> cancelado".
+/// LIQUIDADO cobre tanto "pago" (DESPESA) quanto "recebido" (RECEITA) — o
+/// rótulo na UI muda conforme FinanceEntryType, mesmo padrão já usado em
+/// WorkItemStatus (compartilhado por Project e Task).
+enum FinanceEntryStatus {
+  PREVISTO
+  PENDENTE
+  LIQUIDADO
+  VENCIDO
+  CANCELADO
+}
+
+model FinanceCategory {
+  id        String           @id @default(cuid())
+  agencyId  String
+  agency    Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  type      FinanceEntryType
+  createdAt DateTime         @default(now())
+
+  entries FinanceEntry[]
+
+  @@unique([agencyId, name, type])
+  @@index([agencyId])
+  @@map("finance_category")
+}
+
+/// "Movimento pode estar ligado a cliente, contrato, projeto e categoria"
+/// (seção 22) — contrato não existe como entidade própria neste projeto
+/// (decisão: contratos ficam no Drive, ver docs/DECISIONS.md), então o
+/// vínculo aqui é só client/project/category.
+model FinanceEntry {
+  id              String             @id @default(cuid())
+  agencyId        String
+  agency          Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  type            FinanceEntryType
+  status          FinanceEntryStatus @default(PREVISTO)
+  description     String
+  /// Valor em centavos — nunca float. Negativo só em estornos (ver reversalOfId).
+  amountCents     Int
+  categoryId      String?
+  category        FinanceCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  clientId        String?
+  client          Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId       String?
+  project         Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  /// "Separar competência, vencimento e liquidação" (seção 22) — três datas
+  /// com significado diferente, nunca uma só reaproveitada pras três coisas.
+  competencyDate  DateTime
+  dueDate         DateTime
+  settledDate     DateTime?
+  /// Se preenchido, esta linha É o estorno de outra (amountCents negativo,
+  /// cancela o original nas somas de fluxo de caixa). "Valores são imutáveis
+  /// após conciliação; correção por estorno/ajuste" (seção 22) — a linha
+  /// original nunca é editada depois de LIQUIDADO, só contra-lançada.
+  reversalOfId    String?            @unique
+  reversalOf      FinanceEntry?      @relation("EntryReversal", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversedBy      FinanceEntry?      @relation("EntryReversal")
+  createdByUserId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  statusHistory FinanceEntryStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@index([projectId])
+  @@map("finance_entry")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model FinanceEntryStatusHistory {
+  id             String              @id @default(cuid())
+  financeEntryId String
+  financeEntry   FinanceEntry        @relation(fields: [financeEntryId], references: [id], onDelete: Cascade)
+  fromStatus     FinanceEntryStatus?
+  toStatus       FinanceEntryStatus
+  reason         String?
+  actorUserId    String?
+  createdAt      DateTime            @default(now())
+
+  @@index([financeEntryId])
+  @@map("finance_entry_status_history")
 }

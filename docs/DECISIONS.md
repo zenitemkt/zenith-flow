@@ -1,3 +1,13 @@
+## 2026-09-05 — Financeiro: estorno em vez de edição pós-liquidação; sem contas bancárias nem Asaas
+
+**Contexto**: a seção 22 do manual é explícita em duas regras que juntas formam o núcleo do módulo: "valores são imutáveis após conciliação; correção por estorno/ajuste" e "não criar integração Asaas nesta etapa além dos contratos técnicos preparados".
+
+**Decisão**: uma vez que um `FinanceEntry` chega em `LIQUIDADO`, nenhuma rota permite editá-lo (nem valor, nem datas) — a única correção possível é `POST .../reverse`, que cria um novo lançamento com valor negativo apontando pro original via `reversalOfId` (`@@unique`, um estorno por lançamento). Isso não é só uma regra de UI: é impossível de contornar porque a rota de edição (`PATCH /api/finance/entries/:id`) checa o status no servidor antes de aceitar qualquer mudança. Fica sem Asaas ou qualquer gateway de pagamento — "contas a pagar/receber" aqui são só registro manual mesmo, exatamente como a seção pede.
+
+Também não modelei `financial_accounts` (contas bancárias) nem `cost_centers` (centros de custo) — nesta fase, cliente e projeto já dão segmentação suficiente pra uma agência pequena, e reconciliação bancária de verdade só faz sentido quando houver uma integração real (Fase 2).
+
+**Consequência**: "recorrências manuais" (tela listada na seção 22) ficou de fora desta fatia — precisaria de um template de recorrência (`RoutineTemplate`-like) próprio pro financeiro, e não vale a pena duplicar aquele padrão sem um caso de uso real acumulado ainda. `docs/STATUS.md` documenta isso, junto com DRE/indicadores (Fase 2) e Cobranças (trava explícita do manual contra Asaas nesta etapa).
+
 ## 2026-09-05 — Home v1 construída: só com dado que já existe, gráfico sem biblioteca
 
 **Contexto**: seguindo o plano registrado mais cedo (decisão "Home executiva: seguir a seção 6.1..."), chegou a vez de construir a v1.
