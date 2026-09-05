@@ -145,6 +145,14 @@ Implementa a seção 39 do manual (parte "Opportunity"):
 - **`Opportunity.status` (OPEN/WON/LOST) é separado de `stageId`**: o estágio é só "onde no funil", sempre um `PipelineStage` `OPEN`; ganhar ou perder não é "mais um estágio da lista", é uma transição de status própria (mesmo raciocínio de `ClientStatus.ENCERRADO` não ser "mais uma etapa do onboarding"). Isso também explica por que `OpportunityStatusHistory.toStageId` é opcional — uma linha de histórico pode representar só uma mudança de estágio (status continua `OPEN`) ou só uma mudança de status (`toStageId` nulo, `toStatus` vira `WON`/`LOST`).
 - **`clientId` e `leadId` são independentes, ambos opcionais**: uma oportunidade nem sempre nasce de um lead (cliente já ativo pedindo mais um serviço) nem sempre tem um cliente (ainda é só um lead sendo trabalhado). Não modelei como "XOR" no schema — a UI decide qual vínculo faz sentido pra cada caso, sem o banco impor uma regra que a seção 39 não pede.
 - **Estágios padrão semeados na mesma transação do signup** (`api/agencies/route.ts`), mesmo padrão do `OnboardingTemplate` — uma agência nova nunca começa com um pipeline vazio precisando de configuração antes do primeiro uso.
+
+## Propostas — `Proposal`, `ProposalStatusHistory`
+
+Implementa a seção 39 do manual (parte "Proposal", fecha a seção):
+
+- **Quarta aparição do mesmo padrão de link público** neste projeto (depois de `ContentApproval`, `SurveyRecipient` e `EnpsInvite`): `token` único, `expiresAt` calculado no envio, decisão registrada via rota pública sem sessão. Reaproveitei o TTL de 14 dias de `ContentApproval` em vez de inventar um novo prazo.
+- **`status` cobre "visualizada" como transição real, não como um campo `viewedAt` isolado**: a página pública, ao carregar, transiciona `ENVIADA → VISUALIZADA` (gravando `viewedAt` e uma linha em `ProposalStatusHistory`) — dá pra responder "quando exatamente o cliente abriu isso" com uma consulta simples no histórico, não só "ele abriu alguma vez".
+- **`EXPIRADA` é alcançável de duas formas**: calculada ao vivo (`isProposalExpired()`, compara `expiresAt` contra a data atual, mesmo padrão de `ContentApproval` em `/aprovar/[token]`) *e* como uma transição manual real gravada no banco (`POST /api/proposals/:id/expire`) — a diferença importa porque só a segunda persiste; a primeira é sempre recalculada, nunca escrita, evitando depender de um job pra "ficar certa" no tempo.
 - **`Task.assigneeUserId` já existia no schema desde a Release 1C parte 2** (Projetos/Tarefas), só não tinha UI. Reatribuição não tem tabela de histórico própria — usa o `AuditLog` genérico (`task.reassigned`), consistente com como outras mutações menores já são auditadas no projeto.
 - **Só squad principal por cliente**: o manual permite "squad principal e especialistas" (pessoas avulsas além do squad). Modelamos só o principal (`ClientAllocation.squadId`); especialistas individuais ficam para quando houver caso real.
 

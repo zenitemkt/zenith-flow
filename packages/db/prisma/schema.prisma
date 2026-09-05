@@ -140,6 +140,7 @@ model Agency {
   leads                Lead[]
   pipelineStages       PipelineStage[]
   opportunities        Opportunity[]
+  proposals            Proposal[]
 
   @@map("agency")
 }
@@ -258,6 +259,7 @@ model Client {
   surveyRecipients     SurveyRecipient[]
   convertedFromLead    Lead?
   opportunities        Opportunity[]
+  proposals            Proposal[]
 
   @@index([agencyId])
   @@map("client")
@@ -1580,6 +1582,7 @@ model Lead {
   statusHistory LeadStatusHistory[]
   notes         LeadNote[]
   opportunities Opportunity[]
+  proposals     Proposal[]
 
   @@unique([agencyId, email])
   @@index([agencyId])
@@ -1666,6 +1669,7 @@ model Opportunity {
   updatedAt         DateTime          @updatedAt
 
   statusHistory OpportunityStatusHistory[]
+  proposals     Proposal[]
 
   @@index([agencyId])
   @@index([clientId])
@@ -1690,4 +1694,69 @@ model OpportunityStatusHistory {
 
   @@index([opportunityId])
   @@map("opportunity_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Propostas — Fase 3, parte 3 (seção 39 do manual), fecha a seção
+// ---------------------------------------------------------------------------
+
+enum ProposalStatus {
+  RASCUNHO
+  ENVIADA
+  VISUALIZADA
+  ACEITA
+  REJEITADA
+  EXPIRADA
+}
+
+/// Seção 39: "Proposal: draft -> sent -> viewed -> accepted/rejected/expired."
+/// Link público de visualização/decisão, mesmo padrão já usado em
+/// ContentApproval (/aprovar/[token]) e SurveyRecipient (/pesquisa/[token]) —
+/// TTL de 14 dias idêntico ao de ContentApproval.
+model Proposal {
+  id              String         @id @default(cuid())
+  agencyId        String
+  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  clientId        String?
+  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  opportunityId   String?
+  opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  content         String
+  valueCents      Int?
+  status          ProposalStatus @default(RASCUNHO)
+  token           String         @unique
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  respondedAt     DateTime?
+  expiresAt       DateTime?
+  rejectedReason  String?
+  createdByUserId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  statusHistory ProposalStatusHistory[]
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@index([leadId])
+  @@index([opportunityId])
+  @@map("proposal")
+}
+
+/// Append-only, mesmo padrão das demais *StatusHistory.
+model ProposalStatusHistory {
+  id          String         @id @default(cuid())
+  proposalId  String
+  proposal    Proposal       @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  fromStatus  ProposalStatus?
+  toStatus    ProposalStatus
+  reason      String?
+  actorUserId String?
+  createdAt   DateTime       @default(now())
+
+  @@index([proposalId])
+  @@map("proposal_status_history")
 }

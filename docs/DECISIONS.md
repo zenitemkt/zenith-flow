@@ -1,3 +1,17 @@
+## 2026-09-05 — Propostas (seção 39, parte 3): fecha a seção; "expirada" cobre os dois casos (por data e manual)
+
+**Contexto**: com Leads e Pipeline fechados, Proposal era a última peça faltando pra fechar a seção 39 inteira do manual — "Lead 360 reúne... oportunidades e comunicações" já cobria lead+pipeline; propostas fecham o ciclo comercial completo até a decisão do cliente.
+
+**Decisão 1 — reaproveitar o padrão de link público pela quarta vez, sem variação**: `ContentApproval` (seção 17), `SurveyRecipient` (NPS) e `EnpsInvite` (eNPS) já resolveram exatamente o mesmo problema — token único, TTL, decisão via rota pública sem sessão. Copiei o TTL de 14 dias de `ContentApproval` de propósito, em vez de inventar um prazo novo sem motivo — quatro prazos de expiração diferentes espalhados pelo produto seria inconsistência gratuita.
+
+**Decisão 2 — "visualizada" é uma transição de estado real, gravada na abertura do link, não um campo `viewedAt` solto**: a seção 39 lista "viewed" como um estado do ciclo de vida (não um metadado incidental), então a página pública transiciona `ENVIADA → VISUALIZADA` de verdade, com linha própria no histórico — condicionado exatamente à transição esperada (`status === "ENVIADA"`) pra nunca duplicar caso o componente de servidor rode mais de uma vez.
+
+**Decisão 3 — "expirada" existe de duas formas complementares, não conflitantes**: por data (calculada ao vivo, mesmo padrão já usado em `ContentApproval` — nunca escrita, sempre recalculada) e por ação manual do staff (`POST /api/proposals/:id/expire`, pra fechar uma proposta que nunca teve resposta sem precisar esperar o prazo de 14 dias rodar). As duas precisam ser checadas juntas em qualquer lugar que decide "esta proposta ainda aceita decisão?" — um bug real apareceu exatamente aí.
+
+**Bug real de lógica, achado por raciocínio sobre a interação entre os dois "expirada" antes mesmo de testar**: a página pública checava só `isProposalExpired()` (a versão calculada por data) pra decidir se mostrava "proposta expirada" ou o formulário de decisão. Uma proposta expirada manualmente pelo staff (status `EXPIRADA` já gravado, mas ainda dentro do prazo de 14 dias) não seria pega por essa função — o cliente continuaria vendo o formulário de aceitar/recusar normalmente, like nada tivesse acontecido. Corrigido checando `status === "EXPIRADA"` explicitamente, além do cálculo por data.
+
+**Consequência**: `docs/STATUS.md` documenta a fatia — fecha a seção 39 inteira (Leads + Pipeline + Propostas), restando só tags/consentimento e Lead Scoring (39.2, precisaria de job de decaimento) como pendências documentadas dentro da mesma seção.
+
 ## 2026-09-05 — Pipeline comercial (seção 39, parte 2): estágios configuráveis, não enum fixo; ganhar/perder é status, não estágio
 
 **Contexto**: com Leads fechado, Pipeline/Oportunidades é a continuação natural da mesma seção 39 do manual — o próprio texto já lista "Lead 360 reúne... oportunidades" como parte do mesmo conjunto, e o item de nav "Pipeline" já estava reservado desde o início do projeto, junto com "Leads".
