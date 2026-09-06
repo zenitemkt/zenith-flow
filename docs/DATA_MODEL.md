@@ -264,3 +264,9 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 - **Nenhum modelo novo** — `/portal/arquivos` e `/portal/financeiro` são leituras filtradas de `MediaAsset` e `FinanceEntry` que já existiam, sempre `WHERE clientId = <cliente do portal>`.
 - **A garantia de isolamento entre clientes mora na rota de download (`GET /api/media/:id`), não só na query da página que lista os arquivos**: antes desta fatia, essa rota rejeitava qualquer sessão de papel de cliente (`isClientRole`) por completo — mesmo pra baixar o próprio arquivo. Agora ela resolve o `Client` da sessão (via `Membership.workspaceId`) e só libera o presign quando `asset.clientId` bate com esse cliente. Qualquer outro caso (arquivo de outro cliente, ou item de biblioteca com `clientId: null`) devolve **404, não 403** — um cliente nunca deve saber que um recurso existe se não é dele.
 - **`/portal/financeiro` só consulta `type: RECEITA`**, nunca `DESPESA` — implementa ao pé da letra a regra obrigatória "custo/margem internos nunca aparecem" (seção 18). Não existe uma versão "financeiro completo" pro portal, de propósito.
+
+## Edição/remoção de contato de cliente e remoção de membro de squad (sem tabela nova)
+
+- **Nenhum modelo novo** — `PATCH`/`DELETE` sobre `ClientContact` e `DELETE` sobre `SquadMember`, ambos já existentes desde a Release 1B/1C.
+- **Exclusividade de "contato principal" é garantida na rota, não numa constraint de banco**: marcar `isPrimary: true` roda, na mesma transação, um `updateMany` que desmarca qualquer outro contato principal do mesmo cliente antes de aplicar a mudança pedida — não existe uma constraint parcial única no schema para isso (o ganho não justificava a complexidade).
+- **Remover `SquadMember` é a exclusão da linha do vínculo, e só dela** — `Task.assigneeUserId`, o histórico de carga e `ClientAllocation` não têm nenhuma referência a `SquadMember`, então não há nada em cascata pra decidir aqui.

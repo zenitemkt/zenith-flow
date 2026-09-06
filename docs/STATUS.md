@@ -1,6 +1,6 @@
 # Status de implementação — ZENITH FLOW
 
-Última atualização: 2026-09-05.
+Última atualização: 2026-09-06.
 
 ## Implementado
 
@@ -217,6 +217,11 @@
   - **A garantia de isolamento entre clientes foi movida pra dentro da rota de download** (`GET /api/media/:id`), não só pra query da página: antes, essa rota rejeitava qualquer sessão de papel de cliente (`isClientRole`) — mesmo pra baixar o próprio arquivo, o portal não tinha acesso nenhum. Agora ela permite o download só quando `asset.clientId` bate com o cliente da própria sessão (resolvido via `workspaceId` → `Client`), devolvendo **404 (não 403)** pra qualquer outro caso — arquivo de outro cliente ou item de biblioteca sem cliente (`clientId: null`) — pra nunca revelar a um cliente que aquele arquivo existe. Upload e exclusão continuam exclusivos da equipe interna, decisão não revisitada nesta fatia.
   - `MediaAssetList` ganhou um modo `readOnly` (esconde o botão "Remover") reaproveitado pelo portal, em vez de duplicar o componente.
   - Testado via Playwright com um cenário de dois clientes: convite de portal aceito por um contato do Cliente A, arquivo do Cliente A visível e baixável (redirect real confirmado), arquivo do Cliente B **não aparece na lista e retorna 404 se acessado direto por URL**, arquivo de biblioteca sem cliente também retorna 404 — e a fatura RECEITA do Cliente A aparece certinha em `/portal/financeiro` com valor e status corretos. Sem teste novo em `packages/db` — a garantia de isolamento é uma regra de rota (API), verificada via Playwright, não uma constraint de banco. Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
+- **Edição/remoção de contato de cliente e remoção de membro de squad**: dois itens pequenos que estavam na lista "Parcial" há várias fatias.
+  - `PATCH /api/clients/:id/contacts/:contactId` (nome, e-mail, telefone, finalidade, contato principal) e `DELETE` no mesmo recurso. Marcar um contato como principal desmarca automaticamente qualquer outro contato principal do mesmo cliente na mesma transação — garante exclusividade de verdade, não só na UI.
+  - `ClientContactItem` (novo componente client-side) troca entre exibição e formulário de edição inline, reaproveitando o mesmo `AddContactForm` já existente pra criação.
+  - `DELETE /api/squads/:id/members/:userId` + botão "Remover" no perfil do squad — remover alguém do squad apaga só o vínculo (`SquadMember`); tarefas atribuídas, carga histórica e alocações de cliente continuam intactas.
+  - Testado via Playwright: dois contatos criados, um editado (nome + marcado como principal), o segundo depois marcado como principal (confirmando que o primeiro perdeu o badge — exclusividade mantida), contato editado removido, contato remanescente preservado; squad criado, membro adicionado e removido (volta a mostrar "Nenhum membro ainda"). Sem teste novo em `packages/db` — CRUD simples sobre `ClientContact`/`SquadMember`, modelos já cobertos pelos testes de isolamento existentes (`client-isolation`, `squad-isolation`). Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
 - Testes automatizados: 9 (Sidebar) + 20 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens, conteúdo + aprovação por versão — Vitest contra o Neon real) = 29/29 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
@@ -225,11 +230,10 @@
 
 - Convite de membro: só cobre "pessoa nova" (cria conta na hora). Alguém que já tem conta em outra agência precisa primeiro logar e depois pedir vínculo manual — aceite automático para conta existente é um gap conhecido.
 - **Contratos** (seção 12) segue por decisão do usuário como um botão fixo pro Google Drive — não é o modelo completo (produtos, versionamento). Não será revisitado sem pedido explícito.
-- Edição de contato de cliente (além do responsável criado no cadastro) ainda não existe — só é possível adicionar novos contatos, não editar/remover um existente.
 - **Notificações** (seção 13/Release 1C) seguem adiadas de propósito — seria um sistema in-app/e-mail atravessando vários módulos, melhor construir quando houver um caso real acumulado pedindo.
 - Quadro de tarefas é clique-para-mover, não drag-and-drop (decisão de acessibilidade, não revisitar sem pedido). Tarefa não tem página de detalhe própria.
 - Rotinas: só recorrência mensal, geração é manual (sem `apps/worker`/cron real ainda).
-- Squads: só squad principal por cliente (sem especialistas individuais); remover membro de squad ainda não tem UI (só adicionar).
+- Squads: só squad principal por cliente (sem especialistas individuais).
 - **Comunicação/comentários** (seção 19): falta só "converter mensagem em tarefa/demanda" (adiado, precisa definir "usuário autorizado" antes) e estender o componente pro Portal do Cliente (que ainda não tem comentários).
 - `/aprovacoes` (item de nível superior do nav, inbox cross-módulo interno — diferente de `/conteudo/aprovacoes` e `/portal/aprovacoes`, que já existem) continua Empty State.
 - `/conteudo/publicacao`, `/clientes/onboarding` (visão cross-cliente) no `nav-config` são rótulos sem tela correspondente ainda — candidatos a fechar ou limpar.
@@ -257,7 +261,7 @@
 
 ## Próximo slice sugerido
 
-Com Fase 1 quase fechada, Fase 2 fechada exceto os dois itens bloqueados acima, e a seção 39 da Fase 3 fechada, os próximos candidatos sem bloqueio são: itens pequenos da lista "Parcial" (edição de contato, remover membro de squad, `/aprovacoes` cross-módulo) ou decidir com o usuário se vale destravar Asaas/modelo de contrato agora.
+Com Fase 1 quase fechada, Fase 2 fechada exceto os dois itens bloqueados acima, a seção 39 da Fase 3 fechada, e os itens de contato/squad resolvidos, os próximos candidatos sem bloqueio são: `/aprovacoes` cross-módulo (inbox de nível superior), "converter mensagem em tarefa/demanda" (precisa antes definir "usuário autorizado"), ou decidir com o usuário se vale destravar Asaas/modelo de contrato agora.
 
 ## Ambiente local
 

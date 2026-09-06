@@ -1,3 +1,13 @@
+## 2026-09-06 — Edição/remoção de contato de cliente e remoção de membro de squad: fecha dois itens pequenos da lista "Parcial"
+
+**Contexto**: seguindo a lista de pendências pequenas e desbloqueadas (o usuário pediu pra seguir sem pausar entre fatias), `docs/STATUS.md` listava há várias releases que "editar/remover contato de cliente" e "remover membro de squad" não tinham UI — só era possível adicionar. Nenhuma das duas peças precisava de schema novo; `ClientContact` e `SquadMember` já existiam desde a Release 1B/1C.
+
+**Decisão — marcar um contato como principal desmarca qualquer outro na mesma transação**: o schema não tem uma constraint de banco garantindo "no máximo um contato principal por cliente" (seria uma constraint condicional, mais complexa que o benefício justifica aqui). A exclusividade é garantida na rota (`PATCH /api/clients/:id/contacts/:contactId`): ao marcar `isPrimary: true`, a mesma transação primeiro desmarca qualquer outro contato principal do cliente antes de aplicar a mudança — nunca deixa dois contatos principais coexistirem, mesmo que a UI tente enviar dois cliques rápidos.
+
+**Decisão — remover membro de squad apaga só o vínculo, nunca a pessoa nem seu histórico**: `DELETE /api/squads/:id/members/:userId` remove a linha `SquadMember` (chave composta `squadId_userId`) e nada mais — tarefas já atribuídas àquela pessoa, a contagem de carga histórica e as alocações de cliente do squad continuam intactas. Mesma filosofia já aplicada em "bloquear fornecedor preserva ordens existentes" (Release 1C, parte 5).
+
+**Consequência**: `docs/STATUS.md` — as duas linhas correspondentes na seção "Parcial" foram removidas.
+
 ## 2026-09-05 — Portal do Cliente: Arquivos e Financeiro (seção 18, fecha a "parte 2"); isolamento de download vira regra de rota, não só de query
 
 **Contexto**: seguindo a lista de pendências pequenas e desbloqueadas (o usuário pediu pra seguir sem pausar entre fatias), "Portal do Cliente — Arquivos e Relatórios" estava documentado como pendência desde a Release 1D, parte 5. As duas peças que faltavam (Arquivos, Financeiro) já tinham toda a infraestrutura pronta (`MediaAsset`/R2 desde a fatia de Arquivos da Fase 1E; `FinanceEntry` desde o Financeiro básico) — só faltava a tela e, mais importante, destravar o acesso de leitura que hoje era bloqueado por completo pra qualquer sessão de cliente.

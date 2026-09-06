@@ -6,6 +6,7 @@ import { startOfWeekUTC, formatMinutes } from "@/lib/timesheets";
 import { prisma } from "@zenith/db";
 import { AddMemberForm } from "./AddMemberForm";
 import { AllocateClientForm } from "./AllocateClientForm";
+import { RemoveMemberButton } from "./RemoveMemberButton";
 
 interface PageProps {
   params: { id: string };
@@ -122,6 +123,7 @@ export default async function SquadDetailPage({ params }: PageProps) {
                     >
                       {load} tarefa{load === 1 ? "" : "s"} aberta{load === 1 ? "" : "s"}
                     </span>
+                    <RemoveMemberButton squadId={squad.id} userId={member.userId} />
                   </div>
                 </div>
               );

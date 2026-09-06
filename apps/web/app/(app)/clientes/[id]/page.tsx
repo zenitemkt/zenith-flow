@@ -6,6 +6,7 @@ import { prisma } from "@zenith/db";
 import { StatusActions } from "./StatusActions";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 import { AddContactForm } from "./AddContactForm";
+import { ClientContactItem } from "./ClientContactItem";
 import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
 import { ClientPortalSection } from "./ClientPortalSection";
@@ -326,20 +327,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 <p className="text-sm text-[#98A2B3]">Nenhum contato ainda.</p>
               )}
               {client.contacts.map((contact) => (
-                <div key={contact.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
-                  <p className="text-sm font-medium text-[#101828]">
-                    {contact.name}
-                    {contact.isPrimary && (
-                      <span className="ml-2 rounded-full bg-[#F1EDFE] px-1.5 py-0.5 text-[10px] font-semibold text-[#6847F5]">
-                        Principal
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-[#667085]">
-                    {contact.role} {contact.email ? `· ${contact.email}` : ""}{" "}
-                    {contact.phone ? `· ${contact.phone}` : ""}
-                  </p>
-                </div>
+                <ClientContactItem key={contact.id} clientId={client.id} contact={contact} />
               ))}
               <AddContactForm clientId={client.id} />
             </div>
