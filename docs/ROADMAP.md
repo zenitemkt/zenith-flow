@@ -7,7 +7,7 @@ Ver seções 3 e 3.2 do Manual Mestre v2.0 para o roadmap oficial completo (3 fa
 - [x] Fundação do monorepo + design system inicial (tokens de cor/tipografia)
 - [x] Sidebar de navegação completa (todas as abas, estado "Em desenvolvimento")
 - [x] Release 1A — Auth, agência, workspace, membros, RBAC
-- [~] Release 1B — Clientes, contatos, onboarding ✅ · contratos ✅ (link pro Drive, por decisão do usuário) · arquivos pendente
+- [~] Release 1B — Clientes, contatos, onboarding (checklist + visão cross-cliente `/clientes/onboarding`) ✅ · contratos ✅ (link pro Drive, por decisão do usuário) · arquivos ✅ (Cloudflare R2, Fase 1E) · wizard/acessos pendentes/briefing/kickoff (seção 11) pendentes
 - [~] Release 1C — Demandas ✅ · projetos e tarefas ✅ (com bloqueio por dependência) · rotinas ✅ (mensal, idempotente) · squads e capacidade ✅ · fornecedores ✅ · só notificações pendente (adiada)
 - [~] Release 1D — Conteúdo (planejamento, versões, calendário, filtro por cliente, fila de aprovação, biblioteca) ✅ · aprovação por link público ✅ · Portal do Cliente (login, início, calendário, aprovações, solicitações, **arquivos ✅, financeiro permitido ✅**) ✅ · Comunicação e comentários genéricos (thread, edição, tombstone, menções) ✅ · converter comentário em tarefa pendente
 - [~] Release 1E — RH básico ✅ · apontamento e produtividade ✅ · Home executiva v1 e v2 ✅ · financeiro básico manual ✅ · Arquivos (seção 9.3) e Biblioteca de conteúdo (seção 17) ✅ (Cloudflare R2) · cargos/vagas/candidatos/eNPS pendentes · MRR/Churn na Home pendentes (Fase 2)

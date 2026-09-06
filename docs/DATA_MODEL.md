@@ -275,3 +275,8 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 
 - **`@@unique([agencyId, order])` já existia** — trocar a posição de dois estágios exige passar por um valor temporário (`order: -1`) dentro de uma transação, já que duas linhas não podem compartilhar `order` nem por um instante. Ver `docs/DECISIONS.md`.
 - **Só troca com o vizinho imediato** — a rota não aceita "mover para a posição N", só "esquerda"/"direita" a partir da posição atual.
+
+## Onboarding cross-cliente — `/clientes/onboarding` (sem tabela nova)
+
+- **Nenhum modelo novo** — a página agrega `OnboardingRun`/`OnboardingItem` (existentes desde a Release 1B) por cliente, pegando só a última `OnboardingRun` de cada um (`orderBy: startedAt desc, take: 1`), mesmo critério já usado no perfil individual do cliente.
+- **"Progresso" é sempre um recálculo sob demanda** (itens concluídos ÷ total), nunca persistido — mesmo raciocínio de Cohort/DSO/DRE: é uma reagregação de dado que já existe, não uma decisão pontual.

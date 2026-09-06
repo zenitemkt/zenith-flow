@@ -4,8 +4,6 @@ import {
   Briefcase,
   Workflow,
   FileText,
-  CheckCircle2,
-  Calendar,
   Wallet,
   UserCog,
   BarChart3,
@@ -41,7 +39,7 @@ export const navigationGroups: NavigationGroup[] = [
         children: [
           { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
           { id: "clients-risk", label: "Risco de churn", href: "/clientes/risco", comingSoon: false },
-          { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: true },
+          { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: false },
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
           { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
           { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
@@ -98,8 +96,6 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "content-publishing", label: "Publicação", href: "/conteudo/publicacao", comingSoon: true },
         ],
       },
-      { id: "approvals", label: "Aprovações", icon: CheckCircle2, href: "/aprovacoes", comingSoon: true },
-      { id: "calendar", label: "Calendário", icon: Calendar, href: "/calendario", comingSoon: true },
     ],
   },
   {
