@@ -14,6 +14,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/public/survey",
   "/api/public/enps",
   "/api/public/proposals",
+  "/api/collect",
 ];
 
 function isPublicPath(pathname: string): boolean {

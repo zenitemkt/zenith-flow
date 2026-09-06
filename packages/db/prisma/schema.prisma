@@ -141,6 +141,12 @@ model Agency {
   pipelineStages         PipelineStage[]
   opportunities          Opportunity[]
   proposals              Proposal[]
+  /// Chave pública (não-secreta) do coletor de tracking — ver seção "Tracking"
+  /// abaixo. Gerada sob demanda na primeira visita a `/integracoes`.
+  trackingWriteKey       String?                 @unique
+  trackingVisitors       TrackingVisitor[]
+  trackingEvents         TrackingEvent[]
+  trackingConsents       TrackingConsent[]
 
   @@map("agency")
 }
@@ -1674,10 +1680,11 @@ model Lead {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  statusHistory LeadStatusHistory[]
-  notes         LeadNote[]
-  opportunities Opportunity[]
-  proposals     Proposal[]
+  statusHistory    LeadStatusHistory[]
+  notes            LeadNote[]
+  opportunities    Opportunity[]
+  proposals        Proposal[]
+  trackingVisitors TrackingVisitor[]
 
   @@unique([agencyId, email])
   @@index([agencyId])
@@ -1854,4 +1861,123 @@ model ProposalStatusHistory {
 
   @@index([proposalId])
   @@map("proposal_status_history")
+}
+
+// ---------------------------------------------------------------------------
+// Tracking — Fase 3, seção 34 do manual (abre a Fase 3: "Atrair, medir e
+// otimizar"). Rastreia visitantes do site/landing pages da própria agência
+// (não de clientes dela) para alimentar o CRM (seção 39, já existente) — um
+// visitante identificado por e-mail vira/enriquece um `Lead`.
+// ---------------------------------------------------------------------------
+
+/// `visitor_id` anônimo (seção 34.2) — nasce na primeira chamada ao coletor
+/// (o servidor gera e devolve; o snippet do site persiste localmente).
+/// `leadId` é a única forma de "identidade resolvida" desta fatia: sem tabela
+/// de merge/confiança/evidência (seção 34.2 completa) — se um e-mail normalizado
+/// já é um Lead existente, o visitante vincula a ele; senão, cria um Lead novo.
+model TrackingVisitor {
+  id          String   @id @default(cuid())
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+
+  sessions TrackingSession[]
+  events   TrackingEvent[]
+  consents TrackingConsent[]
+
+  @@index([agencyId])
+  @@index([leadId])
+  @@map("tracking_visitor")
+}
+
+/// `session_id` expira depois de 30min sem evento novo (janela fixa nesta
+/// fatia — o manual pede "rotação e expiração configuradas", configuração
+/// fica para quando houver caso real pedindo). Atribuição UTM é sempre a do
+/// evento que abriu a sessão (first-touch da sessão, não da jornada inteira —
+/// isso é o problema de `Attribution`, seção 36, ainda não construído).
+model TrackingSession {
+  id          String          @id @default(cuid())
+  visitorId   String
+  visitor     TrackingVisitor @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  startedAt   DateTime        @default(now())
+  lastEventAt DateTime        @updatedAt
+  landingUrl  String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+
+  events TrackingEvent[]
+
+  @@index([visitorId])
+  @@map("tracking_session")
+}
+
+/// Append-only por natureza (nenhuma rota edita/apaga um evento já recebido).
+/// `@@unique([agencyId, eventId])` é a garantia real de deduplicação do banco
+/// (seção 34: "event_id gerado uma vez e reutilizado em browser/server") —
+/// reenviar o mesmo `eventId` (ex.: retry de rede) nunca duplica a linha.
+/// `consent` é um snapshot JSON do consentimento vigente no momento exato do
+/// evento (seção 34: "categorias e versão do consentimento no momento do
+/// evento") — nunca lido de `TrackingConsent` depois, porque consentimento
+/// muda com o tempo e o evento precisa continuar auditável como aconteceu.
+model TrackingEvent {
+  id          String           @id @default(cuid())
+  agencyId    String
+  agency      Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  visitorId   String
+  visitor     TrackingVisitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  session     TrackingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  eventName   String
+  eventId     String
+  url         String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  properties  Json?
+  consent     Json
+  occurredAt  DateTime
+  receivedAt  DateTime         @default(now())
+
+  @@unique([agencyId, eventId])
+  @@index([agencyId, occurredAt])
+  @@index([visitorId])
+  @@map("tracking_event")
+}
+
+enum TrackingConsentCategory {
+  ESSENCIAL
+  ANALYTICS
+  MARKETING
+  PERSONALIZACAO
+}
+
+/// Append-only (seção 35: consentimento precisa de prova auditável, nunca
+/// sobrescrita) — cada decisão nova do visitante (aceitar/mudar categorias)
+/// cria uma linha; "consentimento atual" é sempre a mais recente por
+/// `visitorId`. `categories` é a lista do que foi concedido nessa decisão
+/// (ESSENCIAL está sempre implícito/permitido, mas é gravado explicitamente
+/// pra o registro ficar completo por si só, sem depender de uma regra externa
+/// pra interpretar "ausência = permitido").
+model TrackingConsent {
+  id            String                    @id @default(cuid())
+  agencyId      String
+  agency        Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  visitorId     String
+  visitor       TrackingVisitor           @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  categories    TrackingConsentCategory[]
+  noticeVersion String
+  createdAt     DateTime                  @default(now())
+
+  @@index([visitorId])
+  @@map("tracking_consent")
 }

@@ -24,6 +24,11 @@ export function canManageTeam(role: MembershipRole): boolean {
   return hasRole(role, TEAM_MANAGEMENT_ROLES);
 }
 
+/** Rotacionar a chave de tracking invalida o snippet já publicado no site — mesma sensibilidade de gerenciar equipe. */
+export function canManageIntegrations(role: MembershipRole): boolean {
+  return hasRole(role, TEAM_MANAGEMENT_ROLES);
+}
+
 /** Seção 21: "pessoa acessa seus dados; gestor acessa escopo autorizado." */
 export function canApproveTimesheets(role: MembershipRole): boolean {
   return hasRole(role, TIMESHEET_APPROVAL_ROLES);

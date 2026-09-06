@@ -154,7 +154,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "system",
     label: "Sistema",
     items: [
-      { id: "integrations", label: "Integrações", icon: Plug, href: "/integracoes", comingSoon: true },
+      { id: "integrations", label: "Integrações", icon: Plug, href: "/integracoes", comingSoon: false },
       {
         id: "settings",
         label: "Configurações",
