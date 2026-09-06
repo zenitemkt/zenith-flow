@@ -27,6 +27,25 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
   const [lostReason, setLostReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const [stageBusyId, setStageBusyId] = useState<string | null>(null);
+
+  async function moveStage(stageId: string, direction: "left" | "right") {
+    setError(null);
+    setStageBusyId(stageId);
+    const response = await fetch(`/api/pipeline-stages/${stageId}/move`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ direction }),
+    });
+    setStageBusyId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Não foi possível mover o estágio.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function move(opportunityId: string, stageId: string) {
     setError(null);
     setBusyId(opportunityId);
@@ -67,13 +86,35 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
     <div className="flex flex-col gap-3">
       {error && <p className="rounded-lg bg-[#FEE4E2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}
       <div className="grid grid-cols-1 gap-4 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4">
-        {stages.map((stage) => {
+        {stages.map((stage, index) => {
           const stageOpportunities = opportunities.filter((o) => o.stageId === stage.id);
           return (
             <div key={stage.id} className="flex min-w-[240px] flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
-                {stage.name} · {stageOpportunities.length}
-              </p>
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
+                  {stage.name} · {stageOpportunities.length}
+                </p>
+                <div className="flex shrink-0 gap-0.5">
+                  <button
+                    type="button"
+                    disabled={index === 0 || stageBusyId === stage.id}
+                    onClick={() => void moveStage(stage.id, "left")}
+                    aria-label={`Mover ${stage.name} para a esquerda`}
+                    className="flex h-5 w-5 items-center justify-center rounded border border-[#D0D5DD] text-[10px] text-[#344054] disabled:opacity-30"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === stages.length - 1 || stageBusyId === stage.id}
+                    onClick={() => void moveStage(stage.id, "right")}
+                    aria-label={`Mover ${stage.name} para a direita`}
+                    className="flex h-5 w-5 items-center justify-center rounded border border-[#D0D5DD] text-[10px] text-[#344054] disabled:opacity-30"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 {stageOpportunities.map((opp) => (
                   <div key={opp.id} className="rounded-lg border border-[#E4E7EC] bg-white p-3 shadow-sm">

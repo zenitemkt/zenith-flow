@@ -270,3 +270,8 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 - **Nenhum modelo novo** — `PATCH`/`DELETE` sobre `ClientContact` e `DELETE` sobre `SquadMember`, ambos já existentes desde a Release 1B/1C.
 - **Exclusividade de "contato principal" é garantida na rota, não numa constraint de banco**: marcar `isPrimary: true` roda, na mesma transação, um `updateMany` que desmarca qualquer outro contato principal do mesmo cliente antes de aplicar a mudança pedida — não existe uma constraint parcial única no schema para isso (o ganho não justificava a complexidade).
 - **Remover `SquadMember` é a exclusão da linha do vínculo, e só dela** — `Task.assigneeUserId`, o histórico de carga e `ClientAllocation` não têm nenhuma referência a `SquadMember`, então não há nada em cascata pra decidir aqui.
+
+## Reordenar `PipelineStage` (sem tabela nova)
+
+- **`@@unique([agencyId, order])` já existia** — trocar a posição de dois estágios exige passar por um valor temporário (`order: -1`) dentro de uma transação, já que duas linhas não podem compartilhar `order` nem por um instante. Ver `docs/DECISIONS.md`.
+- **Só troca com o vizinho imediato** — a rota não aceita "mover para a posição N", só "esquerda"/"direita" a partir da posição atual.

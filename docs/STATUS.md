@@ -222,6 +222,8 @@
   - `ClientContactItem` (novo componente client-side) troca entre exibição e formulário de edição inline, reaproveitando o mesmo `AddContactForm` já existente pra criação.
   - `DELETE /api/squads/:id/members/:userId` + botão "Remover" no perfil do squad — remover alguém do squad apaga só o vínculo (`SquadMember`); tarefas atribuídas, carga histórica e alocações de cliente continuam intactas.
   - Testado via Playwright: dois contatos criados, um editado (nome + marcado como principal), o segundo depois marcado como principal (confirmando que o primeiro perdeu o badge — exclusividade mantida), contato editado removido, contato remanescente preservado; squad criado, membro adicionado e removido (volta a mostrar "Nenhum membro ainda"). Sem teste novo em `packages/db` — CRUD simples sobre `ClientContact`/`SquadMember`, modelos já cobertos pelos testes de isolamento existentes (`client-isolation`, `squad-isolation`). Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
+- **Reordenar estágios do Pipeline**: `POST /api/pipeline-stages/:id/move` (`direction: "left" | "right"`) troca a posição do estágio com o vizinho imediato — nunca um salto arbitrário. Swap implementado com uma ordem temporária (`-1`, nunca usada por um estágio real) dentro de uma transação, já que `@@unique([agencyId, order])` rejeitaria dois estágios com o mesmo valor mesmo que só por um instante. Setas "←"/"→" no cabeçalho de cada coluna do board (`PipelineBoard`), desabilitadas nas pontas. Fecha o último item pequeno da lista "Parcial" do Pipeline.
+  - Testado via Playwright: 4 estágios padrão na ordem semeada, mover "Qualificação" para a esquerda troca de fato com "Novo contato" (confirmado após reload), botão "esquerda" fica desabilitado quando o estágio já é o primeiro, mover de volta pra direita restaura a ordem original. Sem teste novo em `packages/db` — o swap é uma regra de rota simples sobre um modelo já coberto pelo teste de isolamento de `opportunity-isolation`. Suite completa: 9 (Sidebar) + 58 (`packages/db`) = 67/67 passando (inalterada).
 - Testes automatizados: 9 (Sidebar) + 20 (isolamento entre agências: memberships, clientes, demandas, tarefas + bloqueio por dependência, rotinas + idempotência, squads + handoff, fornecedores + preservação de ordens, conteúdo + aprovação por versão — Vitest contra o Neon real) = 29/29 passando. `npm run build` e `tsc --noEmit` limpos em `apps/web`.
 
 ## Parcial
@@ -240,7 +242,7 @@
 - RH (seção 20): cargos como entidade própria, vagas/candidatos e dados de salário seguem fora de escopo (evitado de propósito até haver caso real pedindo permissões separadas).
 - Envio real de e-mail (convites, NPS, eNPS, propostas) segue adiado — todos os fluxos que precisariam disso hoje geram um link público copiável em vez de disparo automático, por escolha do usuário.
 - Lead Scoring (seção 39.2) e tags/consentimento de Lead ficam de fora do CRM — score precisaria de job de decaimento (`apps/worker`), tags/consentimento não têm caso de uso real pedindo ainda.
-- Pipeline: reordenar estágios não tem UI (só a ordem semeada no signup). Propostas: sem versionamento de conteúdo (uma proposta RASCUNHO é editável livremente, sem histórico de "versões" da proposta em si, só do status).
+- Propostas: sem versionamento de conteúdo (uma proposta RASCUNHO é editável livremente, sem histórico de "versões" da proposta em si, só do status).
 
 ## Pendente (por fase, ver manual)
 
@@ -261,7 +263,7 @@
 
 ## Próximo slice sugerido
 
-Com Fase 1 quase fechada, Fase 2 fechada exceto os dois itens bloqueados acima, a seção 39 da Fase 3 fechada, e os itens de contato/squad resolvidos, os próximos candidatos sem bloqueio são: `/aprovacoes` cross-módulo (inbox de nível superior), "converter mensagem em tarefa/demanda" (precisa antes definir "usuário autorizado"), ou decidir com o usuário se vale destravar Asaas/modelo de contrato agora.
+Com Fase 1 quase fechada, Fase 2 fechada exceto os dois itens bloqueados acima, a seção 39 da Fase 3 fechada (incluindo reordenação de estágios do Pipeline), e os itens de contato/squad resolvidos, os próximos candidatos sem bloqueio exigem uma decisão de escopo antes de codificar: `/aprovacoes` cross-módulo (inbox de nível superior — precisa decidir o que exatamente ele agrega, distinto de `/conteudo/aprovacoes` e `/portal/aprovacoes`) e "converter mensagem em tarefa/demanda" (precisa definir "usuário autorizado"). Fora isso, resta decidir com o usuário se vale destravar Asaas/modelo de contrato agora.
 
 ## Ambiente local
 

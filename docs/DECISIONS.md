@@ -1,3 +1,11 @@
+## 2026-09-06 — Reordenar estágios do Pipeline: swap com ordem temporária, não uma tabela de posições nova
+
+**Contexto**: `docs/STATUS.md` listava "reordenar estágios não tem UI (só a ordem semeada no signup)" como o último item pequeno pendente da seção 39. `PipelineStage` já tem `@@unique([agencyId, order])` desde que o Pipeline foi criado — a duplicidade de posição já era uma constraint de banco real, não só uma checagem de aplicação.
+
+**Decisão — trocar de posição com um valor temporário, dentro de uma transação, em vez de relaxar a constraint**: mover um estágio pra a esquerda/direita troca sua `order` com a do vizinho imediato. Fazer isso em duas `UPDATE` sequenciais violaria a constraint única no meio do caminho (as duas linhas teriam a mesma `order` por um instante). Prisma não expõe constraint diferível pra esse caso, então a rota (`POST /api/pipeline-stages/:id/move`) faz três updates na mesma transação: estágio movido vai pra `order: -1` (valor que nenhum estágio real usa, já que a numeração real começa em 0) → vizinho assume a `order` antiga do estágio movido → estágio movido assume a `order` antiga do vizinho. Mesmo padrão de "não inventar uma tabela nova pra resolver um problema que uma transação resolve".
+
+**Decisão — só troca com o vizinho imediato, nunca um salto arbitrário**: a UI é só duas setas (←/→) por coluna, desabilitadas nas pontas — não existe "mover para a posição 3" direto. Suficiente pro caso de uso real (a agência tem poucos estágios, tipicamente 4-6) e evita ter que implementar um algoritmo de reordenação em lote.
+
 ## 2026-09-06 — Edição/remoção de contato de cliente e remoção de membro de squad: fecha dois itens pequenos da lista "Parcial"
 
 **Contexto**: seguindo a lista de pendências pequenas e desbloqueadas (o usuário pediu pra seguir sem pausar entre fatias), `docs/STATUS.md` listava há várias releases que "editar/remover contato de cliente" e "remover membro de squad" não tinham UI — só era possível adicionar. Nenhuma das duas peças precisava de schema novo; `ClientContact` e `SquadMember` já existiam desde a Release 1B/1C.
