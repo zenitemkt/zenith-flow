@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { createEmployeeRecord } from "@/lib/employees-create";
 import { prisma } from "@zenith/db";
 
 function optionalString(value: unknown): string | null {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   const email = optionalString(body?.email);
   const role = optionalString(body?.role);
   const userId = optionalString(body?.userId);
+  const positionId = optionalString(body?.positionId);
 
   if (userId) {
     const linkedMembership = await prisma.membership.findFirst({ where: { userId, agencyId: membership.agencyId } });
@@ -43,32 +45,19 @@ export async function POST(request: Request) {
     }
   }
 
-  const created = await prisma.$transaction(async (tx) => {
-    const employee = await tx.employee.create({
-      data: {
-        agencyId: membership.agencyId,
-        userId,
-        name,
-        email,
-        role,
-        hiredAt: new Date(),
-      },
-    });
-    await tx.employeeStatusHistory.create({
-      data: { employeeId: employee.id, toStatus: "ATIVO", actorUserId: session.user.id },
-    });
-    await tx.auditLog.create({
-      data: {
-        agencyId: membership.agencyId,
-        actorUserId: session.user.id,
-        actorType: "user",
-        action: "employee.created",
-        resourceType: "employee",
-        resourceId: employee.id,
-      },
-    });
-    return employee;
-  });
+  if (positionId) {
+    const position = await prisma.position.findUnique({ where: { id: positionId } });
+    if (!position || position.agencyId !== membership.agencyId) {
+      return NextResponse.json({ error: "Cargo inválido." }, { status: 400 });
+    }
+  }
+
+  const created = await prisma.$transaction((tx) =>
+    createEmployeeRecord(
+      { agencyId: membership.agencyId, userId, name, email, role, positionId, actorUserId: session.user.id },
+      tx,
+    ),
+  );
 
   return NextResponse.json({ id: created.id }, { status: 201 });
 }

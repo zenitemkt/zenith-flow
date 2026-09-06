@@ -288,3 +288,14 @@ Implementa a regra obrigatória da seção 19: "mensagem pode virar demanda/tare
 - **Duas colunas únicas com FK real, não um par polimórfico genérico** — mesma escolha já feita em `Request.convertedTaskId`/`Lead.convertedClientId`/`FinanceEntry.collectionTaskId`: `convertedTaskId` aponta pra `Task`, `convertedRequestId` aponta pra `Request`, cada um `@unique` (uma Task/Request só pode ser o destino de uma conversão).
 - **Reverse fields `Task.sourceComment`/`Request.sourceComment`** — mesmo padrão de `Task.sourceRequest` (a Task que veio da conversão de uma Request).
 - **Migração aplicada via `prisma migrate diff` + `migrate deploy` manual**, não `migrate dev`: a nova constraint única numa tabela existente dispara um aviso de confirmação que trava em ambiente não-interativo. Ver `docs/DECISIONS.md`.
+
+## RH — Cargos, Vagas e Candidatos — `Position`, `Job`, `JobStage`, `Candidate`, `CandidateStatusHistory`
+
+Implementa a seção 20 do manual. Ver `docs/DECISIONS.md`.
+
+- **`Position` é um catálogo simples e aditivo**: `Employee.positionId` é opcional; `Employee.role` (texto livre) continua existindo e não foi migrado. `@@unique([agencyId, title])` evita duplicar o mesmo cargo.
+- **`JobStage` é o mesmo padrão de `PipelineStage`, só que escopado por `Job` em vez de `Agency`**: `@@unique([jobId, order])`, reordenação por swap com ordem temporária, 4 estágios padrão semeados na criação de cada vaga (não um template global).
+- **`Candidate.convertedEmployeeId`** (`@unique`, FK real pra `Employee`) segue o mesmo padrão de idempotência de toda conversão do projeto (`Lead.convertedClientId`, `Request.convertedTaskId`, `Comment.convertedTaskId`/`convertedRequestId`).
+- **`CandidateStatusHistory` registra estágio E status na mesma linha**, mesmo padrão de `OpportunityStatusHistory` — uma tabela só para as duas dimensões de mudança de um candidato.
+- **`anonymizedAt` marca a política de retenção manual** (regra obrigatória da seção 20) — ver `docs/DECISIONS.md` pra por que é manual e não automática.
+- **`createEmployeeRecord()` (`apps/web/lib/employees-create.ts`) aceita um client de transação opcional** — precisa participar da mesma transação atômica da conversão de candidato (`Candidate.convertedEmployeeId` + `Employee` criados juntos ou nenhum dos dois).

@@ -10,13 +10,25 @@ interface MemberOption {
   name: string;
 }
 
-export function NewEmployeeModal({ memberOptions }: { memberOptions: MemberOption[] }) {
+interface PositionOption {
+  id: string;
+  title: string;
+}
+
+export function NewEmployeeModal({
+  memberOptions,
+  positions = [],
+}: {
+  memberOptions: MemberOption[];
+  positions?: PositionOption[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [positionId, setPositionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,8 +37,15 @@ export function NewEmployeeModal({ memberOptions }: { memberOptions: MemberOptio
     setName("");
     setEmail("");
     setRole("");
+    setPositionId("");
     setError(null);
     setOpen(false);
+  }
+
+  function handlePositionSelect(value: string) {
+    setPositionId(value);
+    const position = positions.find((p) => p.id === value);
+    if (position) setRole(position.title);
   }
 
   function handleMemberSelect(value: string) {
@@ -43,7 +62,7 @@ export function NewEmployeeModal({ memberOptions }: { memberOptions: MemberOptio
     const response = await fetch("/api/employees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, role, userId: userId || null }),
+      body: JSON.stringify({ name, email, role, userId: userId || null, positionId: positionId || null }),
     });
 
     setLoading(false);
@@ -110,8 +129,28 @@ export function NewEmployeeModal({ memberOptions }: { memberOptions: MemberOptio
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          {positions.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="employee-position" className="text-sm font-medium text-[#344054]">
+                Cargo (catálogo, opcional)
+              </label>
+              <select
+                id="employee-position"
+                value={positionId}
+                onChange={(e) => handlePositionSelect(e.target.value)}
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              >
+                <option value="">Nenhum</option>
+                {positions.map((position) => (
+                  <option key={position.id} value={position.id}>
+                    {position.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <FormField
-            label="Cargo (opcional)"
+            label="Cargo — texto livre (opcional)"
             name="role"
             value={role}
             onChange={(e) => setRole(e.target.value)}

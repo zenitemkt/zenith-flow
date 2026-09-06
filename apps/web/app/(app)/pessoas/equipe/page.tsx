@@ -5,6 +5,7 @@ import { getAgencyMembers } from "@/lib/team";
 import { EMPLOYEE_STATUS_LABELS } from "@/lib/employees";
 import { prisma } from "@zenith/db";
 import { NewEmployeeModal } from "./NewEmployeeModal";
+import { PositionsPanel } from "./PositionsPanel";
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   ATIVO: "bg-[#DCFCE7] text-[#166534]",
@@ -19,10 +20,11 @@ export default async function EquipePage() {
   }
 
   const now = new Date();
-  const [employees, agencyMembers] = await Promise.all([
+  const [employees, agencyMembers, positions] = await Promise.all([
     prisma.employee.findMany({
       where: { agencyId: membership.agencyId },
       include: {
+        position: true,
         leaveRequests: {
           where: { status: "APROVADA", startDate: { lte: now }, endDate: { gte: now } },
           take: 1,
@@ -31,6 +33,7 @@ export default async function EquipePage() {
       orderBy: { createdAt: "desc" },
     }),
     getAgencyMembers(membership.agencyId),
+    prisma.position.findMany({ where: { agencyId: membership.agencyId }, orderBy: { title: "asc" } }),
   ]);
 
   const employeeUserIds = new Set(employees.map((e) => e.userId).filter(Boolean));
@@ -52,9 +55,11 @@ export default async function EquipePage() {
           >
             Férias e ausências
           </Link>
-          <NewEmployeeModal memberOptions={memberOptions} />
+          <NewEmployeeModal memberOptions={memberOptions} positions={positions} />
         </div>
       </div>
+
+      <PositionsPanel positions={positions} />
 
       {employees.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
@@ -84,7 +89,7 @@ export default async function EquipePage() {
                       </Link>
                       {employee.email && <p className="text-xs text-[#98A2B3]">{employee.email}</p>}
                     </td>
-                    <td className="px-4 py-3 text-[#475467]">{employee.role ?? "—"}</td>
+                    <td className="px-4 py-3 text-[#475467]">{employee.position?.title ?? employee.role ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[employee.status]}`}
