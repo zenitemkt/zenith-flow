@@ -280,3 +280,11 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 
 - **Nenhum modelo novo** — a página agrega `OnboardingRun`/`OnboardingItem` (existentes desde a Release 1B) por cliente, pegando só a última `OnboardingRun` de cada um (`orderBy: startedAt desc, take: 1`), mesmo critério já usado no perfil individual do cliente.
 - **"Progresso" é sempre um recálculo sob demanda** (itens concluídos ÷ total), nunca persistido — mesmo raciocínio de Cohort/DSO/DRE: é uma reagregação de dado que já existe, não uma decisão pontual.
+
+## Converter comentário em tarefa/demanda — `Comment.convertedTaskId`/`convertedRequestId`
+
+Implementa a regra obrigatória da seção 19: "mensagem pode virar demanda/tarefa apenas por usuário autorizado". Ver `docs/DECISIONS.md`.
+
+- **Duas colunas únicas com FK real, não um par polimórfico genérico** — mesma escolha já feita em `Request.convertedTaskId`/`Lead.convertedClientId`/`FinanceEntry.collectionTaskId`: `convertedTaskId` aponta pra `Task`, `convertedRequestId` aponta pra `Request`, cada um `@unique` (uma Task/Request só pode ser o destino de uma conversão).
+- **Reverse fields `Task.sourceComment`/`Request.sourceComment`** — mesmo padrão de `Task.sourceRequest` (a Task que veio da conversão de uma Request).
+- **Migração aplicada via `prisma migrate diff` + `migrate deploy` manual**, não `migrate dev`: a nova constraint única numa tabela existente dispara um aviso de confirmação que trava em ambiente não-interativo. Ver `docs/DECISIONS.md`.

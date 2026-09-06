@@ -36,14 +36,11 @@ export default async function RequestDetailPage({ params }: PageProps) {
     getMentionableMembers(membership.agencyId),
   ]);
 
-  const projects =
-    req.status === "APROVADA"
-      ? await prisma.project.findMany({
-          where: { agencyId: membership.agencyId },
-          select: { id: true, name: true },
-          orderBy: { createdAt: "desc" },
-        })
-      : [];
+  const projects = await prisma.project.findMany({
+    where: { agencyId: membership.agencyId },
+    select: { id: true, name: true },
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,6 +93,7 @@ export default async function RequestDetailPage({ params }: PageProps) {
           thread={thread}
           mentionableMembers={mentionableMembers}
           currentUserId={session.user.id}
+          projects={projects}
         />
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

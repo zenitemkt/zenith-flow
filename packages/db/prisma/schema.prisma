@@ -429,6 +429,7 @@ model Request {
   updatedAt         DateTime         @updatedAt
 
   statusHistory RequestStatusHistory[]
+  sourceComment Comment?
 
   @@index([agencyId])
   @@index([clientId])
@@ -509,11 +510,12 @@ model Task {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  statusHistory TaskStatusHistory[]
-  sourceRequest Request?
-  vendorOrders  VendorOrder[]
-  timeEntries   TimeEntry[]
-  collectionFor FinanceEntry?
+  statusHistory  TaskStatusHistory[]
+  sourceRequest  Request?
+  sourceComment  Comment?
+  vendorOrders   VendorOrder[]
+  timeEntries    TimeEntry[]
+  collectionFor  FinanceEntry?
 
   @@index([projectId])
   @@map("task")
@@ -864,15 +866,23 @@ model CommentThread {
   @@map("comment_thread")
 }
 
+/// "Mensagem pode virar demanda/tarefa apenas por usuário autorizado" (seção
+/// 19) — convertedTaskId/convertedRequestId seguem o mesmo padrão de
+/// idempotência de Request.convertedTaskId e Lead.convertedClientId: no
+/// máximo uma conversão por comentário, nunca duplicada.
 model Comment {
-  id           String        @id @default(cuid())
-  threadId     String
-  thread       CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  authorUserId String
-  body         String
-  status       CommentStatus @default(ATIVO)
-  editedAt     DateTime?
-  createdAt    DateTime      @default(now())
+  id                 String        @id @default(cuid())
+  threadId           String
+  thread             CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorUserId       String
+  body               String
+  status             CommentStatus @default(ATIVO)
+  editedAt           DateTime?
+  convertedTaskId    String?       @unique
+  convertedTask      Task?         @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  convertedRequestId String?       @unique
+  convertedRequest   Request?      @relation(fields: [convertedRequestId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now())
 
   edits    CommentEdit[]
   mentions CommentMention[]

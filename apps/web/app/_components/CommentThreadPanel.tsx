@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { CommentEntityType, CommentView, CommentThreadView } from "@/lib/comments";
 
 interface MentionableMember {
@@ -10,18 +11,25 @@ interface MentionableMember {
   email: string;
 }
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 export function CommentThreadPanel({
   entityType,
   entityId,
   thread,
   mentionableMembers,
   currentUserId,
+  projects = [],
 }: {
   entityType: CommentEntityType;
   entityId: string;
   thread: CommentThreadView;
   mentionableMembers: MentionableMember[];
   currentUserId: string;
+  projects?: ProjectOption[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -30,6 +38,49 @@ export function CommentThreadPanel({
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [convertTarget, setConvertTarget] = useState<"task" | "request">("task");
+  const [convertTitle, setConvertTitle] = useState("");
+  const [convertProjectId, setConvertProjectId] = useState(projects[0]?.id ?? "");
+  const [convertNewProjectName, setConvertNewProjectName] = useState("");
+  const [convertError, setConvertError] = useState<string | null>(null);
+  const [convertLoading, setConvertLoading] = useState(false);
+
+  function startConvert(comment: CommentView) {
+    setConvertingId(comment.id);
+    setConvertTarget("task");
+    setConvertTitle(comment.body.slice(0, 120));
+    setConvertProjectId(projects[0]?.id ?? "");
+    setConvertNewProjectName("");
+    setConvertError(null);
+  }
+
+  async function submitConvert(commentId: string) {
+    if (!convertTitle.trim()) {
+      setConvertError("Informe um título.");
+      return;
+    }
+    setConvertError(null);
+    setConvertLoading(true);
+    const response = await fetch(`/api/comments/${commentId}/convert`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target: convertTarget,
+        title: convertTitle.trim(),
+        projectId: projects.length > 0 ? convertProjectId : null,
+        newProjectName: convertNewProjectName.trim(),
+      }),
+    });
+    setConvertLoading(false);
+    if (!response.ok) {
+      const responseBody = await response.json().catch(() => null);
+      setConvertError(responseBody?.error ?? "Não foi possível converter.");
+      return;
+    }
+    setConvertingId(null);
+    router.refresh();
+  }
 
   function toggleMention(userId: string) {
     setMentioned((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
@@ -172,28 +223,121 @@ export function CommentThreadPanel({
                     {comment.authorName} · {comment.createdAt.toLocaleString("pt-BR")}
                     {comment.status === "EDITADO" ? " · editado" : ""}
                   </p>
-                  {comment.authorUserId === currentUserId && (
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    {comment.convertedTaskId ? (
+                      <span className="text-xs font-medium text-[#3730A3]">Convertido em tarefa</span>
+                    ) : comment.convertedRequestId ? (
+                      <Link
+                        href={`/operacao/demandas/${comment.convertedRequestId}`}
+                        className="text-xs font-medium text-[#3730A3] hover:underline"
+                      >
+                        Convertido em demanda
+                      </Link>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditingId(comment.id);
-                          setEditBody(comment.body);
-                        }}
+                        onClick={() => startConvert(comment)}
                         className="text-xs font-medium text-[#6847F5] hover:underline"
                       >
-                        Editar
+                        Converter
+                      </button>
+                    )}
+                    {comment.authorUserId === currentUserId && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingId(comment.id);
+                            setEditBody(comment.body);
+                          }}
+                          className="text-xs font-medium text-[#6847F5] hover:underline"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeComment(comment.id)}
+                          className="text-xs font-medium text-[#D94343] hover:underline"
+                        >
+                          Remover
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {convertingId === comment.id && (
+                  <div className="mt-2 flex flex-col gap-1.5 rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setConvertTarget("task")}
+                        className={`h-7 flex-1 rounded-md text-xs font-medium ${
+                          convertTarget === "task" ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"
+                        }`}
+                      >
+                        Virar tarefa
                       </button>
                       <button
                         type="button"
-                        onClick={() => removeComment(comment.id)}
-                        className="text-xs font-medium text-[#D94343] hover:underline"
+                        onClick={() => setConvertTarget("request")}
+                        className={`h-7 flex-1 rounded-md text-xs font-medium ${
+                          convertTarget === "request" ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"
+                        }`}
                       >
-                        Remover
+                        Virar demanda
                       </button>
                     </div>
-                  )}
-                </div>
+                    <input
+                      value={convertTitle}
+                      onChange={(e) => setConvertTitle(e.target.value)}
+                      placeholder="Título"
+                      className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                    />
+                    {convertTarget === "task" && (
+                      <>
+                        {projects.length > 0 && (
+                          <select
+                            value={convertProjectId}
+                            onChange={(e) => setConvertProjectId(e.target.value)}
+                            className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                          >
+                            {projects.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <input
+                          value={convertNewProjectName}
+                          onChange={(e) => setConvertNewProjectName(e.target.value)}
+                          placeholder={projects.length > 0 ? "Ou nome de um novo projeto" : "Nome do projeto"}
+                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                        />
+                      </>
+                    )}
+                    {convertError && <p className="text-xs font-medium text-[#D94343]">{convertError}</p>}
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        disabled={convertLoading}
+                        onClick={() => void submitConvert(comment.id)}
+                        className="flex h-7 flex-1 items-center justify-center rounded-md text-xs font-semibold text-white disabled:opacity-60"
+                        style={{ backgroundColor: "#6847F5" }}
+                      >
+                        {convertLoading ? "Convertendo..." : "Confirmar"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConvertingId(null)}
+                        className="flex h-7 flex-1 items-center justify-center rounded-md border border-[#D0D5DD] text-xs font-medium text-[#344054]"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

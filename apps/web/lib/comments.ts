@@ -28,6 +28,22 @@ export async function resolveCommentableEntity(
   return false;
 }
 
+/** `clientId` da entidade de origem, se houver — usado ao converter um comentário em tarefa/demanda. */
+export async function resolveCommentEntityClientId(
+  entityType: CommentEntityType,
+  entityId: string,
+): Promise<string | null> {
+  if (entityType === "content_item") {
+    const item = await prisma.contentItem.findUnique({ where: { id: entityId }, select: { clientId: true } });
+    return item?.clientId ?? null;
+  }
+  if (entityType === "request") {
+    const req = await prisma.request.findUnique({ where: { id: entityId }, select: { clientId: true } });
+    return req?.clientId ?? null;
+  }
+  return null;
+}
+
 /** Membros da equipe interna (não-cliente) que podem ser mencionados. */
 export async function getMentionableMembers(agencyId: string) {
   const members = await prisma.membership.findMany({
@@ -52,6 +68,8 @@ export interface CommentView {
   createdAt: Date;
   editedAt: Date | null;
   mentionNames: string[];
+  convertedTaskId: string | null;
+  convertedRequestId: string | null;
 }
 
 export interface CommentThreadView {
@@ -101,6 +119,8 @@ export async function loadCommentThreadView(
       authorName: nameById.get(comment.authorUserId) ?? "Ex-membro",
       createdAt: comment.createdAt,
       editedAt: comment.editedAt,
+      convertedTaskId: comment.convertedTaskId,
+      convertedRequestId: comment.convertedRequestId,
       mentionNames: comment.mentions.map((m) => nameById.get(m.mentionedUserId) ?? "Ex-membro"),
     })),
   };
