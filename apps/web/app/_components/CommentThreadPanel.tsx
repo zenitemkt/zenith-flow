@@ -11,25 +11,18 @@ interface MentionableMember {
   email: string;
 }
 
-interface ProjectOption {
-  id: string;
-  name: string;
-}
-
 export function CommentThreadPanel({
   entityType,
   entityId,
   thread,
   mentionableMembers,
   currentUserId,
-  projects = [],
 }: {
   entityType: CommentEntityType;
   entityId: string;
   thread: CommentThreadView;
   mentionableMembers: MentionableMember[];
   currentUserId: string;
-  projects?: ProjectOption[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -39,19 +32,13 @@ export function CommentThreadPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
   const [convertingId, setConvertingId] = useState<string | null>(null);
-  const [convertTarget, setConvertTarget] = useState<"task" | "request">("task");
   const [convertTitle, setConvertTitle] = useState("");
-  const [convertProjectId, setConvertProjectId] = useState(projects[0]?.id ?? "");
-  const [convertNewProjectName, setConvertNewProjectName] = useState("");
   const [convertError, setConvertError] = useState<string | null>(null);
   const [convertLoading, setConvertLoading] = useState(false);
 
   function startConvert(comment: CommentView) {
     setConvertingId(comment.id);
-    setConvertTarget("task");
     setConvertTitle(comment.body.slice(0, 120));
-    setConvertProjectId(projects[0]?.id ?? "");
-    setConvertNewProjectName("");
     setConvertError(null);
   }
 
@@ -65,12 +52,7 @@ export function CommentThreadPanel({
     const response = await fetch(`/api/comments/${commentId}/convert`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        target: convertTarget,
-        title: convertTitle.trim(),
-        projectId: projects.length > 0 ? convertProjectId : null,
-        newProjectName: convertNewProjectName.trim(),
-      }),
+      body: JSON.stringify({ title: convertTitle.trim() }),
     });
     setConvertLoading(false);
     if (!response.ok) {
@@ -226,13 +208,6 @@ export function CommentThreadPanel({
                   <div className="flex gap-2">
                     {comment.convertedTaskId ? (
                       <span className="text-xs font-medium text-[#3730A3]">Convertido em tarefa</span>
-                    ) : comment.convertedRequestId ? (
-                      <Link
-                        href={`/operacao/demandas/${comment.convertedRequestId}`}
-                        className="text-xs font-medium text-[#3730A3] hover:underline"
-                      >
-                        Convertido em demanda
-                      </Link>
                     ) : (
                       <button
                         type="button"
@@ -268,55 +243,12 @@ export function CommentThreadPanel({
 
                 {convertingId === comment.id && (
                   <div className="mt-2 flex flex-col gap-1.5 rounded-lg border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setConvertTarget("task")}
-                        className={`h-7 flex-1 rounded-md text-xs font-medium ${
-                          convertTarget === "task" ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"
-                        }`}
-                      >
-                        Virar tarefa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConvertTarget("request")}
-                        className={`h-7 flex-1 rounded-md text-xs font-medium ${
-                          convertTarget === "request" ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"
-                        }`}
-                      >
-                        Virar demanda
-                      </button>
-                    </div>
                     <input
                       value={convertTitle}
                       onChange={(e) => setConvertTitle(e.target.value)}
-                      placeholder="Título"
+                      placeholder="Título da tarefa"
                       className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
                     />
-                    {convertTarget === "task" && (
-                      <>
-                        {projects.length > 0 && (
-                          <select
-                            value={convertProjectId}
-                            onChange={(e) => setConvertProjectId(e.target.value)}
-                            className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
-                          >
-                            {projects.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <input
-                          value={convertNewProjectName}
-                          onChange={(e) => setConvertNewProjectName(e.target.value)}
-                          placeholder={projects.length > 0 ? "Ou nome de um novo projeto" : "Nome do projeto"}
-                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
-                        />
-                      </>
-                    )}
                     {convertError && <p className="text-xs font-medium text-[#D94343]">{convertError}</p>}
                     <div className="flex gap-1">
                       <button

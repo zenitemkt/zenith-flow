@@ -29,7 +29,7 @@ export default async function VendorDetailPage({ params }: PageProps) {
     include: {
       orders: {
         orderBy: { createdAt: "desc" },
-        include: { task: { include: { project: true } } },
+        include: { task: { include: { project: { include: { client: { select: { id: true, name: true } } } } } } },
       },
     },
   });
@@ -40,7 +40,7 @@ export default async function VendorDetailPage({ params }: PageProps) {
 
   const openTasks = await prisma.task.findMany({
     where: { project: { agencyId: membership.agencyId }, status: { notIn: ["CONCLUIDA", "CANCELADA"] } },
-    include: { project: { select: { name: true } } },
+    include: { project: { include: { client: { select: { name: true } } } } },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
@@ -66,7 +66,7 @@ export default async function VendorDetailPage({ params }: PageProps) {
           <h2 className="text-sm font-semibold text-[#101828]">Ordens</h2>
           <NewOrderModal
             vendorId={vendor.id}
-            tasks={openTasks.map((t) => ({ id: t.id, title: t.title, projectName: t.project.name }))}
+            tasks={openTasks.map((t) => ({ id: t.id, title: t.title, clientName: t.project.client?.name ?? "Interna" }))}
           />
         </div>
         {vendor.orders.length === 0 ? (
@@ -82,7 +82,7 @@ export default async function VendorDetailPage({ params }: PageProps) {
                   <p className="text-sm text-[#101828]">{order.description}</p>
                   {order.task && (
                     <Link
-                      href={`/operacao/projetos/${order.task.projectId}`}
+                      href={order.task.project.client ? `/operacao?clientId=${order.task.project.client.id}` : "/operacao"}
                       className="text-xs text-[#6847F5] hover:underline"
                     >
                       tarefa: {order.task.title}

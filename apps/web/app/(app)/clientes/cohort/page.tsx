@@ -109,7 +109,7 @@ export default async function CohortPage() {
         <h2 className="mb-1 text-sm font-semibold text-[#101828]">Como ler</h2>
         <p className="text-xs text-[#667085]">
           <strong>Logo retention</strong> (número maior): % de clientes daquele cohort que ainda não foram
-          encerrados até aquele mês. <strong>Revenue retention</strong> (linha "receita"): receita liquidada
+          encerrados até aquele mês. <strong>Revenue retention</strong> (linha &quot;receita&quot;): receita liquidada
           naquele mês comparada à receita do mês 0 do mesmo cohort — pode passar de 100% se houver expansão.
         </p>
         <p className="mt-2 text-xs text-[#98A2B3]">

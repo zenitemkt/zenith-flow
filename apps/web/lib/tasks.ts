@@ -1,29 +1,33 @@
 import type { WorkItemStatus } from "@zenith/db";
 
+/**
+ * O enum inteiro (7 valores) é preservado porque Health Score
+ * (`computeEntregasDimension`) e Risco de Churn (`computeLateDeliveriesSignal`)
+ * dependem de valores específicos — mas o Kanban unificado só expõe/usa 3
+ * como colunas (`BOARD_LANES`) e `CANCELADA` como ação. `PLANEJADA`,
+ * `BLOQUEADA` e `REVISAO` ficam sem uso ativo no board novo. Ver docs/DECISIONS.md.
+ */
 export const WORK_ITEM_STATUS_LABELS: Record<WorkItemStatus, string> = {
-  BACKLOG: "Backlog",
+  BACKLOG: "A Fazer",
   PLANEJADA: "Planejada",
-  EM_ANDAMENTO: "Em andamento",
+  EM_ANDAMENTO: "Fazendo",
   BLOQUEADA: "Bloqueada",
   REVISAO: "Revisão",
-  CONCLUIDA: "Concluída",
+  CONCLUIDA: "Concluído",
   CANCELADA: "Cancelada",
 };
 
-/** Colunas do quadro, na ordem em que aparecem (seção 14 do manual). */
-export const TASK_BOARD_COLUMNS: WorkItemStatus[] = [
-  "BACKLOG",
-  "PLANEJADA",
-  "EM_ANDAMENTO",
-  "BLOQUEADA",
-  "REVISAO",
-  "CONCLUIDA",
-];
+/** As 3 lanes visíveis no board unificado de Operação, na ordem em que aparecem. */
+export const BOARD_LANES: WorkItemStatus[] = ["BACKLOG", "EM_ANDAMENTO", "CONCLUIDA"];
 
+/**
+ * Transições simplificadas pro board de 3 lanes — cancelar é uma ação
+ * disponível a partir de qualquer lane ativa, não uma coluna própria.
+ */
 export const WORK_ITEM_TRANSITIONS: Record<WorkItemStatus, WorkItemStatus[]> = {
-  BACKLOG: ["PLANEJADA", "CANCELADA"],
+  BACKLOG: ["EM_ANDAMENTO", "CANCELADA"],
   PLANEJADA: ["EM_ANDAMENTO", "CANCELADA"],
-  EM_ANDAMENTO: ["BLOQUEADA", "REVISAO", "CANCELADA"],
+  EM_ANDAMENTO: ["BACKLOG", "CONCLUIDA", "CANCELADA"],
   BLOQUEADA: ["EM_ANDAMENTO", "CANCELADA"],
   REVISAO: ["CONCLUIDA", "EM_ANDAMENTO"],
   CONCLUIDA: [],
@@ -34,7 +38,7 @@ export function canTransitionWorkItem(from: WorkItemStatus, to: WorkItemStatus):
   return WORK_ITEM_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-/** Task não pode avançar para "em andamento" ou "concluída" enquanto quem a bloqueia não estiver concluída. */
+/** Task não pode avançar para "fazendo" ou "concluída" enquanto quem a bloqueia não estiver concluída. */
 export function isBlockedByDependency(
   targetStatus: WorkItemStatus,
   blockerStatus: WorkItemStatus | null,
@@ -42,4 +46,15 @@ export function isBlockedByDependency(
   if (!blockerStatus) return false;
   if (blockerStatus === "CONCLUIDA") return false;
   return targetStatus === "EM_ANDAMENTO" || targetStatus === "CONCLUIDA";
+}
+
+/** Rótulo de prazo pro card: atrasado, vence em N dias, ou sem prazo (vai pro fim da fila). */
+export function dueDateLabel(dueDate: Date | null, now: Date = new Date()): string {
+  if (!dueDate) return "Sem prazo";
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDue = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+  const diffDays = Math.round((startOfDue.getTime() - startOfToday.getTime()) / 86_400_000);
+  if (diffDays < 0) return `Atrasado há ${Math.abs(diffDays)} dia${Math.abs(diffDays) === 1 ? "" : "s"}`;
+  if (diffDays === 0) return "Vence hoje";
+  return `Vence em ${diffDays} dia${diffDays === 1 ? "" : "s"}`;
 }

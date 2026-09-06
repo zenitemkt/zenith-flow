@@ -1,14 +1,16 @@
 import { prisma, type CommentStatus, type CommentThreadStatus } from "@zenith/db";
 
 /**
- * Tipos de entidade comentável nesta fatia — texto livre no banco (não enum),
- * mas fechado em código pra manter as rotas que consomem thread de comentário
+ * Tipos de entidade comentável — texto livre no banco (não enum), mas
+ * fechado em código pra manter as rotas que consomem thread de comentário
  * honestas sobre o que sabem carregar (checagem de posse do recurso).
+ * "request" saiu quando Demandas foi substituída pelo Kanban unificado de
+ * Operação (ver docs/DECISIONS.md, 2026-09-06).
  */
-export type CommentEntityType = "content_item" | "request";
+export type CommentEntityType = "content_item";
 
 export function isCommentEntityType(value: unknown): value is CommentEntityType {
-  return value === "content_item" || value === "request";
+  return value === "content_item";
 }
 
 /** Confere que a entidade existe e pertence à agência do chamador. */
@@ -21,14 +23,10 @@ export async function resolveCommentableEntity(
     const item = await prisma.contentItem.findUnique({ where: { id: entityId } });
     return Boolean(item && item.agencyId === agencyId);
   }
-  if (entityType === "request") {
-    const req = await prisma.request.findUnique({ where: { id: entityId } });
-    return Boolean(req && req.agencyId === agencyId);
-  }
   return false;
 }
 
-/** `clientId` da entidade de origem, se houver — usado ao converter um comentário em tarefa/demanda. */
+/** `clientId` da entidade de origem, se houver — usado ao converter um comentário em tarefa. */
 export async function resolveCommentEntityClientId(
   entityType: CommentEntityType,
   entityId: string,
@@ -36,10 +34,6 @@ export async function resolveCommentEntityClientId(
   if (entityType === "content_item") {
     const item = await prisma.contentItem.findUnique({ where: { id: entityId }, select: { clientId: true } });
     return item?.clientId ?? null;
-  }
-  if (entityType === "request") {
-    const req = await prisma.request.findUnique({ where: { id: entityId }, select: { clientId: true } });
-    return req?.clientId ?? null;
   }
   return null;
 }
@@ -69,7 +63,6 @@ export interface CommentView {
   editedAt: Date | null;
   mentionNames: string[];
   convertedTaskId: string | null;
-  convertedRequestId: string | null;
 }
 
 export interface CommentThreadView {
@@ -120,7 +113,6 @@ export async function loadCommentThreadView(
       createdAt: comment.createdAt,
       editedAt: comment.editedAt,
       convertedTaskId: comment.convertedTaskId,
-      convertedRequestId: comment.convertedRequestId,
       mentionNames: comment.mentions.map((m) => nameById.get(m.mentionedUserId) ?? "Ex-membro"),
     })),
   };

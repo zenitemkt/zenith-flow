@@ -101,10 +101,10 @@ describe("comentários: isolamento, edição com histórico e tombstone", () => 
     expect(removed?.edits[1]!.previousBody).toBe("Texto editado");
   });
 
-  it("conversão em tarefa/demanda é única por recurso (@@unique convertedTaskId/convertedRequestId)", async () => {
+  it("conversão em tarefa é única por recurso (@@unique convertedTaskId)", async () => {
     const agency = await createAgency("zeta");
     const thread = await prisma.commentThread.create({
-      data: { agencyId: agency.id, entityType: "request", entityId: `req-zeta-${suffix}` },
+      data: { agencyId: agency.id, entityType: "content_item", entityId: `content-zeta-${suffix}` },
     });
     const [commentA, commentB] = await Promise.all([
       prisma.comment.create({ data: { threadId: thread.id, authorUserId: "user-1", body: "Comentário A" } }),
@@ -122,13 +122,6 @@ describe("comentários: isolamento, edição com histórico e tombstone", () => 
     await expect(
       prisma.comment.update({ where: { id: commentB.id }, data: { convertedTaskId: task.id } }),
     ).rejects.toThrow();
-
-    const req = await prisma.request.create({ data: { agencyId: agency.id, title: "Demanda da conversão" } });
-    const convertedReq = await prisma.comment.update({
-      where: { id: commentB.id },
-      data: { convertedRequestId: req.id },
-    });
-    expect(convertedReq.convertedRequestId).toBe(req.id);
   });
 
   it("resolver a thread grava quem resolveu e quando", async () => {

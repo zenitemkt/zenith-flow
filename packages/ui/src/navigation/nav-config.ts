@@ -74,11 +74,7 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/operacao",
         comingSoon: false,
         children: [
-          { id: "operations-projects", label: "Projetos", href: "/operacao/projetos", comingSoon: false },
-          { id: "operations-requests", label: "Demandas", href: "/operacao/demandas", comingSoon: false },
-          { id: "operations-tasks", label: "Tarefas", href: "/operacao/tarefas", comingSoon: false },
-          { id: "operations-routines", label: "Rotinas", href: "/operacao/rotinas", comingSoon: false },
-          { id: "operations-squads", label: "Squads", href: "/operacao/squads", comingSoon: false },
+          { id: "operations-recurring", label: "Recorrências", href: "/operacao/recorrencias", comingSoon: false },
           { id: "operations-vendors", label: "Fornecedores", href: "/operacao/fornecedores", comingSoon: false },
         ],
       },

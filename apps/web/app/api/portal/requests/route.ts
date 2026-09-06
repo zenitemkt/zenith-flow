@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { createRequestRecord } from "@/lib/requests-create";
+import { getOrCreateTaskProject } from "@/lib/task-projects";
 import { prisma } from "@zenith/db";
 
 function optionalString(value: unknown): string | null {
@@ -11,10 +11,11 @@ function optionalString(value: unknown): string | null {
 }
 
 /**
- * Demanda aberta pelo próprio cliente no portal — seção 18 do manual
- * ("nova solicitação entra na triagem"). O cliente nunca escolhe qual
- * cliente/prioridade: clientId vem do workspace da sessão, prioridade só é
- * definida pelo time na triagem (mesma regra da seção 13).
+ * Solicitação aberta pelo próprio cliente no portal — com o Kanban unificado
+ * de Operação (ver docs/DECISIONS.md, 2026-09-06), isso agora cria uma
+ * Tarefa sem responsável (`assigneeUserId: null`, sem `TaskAssignee`), que
+ * cai na coluna compartilhada "Não atribuída" pra equipe assumir. O cliente
+ * nunca escolhe cliente (vem do workspace da sessão) nem responsável.
  */
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -38,15 +39,26 @@ export async function POST(request: Request) {
   }
   const description = optionalString(body?.description);
 
-  const created = await createRequestRecord({
-    agencyId: client.agencyId,
-    clientId: client.id,
-    title,
-    description,
-    requesterName: session.user.name,
-    requestedByUserId: session.user.id,
-    auditActorType: "client_portal",
+  const task = await prisma.$transaction(async (tx) => {
+    const project = await getOrCreateTaskProject(tx, client.agencyId, client.id);
+    const created = await tx.task.create({
+      data: { projectId: project.id, title, description },
+    });
+    await tx.taskStatusHistory.create({
+      data: { taskId: created.id, toStatus: "BACKLOG", actorUserId: session.user.id },
+    });
+    await tx.auditLog.create({
+      data: {
+        agencyId: client.agencyId,
+        actorUserId: session.user.id,
+        actorType: "client_portal",
+        action: "task.created",
+        resourceType: "task",
+        resourceId: created.id,
+      },
+    });
+    return created;
   });
 
-  return NextResponse.json({ id: created.id }, { status: 201 });
+  return NextResponse.json({ id: task.id }, { status: 201 });
 }

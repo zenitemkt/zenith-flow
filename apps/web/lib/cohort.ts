@@ -7,11 +7,10 @@
  * dado real e inequívoco hoje (a data em que o cliente virou `ATIVO`, via
  * `ClientStatusHistory`). "Canal" e "produto" não existem no schema (não há
  * campo de origem de aquisição nem entidade de produto/contrato formal —
- * decisão já tomada de não modelar contrato). "Squad" existe (`ClientAllocation`)
- * mas puxaria uma segunda dimensão de agrupamento sem um caso de uso real
- * pedindo ainda — mesma régua pragmática usada em Health Score/Risco de
- * churn (só implementar o que tem dado real, documentar o resto como
- * pendente). Ver docs/DECISIONS.md.
+ * decisão já tomada de não modelar contrato). "Squad" saiu do schema com o
+ * Kanban unificado de Operação (ver docs/DECISIONS.md, 2026-09-06) — mesma
+ * régua pragmática usada em Health Score/Risco de churn (só implementar o
+ * que tem dado real, documentar o resto como pendente).
  */
 
 export const COHORT_MONTH_WINDOW = 6;

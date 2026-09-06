@@ -26,38 +26,19 @@ Implementa as seções 10 e 11 do manual:
 - **OnboardingItem.status**: `PENDENTE` (liberado, ainda não feito) vs `BLOQUEADO` (aguardando o anterior) vs `CONCLUIDO`. Dependência é sequencial pela coluna `order` — ver decisão abaixo.
 - **Client.email/phone/whatsapp**: dados da empresa em si (não de uma pessoa) — o contato "Responsável" continua sendo uma `ClientContact` separada (`isPrimary: true`). Cadastro pode nascer só com `name` preenchido; todo o resto é opcional e editável depois via `PATCH /api/clients/:id`.
 
-## Demandas — `Request`, `RequestComment`, `RequestStatusHistory`
+## Kanban unificado de Operação — `Project`, `Task`, `TaskAssignee`, `TaskChecklistItem`, `RecurringTaskTemplate`
 
-Implementa a seção 13 do manual:
+Substitui Demandas (`Request`), o quadro visível de Projetos, Rotinas (`RoutineTemplate`/`RoutineRun`) e Squads (`Squad`/`SquadMember`/`ClientAllocation`) — ver `docs/DECISIONS.md` de 2026-09-06. Um único board (`/operacao`) com 3 colunas (A Fazer/Fazendo/Concluído), uma coluna "A Fazer" por pessoa, fila sequencial de responsáveis, checklist opcional e recorrência.
 
-- **Request.clientId é opcional**: uma demanda pode ser interna (sem cliente) ou vinculada a um cliente. `requesterName` é texto livre (não um `User`/`ClientContact` formal) porque ainda não existe portal do cliente (Fase 1D) — quando existir, isso pode migrar para uma referência real.
-- **Request.priority não é definida na criação**: o campo só é preenchido durante a triagem/aprovação (seção 13: "prioridade é definida por matriz, não apenas pelo solicitante"). Por isso é opcional no create e só aparece como opção nas transições `TRIAGEM`/`APROVADA`.
-- **`status: CONVERTIDA` ainda não cria nada**: é só um marcador. A conversão real para Tarefa/Projeto acontece quando esses módulos existirem — ver `docs/DECISIONS.md`.
-
-## Projetos e tarefas — `Project`, `Task`, `TaskStatusHistory`
-
-Implementa a seção 14 do manual:
-
-- **WorkItemStatus é um enum único** compartilhado por `Project.status` e `Task.status` — o manual descreve uma única cadeia de estados na seção 14 sem diferenciar as duas entidades, então modelamos assim em vez de dois enums quase idênticos.
-- **`Task.blockedByTaskId` é autorrelacionamento simples** (bloqueio único), não uma tabela `task_dependencies` many-to-many como o manual lista — mesma simplificação pragmática do checklist de onboarding (item N depende do N-1). A regra de bloqueio (`isBlockedByDependency` em `apps/web/lib/tasks.ts`) impede ir para `EM_ANDAMENTO`/`CONCLUIDA` enquanto a bloqueadora não estiver `CONCLUIDA`.
-- **`Request.convertedTaskId`**: liga a demanda à tarefa gerada por ela. A conversão (`POST /api/requests/:id/convert`) é sua própria rota — não a rota genérica de status — porque precisa decidir em qual `Project` a `Task` entra (existente ou novo).
-- **Sem `deliverables` nem `work_logs` nesta fatia**: o manual lista essas entidades na seção 14, mas para o MVP tratamos "concluir a tarefa" como o próprio entregável (sem uma entidade separada de "deliverable" com seu próprio fluxo de aprovação — isso se sobrepõe ao módulo de Aprovações da Fase 1D). Apontamento de horas (`work_logs`) é Fase 1E (seção 21 do manual).
-
-## Rotinas recorrentes — `RoutineTemplate`, `RoutineTemplateTask`, `RoutineRun`
-
-Implementa a seção 15 do manual:
-
-- **`RoutineRun.period` + `@@unique([templateId, period])`**: essa constraint É o mecanismo de idempotência que o manual pede ("idempotency key impede duplicidade por rotina+período") — não é uma checagem só em código, é uma garantia do banco. Duas chamadas concorrentes de geração para o mesmo período: uma cria a linha, a outra recebe erro de constraint (`P2002`) e é tratada como sucesso idempotente em `apps/web/lib/routines.ts`.
-- **Cada geração cria um `Project` novo** (não reaproveita um projeto entre períodos) — mantém cada mês/período claramente separado e satisfaz naturalmente "mudança de template não altera instâncias passadas" (seção 15): o `Project` e as `Task` já criados são cópias independentes, não referências ao template.
-- **Só recorrência mensal (`dayOfMonth`) nesta fatia**: o manual pede timezone, dias úteis e data final também — implementamos `timezone` e `endDate` no schema (para não bloquear a evolução), mas a lógica de geração ainda não os usa. Semanal/dias úteis ficam para quando houver caso real.
-- **Geração é sempre manual (botão "Gerar agora")**: não existe ainda um worker/cron rodando a geração automaticamente no dia certo — isso é `apps/worker`, que ainda não existe no monorepo. A função `generateRoutineRun()` já é a peça que um cron chamaria; só falta o cron em si.
-
-## Squads e capacidade — `Squad`, `SquadMember`, `ClientAllocation`
-
-Implementa a seção 16 do manual:
-
-- **`ClientAllocation` é histórico, não estado atual**: cada realocação de squad cria uma linha nova (`ATIVA`) e encerra a anterior (`ENCERRADA` + `endDate`), em vez de fazer `UPDATE` no squad responsável do cliente. Isso é literalmente "troca de responsável registra handoff" (seção 16) — a query "squad atual" é só `WHERE status = 'ATIVA'`, mas o histórico completo sempre existe.
-- **Sem tabela de "capacidade" (`capacity_calendars`)**: o manual descreve capacidade como horas disponíveis vs. planejadas. Sem um sistema de estimativa/apontamento de horas (isso é `time_entries`/`estimates`, Fase 1E, seção 21), "carga" aqui é uma contagem de `Task` abertas (`status` fora de `CONCLUIDA`/`CANCELADA`) por `assigneeUserId` — calculada on-the-fly via `groupBy`, sem tabela própria. Simples, honesto sobre sua limitação, e útil o suficiente pra apontar sobrecarga óbvia.
+- **WorkItemStatus é um enum único** compartilhado por `Project.status` e `Task.status`, herdado da modelagem original de Projetos/Tarefas (seção 14 do manual). O enum inteiro (7 valores) é preservado porque Health Score e Risco de Churn dependem de valores específicos, mas o board novo só expõe `BACKLOG`/`EM_ANDAMENTO`/`CONCLUIDA` como colunas e `CANCELADA` como ação — `PLANEJADA`/`BLOQUEADA`/`REVISAO` ficam sem uso ativo.
+- **`Project` virou 100% interno/invisível**: sem página, sem nav. Toda tarefa nova é anexada a um projeto "guarda-chuva" por cliente (ou um único projeto interno quando não há cliente), resolvido via `getOrCreateTaskProject()` (find-or-create, mesmo padrão já usado pelo projeto "Cobrança" da régua de cobrança) — isso preserva `FinanceEntry.projectId`/`VendorOrder`/`TimeEntry` sem precisar mudar nada neles.
+- **`TaskAssignee` é a fila sequencial de responsáveis**: `@@unique([taskId, order])` garante que a fila nunca tem posição duplicada. `Task.assigneeUserId` continua existindo como cache denormalizado de "quem está na vez agora" — é o que a Home, `/pessoas/horas` e o board já sabem ler. Concluir a parte de quem está na vez (`advanceAssigneeQueue()` em `apps/web/lib/task-assignees.ts`) marca `completedAt` na linha atual e promove o próximo `order`; sem próximo, a `Task` inteira fecha `CONCLUIDA`.
+- **`TaskChecklistItem` é puramente informativo**: não bloqueia conclusão da tarefa, mesmo espírito de `OnboardingItem`/o antigo `RoutineTemplateTask`.
+- **`Task.blockedByTaskId` continua autorrelacionamento simples** (bloqueio único), não uma tabela `task_dependencies` many-to-many — mesma simplificação pragmática de sempre. A regra de bloqueio (`isBlockedByDependency` em `apps/web/lib/tasks.ts`) impede ir para `EM_ANDAMENTO`/`CONCLUIDA` enquanto a bloqueadora não estiver `CONCLUIDA`.
+- **`RecurringTaskTemplate` substitui `RoutineTemplate`, gerando uma `Task` por período (não mais um `Project`+N tarefas)**: `RecurringTaskAssignee`/`RecurringTaskChecklistItem` copiam a fila/checklist do template pra cada `Task` gerada; `RecurringTaskDate` só é usado quando `recurrenceMode = DATAS_ESPECIFICAS` (datas escolhidas à mão, em vez de um dia fixo do mês). `@@unique([templateId, period])` em `RecurringTaskGeneration` continua sendo a mesma garantia real de idempotência do banco que `RoutineRun` já tinha — `period` é "AAAA-MM" no modo mensal, ou a data ISO da ocorrência no modo datas específicas. Geração continua manual ("Gerar agora", `/operacao/recorrencias`) — mesmo padrão de tudo que dependeria de `apps/worker`, que ainda não existe.
+- **Squads (`Squad`/`SquadMember`/`ClientAllocation`) foram removidos sem substituto direto**: "carga por pessoa" agora é a própria coluna "A Fazer" de cada um no board; "squad responsável pelo cliente" não tinha um caso de uso reaproveitado no board novo e saiu do schema (não só da UI) — se voltar a ser necessário, é uma tabela nova, não uma ressurreição da antiga.
+- **Solicitação do Portal do Cliente vira uma `Task` sem responsável** (`assigneeUserId: null`, sem `TaskAssignee`), caindo na coluna compartilhada "Não atribuída" pra equipe assumir — substitui o antigo fluxo de `Request` criada pelo cliente e triada manualmente.
+- **Sem `deliverables` nem `work_logs` nesta fatia**: "concluir a tarefa" continua sendo o próprio entregável; apontamento de horas (`TimeEntry`) já existe desde a Fase 1E e continua funcionando sobre `Task` normalmente.
 
 ## Health Score — `HealthScoreSnapshot`
 
@@ -84,8 +65,8 @@ Implementa a seção 31 do manual:
 Implementa a seção 28 do manual:
 
 - **Sem tabela própria de "estágio da régua"**: o estágio (D-5/D0/D+1/D+3/D+7/D+15) é sempre derivado na hora, a partir de `FinanceEntry.dueDate` vs. a data atual (`apps/web/lib/collection-ladder.ts`), nunca persistido. Diferente do `ChurnRiskSnapshot.band` (persistido porque representa uma decisão pontual no tempo), o estágio da régua muda todo dia sozinho conforme o atraso cresce — persistir um valor que fica errado no dia seguinte seria pior que recalcular.
-- **`collectionTaskId String? @unique` + relação com `Task`**: é a mesma família de padrão de idempotência usado em `RoutineRun.period` (`@@unique`) e `MediaAsset.key` (`@unique`) — aqui a garantia é "no máximo uma tarefa de cobrança por lançamento". `onDelete: SetNull` na FK: apagar a tarefa (ex.: limpeza manual) nunca apaga o lançamento financeiro, só desfaz o vínculo, permitindo gerar uma nova tarefa depois.
-- **Projeto "Cobrança" é find-or-create por cliente (ou por agência, quando o lançamento não tem cliente)**: em vez de um projeto novo por tarefa (como as Rotinas fazem, onde cada geração é logicamente distinta) ou um projeto novo por lançamento, aqui um único projeto "Cobrança" por cliente acumula todas as tarefas de cobrança daquele cliente ao longo do tempo — mais parecido com o padrão de "Arquivos"/"Biblioteca" (um bucket estável) do que com Rotinas.
+- **`collectionTaskId String? @unique` + relação com `Task`**: é a mesma família de padrão de idempotência usado em `RecurringTaskGeneration.period` (`@@unique`) e `MediaAsset.key` (`@unique`) — aqui a garantia é "no máximo uma tarefa de cobrança por lançamento". `onDelete: SetNull` na FK: apagar a tarefa (ex.: limpeza manual) nunca apaga o lançamento financeiro, só desfaz o vínculo, permitindo gerar uma nova tarefa depois.
+- **Projeto "Cobrança" é find-or-create por cliente (ou por agência, quando o lançamento não tem cliente)**: mesmo padrão que o Kanban unificado de Operação generalizou depois para toda tarefa nova (`getOrCreateTaskProject()`) — um único projeto estável acumula as tarefas daquele cliente ao longo do tempo, em vez de um projeto novo por tarefa ou por lançamento.
 
 ## NPS — `SurveyCampaign`, `SurveyRecipient`, `NpsSnapshot`, `ClientContact.marketingOptOut`
 
@@ -111,7 +92,7 @@ Implementa a seção 32.2 do manual:
 
 - **Nenhum modelo novo**: cohort é 100% derivado de `Client`, `ClientStatusHistory` (pra saber o mês de ativação e se/quando foi encerrado) e `FinanceEntry` (receita liquidada por mês) — calculado sob demanda em `apps/web/lib/cohort.ts`, nunca persistido. Diferente de `HealthScoreSnapshot`/`ChurnRiskSnapshot`/`NpsSnapshot` (que fazem sentido persistir porque representam uma decisão/cálculo pontual auditável no tempo), um cohort é só uma reagregação dos mesmos dados brutos — persistir traria o risco de ficar desatualizado sem ninguém perceber.
 - **A lógica assume histórico de status estritamente cronológico** (`ClientStatusHistory.createdAt` sempre crescente por cliente, nunca editado) — é uma garantia real do sistema em produção (`createdAt` é `@default(now())`, nunca há rota que o edite), então o cálculo de "qual era o status do cliente num mês de referência" (`statusAsOf` em `lib/cohort.ts`) pode confiar em iterar em ordem e pegar o último evento até aquele ponto. Isso só quebraria se algo backdatasse uma linha de histórico manualmente — o que não existe em nenhuma rota do produto (só aconteceu de propósito no smoke test, pra simular múltiplos meses sem esperar meses de verdade).
-- **Só a dimensão "mês de início" está implementada** — "canal" e "produto" (também citados na seção 32.2) não têm campo nenhum no schema hoje; "squad" existe (`ClientAllocation`) mas uma segunda dimensão de agrupamento fica pra quando houver um caso de uso real pedindo, mesma régua pragmática do Health Score.
+- **Só a dimensão "mês de início" está implementada** — "canal" e "produto" (também citados na seção 32.2) não têm campo nenhum no schema hoje; "squad" saiu do schema com o Kanban unificado de Operação (2026-09-06) e não é mais uma dimensão disponível, mesma régua pragmática do Health Score.
 
 ## Reativações — `Client.competitorName`, `Client.reactivationEligible`
 
@@ -154,7 +135,6 @@ Implementa a seção 39 do manual (parte "Proposal", fecha a seção):
 - **`status` cobre "visualizada" como transição real, não como um campo `viewedAt` isolado**: a página pública, ao carregar, transiciona `ENVIADA → VISUALIZADA` (gravando `viewedAt` e uma linha em `ProposalStatusHistory`) — dá pra responder "quando exatamente o cliente abriu isso" com uma consulta simples no histórico, não só "ele abriu alguma vez".
 - **`EXPIRADA` é alcançável de duas formas**: calculada ao vivo (`isProposalExpired()`, compara `expiresAt` contra a data atual, mesmo padrão de `ContentApproval` em `/aprovar/[token]`) *e* como uma transição manual real gravada no banco (`POST /api/proposals/:id/expire`) — a diferença importa porque só a segunda persiste; a primeira é sempre recalculada, nunca escrita, evitando depender de um job pra "ficar certa" no tempo.
 - **`Task.assigneeUserId` já existia no schema desde a Release 1C parte 2** (Projetos/Tarefas), só não tinha UI. Reatribuição não tem tabela de histórico própria — usa o `AuditLog` genérico (`task.reassigned`), consistente com como outras mutações menores já são auditadas no projeto.
-- **Só squad principal por cliente**: o manual permite "squad principal e especialistas" (pessoas avulsas além do squad). Modelamos só o principal (`ClientAllocation.squadId`); especialistas individuais ficam para quando houver caso real.
 
 ## Fornecedores — `Vendor`, `VendorOrder`
 
@@ -173,7 +153,7 @@ Implementa a seção 17 do manual (parcialmente — ver `docs/STATUS.md` para o 
 - **`ContentVersion.assetUrl` é link externo (Drive/Figma/Canva), não upload real**: mesma decisão pragmática já tomada para Contratos — upload de arquivo depende de escolher provedor de storage (S3/R2), ainda não decidido. Nada no schema impede trocar por um campo de arquivo interno depois; a coluna já é só uma URL.
 - **Aprovação por link público (token), não portal do cliente com login**: o manual (seção 3.2) define o critério de saída da Fase 1D como "aprova por link **ou** portal" — o link satisfaz o critério sozinho. `ContentApproval.token` é um UUID único, com `expiresAt` (14 dias) e semântica de uso único garantida pelo próprio `status` (`PENDENTE` → `APROVADO`/`AJUSTES_SOLICITADOS`, nunca volta a `PENDENTE`). O ator da decisão é o cliente sem sessão — por isso `ContentStatusHistory.actorUserId` aceita `null` (já era opcional desde a Release 1C, reaproveitado aqui pela primeira vez com um autor real "externo").
 - **`ContentStatus` tem 10 estados** cobrindo a cadeia inteira da seção 17 (`ideia → pauta → produção → revisão interna → aguardando cliente → ajustes → aprovado → agendado → publicado → arquivado`). `AGUARDANDO_CLIENTE` só é alcançado via `POST /api/content/:id/submit` (que também cria a `ContentApproval`) e só sai dali via a decisão registrada pelo próprio cliente no link — nenhuma rota interna pode pular esse passo.
-- **Comentários são por `ContentItem`, não por versão**: uma discussão interna sobre a peça como um todo não precisa se reatar a cada nova versão. Mesmo padrão simples já usado em `RequestComment`.
+- **Comentários são por `ContentItem`, não por versão**: uma discussão interna sobre a peça como um todo não precisa se reatar a cada nova versão.
 
 ## Portal do Cliente — sem tabela nova
 
@@ -184,10 +164,9 @@ Implementa (parte 1) a seção 18 do manual:
 - **Roteamento por papel, não por subdomínio/app separado**: mesma sessão Better Auth para todo mundo. `(app)/layout.tsx` e `/portal/layout.tsx` decidem pra onde mandar o usuário olhando `membership.role` via `isClientRole()` (`lib/rbac.ts`). Mais simples que ter dois apps ou dois logins, e já é o suficiente pro "acessa somente seu workspace" do critério de aceite da seção 18.
 - **Aprovação por sessão reaproveita a mesma regra do link público**: `applyApprovalDecision()` (`lib/content-approval.ts`) é chamada tanto por `/api/approvals/:token` (anônimo) quanto por `/api/portal/content/:id/decide` (autenticado) — a única diferença é o `actorUserId` (null vs. o usuário real) e o `actorType` no `AuditLog` (`"client"` vs. `"client_portal"`). O link público continua funcionando mesmo depois que o cliente ganha portal — não são mutuamente exclusivos, e o manual não pede que sejam.
 
-## Solicitações via Portal — reaproveita `Request` sem mudança de schema
+## Solicitações via Portal — cria uma `Task` sem responsável (sem tabela nova)
 
-- **`Request.clientId`/`requesterName`/`requestedByUserId` já existiam desde a Release 1C** e já eram exatamente o que uma solicitação de portal precisa — o comentário antigo no schema ("ainda não há portal do cliente") ficou desatualizado com esta fatia, mas o modelo não precisou mudar nada. `POST /api/portal/requests` só força `clientId` a ser sempre o do próprio cliente (nunca vindo do corpo da requisição) e preenche `requesterName`/`requestedByUserId` com os dados reais da sessão.
-- **Mesmo pipeline de triagem**: uma solicitação aberta pelo portal cai no mesmo inbox (`/operacao/demandas`), com o mesmo `RequestStatus` e as mesmas transições — não existe um "status especial de portal". A única diferença observável é o `AuditLog.actorType` (`"client_portal"` em vez de `"user"`).
+Substituído pelo Kanban unificado de Operação (2026-09-06) — ver seção acima. `POST /api/portal/requests` cria a `Task` diretamente via `getOrCreateTaskProject()`, sem `TaskAssignee`; `clientId` é sempre o do workspace da sessão do portal, nunca vindo do corpo da requisição. A única diferença observável em relação a uma tarefa criada internamente é o `AuditLog.actorType` (`"client_portal"` em vez de `"user"`).
 
 ## Comunicação e comentários — `CommentThread`, `Comment`, `CommentEdit`, `CommentMention`
 
@@ -265,11 +244,10 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 - **A garantia de isolamento entre clientes mora na rota de download (`GET /api/media/:id`), não só na query da página que lista os arquivos**: antes desta fatia, essa rota rejeitava qualquer sessão de papel de cliente (`isClientRole`) por completo — mesmo pra baixar o próprio arquivo. Agora ela resolve o `Client` da sessão (via `Membership.workspaceId`) e só libera o presign quando `asset.clientId` bate com esse cliente. Qualquer outro caso (arquivo de outro cliente, ou item de biblioteca com `clientId: null`) devolve **404, não 403** — um cliente nunca deve saber que um recurso existe se não é dele.
 - **`/portal/financeiro` só consulta `type: RECEITA`**, nunca `DESPESA` — implementa ao pé da letra a regra obrigatória "custo/margem internos nunca aparecem" (seção 18). Não existe uma versão "financeiro completo" pro portal, de propósito.
 
-## Edição/remoção de contato de cliente e remoção de membro de squad (sem tabela nova)
+## Edição/remoção de contato de cliente (sem tabela nova)
 
-- **Nenhum modelo novo** — `PATCH`/`DELETE` sobre `ClientContact` e `DELETE` sobre `SquadMember`, ambos já existentes desde a Release 1B/1C.
+- **Nenhum modelo novo** — `PATCH`/`DELETE` sobre `ClientContact`, já existente desde a Release 1B.
 - **Exclusividade de "contato principal" é garantida na rota, não numa constraint de banco**: marcar `isPrimary: true` roda, na mesma transação, um `updateMany` que desmarca qualquer outro contato principal do mesmo cliente antes de aplicar a mudança pedida — não existe uma constraint parcial única no schema para isso (o ganho não justificava a complexidade).
-- **Remover `SquadMember` é a exclusão da linha do vínculo, e só dela** — `Task.assigneeUserId`, o histórico de carga e `ClientAllocation` não têm nenhuma referência a `SquadMember`, então não há nada em cascata pra decidir aqui.
 
 ## Reordenar `PipelineStage` (sem tabela nova)
 
@@ -281,12 +259,12 @@ Implementa a seção 18 do manual (fecha a "parte 2" da pendência registrada na
 - **Nenhum modelo novo** — a página agrega `OnboardingRun`/`OnboardingItem` (existentes desde a Release 1B) por cliente, pegando só a última `OnboardingRun` de cada um (`orderBy: startedAt desc, take: 1`), mesmo critério já usado no perfil individual do cliente.
 - **"Progresso" é sempre um recálculo sob demanda** (itens concluídos ÷ total), nunca persistido — mesmo raciocínio de Cohort/DSO/DRE: é uma reagregação de dado que já existe, não uma decisão pontual.
 
-## Converter comentário em tarefa/demanda — `Comment.convertedTaskId`/`convertedRequestId`
+## Converter comentário em tarefa — `Comment.convertedTaskId`
 
-Implementa a regra obrigatória da seção 19: "mensagem pode virar demanda/tarefa apenas por usuário autorizado". Ver `docs/DECISIONS.md`.
+Implementa a regra obrigatória da seção 19: "mensagem pode virar tarefa apenas por usuário autorizado". Ver `docs/DECISIONS.md`. Nasceu como duas colunas (`convertedTaskId`/`convertedRequestId`, uma por destino possível); `convertedRequestId` saiu do schema quando Demandas foi substituída pelo Kanban unificado de Operação (2026-09-06) — hoje só existe o destino "tarefa".
 
-- **Duas colunas únicas com FK real, não um par polimórfico genérico** — mesma escolha já feita em `Request.convertedTaskId`/`Lead.convertedClientId`/`FinanceEntry.collectionTaskId`: `convertedTaskId` aponta pra `Task`, `convertedRequestId` aponta pra `Request`, cada um `@unique` (uma Task/Request só pode ser o destino de uma conversão).
-- **Reverse fields `Task.sourceComment`/`Request.sourceComment`** — mesmo padrão de `Task.sourceRequest` (a Task que veio da conversão de uma Request).
+- **Coluna única com FK real, não um campo polimórfico genérico** — mesma escolha já feita em `Lead.convertedClientId`/`FinanceEntry.collectionTaskId`: `convertedTaskId` aponta pra `Task`, `@unique` (uma `Task` só pode ser o destino de uma conversão).
+- **Reverse field `Task.sourceComment`** — a `Task` sabe de qual comentário ela veio, quando veio de uma conversão.
 - **Migração aplicada via `prisma migrate diff` + `migrate deploy` manual**, não `migrate dev`: a nova constraint única numa tabela existente dispara um aviso de confirmação que trava em ambiente não-interativo. Ver `docs/DECISIONS.md`.
 
 ## RH — Cargos, Vagas e Candidatos — `Position`, `Job`, `JobStage`, `Candidate`, `CandidateStatusHistory`
@@ -295,7 +273,7 @@ Implementa a seção 20 do manual. Ver `docs/DECISIONS.md`.
 
 - **`Position` é um catálogo simples e aditivo**: `Employee.positionId` é opcional; `Employee.role` (texto livre) continua existindo e não foi migrado. `@@unique([agencyId, title])` evita duplicar o mesmo cargo.
 - **`JobStage` é o mesmo padrão de `PipelineStage`, só que escopado por `Job` em vez de `Agency`**: `@@unique([jobId, order])`, reordenação por swap com ordem temporária, 4 estágios padrão semeados na criação de cada vaga (não um template global).
-- **`Candidate.convertedEmployeeId`** (`@unique`, FK real pra `Employee`) segue o mesmo padrão de idempotência de toda conversão do projeto (`Lead.convertedClientId`, `Request.convertedTaskId`, `Comment.convertedTaskId`/`convertedRequestId`).
+- **`Candidate.convertedEmployeeId`** (`@unique`, FK real pra `Employee`) segue o mesmo padrão de idempotência de toda conversão do projeto (`Lead.convertedClientId`, `Comment.convertedTaskId`).
 - **`CandidateStatusHistory` registra estágio E status na mesma linha**, mesmo padrão de `OpportunityStatusHistory` — uma tabela só para as duas dimensões de mudança de um candidato.
 - **`anonymizedAt` marca a política de retenção manual** (regra obrigatória da seção 20) — ver `docs/DECISIONS.md` pra por que é manual e não automática.
 - **`createEmployeeRecord()` (`apps/web/lib/employees-create.ts`) aceita um client de transação opcional** — precisa participar da mesma transação atômica da conversão de candidato (`Candidate.convertedEmployeeId` + `Employee` criados juntos ou nenhum dos dois).

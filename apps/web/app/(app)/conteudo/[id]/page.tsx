@@ -41,14 +41,9 @@ export default async function ContentDetailPage({ params }: PageProps) {
   }
 
   const canSubmit = SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
-  const [thread, mentionableMembers, projects] = await Promise.all([
+  const [thread, mentionableMembers] = await Promise.all([
     loadCommentThreadView("content_item", item.id),
     getMentionableMembers(membership.agencyId),
-    prisma.project.findMany({
-      where: { agencyId: membership.agencyId },
-      select: { id: true, name: true },
-      orderBy: { createdAt: "desc" },
-    }),
   ]);
 
   return (
@@ -132,7 +127,6 @@ export default async function ContentDetailPage({ params }: PageProps) {
             thread={thread}
             mentionableMembers={mentionableMembers}
             currentUserId={session.user.id}
-            projects={projects}
           />
         </div>
 

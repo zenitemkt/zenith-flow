@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { currentPeriod } from "@/lib/routines";
+import { hasPendingGeneration } from "@/lib/recurring-tasks";
 import { startOfWeekUTC } from "@/lib/timesheets";
 import { WORK_ITEM_STATUS_LABELS } from "@/lib/tasks";
 import { formatCents } from "@/lib/finance";
@@ -27,7 +27,6 @@ export default async function HomePage() {
   }
 
   const now = new Date();
-  const period = currentPeriod();
   const sixWeeksAgo = new Date(now);
   sixWeeksAgo.setUTCDate(sixWeeksAgo.getUTCDate() - 42);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -36,14 +35,13 @@ export default async function HomePage() {
   const todayStart = startOfDayUTC(now);
 
   const [
-    activeRoutines,
+    activeRecurring,
     overdueTasksCount,
     pendingApprovalsCount,
-    newRequestsCount,
+    unassignedTasksCount,
     pendingLeavesCount,
     overdueInvoicesCount,
     myTasks,
-    mySquadMemberships,
     completedTasks,
     activeClientsCount,
     aReceberAgg,
@@ -53,9 +51,9 @@ export default async function HomePage() {
     revenueEntries,
     latestHealthSnapshots,
   ] = await Promise.all([
-    prisma.routineTemplate.findMany({
+    prisma.recurringTaskTemplate.findMany({
       where: { agencyId: membership.agencyId, status: "ATIVO" },
-      include: { runs: { where: { period }, select: { id: true } }, client: { select: { name: true } } },
+      include: { generations: { select: { period: true } }, dates: { select: { date: true } }, client: { select: { name: true } } },
     }),
     prisma.task.count({
       where: {
@@ -67,7 +65,9 @@ export default async function HomePage() {
     prisma.contentApproval.count({
       where: { status: "PENDENTE", contentVersion: { contentItem: { agencyId: membership.agencyId } } },
     }),
-    prisma.request.count({ where: { agencyId: membership.agencyId, status: "NOVA" } }),
+    prisma.task.count({
+      where: { project: { agencyId: membership.agencyId }, status: "BACKLOG", assigneeUserId: null },
+    }),
     prisma.leaveRequest.count({ where: { agencyId: membership.agencyId, status: "SOLICITADA" } }),
     prisma.financeEntry.count({
       where: {
@@ -81,20 +81,9 @@ export default async function HomePage() {
         assigneeUserId: session.user.id,
         status: { notIn: ["CONCLUIDA", "CANCELADA"] },
       },
-      include: { project: { select: { name: true } } },
+      include: { project: { include: { client: { select: { name: true } } } } },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       take: 6,
-    }),
-    prisma.squadMember.findMany({
-      where: { userId: session.user.id, squad: { agencyId: membership.agencyId } },
-      include: {
-        squad: {
-          include: {
-            members: { select: { id: true } },
-            allocations: { where: { status: "ATIVA" }, select: { id: true } },
-          },
-        },
-      },
     }),
     prisma.task.findMany({
       where: {
@@ -180,12 +169,12 @@ export default async function HomePage() {
   }
   const maxRevenue = Math.max(1, ...revenueMonths.map((m) => m.total));
 
-  const pendingRoutines = activeRoutines.filter((r) => r.runs.length === 0);
+  const pendingRecurring = activeRecurring.filter(hasPendingGeneration);
 
   const attentionCards = [
-    { label: "tarefa(s) atrasada(s)", count: overdueTasksCount, href: "/operacao/tarefas" },
+    { label: "tarefa(s) atrasada(s)", count: overdueTasksCount, href: "/operacao" },
     { label: "aprovação(ões) de conteúdo pendente(s)", count: pendingApprovalsCount, href: "/conteudo/aprovacoes" },
-    { label: "demanda(s) nova(s) aguardando triagem", count: newRequestsCount, href: "/operacao/demandas" },
+    { label: "tarefa(s) sem responsável aguardando triagem", count: unassignedTasksCount, href: "/operacao" },
     { label: "férias/ausência(s) aguardando decisão", count: pendingLeavesCount, href: "/pessoas/ferias" },
     { label: "fatura(s) vencida(s)", count: overdueInvoicesCount, href: "/financeiro/visao-geral" },
     { label: "cliente(s) em alto risco (Health Score)", count: clientsAtRiskCount, href: "/clientes/carteira" },
@@ -223,25 +212,25 @@ export default async function HomePage() {
             Apontar horas
           </Link>
           <Link
-            href="/operacao/demandas"
+            href="/operacao"
             className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
             style={{ backgroundColor: "#6847F5" }}
           >
-            Nova solicitação
+            Novo card
           </Link>
         </div>
       </div>
 
-      {pendingRoutines.length > 0 && (
+      {pendingRecurring.length > 0 && (
         <div className="rounded-xl border border-[#FDE68A] bg-[#FEF3C7] px-4 py-3 text-sm text-[#92600A]">
-          <strong>{pendingRoutines.length}</strong> rotina{pendingRoutines.length === 1 ? "" : "s"} deste mês ainda
-          não gerada{pendingRoutines.length === 1 ? "" : "s"}:{" "}
-          {pendingRoutines
+          <strong>{pendingRecurring.length}</strong> recorrência{pendingRecurring.length === 1 ? "" : "s"} com
+          ocorrência ainda não gerada{pendingRecurring.length === 1 ? "" : "s"}:{" "}
+          {pendingRecurring
             .slice(0, 3)
-            .map((r) => `${r.name}${r.client ? ` (${r.client.name})` : ""}`)
+            .map((r) => `${r.title}${r.client ? ` (${r.client.name})` : ""}`)
             .join(", ")}
-          {pendingRoutines.length > 3 ? "..." : ""} —{" "}
-          <Link href="/operacao/rotinas" className="font-semibold hover:underline">
+          {pendingRecurring.length > 3 ? "..." : ""} —{" "}
+          <Link href="/operacao/recorrencias" className="font-semibold hover:underline">
             gerar agora
           </Link>
         </div>
@@ -283,7 +272,7 @@ export default async function HomePage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {attentionCards.map((card) => (
           <Link
-            key={card.href}
+            key={card.label}
             href={card.href}
             className="rounded-xl border border-[#E4E7EC] bg-white p-4 hover:border-[#6847F5]"
           >
@@ -312,7 +301,7 @@ export default async function HomePage() {
                   <div>
                     <p className="text-sm font-medium text-[#101828]">{task.title}</p>
                     <p className="text-xs text-[#98A2B3]">
-                      {task.project.name} · {WORK_ITEM_STATUS_LABELS[task.status]}
+                      {task.project.client?.name ?? "Interna"} · {WORK_ITEM_STATUS_LABELS[task.status]}
                     </p>
                   </div>
                   {task.dueDate && (
@@ -325,22 +314,31 @@ export default async function HomePage() {
         </section>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Meus squads</h2>
-          {mySquadMemberships.length === 0 ? (
-            <p className="text-sm text-[#98A2B3]">Você ainda não faz parte de um squad.</p>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[#101828]">Recorrências ativas</h2>
+            <Link href="/operacao/recorrencias" className="text-xs font-medium text-[#6847F5] hover:underline">
+              Ver todas
+            </Link>
+          </div>
+          {activeRecurring.length === 0 ? (
+            <p className="text-sm text-[#98A2B3]">Nenhuma recorrência ativa ainda.</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {mySquadMemberships.map((sm) => (
+              {activeRecurring.slice(0, 6).map((r) => (
                 <Link
-                  key={sm.squad.id}
-                  href={`/operacao/squads/${sm.squad.id}`}
+                  key={r.id}
+                  href="/operacao/recorrencias"
                   className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 hover:border-[#6847F5]"
                 >
-                  <span className="text-sm font-medium text-[#101828]">{sm.squad.name}</span>
-                  <span className="text-xs text-[#98A2B3]">
-                    {sm.squad.members.length} pessoa{sm.squad.members.length === 1 ? "" : "s"} ·{" "}
-                    {sm.squad.allocations.length} cliente{sm.squad.allocations.length === 1 ? "" : "s"}
+                  <span className="text-sm font-medium text-[#101828]">
+                    {r.title}
+                    {r.client ? ` (${r.client.name})` : ""}
                   </span>
+                  {hasPendingGeneration(r) && (
+                    <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-xs font-medium text-[#92600A]">
+                      pendente
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

@@ -27,7 +27,7 @@ export default async function CobrancasPage() {
       type: "RECEITA",
       status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] },
     },
-    include: { client: { select: { name: true } }, collectionTask: { select: { id: true, projectId: true } } },
+    include: { client: { select: { name: true } }, collectionTask: { select: { id: true } } },
   });
 
   const rows = entries
@@ -81,7 +81,7 @@ export default async function CobrancasPage() {
                   <p className="text-sm font-semibold text-[#166534]">{formatCents(entry.amountCents)}</p>
                   {entry.collectionTask ? (
                     <Link
-                      href={`/operacao/projetos/${entry.collectionTask.projectId}`}
+                      href={entry.clientId ? `/operacao?clientId=${entry.clientId}` : "/operacao"}
                       className="text-xs font-medium text-[#6847F5] hover:underline"
                     >
                       Ver tarefa de cobrança

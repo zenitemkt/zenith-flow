@@ -7,7 +7,7 @@ import { Modal } from "@zenith/ui";
 interface TaskOption {
   id: string;
   title: string;
-  projectName: string;
+  clientName: string;
 }
 
 export function NewOrderModal({ vendorId, tasks }: { vendorId: string; tasks: TaskOption[] }) {
@@ -91,7 +91,7 @@ export function NewOrderModal({ vendorId, tasks }: { vendorId: string; tasks: Ta
                 <option value="">Nenhuma</option>
                 {tasks.map((task) => (
                   <option key={task.id} value={task.id}>
-                    {task.title} ({task.projectName})
+                    {task.title} ({task.clientName})
                   </option>
                 ))}
               </select>

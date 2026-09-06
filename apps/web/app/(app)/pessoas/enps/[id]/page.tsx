@@ -109,7 +109,7 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
               {campaign.responses.map((r) => (
                 <div key={r.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
                   <p className="text-sm font-semibold text-[#101828]">Nota: {r.score}</p>
-                  {r.comment && <p className="text-xs text-[#667085]">"{r.comment}"</p>}
+                  {r.comment && <p className="text-xs text-[#667085]">&quot;{r.comment}&quot;</p>}
                 </div>
               ))}
             </div>

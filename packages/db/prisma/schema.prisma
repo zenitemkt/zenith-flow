@@ -20,11 +20,10 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  sessions         Session[]
-  accounts         Account[]
-  memberships      Membership[]
-  squadMemberships SquadMember[]
-  employee         Employee?
+  sessions    Session[]
+  accounts    Account[]
+  memberships Membership[]
+  employee    Employee?
 
   @@map("user")
 }
@@ -111,39 +110,37 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces           Workspace[]
-  memberships          Membership[]
-  auditLogs            AuditLog[]
-  clients              Client[]
-  onboardingTemplates  OnboardingTemplate[]
-  requests             Request[]
-  projects             Project[]
-  routineTemplates     RoutineTemplate[]
-  squads               Squad[]
-  vendors              Vendor[]
-  contentItems         ContentItem[]
-  commentThreads       CommentThread[]
-  employees            Employee[]
-  positions            Position[]
-  jobs                 Job[]
-  candidates           Candidate[]
-  leaveRequests        LeaveRequest[]
-  timesheets           Timesheet[]
-  timeEntries          TimeEntry[]
-  financeCategories    FinanceCategory[]
-  financeEntries       FinanceEntry[]
-  mediaAssets          MediaAsset[]
-  healthScoreSnapshots HealthScoreSnapshot[]
-  churnRiskSnapshots   ChurnRiskSnapshot[]
-  retentionPlans       RetentionPlan[]
-  surveyCampaigns      SurveyCampaign[]
-  npsSnapshots         NpsSnapshot[]
-  enpsCampaigns        EnpsCampaign[]
-  enpsSnapshots        EnpsSnapshot[]
-  leads                Lead[]
-  pipelineStages       PipelineStage[]
-  opportunities        Opportunity[]
-  proposals            Proposal[]
+  workspaces             Workspace[]
+  memberships            Membership[]
+  auditLogs              AuditLog[]
+  clients                Client[]
+  onboardingTemplates    OnboardingTemplate[]
+  projects               Project[]
+  recurringTaskTemplates RecurringTaskTemplate[]
+  vendors                Vendor[]
+  contentItems           ContentItem[]
+  commentThreads         CommentThread[]
+  employees              Employee[]
+  positions              Position[]
+  jobs                   Job[]
+  candidates             Candidate[]
+  leaveRequests          LeaveRequest[]
+  timesheets             Timesheet[]
+  timeEntries            TimeEntry[]
+  financeCategories      FinanceCategory[]
+  financeEntries         FinanceEntry[]
+  mediaAssets            MediaAsset[]
+  healthScoreSnapshots   HealthScoreSnapshot[]
+  churnRiskSnapshots     ChurnRiskSnapshot[]
+  retentionPlans         RetentionPlan[]
+  surveyCampaigns        SurveyCampaign[]
+  npsSnapshots           NpsSnapshot[]
+  enpsCampaigns          EnpsCampaign[]
+  enpsSnapshots          EnpsSnapshot[]
+  leads                  Lead[]
+  pipelineStages         PipelineStage[]
+  opportunities          Opportunity[]
+  proposals              Proposal[]
 
   @@map("agency")
 }
@@ -245,24 +242,22 @@ model Client {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
-  contacts             ClientContact[]
-  statusHistory        ClientStatusHistory[]
-  notes                ClientNote[]
-  onboardingRuns       OnboardingRun[]
-  requests             Request[]
-  projects             Project[]
-  routineTemplates     RoutineTemplate[]
-  allocations          ClientAllocation[]
-  contentItems         ContentItem[]
-  financeEntries       FinanceEntry[]
-  mediaAssets          MediaAsset[]
-  healthScoreSnapshots HealthScoreSnapshot[]
-  churnRiskSnapshots   ChurnRiskSnapshot[]
-  retentionPlans       RetentionPlan[]
-  surveyRecipients     SurveyRecipient[]
-  convertedFromLead    Lead?
-  opportunities        Opportunity[]
-  proposals            Proposal[]
+  contacts               ClientContact[]
+  statusHistory          ClientStatusHistory[]
+  notes                  ClientNote[]
+  onboardingRuns         OnboardingRun[]
+  projects               Project[]
+  recurringTaskTemplates RecurringTaskTemplate[]
+  contentItems           ContentItem[]
+  financeEntries         FinanceEntry[]
+  mediaAssets            MediaAsset[]
+  healthScoreSnapshots   HealthScoreSnapshot[]
+  churnRiskSnapshots     ChurnRiskSnapshot[]
+  retentionPlans         RetentionPlan[]
+  surveyRecipients       SurveyRecipient[]
+  convertedFromLead      Lead?
+  opportunities          Opportunity[]
+  proposals              Proposal[]
 
   @@index([agencyId])
   @@map("client")
@@ -388,78 +383,17 @@ model OnboardingItem {
 }
 
 // ---------------------------------------------------------------------------
-// Demandas — Release 1C, parte 1 (seção 13 do manual)
+// Kanban unificado de Operação — substitui Projetos/Tarefas/Demandas/
+// Rotinas/Squads (2026-09-06, ver docs/DECISIONS.md). Board de 3 lanes
+// (A Fazer/Fazendo/Concluído) por pessoa + fila sequencial de responsáveis +
+// checklist opcional + recorrência (mensal ou datas específicas).
 // ---------------------------------------------------------------------------
 
-enum RequestStatus {
-  NOVA
-  TRIAGEM
-  AGUARDANDO_INFORMACAO
-  APROVADA
-  REJEITADA
-  CONVERTIDA
-  CONCLUIDA
-}
-
-enum RequestPriority {
-  BAIXA
-  MEDIA
-  ALTA
-  URGENTE
-}
-
-/// "Convertida" cria uma Task real via POST /api/requests/:id/convert
-/// (endpoint dedicado, não a rota genérica de status — precisa saber em qual
-/// projeto a tarefa entra). convertedTaskId guarda o resultado da conversão.
-model Request {
-  id                String           @id @default(cuid())
-  agencyId          String
-  agency            Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  clientId          String?
-  client            Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  title             String
-  description       String?
-  status            RequestStatus    @default(NOVA)
-  priority          RequestPriority?
-  /// Nome de quem pediu — pessoa da agência ou contato do cliente; ainda não
-  /// há portal do cliente (Fase 1D), então hoje é sempre preenchido manualmente.
-  requesterName     String?
-  requestedByUserId String?
-  rejectionReason   String?
-  convertedTaskId   String?          @unique
-  convertedTask     Task?            @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  statusHistory RequestStatusHistory[]
-  sourceComment Comment?
-
-  @@index([agencyId])
-  @@index([clientId])
-  @@map("request")
-}
-
-/// Append-only, mesmo padrão de ClientStatusHistory.
-model RequestStatusHistory {
-  id          String         @id @default(cuid())
-  requestId   String
-  request     Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  fromStatus  RequestStatus?
-  toStatus    RequestStatus
-  reason      String?
-  actorUserId String?
-  createdAt   DateTime       @default(now())
-
-  @@index([requestId])
-  @@map("request_status_history")
-}
-
-// ---------------------------------------------------------------------------
-// Projetos e tarefas — Release 1C, parte 2 (seção 14 do manual)
-// ---------------------------------------------------------------------------
-
-/// Estado único compartilhado por Project e Task (o manual descreve uma única
-/// cadeia — seção 14 — sem diferenciar as duas entidades).
+/// Estado único compartilhado por Project e Task. O board novo só expõe
+/// BACKLOG ("A Fazer"), EM_ANDAMENTO ("Fazendo") e CONCLUIDA ("Concluído")
+/// como colunas, e CANCELADA como ação — mas o enum inteiro é preservado
+/// porque Health Score e Risco de Churn dependem dos valores específicos
+/// (nenhuma migração de dado necessária).
 enum WorkItemStatus {
   BACKLOG
   PLANEJADA
@@ -470,8 +404,11 @@ enum WorkItemStatus {
   CANCELADA
 }
 
-/// Projeto pertence a cliente ou à agência (seção 14: "projeto pertence a
-/// cliente ou a agência") — clientId nulo = projeto interno.
+/// Projeto vira 100% interno/invisível — sem página, sem nav — a partir do
+/// Kanban unificado: cada tarefa é anexada automaticamente a um projeto
+/// "guarda-chuva" por cliente (findFirst-ou-create, mesmo padrão já usado no
+/// projeto "Cobrança" da régua de cobrança), preservando FinanceEntry/
+/// VendorOrder/Timesheets sem precisar mudar nada nelas. Ver docs/DECISIONS.md.
 model Project {
   id        String         @id @default(cuid())
   agencyId  String
@@ -484,7 +421,6 @@ model Project {
   updatedAt DateTime       @updatedAt
 
   tasks          Task[]
-  routineRuns    RoutineRun[]
   financeEntries FinanceEntry[]
 
   @@index([agencyId])
@@ -492,8 +428,9 @@ model Project {
   @@map("project")
 }
 
-/// Dependência simplificada como bloqueio único (`blockedByTaskId`), mesmo
-/// espírito pragmático do checklist de onboarding — não é um grafo arbitrário.
+/// Dependência simplificada como bloqueio único (`blockedByTaskId`) — não é
+/// um grafo arbitrário. `assigneeUserId` é sempre "quem está na vez agora"
+/// (cache denormalizado mantido em sincronia pela fila `TaskAssignee`).
 model Task {
   id               String         @id @default(cuid())
   projectId        String
@@ -505,20 +442,22 @@ model Task {
   blockedBy        Task?          @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
   blocks           Task[]         @relation("TaskBlocks")
   assigneeUserId   String?
-  /// Seção 21 do manual — usado pra comparar estimado x realizado com o
-  /// somatório de TimeEntry.minutes. Opcional: nem toda tarefa tem estimativa.
+  /// Usado pra comparar estimado x realizado com o somatório de
+  /// TimeEntry.minutes. Opcional: nem toda tarefa tem estimativa.
   estimatedMinutes Int?
   dueDate          DateTime?
   completedAt      DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  statusHistory TaskStatusHistory[]
-  sourceRequest Request?
-  sourceComment Comment?
-  vendorOrders  VendorOrder[]
-  timeEntries   TimeEntry[]
-  collectionFor FinanceEntry?
+  statusHistory       TaskStatusHistory[]
+  assignees           TaskAssignee[]
+  checklistItems      TaskChecklistItem[]
+  sourceComment       Comment?
+  vendorOrders        VendorOrder[]
+  timeEntries         TimeEntry[]
+  collectionFor       FinanceEntry?
+  recurringGeneration RecurringTaskGeneration?
 
   @@index([projectId])
   @@map("task")
@@ -539,137 +478,137 @@ model TaskStatusHistory {
   @@map("task_status_history")
 }
 
-// ---------------------------------------------------------------------------
-// Rotinas recorrentes — Release 1C, parte 3 (seção 15 do manual)
-// ---------------------------------------------------------------------------
+/// Fila sequencial de responsáveis: a tarefa só aparece na coluna "A Fazer"
+/// de quem está na vez (`Task.assigneeUserId`). Concluir a parte de alguém
+/// marca `completedAt` aqui e promove o próximo `order` — se não há próximo,
+/// a Task inteira vai pra CONCLUIDA. `@@unique([taskId, order])` garante que
+/// a fila nunca tem posição duplicada.
+model TaskAssignee {
+  id          String    @id @default(cuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String
+  order       Int
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
 
-enum RoutineStatus {
+  @@unique([taskId, order])
+  @@index([taskId])
+  @@map("task_assignee")
+}
+
+/// Checklist opcional por tarefa — puramente informativo, não bloqueia
+/// conclusão (mesmo espírito de OnboardingItem/RoutineTemplateTask).
+model TaskChecklistItem {
+  id          String    @id @default(cuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  order       Int
+  done        Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([taskId])
+  @@map("task_checklist_item")
+}
+
+enum RecurrenceMode {
+  MENSAL
+  DATAS_ESPECIFICAS
+}
+
+enum RecurringTaskStatus {
   RASCUNHO
   ATIVO
   PAUSADO
-  ARQUIVADO
 }
 
-enum RoutineRunStatus {
-  AGENDADA
-  CRIADA
-  IGNORADA
-  FALHOU
-}
+/// Substitui RoutineTemplate: gera uma Tarefa por período (não um Projeto+N
+/// tarefas como antes) — mesmo padrão de fila/checklist do template é
+/// copiado pra cada geração. Geração continua manual ("Gerar agora"), mesmo
+/// padrão de tudo que dependeria de apps/worker (ainda não existe).
+model RecurringTaskTemplate {
+  id               String              @id @default(cuid())
+  agencyId         String
+  agency           Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String?
+  client           Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  estimatedMinutes Int?
+  recurrenceMode   RecurrenceMode
+  /// Usado só quando recurrenceMode = MENSAL (1-28, evita problema com meses curtos).
+  dayOfMonth       Int?
+  status           RecurringTaskStatus @default(RASCUNHO)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
-/// Só recorrência mensal (dia fixo do mês) nesta fatia — semanal/dias úteis
-/// ficam para quando houver caso real pedindo. Ver docs/DECISIONS.md.
-model RoutineTemplate {
-  id         String        @id @default(cuid())
-  agencyId   String
-  agency     Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  clientId   String?
-  client     Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  name       String
-  status     RoutineStatus @default(RASCUNHO)
-  /// Dia do mês em que a rotina deve gerar (1-28, evita problema com meses curtos).
-  dayOfMonth Int           @default(1)
-  timezone   String        @default("America/Sao_Paulo")
-  startDate  DateTime      @default(now())
-  endDate    DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-
-  tasks RoutineTemplateTask[]
-  runs  RoutineRun[]
+  assignees      RecurringTaskAssignee[]
+  checklistItems RecurringTaskChecklistItem[]
+  dates          RecurringTaskDate[]
+  generations    RecurringTaskGeneration[]
 
   @@index([agencyId])
   @@index([clientId])
-  @@map("routine_template")
+  @@map("recurring_task_template")
 }
 
-model RoutineTemplateTask {
-  id          String          @id @default(cuid())
-  templateId  String
-  template    RoutineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  title       String
-  description String?
-  order       Int
+/// Fila de responsáveis do template — copiada (como TaskAssignee) pra cada
+/// tarefa gerada.
+model RecurringTaskAssignee {
+  id         String                @id @default(cuid())
+  templateId String
+  template   RecurringTaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId     String
+  order      Int
+
+  @@unique([templateId, order])
+  @@index([templateId])
+  @@map("recurring_task_assignee")
+}
+
+/// Checklist do template — copiado (como TaskChecklistItem) pra cada tarefa gerada.
+model RecurringTaskChecklistItem {
+  id         String                @id @default(cuid())
+  templateId String
+  template   RecurringTaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title      String
+  order      Int
 
   @@index([templateId])
-  @@map("routine_template_task")
+  @@map("recurring_task_checklist_item")
 }
 
-/// `@@unique([templateId, period])` É a chave de idempotência (seção 15:
-/// "idempotency key impede duplicidade por rotina+período") — não é só
-/// uma otimização, é a garantia contra rodar a mesma rotina duas vezes.
-model RoutineRun {
-  id           String           @id @default(cuid())
-  templateId   String
-  template     RoutineTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  /// Rótulo do período, ex.: "2026-09" para rotina mensal.
-  period       String
-  status       RoutineRunStatus @default(AGENDADA)
-  projectId    String?
-  project      Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  errorMessage String?
-  createdAt    DateTime         @default(now())
+/// Só usado quando recurrenceMode = DATAS_ESPECIFICAS — datas escolhidas à
+/// mão num calendário multi-seleção na criação do template.
+model RecurringTaskDate {
+  id         String                @id @default(cuid())
+  templateId String
+  template   RecurringTaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  date       DateTime
+
+  @@unique([templateId, date])
+  @@index([templateId])
+  @@map("recurring_task_date")
+}
+
+/// `@@unique([templateId, period])` é a mesma garantia de idempotência real
+/// do banco que RoutineRun já tinha (seção 15 do manual) — não é só uma
+/// checagem de aplicação. `period` é "AAAA-MM" no modo mensal, ou a data ISO
+/// da ocorrência no modo datas específicas.
+model RecurringTaskGeneration {
+  id         String                @id @default(cuid())
+  templateId String
+  template   RecurringTaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  period     String
+  taskId     String?               @unique
+  task       Task?                 @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt  DateTime              @default(now())
 
   @@unique([templateId, period])
   @@index([templateId])
-  @@map("routine_run")
-}
-
-// ---------------------------------------------------------------------------
-// Squads e capacidade — Release 1C, parte 4 (seção 16 do manual)
-// ---------------------------------------------------------------------------
-
-enum AllocationStatus {
-  ATIVA
-  ENCERRADA
-}
-
-model Squad {
-  id        String   @id @default(cuid())
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name      String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  members     SquadMember[]
-  allocations ClientAllocation[]
-
-  @@index([agencyId])
-  @@map("squad")
-}
-
-model SquadMember {
-  id       String   @id @default(cuid())
-  squadId  String
-  squad    Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  joinedAt DateTime @default(now())
-
-  @@unique([squadId, userId])
-  @@map("squad_member")
-}
-
-/// Histórico de squad responsável por cliente — reatribuir encerra a linha
-/// anterior (status ENCERRADA + endDate) e cria uma nova, nunca apaga
-/// ("troca de responsável registra handoff", seção 16 do manual). Só squad
-/// principal nesta fatia — especialistas individuais ficam para depois.
-model ClientAllocation {
-  id        String           @id @default(cuid())
-  clientId  String
-  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  squadId   String
-  squad     Squad            @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  status    AllocationStatus @default(ATIVA)
-  startDate DateTime         @default(now())
-  endDate   DateTime?
-  createdAt DateTime         @default(now())
-
-  @@index([clientId])
-  @@index([squadId])
-  @@map("client_allocation")
+  @@map("recurring_task_generation")
 }
 
 // ---------------------------------------------------------------------------
@@ -869,23 +808,20 @@ model CommentThread {
   @@map("comment_thread")
 }
 
-/// "Mensagem pode virar demanda/tarefa apenas por usuário autorizado" (seção
-/// 19) — convertedTaskId/convertedRequestId seguem o mesmo padrão de
-/// idempotência de Request.convertedTaskId e Lead.convertedClientId: no
-/// máximo uma conversão por comentário, nunca duplicada.
+/// "Mensagem pode virar tarefa apenas por usuário autorizado" (seção 19) —
+/// convertedTaskId segue o mesmo padrão de idempotência de
+/// Lead.convertedClientId: no máximo uma conversão por comentário.
 model Comment {
-  id                 String        @id @default(cuid())
-  threadId           String
-  thread             CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  authorUserId       String
-  body               String
-  status             CommentStatus @default(ATIVO)
-  editedAt           DateTime?
-  convertedTaskId    String?       @unique
-  convertedTask      Task?         @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
-  convertedRequestId String?       @unique
-  convertedRequest   Request?      @relation(fields: [convertedRequestId], references: [id], onDelete: SetNull)
-  createdAt          DateTime      @default(now())
+  id              String        @id @default(cuid())
+  threadId        String
+  thread          CommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorUserId    String
+  body            String
+  status          CommentStatus @default(ATIVO)
+  editedAt        DateTime?
+  convertedTaskId String?       @unique
+  convertedTask   Task?         @relation(fields: [convertedTaskId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
 
   edits    CommentEdit[]
   mentions CommentMention[]

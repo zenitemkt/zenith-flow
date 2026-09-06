@@ -41,7 +41,6 @@ export default async function ClientProfilePage({ params }: PageProps) {
         take: 1,
         include: { items: { orderBy: { order: "asc" } } },
       },
-      allocations: { where: { status: "ATIVA" }, include: { squad: true }, take: 1 },
       mediaAssets: { orderBy: { createdAt: "desc" } },
       _count: { select: { contentItems: true } },
     },
@@ -79,7 +78,6 @@ export default async function ClientProfilePage({ params }: PageProps) {
     : [];
 
   const latestRun = client.onboardingRuns[0];
-  const currentAllocation = client.allocations[0];
 
   type TimelineEntry = {
     id: string;
@@ -135,21 +133,6 @@ export default async function ClientProfilePage({ params }: PageProps) {
               .join(" · ") || "E-mail, telefone e WhatsApp ainda não cadastrados"}
           </p>
           <p className="mt-1 text-sm text-[#98A2B3]">
-            Squad responsável:{" "}
-            {currentAllocation ? (
-              <Link
-                href={`/operacao/squads/${currentAllocation.squad.id}`}
-                className="font-medium text-[#6847F5] hover:underline"
-              >
-                {currentAllocation.squad.name}
-              </Link>
-            ) : (
-              <Link href="/operacao/squads" className="text-[#6847F5] hover:underline">
-                nenhum ainda — alocar
-              </Link>
-            )}
-          </p>
-          <p className="mt-1 text-sm text-[#98A2B3]">
             <Link
               href={`/conteudo/planejamento?clientId=${client.id}`}
               className="font-medium text-[#6847F5] hover:underline"
@@ -182,7 +165,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
               <RecalculateHealthScoreButton clientId={client.id} />
             </div>
             {!latestHealthScore || !healthBreakdown ? (
-              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em "Recalcular".</p>
+              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em &quot;Recalcular&quot;.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[#98A2B3]">
@@ -227,7 +210,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
               <RecalculateChurnRiskButton clientId={client.id} />
             </div>
             {!latestChurnRisk || !churnSignals ? (
-              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em "Recalcular".</p>
+              <p className="text-sm text-[#98A2B3]">Ainda não calculado. Clique em &quot;Recalcular&quot;.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[#98A2B3]">

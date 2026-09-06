@@ -83,7 +83,7 @@ export default async function IndicadoresPage() {
           <li>
             <strong>MRR, ARR, ARPA, Gross/Net Revenue Churn, LTV simples</strong> — pressupõem receita recorrente
             normalizada; este projeto não modela contrato/assinatura como entidade própria (decisão da Release
-            1B), então não há uma base honesta de "receita mensal recorrente" pra calcular.
+            1B), então não há uma base honesta de &quot;receita mensal recorrente&quot; pra calcular.
           </li>
           <li>
             <strong>CAC</strong> — depende de dado de aquisição/marketing, que é Fase 3 (tracking, campanhas).

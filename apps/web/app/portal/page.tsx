@@ -21,8 +21,8 @@ export default async function PortalHomePage() {
       orderBy: { scheduledDate: "asc" },
       take: 5,
     }),
-    prisma.request.count({
-      where: { clientId: client.id, status: { notIn: ["CONCLUIDA", "REJEITADA"] } },
+    prisma.task.count({
+      where: { project: { clientId: client.id }, status: { notIn: ["CONCLUIDA", "CANCELADA"] } },
     }),
   ]);
 
