@@ -23,46 +23,17 @@ import type { NavigationGroup } from "./types";
  * especificação de sidebar). Todos os itens nascem com comingSoon: true e são
  * habilitados individualmente conforme cada fatia funcional é implementada —
  * ver docs/STATUS.md para o que já está ativo.
+ *
+ * Ordem dos grupos reorganizada por frequência de uso (pedido do usuário,
+ * 2026-09-07): processos do dia a dia (Produção, Comercial, Gestão) vêm logo
+ * após a Home; Clientes (carteira/cadastro, acessado com bem menos frequência
+ * que o resto) desce para depois de Gestão. Ver docs/DECISIONS.md.
  */
 export const navigationGroups: NavigationGroup[] = [
   {
     id: "overview",
     label: "Visão geral",
-    items: [
-      { id: "home", label: "Home", icon: Home, href: "/", comingSoon: false },
-      {
-        id: "clients",
-        label: "Clientes",
-        icon: Users,
-        href: "/clientes",
-        comingSoon: false,
-        children: [
-          { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
-          { id: "clients-risk", label: "Risco de churn", href: "/clientes/risco", comingSoon: false },
-          { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: false },
-          { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
-          { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
-          { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
-          { id: "clients-cohort", label: "Cohort", href: "/clientes/cohort", comingSoon: false },
-          { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: false },
-        ],
-      },
-      {
-        id: "commercial",
-        label: "Comercial",
-        icon: Briefcase,
-        href: "/comercial",
-        comingSoon: false,
-        children: [
-          { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
-          { id: "commercial-pipeline", label: "Pipeline", href: "/comercial/pipeline", comingSoon: false },
-          { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
-          { id: "commercial-campaigns", label: "Campanhas", href: "/comercial/campanhas", comingSoon: false },
-          { id: "commercial-products", label: "Produtos", href: "/comercial/produtos", comingSoon: true },
-          { id: "commercial-goals", label: "Metas", href: "/comercial/metas", comingSoon: true },
-        ],
-      },
-    ],
+    items: [{ id: "home", label: "Home", icon: Home, href: "/", comingSoon: false }],
   },
   {
     id: "production",
@@ -92,6 +63,21 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "content-library", label: "Biblioteca", href: "/conteudo/biblioteca", comingSoon: false },
           { id: "content-approvals", label: "Aprovações", href: "/conteudo/aprovacoes", comingSoon: false },
           { id: "content-publishing", label: "Publicação", href: "/conteudo/publicacao", comingSoon: true },
+        ],
+      },
+      {
+        id: "commercial",
+        label: "Comercial",
+        icon: Briefcase,
+        href: "/comercial",
+        comingSoon: false,
+        children: [
+          { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
+          { id: "commercial-pipeline", label: "Pipeline", href: "/comercial/pipeline", comingSoon: false },
+          { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
+          { id: "commercial-campaigns", label: "Campanhas", href: "/comercial/campanhas", comingSoon: false },
+          { id: "commercial-products", label: "Produtos", href: "/comercial/produtos", comingSoon: true },
+          { id: "commercial-goals", label: "Metas", href: "/comercial/metas", comingSoon: true },
         ],
       },
     ],
@@ -132,6 +118,29 @@ export const navigationGroups: NavigationGroup[] = [
         ],
       },
       { id: "reports", label: "Relatórios", icon: BarChart3, href: "/relatorios", comingSoon: true },
+    ],
+  },
+  {
+    id: "client-management",
+    label: "Clientes",
+    items: [
+      {
+        id: "clients",
+        label: "Clientes",
+        icon: Users,
+        href: "/clientes",
+        comingSoon: false,
+        children: [
+          { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
+          { id: "clients-risk", label: "Risco de churn", href: "/clientes/risco", comingSoon: false },
+          { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: false },
+          { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
+          { id: "clients-files", label: "Arquivos", href: "/clientes/arquivos", comingSoon: false },
+          { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
+          { id: "clients-cohort", label: "Cohort", href: "/clientes/cohort", comingSoon: false },
+          { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: false },
+        ],
+      },
     ],
   },
   {

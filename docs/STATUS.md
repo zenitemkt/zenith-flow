@@ -1,6 +1,6 @@
 # Status de implementação — ZENITH FLOW
 
-Última atualização: 2026-09-06.
+Última atualização: 2026-09-07.
 
 ## Implementado
 
@@ -252,6 +252,8 @@
   - `FinanceEntry.boletoAssetId` (reaproveita `MediaAsset`/R2) — time anexa o PDF em `/financeiro/receber` (`AttachBoletoButton`, upload + vínculo em dois passos: `POST /api/media` já existente + `POST /api/finance/entries/:id/boleto` novo), cliente baixa em `/portal/financeiro`. Arquivo do boleto precisa ter o mesmo `clientId` do lançamento (validado na rota).
   - `Campaign.clientId` (novo, opcional) — mesma tabela da seção 36 passa a servir dois propósitos: nulo é o funil comercial da própria agência, preenchido é tráfego pago gerenciado pra aquele cliente. `/comercial/campanhas` ganhou seletor de cliente opcional; nova página `/portal/trafego` (somente leitura, sem o painel de atribuição — isso é assunto interno da agência).
   - Novo teste de isolamento em `packages/db` (3 testes: boleto `onDelete: SetNull`, `@@unique(boletoAssetId)`, campanha de cliente isolada da campanha própria da agência). Suite completa: 9 (Sidebar) + 76 (`packages/db`) = 85/85 passando. `npm run build`/`tsc --noEmit` limpos em `apps/web`. Sem teste de upload real contra o R2 nesta sessão (rota de upload em si não mudou).
+- **Reordenação da sidebar por frequência de uso (pedido do usuário, 2026-09-07)**: `nav-config.ts` reagrupado — `Visão geral` (só Home) → `Produção` (Operação, Conteúdo e agora também Comercial, trabalho recorrente do dia a dia) → `Gestão` (Financeiro, Pessoas, Relatórios, inalterado) → `Clientes` (novo grupo próprio, movido pra depois de Gestão — carteira/cadastro é bem menos frequente que operar) → Inteligência e automação → Comunicação e recursos → Sistema (inalterados). Ver `docs/DECISIONS.md`.
+  - Sem mudança de schema, rota ou lógica — só reordenação/reagrupamento de itens já existentes em `navigationGroups`. `Sidebar.test.tsx` usa fixture própria (não afetado, 9/9). `tsc --noEmit`/`npm run build` de `apps/web` limpos. Sem verificação manual em navegador nesta sessão.
 
 ## Parcial
 

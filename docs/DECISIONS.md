@@ -1,3 +1,13 @@
+## 2026-09-07 — Reordenação da sidebar por frequência de uso (Produção/Comercial/Gestão antes de Clientes)
+
+**Contexto**: pedido direto do usuário — "devemos priorizar os processos primeiro, pois são o que mais vamos acessar o sistema pra usar... o cadastro do cliente vai ocorrer com frequência menor... assim o usuário consegue usar mais rapidamente o sistema, mais otimizado."
+
+**Decisão**: `packages/ui/src/navigation/nav-config.ts` reorganizado por frequência de uso esperada, não mais pela ordem "Visão geral" (Home+Clientes+Comercial) → Produção → Gestão → resto. Nova ordem: `Visão geral` (só Home) → `Produção` (Operação, Conteúdo, e agora também Comercial — as três são trabalho do dia a dia: quadro de tarefas, pipeline, aprovação de conteúdo) → `Gestão` (Financeiro, Pessoas, Relatórios — inalterado) → `Clientes` (novo grupo próprio, carteira/cadastro/risco/onboarding/NPS/cohort/reativações — desce pra depois de Gestão porque cadastrar/consultar cliente é bem menos frequente que operar) → Inteligência e automação → Comunicação e recursos → Sistema (os três últimos inalterados).
+
+**Por que Comercial foi pra dentro de "Produção" e não ficou como grupo próprio**: pipeline/leads/propostas são trabalho recorrente de quem vende (não cadastro esporádico), mais parecido com Operação/Conteúdo do que com a carteira de clientes já ativos.
+
+**Testado**: suíte de `Sidebar.test.tsx` usa uma fixture própria de grupos (não `nav-config.ts`), então não foi afetada — 9/9 passando. `tsc --noEmit` e `npm run build` de `apps/web` limpos. Sem verificação manual em navegador nesta sessão (mudança é só reordenação de dados já renderizados pelo componente existente, sem lógica nova).
+
 ## 2026-09-07 — Portal do Cliente: boleto em PDF anexado à fatura + visualização de tráfego pago
 
 **Contexto**: usuário perguntou "isso tá pronto?" listando o que esperava do Portal do Cliente (login próprio, solicitações, aprovação de artes, calendário, tráfego pago, financeiro com boleto em PDF). Verificação no código (não por suposição) mostrou que tudo já existia, exceto duas peças: anexar/visualizar boleto em PDF na fatura, e visualização de tráfego pago no portal. As duas não dependem de credencial externa (Meta/Google Ads, seções 37/38) — dá pra construir agora reaproveitando schema e storage já existentes.
