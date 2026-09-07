@@ -8,6 +8,7 @@ describe("campanhas: isolamento e idempotência de métrica diária", () => {
   afterAll(async () => {
     await prisma.campaignDailyMetric.deleteMany({ where: { campaign: { agencyId: { in: createdAgencyIds } } } });
     await prisma.campaign.deleteMany({ where: { agencyId: { in: createdAgencyIds } } });
+    await prisma.client.deleteMany({ where: { agencyId: { in: createdAgencyIds } } });
     await prisma.agency.deleteMany({ where: { id: { in: createdAgencyIds } } });
   });
 
@@ -61,5 +62,21 @@ describe("campanhas: isolamento e idempotência de métrica diária", () => {
 
     const metrics = await prisma.campaignDailyMetric.findMany({ where: { campaignId: campaign.id } });
     expect(metrics).toHaveLength(1);
+  });
+
+  it("campanha de tráfego pago pode ser vinculada a um cliente, visível pra ele em /portal/trafego", async () => {
+    const agency = await prisma.agency.create({ data: { name: `Agência epsilon ${suffix}`, slug: `epsilon-${suffix}` } });
+    createdAgencyIds.push(agency.id);
+    const client = await prisma.client.create({ data: { agencyId: agency.id, name: "Cliente epsilon" } });
+    const ownCampaign = await prisma.campaign.create({ data: { agencyId: agency.id, name: "Funil próprio", channel: "Orgânico" } });
+    const clientCampaign = await prisma.campaign.create({
+      data: { agencyId: agency.id, clientId: client.id, name: "Tráfego do cliente", channel: "Meta Ads" },
+    });
+
+    const campaignsOfClient = await prisma.campaign.findMany({ where: { clientId: client.id } });
+    expect(campaignsOfClient.map((c) => c.id)).toEqual([clientCampaign.id]);
+
+    const agencyOwnCampaigns = await prisma.campaign.findMany({ where: { agencyId: agency.id, clientId: null } });
+    expect(agencyOwnCampaigns.map((c) => c.id)).toEqual([ownCampaign.id]);
   });
 });

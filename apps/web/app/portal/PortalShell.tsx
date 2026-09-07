@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/portal/aprovacoes", label: "Aprovações" },
   { href: "/portal/solicitacoes", label: "Solicitações" },
   { href: "/portal/arquivos", label: "Arquivos" },
+  { href: "/portal/trafego", label: "Tráfego pago" },
   { href: "/portal/financeiro", label: "Financeiro" },
 ];
 

@@ -12,10 +12,18 @@ export default async function CampaignsPage() {
     redirect("/login");
   }
 
-  const campaigns = await prisma.campaign.findMany({
-    where: { agencyId: membership.agencyId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [campaigns, clients] = await Promise.all([
+    prisma.campaign.findMany({
+      where: { agencyId: membership.agencyId },
+      include: { client: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.client.findMany({
+      where: { agencyId: membership.agencyId },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -27,7 +35,7 @@ export default async function CampaignsPage() {
             manual) — sem conector externo ainda, cadastro e métricas são manuais.
           </p>
         </div>
-        <NewCampaignModal />
+        <NewCampaignModal clients={clients} />
       </div>
 
       {campaigns.length === 0 ? (
@@ -40,6 +48,7 @@ export default async function CampaignsPage() {
             <thead className="bg-[#F9FAFB] text-xs font-semibold uppercase tracking-wide text-[#667085]">
               <tr>
                 <th className="px-4 py-3">Campanha</th>
+                <th className="px-4 py-3">Cliente</th>
                 <th className="px-4 py-3">Canal</th>
                 <th className="px-4 py-3">Período</th>
                 <th className="px-4 py-3">Orçamento</th>
@@ -60,6 +69,7 @@ export default async function CampaignsPage() {
                       <span className="ml-2 text-xs text-[#98A2B3]">utm_campaign={campaign.utmCampaign}</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-[#475467]">{campaign.client?.name ?? "Própria agência"}</td>
                   <td className="px-4 py-3 text-[#475467]">{campaign.channel}</td>
                   <td className="px-4 py-3 text-[#475467]">
                     {campaign.startDate ? campaign.startDate.toLocaleDateString("pt-BR") : "—"}

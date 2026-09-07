@@ -16,9 +16,10 @@ export async function FinanceListPageContent({ type }: { type: FinanceEntryType 
       where: { agencyId: membership.agencyId, type },
       include: {
         category: { select: { name: true } },
-        client: { select: { name: true } },
+        client: { select: { id: true, name: true } },
         project: { select: { name: true } },
         reversedBy: { select: { id: true } },
+        boletoAsset: { select: { id: true, fileName: true } },
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     }),
@@ -54,7 +55,7 @@ export async function FinanceListPageContent({ type }: { type: FinanceEntryType 
         <NewFinanceEntryModal type={type} categories={categories} clients={clients} projects={projects} />
       </div>
 
-      <FinanceEntryTable entries={entries} />
+      <FinanceEntryTable entries={entries} showBoleto={type === "RECEITA"} />
     </div>
   );
 }

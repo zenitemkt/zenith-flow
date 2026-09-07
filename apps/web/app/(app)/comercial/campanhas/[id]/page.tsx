@@ -21,7 +21,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
 
   const campaign = await prisma.campaign.findUnique({
     where: { id: params.id },
-    include: { dailyMetrics: { orderBy: { date: "desc" }, take: 30 } },
+    include: { dailyMetrics: { orderBy: { date: "desc" }, take: 30 }, client: { select: { id: true, name: true } } },
   });
 
   if (!campaign || campaign.agencyId !== membership.agencyId) {
@@ -57,6 +57,15 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           </h1>
           <p className="text-sm text-[#667085]">
             {campaign.channel} · {campaign.objective ?? "Sem objetivo informado"}
+            {campaign.client && (
+              <>
+                {" · "}
+                <Link href={`/clientes/${campaign.client.id}`} className="font-medium text-[#6847F5] hover:underline">
+                  {campaign.client.name}
+                </Link>{" "}
+                <span className="text-xs text-[#98A2B3]">(visível no portal em Tráfego pago)</span>
+              </>
+            )}
           </p>
           <p className="mt-1 text-sm text-[#98A2B3]">
             {campaign.startDate ? campaign.startDate.toLocaleDateString("pt-BR") : "Sem início"}

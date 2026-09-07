@@ -1,6 +1,7 @@
 import type { FinanceEntryStatus, FinanceEntryType } from "@zenith/db";
 import { FINANCE_STATUS_LABELS, formatCents, isOverdue } from "@/lib/finance";
 import { FinanceEntryActions } from "./FinanceEntryActions";
+import { AttachBoletoButton } from "./AttachBoletoButton";
 import { FINANCE_STATUS_TRANSITIONS } from "@/lib/finance";
 
 export interface FinanceEntryRow {
@@ -12,10 +13,11 @@ export interface FinanceEntryRow {
   dueDate: Date;
   settledDate: Date | null;
   category: { name: string } | null;
-  client: { name: string } | null;
+  client: { id: string; name: string } | null;
   project: { name: string } | null;
   reversalOfId: string | null;
   reversedBy: { id: string } | null;
+  boletoAsset: { id: string; fileName: string } | null;
 }
 
 const STATUS_BADGE_CLASS: Record<FinanceEntryStatus, string> = {
@@ -26,7 +28,7 @@ const STATUS_BADGE_CLASS: Record<FinanceEntryStatus, string> = {
   CANCELADO: "bg-[#F2F4F7] text-[#98A2B3]",
 };
 
-export function FinanceEntryTable({ entries }: { entries: FinanceEntryRow[] }) {
+export function FinanceEntryTable({ entries, showBoleto = false }: { entries: FinanceEntryRow[]; showBoleto?: boolean }) {
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
@@ -46,6 +48,7 @@ export function FinanceEntryTable({ entries }: { entries: FinanceEntryRow[] }) {
             <th className="px-4 py-3">Vencimento</th>
             <th className="px-4 py-3">Valor</th>
             <th className="px-4 py-3">Status</th>
+            {showBoleto && <th className="px-4 py-3">Boleto</th>}
             <th className="px-4 py-3">Ação</th>
           </tr>
         </thead>
@@ -79,6 +82,13 @@ export function FinanceEntryTable({ entries }: { entries: FinanceEntryRow[] }) {
                     {FINANCE_STATUS_LABELS[entry.type][displayStatus]}
                   </span>
                 </td>
+                {showBoleto && (
+                  <td className="px-4 py-3">
+                    {!isReversal && (
+                      <AttachBoletoButton entryId={entry.id} clientId={entry.client?.id ?? null} boleto={entry.boletoAsset} />
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   {!isReversal && (
                     <FinanceEntryActions

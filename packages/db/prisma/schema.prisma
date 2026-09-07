@@ -267,6 +267,7 @@ model Client {
   convertedFromLead      Lead?
   opportunities          Opportunity[]
   proposals              Proposal[]
+  campaigns              Campaign[]
 
   @@index([agencyId])
   @@map("client")
@@ -1288,6 +1289,11 @@ model FinanceEntry {
   /// "Criar tarefa de cobrança" — nunca automático (sem apps/worker ainda).
   collectionTaskId String?            @unique
   collectionTask   Task?              @relation(fields: [collectionTaskId], references: [id], onDelete: SetNull)
+  /// Boleto/fatura em PDF anexado pelo time (pedido do usuário, 2026-09-07) —
+  /// reaproveita `MediaAsset`/R2, mesmo storage já usado por Arquivos/Biblioteca.
+  /// `onDelete: SetNull`: apagar o arquivo nunca apaga o lançamento financeiro.
+  boletoAssetId    String?            @unique
+  boletoAsset      MediaAsset?        @relation(fields: [boletoAssetId], references: [id], onDelete: SetNull)
   createdByUserId  String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -1337,6 +1343,8 @@ model MediaAsset {
   sizeBytes        Int
   uploadedByUserId String?
   createdAt        DateTime @default(now())
+
+  boletoFor FinanceEntry?
 
   @@index([agencyId])
   @@index([clientId])
@@ -2012,10 +2020,17 @@ enum CampaignStatus {
 /// ainda. `channel`/`utmSource`/`utmCampaign` são texto livre, mesmo padrão de
 /// `Lead.source` — fechar num enum exigiria prever cada plataforma de anúncio
 /// de antemão.
+/// `clientId` (pedido do usuário, 2026-09-07) distingue duas naturezas que
+/// usam o mesmo desenho: nulo é campanha do funil comercial da própria
+/// agência (seção 34/39, atribuída a Lead/Opportunity); preenchido é tráfego
+/// pago que a agência gerencia PRA aquele cliente, mostrado a ele em
+/// `/portal/trafego` — as duas nunca se misturam na tela errada.
 model Campaign {
   id          String         @id @default(cuid())
   agencyId    String
   agency      Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId    String?
+  client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   name        String
   channel     String
   objective   String?
@@ -2034,6 +2049,7 @@ model Campaign {
   dailyMetrics CampaignDailyMetric[]
 
   @@index([agencyId])
+  @@index([clientId])
   @@map("campaign")
 }
 

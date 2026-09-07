@@ -21,6 +21,7 @@ export default async function PortalFinanceiroPage() {
 
   const entries = await prisma.financeEntry.findMany({
     where: { clientId: client.id, type: "RECEITA", status: { not: "CANCELADO" } },
+    include: { boletoAsset: { select: { id: true, fileName: true } } },
     orderBy: { dueDate: "desc" },
   });
 
@@ -44,6 +45,7 @@ export default async function PortalFinanceiroPage() {
                 <th className="px-4 py-3">Vencimento</th>
                 <th className="px-4 py-3">Valor</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Boleto</th>
               </tr>
             </thead>
             <tbody>
@@ -62,6 +64,20 @@ export default async function PortalFinanceiroPage() {
                       >
                         {overdue ? "Vencido" : FINANCE_STATUS_LABELS.RECEITA[entry.status]}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {entry.boletoAsset ? (
+                        <a
+                          href={`/api/media/${entry.boletoAsset.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-[#6847F5] hover:underline"
+                        >
+                          Baixar PDF
+                        </a>
+                      ) : (
+                        <span className="text-[#98A2B3]">—</span>
+                      )}
                     </td>
                   </tr>
                 );

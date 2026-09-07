@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@zenith/ui";
 import { FormField } from "@/app/_components/FormField";
 
-export function NewCampaignModal() {
+export function NewCampaignModal({ clients }: { clients: { id: string; name: string }[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [clientId, setClientId] = useState("");
   const [channel, setChannel] = useState("");
   const [objective, setObjective] = useState("");
   const [budget, setBudget] = useState("");
@@ -21,6 +22,7 @@ export function NewCampaignModal() {
 
   function close() {
     setName("");
+    setClientId("");
     setChannel("");
     setObjective("");
     setBudget("");
@@ -42,6 +44,7 @@ export function NewCampaignModal() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
+        clientId: clientId || null,
         channel,
         objective,
         budget: budget || null,
@@ -77,6 +80,28 @@ export function NewCampaignModal() {
       <Modal open={open} onClose={close} title="Nova campanha">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <FormField label="Nome" name="name" required autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="campaign-client" className="text-sm font-medium text-[#344054]">
+              Cliente (opcional)
+            </label>
+            <select
+              id="campaign-client"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+            >
+              <option value="">Nenhum — campanha da própria agência</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-[#98A2B3]">
+              Escolhendo um cliente, ele passa a ver esta campanha e as métricas em{" "}
+              <span className="font-medium">Portal → Tráfego pago</span>.
+            </p>
+          </div>
           <FormField
             label="Canal"
             name="channel"

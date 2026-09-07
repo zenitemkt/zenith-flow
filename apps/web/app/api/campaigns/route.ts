@@ -34,6 +34,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Informe o canal da campanha." }, { status: 400 });
   }
 
+  const clientId = optionalString(body?.clientId);
+  if (clientId) {
+    const client = await prisma.client.findUnique({ where: { id: clientId } });
+    if (!client || client.agencyId !== membership.agencyId) {
+      return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
+    }
+  }
+
   const objective = optionalString(body?.objective);
   const utmSource = optionalString(body?.utmSource);
   const utmCampaign = optionalString(body?.utmCampaign);
@@ -59,6 +67,7 @@ export async function POST(request: Request) {
   const campaign = await prisma.campaign.create({
     data: {
       agencyId: membership.agencyId,
+      clientId,
       name,
       channel,
       objective,
