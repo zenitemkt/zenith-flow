@@ -147,6 +147,7 @@ model Agency {
   trackingVisitors       TrackingVisitor[]
   trackingEvents         TrackingEvent[]
   trackingConsents       TrackingConsent[]
+  campaigns              Campaign[]
 
   @@map("agency")
 }
@@ -1980,4 +1981,75 @@ model TrackingConsent {
 
   @@index([visitorId])
   @@map("tracking_consent")
+}
+
+// ---------------------------------------------------------------------------
+// Campanhas, UTMs e atribuição — Fase 3, seção 36 do manual. Sem tabela de
+// "touchpoint" nem de "modelo de atribuição": um touchpoint é derivado de
+// `TrackingSession` (que já guarda os UTMs) casado com uma `Campaign` por
+// utm_source+utm_campaign; os modelos (first touch/last non-direct/linear)
+// são funções puras em `apps/web/lib/attribution.ts`, nunca persistidos —
+// mesmo raciocínio já usado em Cohort/DRE/Indicadores financeiros ("não
+// modelar o que dá pra derivar"). Ver docs/DECISIONS.md de 2026-09-07.
+// ---------------------------------------------------------------------------
+
+enum CampaignStatus {
+  ATIVA
+  PAUSADA
+  ENCERRADA
+}
+
+/// Ad set/anúncio (granularidade abaixo de campanha, seção 36) ficam de fora
+/// desta fatia — sem um conector real (seção 38) pra sincronizar automaticamente
+/// aquele nível, pedir pra alguém digitar isso à mão não tem caso de uso real
+/// ainda. `channel`/`utmSource`/`utmCampaign` são texto livre, mesmo padrão de
+/// `Lead.source` — fechar num enum exigiria prever cada plataforma de anúncio
+/// de antemão.
+model Campaign {
+  id          String         @id @default(cuid())
+  agencyId    String
+  agency      Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name        String
+  channel     String
+  objective   String?
+  startDate   DateTime?
+  endDate     DateTime?
+  budgetCents Int?
+  currency    String         @default("BRL")
+  ownerUserId String?
+  externalId  String?
+  utmSource   String?
+  utmCampaign String?
+  status      CampaignStatus @default(ATIVA)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  dailyMetrics CampaignDailyMetric[]
+
+  @@index([agencyId])
+  @@map("campaign")
+}
+
+/// "Métricas diárias" (seção 36) — uma linha por dia por campanha, sempre a
+/// visão "reportada pela plataforma de anúncios" (ou digitada à mão nesta
+/// fatia, sem conector). Nunca confundir com "Atribuição Zenith" (calculada
+/// à parte, sobre dado próprio de tracking+CRM) — a seção 36 é explícita
+/// que as duas podem divergir e precisam de rótulo claro, nunca fingir
+/// equivalência.
+model CampaignDailyMetric {
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  date        DateTime
+  spendCents  Int      @default(0)
+  impressions Int      @default(0)
+  reach       Int?
+  clicks      Int      @default(0)
+  results     Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@map("campaign_daily_metric")
 }

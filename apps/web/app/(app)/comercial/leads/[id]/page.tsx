@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS } from "@/lib/leads";
+import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
 import { prisma } from "@zenith/db";
 import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
@@ -43,6 +44,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
     })),
     ...lead.notes.map((note) => ({ id: note.id, kind: "note" as const, createdAt: note.createdAt, label: note.body })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const touchpoints = await getLeadJourney(membership.agencyId, lead.id);
+  const credited = applyAttributionModel(touchpoints, "last_non_direct");
 
   return (
     <div className="flex flex-col gap-6">
@@ -124,6 +128,36 @@ export default async function LeadDetailPage({ params }: PageProps) {
           </div>
         </section>
       </div>
+
+      {touchpoints.length > 0 && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Jornada de aquisição</h2>
+          <p className="mb-3 text-xs text-[#98A2B3]">
+            Sessões de tracking deste lead (seção 34/36 do manual), em ordem. Crédito de conversão pelo modelo{" "}
+            {ATTRIBUTION_MODEL_LABELS.last_non_direct} — outros modelos disponíveis na página da campanha.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {credited.map((tp) => (
+              <div
+                key={tp.sessionId}
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                  tp.weight > 0 ? "border-[#6847F5] bg-[#F1EDFE]" : "border-[#EEF0F3]"
+                }`}
+              >
+                <span className="text-[#101828]">{tp.channel}</span>
+                <span className="flex items-center gap-2 text-xs text-[#98A2B3]">
+                  {tp.occurredAt.toLocaleString("pt-BR")}
+                  {tp.weight > 0 && (
+                    <span className="rounded-full bg-[#6847F5] px-2 py-0.5 text-[10px] font-semibold text-white">
+                      crédito
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
