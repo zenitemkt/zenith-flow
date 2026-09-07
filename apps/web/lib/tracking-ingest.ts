@@ -1,5 +1,6 @@
 import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zenith/db";
 import { normalizeEmail } from "@/lib/leads";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import {
   isTrackingEventName,
   isConsentSatisfied,
@@ -68,16 +69,28 @@ async function identifyVisitor(
   const visitor = await prisma.trackingVisitor.findUnique({ where: { id: visitorId } });
   if (!visitor || visitor.leadId) return;
 
-  await prisma.$transaction(async (tx) => {
+  const { lead, createdNewLead } = await prisma.$transaction(async (tx) => {
     let lead = await tx.lead.findUnique({ where: { agencyId_email: { agencyId, email } } });
+    let createdNewLead = false;
     if (!lead) {
       const name = typeof properties.name === "string" && properties.name.trim() ? properties.name.trim() : email;
       const phone = typeof properties.phone === "string" ? properties.phone : null;
       lead = await tx.lead.create({ data: { agencyId, name, email, phone, source: "tracking" } });
       await tx.leadStatusHistory.create({ data: { leadId: lead.id, toStatus: "NOVO" } });
+      createdNewLead = true;
     }
     await tx.trackingVisitor.update({ where: { id: visitorId }, data: { leadId: lead.id } });
+    return { lead, createdNewLead };
   });
+
+  if (createdNewLead) {
+    await fireWorkflowTrigger(agencyId, "lead.created", "lead", lead.id, {
+      leadId: lead.id,
+      name: lead.name,
+      email: lead.email,
+      source: lead.source,
+    });
+  }
 }
 
 export async function processTrackingEvent(

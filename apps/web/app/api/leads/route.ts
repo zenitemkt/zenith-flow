@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { normalizeEmail } from "@/lib/leads";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma } from "@zenith/db";
 
 function optionalString(value: unknown): string | null {
@@ -59,6 +60,13 @@ export async function POST(request: Request) {
       },
     });
     return created;
+  });
+
+  await fireWorkflowTrigger(membership.agencyId, "lead.created", "lead", lead.id, {
+    leadId: lead.id,
+    name: lead.name,
+    email: lead.email,
+    source: lead.source,
   });
 
   return NextResponse.json({ id: lead.id }, { status: 201 });

@@ -33,7 +33,7 @@ export async function advanceAssigneeQueue(
       if (next) {
         await client.task.update({
           where: { id: taskId },
-          data: { status: "BACKLOG", assigneeUserId: next.userId },
+          data: { status: "BACKLOG", assigneeUserId: next.userId, stageId: null },
         });
         await client.taskStatusHistory.create({
           data: {
@@ -51,7 +51,7 @@ export async function advanceAssigneeQueue(
 
   await client.task.update({
     where: { id: taskId },
-    data: { status: "CONCLUIDA", completedAt: new Date(), assigneeUserId: null },
+    data: { status: "CONCLUIDA", completedAt: new Date(), assigneeUserId: null, stageId: null },
   });
   await client.taskStatusHistory.create({
     data: { taskId, fromStatus: task.status, toStatus: "CONCLUIDA", actorUserId },

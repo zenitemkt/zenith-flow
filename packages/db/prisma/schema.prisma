@@ -148,6 +148,8 @@ model Agency {
   trackingEvents         TrackingEvent[]
   trackingConsents       TrackingConsent[]
   campaigns              Campaign[]
+  workflows              Workflow[]
+  operationStages        OperationStage[]
 
   @@map("agency")
 }
@@ -439,23 +441,28 @@ model Project {
 /// um grafo arbitrário. `assigneeUserId` é sempre "quem está na vez agora"
 /// (cache denormalizado mantido em sincronia pela fila `TaskAssignee`).
 model Task {
-  id               String         @id @default(cuid())
+  id               String          @id @default(cuid())
   projectId        String
-  project          Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   title            String
   description      String?
-  status           WorkItemStatus @default(BACKLOG)
+  status           WorkItemStatus  @default(BACKLOG)
   blockedByTaskId  String?
-  blockedBy        Task?          @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
-  blocks           Task[]         @relation("TaskBlocks")
+  blockedBy        Task?           @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
+  blocks           Task[]          @relation("TaskBlocks")
   assigneeUserId   String?
+  /// Só preenchido enquanto `status = EM_ANDAMENTO` — coluna customizável
+  /// dentro do balde "Fazendo" (ver `OperationStage`). Nunca decide sozinho
+  /// se a tarefa está concluída; isso é sempre `status`.
+  stageId          String?
+  stage            OperationStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
   /// Usado pra comparar estimado x realizado com o somatório de
   /// TimeEntry.minutes. Opcional: nem toda tarefa tem estimativa.
   estimatedMinutes Int?
   dueDate          DateTime?
   completedAt      DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   statusHistory       TaskStatusHistory[]
   assignees           TaskAssignee[]
@@ -2052,4 +2059,141 @@ model CampaignDailyMetric {
   @@unique([campaignId, date])
   @@index([campaignId])
   @@map("campaign_daily_metric")
+}
+
+// ---------------------------------------------------------------------------
+// Motor de automações — Fase 3, seção 40 do manual. Grafo simplificado pra
+// uma lista sequencial de passos (sem canvas visual, sem ramificação — uma
+// `CONDICAO` que falha só encerra a execução) e gatilhos ligados a mutações
+// que já existem no produto (não a um outbox_events formal, que não existe).
+// Ver docs/DECISIONS.md de 2026-09-07 pros recortes de escopo.
+// ---------------------------------------------------------------------------
+
+enum WorkflowStatus {
+  RASCUNHO
+  ATIVO
+  PAUSADO
+  ARQUIVADO
+}
+
+enum WorkflowRunStatus {
+  EXECUTANDO
+  AGUARDANDO
+  CONCLUIDO
+  FALHOU
+}
+
+enum WorkflowStepType {
+  CONDICAO
+  ESPERA
+  ACAO
+}
+
+/// `triggerEvent` é texto fechado em código (`TRIGGER_EVENTS` em
+/// `apps/web/lib/workflows.ts`), mesmo padrão de `CommentEntityType`.
+/// `draftSteps` só é lido/escrito enquanto `status = RASCUNHO` — depois de
+/// publicado, o rascunho não tem mais efeito (a versão publicada é a fonte
+/// de verdade); esta fatia não suporta editar/republicar um workflow já ativo.
+model Workflow {
+  id              String         @id @default(cuid())
+  agencyId        String
+  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  triggerEvent    String
+  status          WorkflowStatus @default(RASCUNHO)
+  draftSteps      Json           @default("[]")
+  createdByUserId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  versions WorkflowVersion[]
+
+  @@index([agencyId])
+  @@index([agencyId, triggerEvent, status])
+  @@map("workflow")
+}
+
+/// "Publicar cria versão imutável" (seção 40) — `steps` nunca muda depois de
+/// criada. `@@unique([workflowId, version])` garante a numeração sequencial
+/// sem colisão.
+model WorkflowVersion {
+  id                String   @id @default(cuid())
+  workflowId        String
+  workflow          Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  version           Int
+  steps             Json
+  publishedAt       DateTime @default(now())
+  publishedByUserId String?
+
+  runs WorkflowRun[]
+
+  @@unique([workflowId, version])
+  @@map("workflow_version")
+}
+
+/// `subjectType`/`subjectId` identificam o registro que disparou o gatilho
+/// (ex.: "lead"/id) — só pra navegação na UI, a execução em si só lê
+/// `payload` (snapshot no momento do gatilho, nunca relido do banco depois).
+/// `resumeAt` é o mecanismo real de `ESPERA`: sem worker/cron, uma automação
+/// pendente só avança quando alguém aciona "Processar automações pendentes"
+/// (mesmo padrão manual de Rotinas/Recorrências) e `resumeAt <= now()`.
+model WorkflowRun {
+  id                String            @id @default(cuid())
+  workflowVersionId String
+  workflowVersion   WorkflowVersion   @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+  subjectType       String
+  subjectId         String
+  payload           Json
+  status            WorkflowRunStatus @default(EXECUTANDO)
+  currentStepIndex  Int               @default(0)
+  resumeAt          DateTime?
+  startedAt         DateTime          @default(now())
+  finishedAt        DateTime?
+
+  stepRuns WorkflowStepRun[]
+
+  @@index([workflowVersionId])
+  @@index([status, resumeAt])
+  @@map("workflow_run")
+}
+
+/// Um `WorkflowStepRun` por passo executado — log append-only (seção 40:
+/// "requisitos: ...logs"). `error` preenchido marca falha; a run inteira para
+/// ali (sem retry/backoff real, que dependeria da fila que não existe).
+model WorkflowStepRun {
+  id            String           @id @default(cuid())
+  workflowRunId String
+  workflowRun   WorkflowRun      @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+  stepIndex     Int
+  stepType      WorkflowStepType
+  input         Json?
+  output        Json?
+  error         String?
+  startedAt     DateTime         @default(now())
+  finishedAt    DateTime?
+
+  @@index([workflowRunId])
+  @@map("workflow_step_run")
+}
+
+/// Colunas customizáveis dentro do balde "Fazendo" do Kanban de Operação
+/// (pedido do usuário, 2026-09-07 — ver docs/DECISIONS.md). Mesmo padrão de
+/// `PipelineStage`: posicional/renomeável, nunca a fonte da verdade sobre se
+/// a tarefa está concluída — isso continua sendo só `Task.status`
+/// (`WorkItemStatus`), do qual Health Score e Risco de churn dependem.
+/// `stageId` em `Task` é nulo em BACKLOG/CONCLUIDA/CANCELADA; só tarefas
+/// `EM_ANDAMENTO` moram numa `OperationStage`.
+model OperationStage {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  order     Int
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+
+  @@unique([agencyId, order])
+  @@index([agencyId])
+  @@map("operation_stage")
 }

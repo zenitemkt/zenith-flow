@@ -1,4 +1,5 @@
-import type { WorkItemStatus } from "@zenith/db";
+import type { MembershipRole, WorkItemStatus } from "@zenith/db";
+import { canManageAnyTask } from "@/lib/rbac";
 
 /**
  * O enum inteiro (7 valores) é preservado porque Health Score
@@ -46,6 +47,21 @@ export function isBlockedByDependency(
   if (!blockerStatus) return false;
   if (blockerStatus === "CONCLUIDA") return false;
   return targetStatus === "EM_ANDAMENTO" || targetStatus === "CONCLUIDA";
+}
+
+/**
+ * Ver tudo, mover só o que é seu (pedido do usuário, 2026-09-07): uma tarefa
+ * sem responsável é livre pra qualquer um da equipe; com responsável, só
+ * quem está na vez ou um admin pode agir sobre ela.
+ */
+export function canActOnTask(
+  role: MembershipRole,
+  actorUserId: string,
+  task: { assigneeUserId: string | null },
+): boolean {
+  if (!task.assigneeUserId) return true;
+  if (task.assigneeUserId === actorUserId) return true;
+  return canManageAnyTask(role);
 }
 
 /** Rótulo de prazo pro card: atrasado, vence em N dias, ou sem prazo (vai pro fim da fila). */

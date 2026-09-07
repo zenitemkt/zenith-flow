@@ -75,6 +75,7 @@ export const navigationGroups: NavigationGroup[] = [
         href: "/operacao",
         comingSoon: false,
         children: [
+          { id: "operations-board", label: "Quadro", href: "/operacao", comingSoon: false },
           { id: "operations-recurring", label: "Recorrências", href: "/operacao/recorrencias", comingSoon: false },
           { id: "operations-vendors", label: "Fornecedores", href: "/operacao/fornecedores", comingSoon: false },
         ],
@@ -137,7 +138,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "intelligence",
     label: "Inteligência e automação",
     items: [
-      { id: "automations", label: "Automações", icon: Zap, href: "/automacoes", comingSoon: true },
+      { id: "automations", label: "Automações", icon: Zap, href: "/automacoes", comingSoon: false },
       { id: "zenith-ai", label: "Zenith AI", icon: Sparkles, href: "/zenith-ai", comingSoon: true },
     ],
   },

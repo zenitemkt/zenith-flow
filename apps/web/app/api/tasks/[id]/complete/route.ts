@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { advanceAssigneeQueue } from "@/lib/task-assignees";
+import { canActOnTask } from "@/lib/tasks";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma } from "@zenith/db";
 
 interface RouteParams {
@@ -33,8 +35,19 @@ export async function POST(_request: Request, { params }: RouteParams) {
   if (task.status !== "EM_ANDAMENTO") {
     return NextResponse.json({ error: "Só é possível concluir tarefas em 'Fazendo'." }, { status: 400 });
   }
+  if (!canActOnTask(membership.role, session.user.id, task)) {
+    return NextResponse.json({ error: "Só quem está na vez (ou um admin) pode mover esta tarefa." }, { status: 403 });
+  }
 
   const result = await prisma.$transaction((tx) => advanceAssigneeQueue(tx, task.id, session.user.id));
+
+  if (result.taskCompleted) {
+    await fireWorkflowTrigger(membership.agencyId, "task.completed", "task", task.id, {
+      taskId: task.id,
+      title: task.title,
+      clientId: task.project.clientId,
+    });
+  }
 
   return NextResponse.json(result);
 }

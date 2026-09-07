@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { canActOnTask } from "@/lib/tasks";
 import { prisma } from "@zenith/db";
 
 interface RouteParams {
@@ -28,6 +29,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (task.status === "CONCLUIDA" || task.status === "CANCELADA") {
     return NextResponse.json({ error: "Esta tarefa já está encerrada." }, { status: 400 });
   }
+  if (!canActOnTask(membership.role, session.user.id, task)) {
+    return NextResponse.json({ error: "Só quem está na vez (ou um admin) pode mover esta tarefa." }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
@@ -36,7 +40,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.task.update({ where: { id: task.id }, data: { status: "CANCELADA" } });
+    await tx.task.update({ where: { id: task.id }, data: { status: "CANCELADA", stageId: null } });
     await tx.taskStatusHistory.create({
       data: { taskId: task.id, fromStatus: task.status, toStatus: "CANCELADA", reason, actorUserId: session.user.id },
     });

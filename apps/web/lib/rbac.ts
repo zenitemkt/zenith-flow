@@ -29,6 +29,16 @@ export function canManageIntegrations(role: MembershipRole): boolean {
   return hasRole(role, TEAM_MANAGEMENT_ROLES);
 }
 
+/**
+ * Pedido do usuário, 2026-09-07: qualquer um pode ver todas as colunas do
+ * board de Operação, mas só quem está na vez (`Task.assigneeUserId`) pode
+ * mover o card — evita mexer no card de outra pessoa por acidente. Admin
+ * sempre pode mover qualquer card, mesmo critério de quem gerencia a equipe.
+ */
+export function canManageAnyTask(role: MembershipRole): boolean {
+  return hasRole(role, TEAM_MANAGEMENT_ROLES);
+}
+
 /** Seção 21: "pessoa acessa seus dados; gestor acessa escopo autorizado." */
 export function canApproveTimesheets(role: MembershipRole): boolean {
   return hasRole(role, TIMESHEET_APPROVAL_ROLES);

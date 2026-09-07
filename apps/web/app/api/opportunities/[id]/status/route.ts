@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma, type OpportunityStatus } from "@zenith/db";
 
 interface RouteParams {
@@ -64,6 +65,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       });
     }
   });
+
+  if (toStatus === "WON") {
+    await fireWorkflowTrigger(membership.agencyId, "opportunity.won", "opportunity", opportunity.id, {
+      opportunityId: opportunity.id,
+      name: opportunity.name,
+      valueCents: opportunity.valueCents,
+      leadId: opportunity.leadId,
+      clientId: opportunity.clientId,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

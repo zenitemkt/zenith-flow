@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { isBlockedByDependency } from "@/lib/tasks";
+import { canActOnTask, isBlockedByDependency } from "@/lib/tasks";
+import { getOrCreateDefaultOperationStage } from "@/lib/operation-stages";
 import { prisma } from "@zenith/db";
 
 interface RouteParams {
@@ -29,6 +30,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
   if (!task || task.project.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
   }
+  if (!canActOnTask(membership.role, session.user.id, task)) {
+    return NextResponse.json({ error: "Só quem está na vez (ou um admin) pode mover esta tarefa." }, { status: 403 });
+  }
   if (task.status !== "BACKLOG") {
     return NextResponse.json({ error: "Só é possível iniciar tarefas em 'A Fazer'." }, { status: 400 });
   }
@@ -39,8 +43,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
     );
   }
 
+  const defaultStage = await getOrCreateDefaultOperationStage(prisma, membership.agencyId);
+
   await prisma.$transaction(async (tx) => {
-    await tx.task.update({ where: { id: task.id }, data: { status: "EM_ANDAMENTO" } });
+    await tx.task.update({ where: { id: task.id }, data: { status: "EM_ANDAMENTO", stageId: defaultStage.id } });
     await tx.taskStatusHistory.create({
       data: { taskId: task.id, fromStatus: "BACKLOG", toStatus: "EM_ANDAMENTO", actorUserId: session.user.id },
     });

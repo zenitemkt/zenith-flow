@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { getAgencyMembers } from "@/lib/team";
+import { canManageAnyTask } from "@/lib/rbac";
+import { getOrCreateDefaultOperationStage } from "@/lib/operation-stages";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 import { prisma } from "@zenith/db";
-import { OperationBoard, type BoardTask, type PersonOption } from "./OperationBoard";
+import { OperationBoard, type BoardTask, type PersonOption, type StageOption } from "./OperationBoard";
 import { NewTaskModal } from "./NewTaskModal";
 
 interface PageProps {
@@ -18,13 +20,16 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
 
   const activeClientId = searchParams.clientId;
 
-  const [people, clients, tasksRaw] = await Promise.all([
+  await getOrCreateDefaultOperationStage(prisma, membership.agencyId);
+
+  const [people, clients, stagesRaw, tasksRaw] = await Promise.all([
     getAgencyMembers(membership.agencyId),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.operationStage.findMany({ where: { agencyId: membership.agencyId }, orderBy: { order: "asc" } }),
     prisma.task.findMany({
       where: {
         project: {
@@ -44,12 +49,14 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
   ]);
 
   const userNameById = new Map(people.map((p) => [p.userId, p.name]));
+  const firstStageId = stagesRaw[0]?.id ?? null;
 
   const tasks: BoardTask[] = tasksRaw.map((task) => ({
     id: task.id,
     title: task.title,
     description: task.description,
     status: task.status,
+    stageId: task.status === "EM_ANDAMENTO" ? (task.stageId ?? firstStageId) : task.stageId,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     estimatedMinutes: task.estimatedMinutes,
     completedAt: task.completedAt ? task.completedAt.toISOString() : null,
@@ -67,6 +74,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
   }));
 
   const personOptions: PersonOption[] = people.map((p) => ({ userId: p.userId, name: p.name }));
+  const stages: StageOption[] = stagesRaw.map((s) => ({ id: s.id, name: s.name, order: s.order }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,7 +96,13 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         buildHref={(clientId) => (clientId ? `/operacao?clientId=${clientId}` : "/operacao")}
       />
 
-      <OperationBoard tasks={tasks} people={personOptions} currentUserId={session.user.id} />
+      <OperationBoard
+        tasks={tasks}
+        people={personOptions}
+        stages={stages}
+        currentUserId={session.user.id}
+        canManageAnyTask={canManageAnyTask(membership.role)}
+      />
     </div>
   );
 }

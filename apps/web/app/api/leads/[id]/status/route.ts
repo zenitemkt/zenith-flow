@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionLead } from "@/lib/leads";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma, type LeadStatus } from "@zenith/db";
 
 interface RouteParams {
@@ -50,6 +51,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       data: { leadId: lead.id, fromStatus: lead.status, toStatus, reason, actorUserId: session.user.id },
     });
   });
+
+  if (toStatus === "QUALIFICADO") {
+    await fireWorkflowTrigger(membership.agencyId, "lead.qualified", "lead", lead.id, {
+      leadId: lead.id,
+      name: lead.name,
+      email: lead.email,
+      source: lead.source,
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

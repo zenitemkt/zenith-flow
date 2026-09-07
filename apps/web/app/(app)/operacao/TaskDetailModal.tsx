@@ -8,11 +8,13 @@ import type { BoardTask } from "./OperationBoard";
 export function TaskDetailModal({
   task,
   currentUserId,
+  canManageAnyTask,
   onClose,
   onChanged,
 }: {
   task: BoardTask;
   currentUserId: string;
+  canManageAnyTask: boolean;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -67,6 +69,7 @@ export function TaskDetailModal({
 
   const isActive = task.status === "BACKLOG" || task.status === "EM_ANDAMENTO";
   const blocked = task.blockedBy && task.blockedBy.status !== "CONCLUIDA";
+  const canAct = canManageAnyTask || !task.assigneeUserId || task.assigneeUserId === currentUserId;
 
   return (
     <Modal open onClose={onClose} title={task.title}>
@@ -151,13 +154,17 @@ export function TaskDetailModal({
 
         {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 
+        {!canAct && (
+          <p className="text-xs text-[#98A2B3]">Só quem está na vez (ou um admin) pode agir sobre esta tarefa.</p>
+        )}
+
         {isActive && (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               {task.status === "BACKLOG" && (
                 <button
                   type="button"
-                  disabled={loading || Boolean(blocked)}
+                  disabled={loading || Boolean(blocked) || !canAct}
                   onClick={() => void handleStart()}
                   className="flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                   style={{ backgroundColor: "#6847F5" }}
@@ -168,7 +175,7 @@ export function TaskDetailModal({
               {task.status === "EM_ANDAMENTO" && (
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={loading || !canAct}
                   onClick={() => void handleComplete()}
                   className="flex h-9 flex-1 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                   style={{ backgroundColor: "#16A36A" }}
@@ -178,8 +185,9 @@ export function TaskDetailModal({
               )}
               <button
                 type="button"
+                disabled={!canAct}
                 onClick={() => setCancelling(true)}
-                className="flex h-9 flex-1 items-center justify-center rounded-lg border border-[#D0D5DD] text-sm font-medium text-[#344054]"
+                className="flex h-9 flex-1 items-center justify-center rounded-lg border border-[#D0D5DD] text-sm font-medium text-[#344054] disabled:opacity-50"
               >
                 Cancelar tarefa
               </button>
