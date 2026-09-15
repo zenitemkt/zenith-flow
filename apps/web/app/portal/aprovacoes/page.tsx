@@ -58,7 +58,7 @@ export default async function PortalApprovalsPage() {
                         href={approval.contentVersion.assetUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="whitespace-nowrap text-sm font-medium text-[#6847F5] hover:underline"
+                        className="whitespace-nowrap text-sm font-medium text-[#FF2B00] hover:underline"
                       >
                         Ver material
                       </a>

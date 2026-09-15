@@ -2,23 +2,39 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// `url` (DATABASE_URL) é a conexão pooled (host "-pooler", via PgBouncer) —
+/// é o que o Prisma Client usa em toda query da aplicação, e é a conexão que
+/// a própria Neon recomenda pra evitar o custo de handshake TCP/TLS a cada
+/// requisição (ver docs/DECISIONS.md, 2026-09-11 — lentidão no board vinha
+/// em boa parte daqui). `directUrl` (DIRECT_URL) é a conexão direta, usada
+/// só pelo Prisma Migrate/db push, que precisam de uma conexão de sessão de
+/// verdade (não funciona corretamente atrás do pooler em modo transação).
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------------------
 // Auth (Better Auth core schema — nomes e formato exigidos pelo adapter)
 // ---------------------------------------------------------------------------
 
+enum ThemePreference {
+  LIGHT
+  DARK
+}
+
 model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  emailVerified   Boolean         @default(false)
+  image           String?
+  /// Tema da interface (pedido do usuário, 2026-09-11) — salvo na conta, não
+  /// no navegador, pra valer em qualquer dispositivo em que a pessoa logar.
+  themePreference ThemePreference @default(LIGHT)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   sessions    Session[]
   accounts    Account[]
@@ -462,6 +478,22 @@ model Task {
   estimatedMinutes Int?
   dueDate          DateTime?
   completedAt      DateTime?
+  /// Início do trecho de trabalho em andamento (cronômetro real ligado a
+  /// Iniciar/Pausar/Concluir). Null quando ninguém está trabalhando agora
+  /// (A Fazer, concluída ou cancelada). Ao pausar ou concluir, o trecho vira
+  /// um TimeEntry (source TIMER) e este campo volta a null.
+  currentRunStartedAt DateTime?
+  /// Quem está sendo cronometrado no trecho atual — normalmente
+  /// `assigneeUserId`, mas cai pra quem clicou Iniciar se a tarefa ainda não
+  /// tem responsável.
+  currentRunUserId    String?
+  /// Preenchidos quando esta tarefa nasceu de "converter comentário em
+  /// tarefa" (ver `POST /api/comments/:id/convert`) — aponta pro "card mãe"
+  /// comentado (hoje: outra Task ou um ContentItem), mesmo padrão de
+  /// entityType/entityId livre já usado por `CommentThread`. Null quando a
+  /// tarefa nasceu direto pelo board.
+  originEntityType String?
+  originEntityId   String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -716,6 +748,7 @@ model ContentItem {
   clientId      String
   client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   title         String
+  description   String?
   channel       ContentChannel
   format        String?
   campaign      String?

@@ -93,7 +93,7 @@ export function NewFinanceEntryModal({
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {label}
       </button>
@@ -144,7 +144,7 @@ export function NewFinanceEntryModal({
               id="finance-category"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="">Sem categoria</option>
               {categories.map((c) => (
@@ -160,7 +160,7 @@ export function NewFinanceEntryModal({
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 placeholder="Nome da categoria"
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               />
             )}
             {categoryId === NEW_CATEGORY && type === "DESPESA" && (
@@ -168,7 +168,7 @@ export function NewFinanceEntryModal({
                 aria-label="Natureza da nova categoria"
                 value={newCategoryNature}
                 onChange={(e) => setNewCategoryNature(e.target.value as FinanceCategoryNature)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               >
                 {DESPESA_CATEGORY_NATURES.map((nature) => (
                   <option key={nature} value={nature}>
@@ -188,7 +188,7 @@ export function NewFinanceEntryModal({
                 id="finance-client"
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               >
                 <option value="">Nenhum</option>
                 {clients.map((c) => (
@@ -206,7 +206,7 @@ export function NewFinanceEntryModal({
                 id="finance-project"
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               >
                 <option value="">Nenhum</option>
                 {projects.map((p) => (
@@ -232,7 +232,7 @@ export function NewFinanceEntryModal({
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar"}
             </button>

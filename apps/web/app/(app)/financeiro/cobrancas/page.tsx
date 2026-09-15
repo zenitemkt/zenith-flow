@@ -82,7 +82,7 @@ export default async function CobrancasPage() {
                   {entry.collectionTask ? (
                     <Link
                       href={entry.clientId ? `/operacao?clientId=${entry.clientId}` : "/operacao"}
-                      className="text-xs font-medium text-[#6847F5] hover:underline"
+                      className="text-xs font-medium text-[#FF2B00] hover:underline"
                     >
                       Ver tarefa de cobrança
                     </Link>

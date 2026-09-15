@@ -64,7 +64,7 @@ export default async function NpsPage() {
               {campaigns.map((campaign) => (
                 <tr key={campaign.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
                   <td className="px-4 py-3">
-                    <Link href={`/clientes/nps/${campaign.id}`} className="font-medium text-[#101828] hover:text-[#6847F5]">
+                    <Link href={`/clientes/nps/${campaign.id}`} className="font-medium text-[#101828] hover:text-[#FF2B00]">
                       {campaign.name}
                     </Link>
                   </td>

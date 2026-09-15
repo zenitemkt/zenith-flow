@@ -65,7 +65,7 @@ export function NewOpportunityModal({ clients, leads }: { clients: Option[]; lea
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Nova oportunidade
       </button>
@@ -96,7 +96,7 @@ export function NewOpportunityModal({ clients, leads }: { clients: Option[]; lea
               id="opportunity-client"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="">Nenhum</option>
               {clients.map((c) => (
@@ -114,7 +114,7 @@ export function NewOpportunityModal({ clients, leads }: { clients: Option[]; lea
               id="opportunity-lead"
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="">Nenhum</option>
               {leads.map((l) => (
@@ -139,7 +139,7 @@ export function NewOpportunityModal({ clients, leads }: { clients: Option[]; lea
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar"}
             </button>

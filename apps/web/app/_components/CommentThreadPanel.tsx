@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { CommentEntityType, CommentView, CommentThreadView } from "@/lib/comments";
 
-interface MentionableMember {
+export interface MentionableMember {
   id: string;
   name: string;
   email: string;
+}
+
+export interface AssigneeOption {
+  userId: string;
+  name: string;
 }
 
 export function CommentThreadPanel({
@@ -17,14 +22,25 @@ export function CommentThreadPanel({
   thread,
   mentionableMembers,
   currentUserId,
+  onMutated,
+  assignableMembers,
 }: {
   entityType: CommentEntityType;
   entityId: string;
   thread: CommentThreadView;
   mentionableMembers: MentionableMember[];
   currentUserId: string;
+  /** Chamado após qualquer mutação bem-sucedida. Sem isso, usa router.refresh() (páginas SSR). */
+  onMutated?: () => void;
+  /** Quando presente, "Converter em tarefa" ganha campos de responsável e prazo. */
+  assignableMembers?: AssigneeOption[];
 }) {
   const router = useRouter();
+
+  function afterMutation() {
+    if (onMutated) onMutated();
+    else router.refresh();
+  }
   const [body, setBody] = useState("");
   const [mentioned, setMentioned] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +49,16 @@ export function CommentThreadPanel({
   const [editBody, setEditBody] = useState("");
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [convertTitle, setConvertTitle] = useState("");
+  const [convertAssigneeId, setConvertAssigneeId] = useState("");
+  const [convertDueDate, setConvertDueDate] = useState("");
   const [convertError, setConvertError] = useState<string | null>(null);
   const [convertLoading, setConvertLoading] = useState(false);
 
   function startConvert(comment: CommentView) {
     setConvertingId(comment.id);
     setConvertTitle(comment.body.slice(0, 120));
+    setConvertAssigneeId("");
+    setConvertDueDate("");
     setConvertError(null);
   }
 
@@ -52,7 +72,11 @@ export function CommentThreadPanel({
     const response = await fetch(`/api/comments/${commentId}/convert`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: convertTitle.trim() }),
+      body: JSON.stringify({
+        title: convertTitle.trim(),
+        assigneeUserId: convertAssigneeId || null,
+        dueDate: convertDueDate || null,
+      }),
     });
     setConvertLoading(false);
     if (!response.ok) {
@@ -61,7 +85,7 @@ export function CommentThreadPanel({
       return;
     }
     setConvertingId(null);
-    router.refresh();
+    afterMutation();
   }
 
   function toggleMention(userId: string) {
@@ -89,7 +113,7 @@ export function CommentThreadPanel({
 
     setBody("");
     setMentioned([]);
-    router.refresh();
+    afterMutation();
   }
 
   async function saveEdit(commentId: string) {
@@ -101,14 +125,14 @@ export function CommentThreadPanel({
     });
     if (response.ok) {
       setEditingId(null);
-      router.refresh();
+      afterMutation();
     }
   }
 
   async function removeComment(commentId: string) {
     const response = await fetch(`/api/comments/${commentId}`, { method: "DELETE" });
     if (response.ok) {
-      router.refresh();
+      afterMutation();
     }
   }
 
@@ -120,7 +144,7 @@ export function CommentThreadPanel({
       body: JSON.stringify({ resolved }),
     });
     if (response.ok) {
-      router.refresh();
+      afterMutation();
     }
   }
 
@@ -142,7 +166,7 @@ export function CommentThreadPanel({
             <button
               type="button"
               onClick={() => toggleThread(thread.status !== "RESOLVIDA")}
-              className="text-xs font-medium text-[#6847F5] hover:underline"
+              className="text-xs font-medium text-[#FF2B00] hover:underline"
             >
               {thread.status === "RESOLVIDA" ? "Reabrir" : "Marcar como resolvida"}
             </button>
@@ -165,7 +189,7 @@ export function CommentThreadPanel({
                   onChange={(e) => setEditBody(e.target.value)}
                   rows={2}
                   autoFocus
-                  className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+                  className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
                 />
                 <div className="flex justify-end gap-2">
                   <button
@@ -179,7 +203,7 @@ export function CommentThreadPanel({
                     type="button"
                     onClick={() => saveEdit(comment.id)}
                     className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white"
-                    style={{ backgroundColor: "#6847F5" }}
+                    style={{ backgroundColor: "#FF2B00" }}
                   >
                     Salvar
                   </button>
@@ -193,7 +217,7 @@ export function CommentThreadPanel({
                     {comment.mentionNames.map((name, idx) => (
                       <span
                         key={idx}
-                        className="rounded-full bg-[#F1EDFE] px-1.5 py-0.5 text-[10px] font-medium text-[#6847F5]"
+                        className="rounded-full bg-[#FFF1EC] px-1.5 py-0.5 text-[10px] font-medium text-[#FF2B00]"
                       >
                         @{name}
                       </span>
@@ -202,7 +226,7 @@ export function CommentThreadPanel({
                 )}
                 <div className="mt-1 flex items-center justify-between">
                   <p className="text-xs text-[#98A2B3]">
-                    {comment.authorName} · {comment.createdAt.toLocaleString("pt-BR")}
+                    {comment.authorName} · {new Date(comment.createdAt).toLocaleString("pt-BR")}
                     {comment.status === "EDITADO" ? " · editado" : ""}
                   </p>
                   <div className="flex gap-2">
@@ -212,7 +236,7 @@ export function CommentThreadPanel({
                       <button
                         type="button"
                         onClick={() => startConvert(comment)}
-                        className="text-xs font-medium text-[#6847F5] hover:underline"
+                        className="text-xs font-medium text-[#FF2B00] hover:underline"
                       >
                         Converter
                       </button>
@@ -225,7 +249,7 @@ export function CommentThreadPanel({
                             setEditingId(comment.id);
                             setEditBody(comment.body);
                           }}
-                          className="text-xs font-medium text-[#6847F5] hover:underline"
+                          className="text-xs font-medium text-[#FF2B00] hover:underline"
                         >
                           Editar
                         </button>
@@ -247,8 +271,30 @@ export function CommentThreadPanel({
                       value={convertTitle}
                       onChange={(e) => setConvertTitle(e.target.value)}
                       placeholder="Título da tarefa"
-                      className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                      className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
                     />
+                    {assignableMembers && assignableMembers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <select
+                          value={convertAssigneeId}
+                          onChange={(e) => setConvertAssigneeId(e.target.value)}
+                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
+                        >
+                          <option value="">Sem responsável</option>
+                          {assignableMembers.map((member) => (
+                            <option key={member.userId} value={member.userId}>
+                              {member.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="datetime-local"
+                          value={convertDueDate}
+                          onChange={(e) => setConvertDueDate(e.target.value)}
+                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
+                        />
+                      </div>
+                    )}
                     {convertError && <p className="text-xs font-medium text-[#D94343]">{convertError}</p>}
                     <div className="flex gap-1">
                       <button
@@ -256,7 +302,7 @@ export function CommentThreadPanel({
                         disabled={convertLoading}
                         onClick={() => void submitConvert(comment.id)}
                         className="flex h-7 flex-1 items-center justify-center rounded-md text-xs font-semibold text-white disabled:opacity-60"
-                        style={{ backgroundColor: "#6847F5" }}
+                        style={{ backgroundColor: "#FF2B00" }}
                       >
                         {convertLoading ? "Convertendo..." : "Confirmar"}
                       </button>
@@ -282,7 +328,7 @@ export function CommentThreadPanel({
           onChange={(e) => setBody(e.target.value)}
           placeholder="Escreva um comentário..."
           rows={2}
-          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
         />
         {mentionableMembers.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -296,7 +342,7 @@ export function CommentThreadPanel({
                   onClick={() => toggleMention(member.id)}
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     mentioned.includes(member.id)
-                      ? "bg-[#6847F5] text-white"
+                      ? "bg-[#FF2B00] text-white"
                       : "border border-[#E4E7EC] text-[#475467] hover:bg-[#F6F7FB]"
                   }`}
                 >
@@ -310,7 +356,7 @@ export function CommentThreadPanel({
           type="submit"
           disabled={loading || !body.trim()}
           className="self-end flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Salvando..." : "Comentar"}
         </button>

@@ -38,23 +38,23 @@ export default async function PortalHomePage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Link
           href="/portal/aprovacoes"
-          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#6847F5]"
+          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#FF2B00]"
         >
-          <p className="text-3xl font-semibold text-[#6847F5]">{pendingApprovals.length}</p>
+          <p className="text-3xl font-semibold text-[#FF2B00]">{pendingApprovals.length}</p>
           <p className="text-sm text-[#475467]">
             peça{pendingApprovals.length === 1 ? "" : "s"} esperando sua aprovação
           </p>
         </Link>
         <Link
           href="/portal/calendario"
-          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#6847F5]"
+          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#FF2B00]"
         >
           <p className="text-3xl font-semibold text-[#101828]">{upcoming.length}</p>
           <p className="text-sm text-[#475467]">peças agendadas nos próximos dias</p>
         </Link>
         <Link
           href="/portal/solicitacoes"
-          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#6847F5]"
+          className="rounded-xl border border-[#E4E7EC] bg-white p-5 hover:border-[#FF2B00]"
         >
           <p className="text-3xl font-semibold text-[#101828]">{openRequests}</p>
           <p className="text-sm text-[#475467]">solicitação{openRequests === 1 ? "" : "ões"} em andamento</p>

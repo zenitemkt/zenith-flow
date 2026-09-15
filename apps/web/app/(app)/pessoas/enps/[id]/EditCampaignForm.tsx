@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 const TEXTAREA_CLASS =
-  "min-h-[64px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]";
+  "min-h-[64px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]";
 
 interface Props {
   campaignId: string;
@@ -65,7 +65,7 @@ export function EditCampaignForm({ campaignId, initial }: Props) {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -94,7 +94,7 @@ export function EditCampaignForm({ campaignId, initial }: Props) {
           id="edit-enps-comment-prompt"
           value={commentPrompt}
           onChange={(e) => setCommentPrompt(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -111,7 +111,7 @@ export function EditCampaignForm({ campaignId, initial }: Props) {
           type="submit"
           disabled={loading}
           className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Salvando..." : "Salvar alterações"}
         </button>

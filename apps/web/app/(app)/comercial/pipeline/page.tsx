@@ -4,6 +4,7 @@ import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STA
 import { prisma } from "@zenith/db";
 import { PipelineBoard } from "./PipelineBoard";
 import { NewOpportunityModal } from "./NewOpportunityModal";
+import { FunnelChart, type FunnelStage } from "@/app/_components/charts/FunnelChart";
 
 export default async function PipelinePage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -11,7 +12,7 @@ export default async function PipelinePage() {
     redirect("/login");
   }
 
-  const [stages, openOpportunities, closedOpportunities, clients, leads] = await Promise.all([
+  const [stages, openOpportunities, closedOpportunities, wonCount, clients, leads] = await Promise.all([
     prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, orderBy: { order: "asc" } }),
     prisma.opportunity.findMany({
       where: { agencyId: membership.agencyId, status: "OPEN" },
@@ -23,6 +24,7 @@ export default async function PipelinePage() {
       orderBy: { updatedAt: "desc" },
       take: 20,
     }),
+    prisma.opportunity.count({ where: { agencyId: membership.agencyId, status: "WON" } }),
     prisma.client.findMany({ where: { agencyId: membership.agencyId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.lead.findMany({
       where: { agencyId: membership.agencyId, status: { not: "CONVERTIDO" } },
@@ -30,6 +32,15 @@ export default async function PipelinePage() {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const funnelData: FunnelStage[] = [
+    ...stages.map((stage) => ({
+      label: stage.name,
+      value: openOpportunities.filter((o) => o.stageId === stage.id).length,
+    })),
+    { label: "Ganhas", value: wonCount },
+  ];
+  const hasFunnelData = funnelData.some((stage) => stage.value > 0);
 
   const boardOpportunities = openOpportunities.map((o) => ({
     id: o.id,
@@ -56,6 +67,15 @@ export default async function PipelinePage() {
         </div>
         <NewOpportunityModal clients={clients} leads={leads} />
       </div>
+
+      {hasFunnelData && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-2 text-sm font-semibold text-[#101828]">Funil de oportunidades</h2>
+          <div className="mx-auto w-full max-w-md">
+            <FunnelChart data={funnelData} orientation="vertical" color="#FF2B00" layers={3} />
+          </div>
+        </section>
+      )}
 
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">

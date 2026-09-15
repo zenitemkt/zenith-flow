@@ -20,7 +20,11 @@ export interface NavigationItem {
   featureFlag?: string;
   /** Badge de notificação/contagem exibido à direita quando expandido. */
   badge?: number | string;
-  /** Submenus — abrem apenas por clique/teclado, nunca por hover. */
+  /**
+   * "Subdivisões" do item — não aparecem na sidebar (que é sempre um link
+   * único, sem accordion). Alimentam as abas horizontais (`SectionTabs`) no
+   * topo do conteúdo quando a rota ativa corresponde a uma delas.
+   */
   children?: NavigationItem[];
   /**
    * Indica que a funcionalidade ainda não foi implementada nesta fase do projeto.

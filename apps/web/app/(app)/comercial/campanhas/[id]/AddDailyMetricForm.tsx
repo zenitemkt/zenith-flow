@@ -60,7 +60,7 @@ export function AddDailyMetricForm({ campaignId }: { campaignId: string }) {
         type="submit"
         disabled={loading}
         className="flex h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Salvando..." : "Salvar dia"}
       </button>

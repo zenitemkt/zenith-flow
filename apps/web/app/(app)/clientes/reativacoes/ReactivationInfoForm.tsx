@@ -37,7 +37,7 @@ export function ReactivationInfoForm({ clientId, initialCompetitorName, initialE
         value={competitorName}
         onChange={(e) => setCompetitorName(e.target.value)}
         placeholder="Concorrente (se informado)"
-        className="h-8 w-48 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+        className="h-8 w-48 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
       />
       <label className="flex items-center gap-1.5 text-xs text-[#344054]">
         <input type="checkbox" checked={eligible} onChange={(e) => setEligible(e.target.checked)} />

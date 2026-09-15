@@ -15,10 +15,14 @@
     "@zenith/db": "*",
     "@zenith/ui": "*",
     "better-auth": "^1.2.7",
+    "clsx": "^2.1.1",
+    "framer-motion": "^13.3.0",
     "lucide-react": "^0.446.0",
     "next": "^14.2.15",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.10",

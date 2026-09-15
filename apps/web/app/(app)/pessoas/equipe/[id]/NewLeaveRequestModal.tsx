@@ -64,7 +64,7 @@ export function NewLeaveRequestModal({ employeeId }: { employeeId: string }) {
               id="leave-type"
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="FERIAS">Férias</option>
               <option value="AUSENCIA">Ausência</option>
@@ -97,7 +97,7 @@ export function NewLeaveRequestModal({ employeeId }: { employeeId: string }) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             />
           </div>
 
@@ -115,7 +115,7 @@ export function NewLeaveRequestModal({ employeeId }: { employeeId: string }) {
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Enviando..." : "Solicitar"}
             </button>

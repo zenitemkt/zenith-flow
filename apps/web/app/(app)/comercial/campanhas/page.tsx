@@ -61,7 +61,7 @@ export default async function CampaignsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/comercial/campanhas/${campaign.id}`}
-                      className="font-medium text-[#101828] hover:text-[#6847F5]"
+                      className="font-medium text-[#101828] hover:text-[#FF2B00]"
                     >
                       {campaign.name}
                     </Link>

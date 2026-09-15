@@ -33,13 +33,13 @@ export function SubmitForApprovalButton({ contentId }: { contentId: string }) {
         disabled={loading}
         onClick={() => void submit()}
         className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Enviando..." : "Enviar para aprovação do cliente"}
       </button>
       {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
       {approvalUrl && (
-        <div className="max-w-xs rounded-lg bg-[#F1EDFE] p-2 text-right text-xs text-[#4A2FD8]">
+        <div className="max-w-xs rounded-lg bg-[#FFF1EC] p-2 text-right text-xs text-[#C2270A]">
           <p className="mb-1 font-medium">Link de aprovação (válido por 14 dias):</p>
           <code className="block break-all">{approvalUrl}</code>
         </div>

@@ -134,8 +134,8 @@ export default async function ClientProfilePage({ params }: PageProps) {
           </p>
           <p className="mt-1 text-sm text-[#98A2B3]">
             <Link
-              href={`/conteudo/planejamento?clientId=${client.id}`}
-              className="font-medium text-[#6847F5] hover:underline"
+              href={`/operacao?clientId=${client.id}`}
+              className="font-medium text-[#FF2B00] hover:underline"
             >
               Conteúdo: {client._count.contentItems} peça
               {client._count.contentItems === 1 ? "" : "s"}

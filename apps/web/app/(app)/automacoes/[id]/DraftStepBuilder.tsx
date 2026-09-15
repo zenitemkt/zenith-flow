@@ -167,7 +167,7 @@ export function DraftStepBuilder({
               key={t}
               type="button"
               onClick={() => setNewType(t)}
-              className={`h-8 flex-1 rounded-md text-xs font-medium ${newType === t ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"}`}
+              className={`h-8 flex-1 rounded-md text-xs font-medium ${newType === t ? "bg-[#FF2B00] text-white" : "border border-[#D0D5DD] text-[#344054]"}`}
             >
               {t === "CONDICAO" ? "Condição" : t === "ESPERA" ? "Espera" : "Ação"}
             </button>
@@ -182,7 +182,7 @@ export function DraftStepBuilder({
                 onChange={(e) => setConditionField(e.target.value)}
                 placeholder="campo"
                 list="condition-fields"
-                className="h-9 flex-1 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                className="h-9 flex-1 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
               />
               <datalist id="condition-fields">
                 {fields.map((f) => (
@@ -192,7 +192,7 @@ export function DraftStepBuilder({
               <select
                 value={conditionOperator}
                 onChange={(e) => setConditionOperator(e.target.value as ConditionOperator)}
-                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
               >
                 {CONDITION_OPERATORS.map((op) => (
                   <option key={op} value={op}>
@@ -206,7 +206,7 @@ export function DraftStepBuilder({
                 value={conditionValue}
                 onChange={(e) => setConditionValue(e.target.value)}
                 placeholder="valor"
-                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
               />
             )}
             <p className="text-[10px] text-[#98A2B3]">Campos disponíveis pra este gatilho: {fields.join(", ")}</p>
@@ -220,7 +220,7 @@ export function DraftStepBuilder({
               min="1"
               value={waitMinutes}
               onChange={(e) => setWaitMinutes(e.target.value)}
-              className="h-9 w-32 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+              className="h-9 w-32 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
             />
             <p className="text-[10px] text-[#98A2B3]">Em minutos — 60 = 1 hora, 1440 = 1 dia. Avança só quando alguém clicar &quot;Processar automações pendentes&quot;.</p>
           </div>
@@ -231,7 +231,7 @@ export function DraftStepBuilder({
             <select
               value={actionType}
               onChange={(e) => setActionType(e.target.value as WorkflowActionType)}
-              className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+              className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
             >
               {(Object.keys(WORKFLOW_ACTION_LABELS) as WorkflowActionType[]).map((a) => (
                 <option key={a} value={a}>
@@ -245,13 +245,13 @@ export function DraftStepBuilder({
                   value={actionTitle}
                   onChange={(e) => setActionTitle(e.target.value)}
                   placeholder="Título da tarefa (aceita {{campo}})"
-                  className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                  className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
                 />
                 <input
                   value={actionDescription}
                   onChange={(e) => setActionDescription(e.target.value)}
                   placeholder="Descrição (opcional)"
-                  className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                  className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
                 />
               </>
             )}
@@ -260,7 +260,7 @@ export function DraftStepBuilder({
                 value={actionBody}
                 onChange={(e) => setActionBody(e.target.value)}
                 placeholder="Texto da nota (aceita {{campo}})"
-                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
               />
             )}
             {actionType === "webhook" && (
@@ -268,7 +268,7 @@ export function DraftStepBuilder({
                 value={actionUrl}
                 onChange={(e) => setActionUrl(e.target.value)}
                 placeholder="https://..."
-                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                className="h-9 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
               />
             )}
             <p className="text-[10px] text-[#98A2B3]">Campos disponíveis pra interpolar: {fields.map((f) => `{{${f}}}`).join(", ")}</p>
@@ -291,7 +291,7 @@ export function DraftStepBuilder({
           disabled={saving}
           onClick={() => void saveDraft()}
           className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {saving ? "Salvando..." : "Salvar rascunho"}
         </button>

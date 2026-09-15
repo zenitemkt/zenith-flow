@@ -57,7 +57,7 @@ export function RetentionPlanActions({ planId }: { planId: string }) {
             value={result}
             onChange={(e) => setResult(e.target.value)}
             placeholder="Resultado do plano (obrigatório para concluir)"
-            className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+            className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
           />
           <div className="flex gap-2">
             <button
@@ -65,7 +65,7 @@ export function RetentionPlanActions({ planId }: { planId: string }) {
               disabled={loading || !result.trim()}
               onClick={() => void submit("CONCLUIDO", result.trim())}
               className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               Confirmar
             </button>

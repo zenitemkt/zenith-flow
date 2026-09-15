@@ -5,12 +5,13 @@ import { prisma, type CommentStatus, type CommentThreadStatus } from "@zenith/db
  * fechado em código pra manter as rotas que consomem thread de comentário
  * honestas sobre o que sabem carregar (checagem de posse do recurso).
  * "request" saiu quando Demandas foi substituída pelo Kanban unificado de
- * Operação (ver docs/DECISIONS.md, 2026-09-06).
+ * Operação (ver docs/DECISIONS.md, 2026-09-06). "task" entrou para dar à
+ * tarefa do Kanban um histórico de eventos/observações com autor e data.
  */
-export type CommentEntityType = "content_item";
+export type CommentEntityType = "content_item" | "task";
 
 export function isCommentEntityType(value: unknown): value is CommentEntityType {
-  return value === "content_item";
+  return value === "content_item" || value === "task";
 }
 
 /** Confere que a entidade existe e pertence à agência do chamador. */
@@ -23,6 +24,10 @@ export async function resolveCommentableEntity(
     const item = await prisma.contentItem.findUnique({ where: { id: entityId } });
     return Boolean(item && item.agencyId === agencyId);
   }
+  if (entityType === "task") {
+    const task = await prisma.task.findUnique({ where: { id: entityId }, include: { project: true } });
+    return Boolean(task && task.project.agencyId === agencyId);
+  }
   return false;
 }
 
@@ -34,6 +39,13 @@ export async function resolveCommentEntityClientId(
   if (entityType === "content_item") {
     const item = await prisma.contentItem.findUnique({ where: { id: entityId }, select: { clientId: true } });
     return item?.clientId ?? null;
+  }
+  if (entityType === "task") {
+    const task = await prisma.task.findUnique({
+      where: { id: entityId },
+      include: { project: { select: { clientId: true } } },
+    });
+    return task?.project.clientId ?? null;
   }
   return null;
 }

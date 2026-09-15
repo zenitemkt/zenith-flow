@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { isBlockedByDependency, canActOnTask, BOARD_LANES } from "@/lib/tasks";
 import { advanceAssigneeQueue } from "@/lib/task-assignees";
+import { closeCurrentRun } from "@/lib/task-timer";
 import { getOrCreateDefaultOperationStage } from "@/lib/operation-stages";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma, type WorkItemStatus } from "@zenith/db";
@@ -22,10 +23,13 @@ async function resolveStage(agencyId: string, requestedStageId: string | null) {
 
 /**
  * Endpoint genérico usado pelo drag-and-drop entre colunas do board (o botão
- * "Iniciar"/"Concluir" no popup de detalhe usa /start e /complete
- * diretamente — este aqui só traduz "larguei o card na coluna X" pra uma das
- * mesmas transições, incluindo mover entre colunas customizáveis dentro do
- * balde "Fazendo" sem mudar `status`).
+ * "Iniciar"/"Pausar"/"Concluir" no popup de detalhe usa /start, /pause e
+ * /complete diretamente — este aqui traduz "larguei o card na coluna X" pra
+ * uma das mesmas transições, incluindo mover entre colunas customizáveis
+ * dentro do balde "Fazendo" sem mudar `status`). Precisa espelhar o mesmo
+ * comportamento de cronômetro dessas rotas (iniciar/fechar o trecho
+ * trabalhado) — arrastar o card é o jeito mais comum de mexer no board, não
+ * pode ser um caminho "sem cronômetro" só porque não passou pelo popup.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
@@ -78,8 +82,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
     const stage = await resolveStage(membership.agencyId, requestedStageId);
+    const runUserId = task.assigneeUserId ?? session.user.id;
     await prisma.$transaction(async (tx) => {
-      await tx.task.update({ where: { id: task.id }, data: { status: "EM_ANDAMENTO", stageId: stage.id } });
+      await tx.task.update({
+        where: { id: task.id },
+        data: {
+          status: "EM_ANDAMENTO",
+          stageId: stage.id,
+          currentRunStartedAt: new Date(),
+          currentRunUserId: runUserId,
+        },
+      });
       await tx.taskStatusHistory.create({
         data: { taskId: task.id, fromStatus: "BACKLOG", toStatus: "EM_ANDAMENTO", actorUserId: session.user.id },
       });
@@ -89,6 +102,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (task.status === "EM_ANDAMENTO" && toLane === "BACKLOG") {
     await prisma.$transaction(async (tx) => {
+      await closeCurrentRun(tx, task, membership.agencyId);
       await tx.task.update({ where: { id: task.id }, data: { status: "BACKLOG", stageId: null } });
       await tx.taskStatusHistory.create({
         data: { taskId: task.id, fromStatus: "EM_ANDAMENTO", toStatus: "BACKLOG", actorUserId: session.user.id },
@@ -97,8 +111,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true });
   }
 
-  if (task.status === "EM_ANDAMENTO" && toLane === "CONCLUIDA") {
-    const result = await prisma.$transaction((tx) => advanceAssigneeQueue(tx, task.id, session.user.id));
+  if ((task.status === "EM_ANDAMENTO" || task.status === "BACKLOG") && toLane === "CONCLUIDA") {
+    const result = await prisma.$transaction(async (tx) => {
+      await closeCurrentRun(tx, task, membership.agencyId);
+      return advanceAssigneeQueue(tx, task.id, session.user.id);
+    });
     if (result.taskCompleted) {
       await fireWorkflowTrigger(membership.agencyId, "task.completed", "task", task.id, {
         taskId: task.id,

@@ -70,7 +70,7 @@ export function AttachBoletoButton({
             href={`/api/media/${boleto.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="max-w-[140px] truncate text-xs font-medium text-[#6847F5] hover:underline"
+            className="max-w-[140px] truncate text-xs font-medium text-[#FF2B00] hover:underline"
             title={boleto.fileName}
           >
             {boleto.fileName}
@@ -102,7 +102,7 @@ export function AttachBoletoButton({
           accept="application/pdf"
           onChange={() => void handleUpload()}
           disabled={loading}
-          className="w-[130px] text-xs text-[#475467] file:mr-1.5 file:rounded-md file:border-0 file:bg-[#F1EDFE] file:px-2 file:py-1 file:text-xs file:font-medium file:text-[#6847F5]"
+          className="w-[130px] text-xs text-[#475467] file:mr-1.5 file:rounded-md file:border-0 file:bg-[#FFF1EC] file:px-2 file:py-1 file:text-xs file:font-medium file:text-[#FF2B00]"
         />
       </div>
       {error && <p className="text-[10px] font-medium text-[#D94343]">{error}</p>}

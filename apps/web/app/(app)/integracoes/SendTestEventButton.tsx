@@ -53,7 +53,7 @@ export function SendTestEventButton({ writeKey }: { writeKey: string }) {
         disabled={loading}
         onClick={() => void sendTestEvent()}
         className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Enviando..." : "Enviar evento de teste"}
       </button>

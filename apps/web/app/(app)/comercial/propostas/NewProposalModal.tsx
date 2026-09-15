@@ -66,7 +66,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Nova proposta
       </button>
@@ -83,7 +83,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={5}
-              className="min-h-[120px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="min-h-[120px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
               placeholder="Escopo, entregáveis, condições..."
             />
           </div>
@@ -104,7 +104,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
               id="proposal-client"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="">Nenhum</option>
               {clients.map((c) => (
@@ -122,7 +122,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
               id="proposal-lead"
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               <option value="">Nenhum</option>
               {leads.map((l) => (
@@ -147,7 +147,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar"}
             </button>

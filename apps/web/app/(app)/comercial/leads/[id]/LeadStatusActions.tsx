@@ -64,7 +64,7 @@ export function LeadStatusActions({ leadId, options }: { leadId: string; options
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={`Motivo para mudar para "${LEAD_STATUS_LABELS[pendingTarget]}"`}
-            className="h-10 flex-1 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+            className="h-10 flex-1 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
           />
           <div className="flex gap-2">
             <button
@@ -72,7 +72,7 @@ export function LeadStatusActions({ leadId, options }: { leadId: string; options
               disabled={loading || !reason.trim()}
               onClick={() => void submit(pendingTarget, reason.trim())}
               className="flex h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               Confirmar
             </button>

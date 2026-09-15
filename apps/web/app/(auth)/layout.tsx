@@ -6,7 +6,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <span
             aria-hidden
             className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-white"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             Z
           </span>

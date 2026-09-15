@@ -14,43 +14,93 @@ const ROLE_OPTIONS: { value: string; label: string }[] = [
 
 export function InviteMemberForm() {
   const router = useRouter();
+  const [mode, setMode] = useState<"direct" | "link">("direct");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("ANALYST");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function resetFeedback() {
+    setError(null);
+    setSuccess(null);
+    setInviteUrl(null);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setInviteUrl(null);
+    resetFeedback();
     setLoading(true);
 
-    const response = await fetch("/api/memberships", {
+    const response = await fetch(mode === "direct" ? "/api/memberships/direct" : "/api/memberships", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, role }),
+      body: JSON.stringify(mode === "direct" ? { name, email, password, role } : { email, role }),
     });
     const body = await response.json().catch(() => null);
 
     setLoading(false);
     if (!response.ok) {
-      setError(body?.error ?? "Não foi possível enviar o convite.");
+      setError(body?.error ?? "Não foi possível concluir.");
       return;
     }
 
-    setInviteUrl(new URL(body.inviteUrl, window.location.origin).toString());
+    if (mode === "direct") {
+      setSuccess(`Colaborador criado — ${email} já pode entrar com a senha definida.`);
+    } else {
+      setInviteUrl(new URL(body.inviteUrl, window.location.origin).toString());
+    }
+    setName("");
     setEmail("");
+    setPassword("");
     router.refresh();
   }
 
   return (
     <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold text-[#101828]">Convidar membro</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex-1">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-[#101828]">Novo colaborador</h2>
+        <div className="flex rounded-lg border border-[#E4E7EC] p-0.5 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("direct");
+              resetFeedback();
+            }}
+            className={`rounded-md px-2.5 py-1 ${mode === "direct" ? "bg-[#FFF1EC] text-[#C2270A]" : "text-[#667085]"}`}
+          >
+            Já definir senha
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("link");
+              resetFeedback();
+            }}
+            className={`rounded-md px-2.5 py-1 ${mode === "link" ? "bg-[#FFF1EC] text-[#C2270A]" : "text-[#667085]"}`}
+          >
+            Enviar link de convite
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {mode === "direct" && (
+            <FormField
+              label="Nome"
+              name="member-name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome completo"
+            />
+          )}
           <FormField
-            label="E-mail"
+            label="E-mail (login)"
             type="email"
             name="invite-email"
             required
@@ -59,37 +109,58 @@ export function InviteMemberForm() {
             placeholder="pessoa@agencia.com"
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="invite-role" className="text-sm font-medium text-[#344054]">
-            Papel
-          </label>
-          <select
-            id="invite-role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
-          >
-            {ROLE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end">
+          {mode === "direct" && (
+            <FormField
+              label="Senha"
+              type="password"
+              name="member-password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 8 caracteres"
+            />
+          )}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="invite-role" className="text-sm font-medium text-[#344054]">
+              Cargo (controla o que a pessoa vê no sistema)
+            </label>
+            <select
+              id="invite-role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
+            >
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
         <button
           type="submit"
           disabled={loading}
-          className="flex h-11 items-center justify-center whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          className="flex h-11 items-center justify-center self-start whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
+          style={{ backgroundColor: "#FF2B00" }}
         >
-          {loading ? "Enviando..." : "Convidar"}
+          {loading ? "Salvando..." : mode === "direct" ? "Criar colaborador" : "Enviar convite"}
         </button>
       </form>
 
       {error && <p className="mt-3 text-sm font-medium text-[#D94343]">{error}</p>}
 
+      {success && (
+        <p className="mt-3 rounded-lg bg-[#DCFCE7] p-3 text-sm font-medium text-[#166534]">{success}</p>
+      )}
+
       {inviteUrl && (
-        <div className="mt-3 rounded-lg bg-[#F1EDFE] p-3 text-sm text-[#4A2FD8]">
+        <div className="mt-3 rounded-lg bg-[#FFF1EC] p-3 text-sm text-[#C2270A]">
           <p className="mb-1 font-medium">
             Convite criado. O envio automático de e-mail chega na Fase 2 — por enquanto, envie este
             link manualmente:

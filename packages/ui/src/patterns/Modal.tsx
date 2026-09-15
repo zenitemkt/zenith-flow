@@ -8,6 +8,8 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   description?: string;
+  /** "lg" para conteúdo mais denso (ex.: detalhe de tarefa com checklist + comentários). */
+  size?: "md" | "lg";
   children: ReactNode;
 }
 
@@ -24,7 +26,7 @@ function getFocusable(container: HTMLElement): HTMLElement[] {
  * fluxos longos usam página ou painel lateral"). Usado para cadastros rápidos
  * que o usuário pode preencher parcialmente e completar depois.
  */
-export function Modal({ open, onClose, title, description, children }: ModalProps) {
+export function Modal({ open, onClose, title, description, size = "md", children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,7 +75,9 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
         aria-modal="true"
         aria-labelledby="modal-title"
         onKeyDown={handleKeyDown}
-        className="relative flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-xl"
+        className={`relative flex max-h-[90vh] w-full flex-col rounded-2xl bg-white shadow-xl ${
+          size === "lg" ? "max-w-2xl" : "max-w-md"
+        }`}
       >
         <div className="flex items-start justify-between gap-3 border-b border-[#EEF0F3] px-5 py-4">
           <div>

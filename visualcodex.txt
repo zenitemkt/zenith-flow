@@ -1,0 +1,128 @@
+VISUALCODEX - Guia visual para continuar o ZENITH FLOW
+
+Objetivo
+Este arquivo deve ser lido por qualquer agente antes de criar ou alterar telas no ZENITH FLOW. A direcao visual base foi definida pelo prototipo em /prototype e aplicada parcialmente no codigo real em packages/ui. A programacao funcional pode continuar normalmente, mas novas telas devem seguir esta linguagem para evitar visual inconsistente.
+
+Fonte funcional
+1. O Manual Mestre continua sendo a fonte de verdade funcional, tecnica e visual: ZENITH_FLOW_Manual_Mestre_v2.0 (1).pdf.
+2. As excecoes e decisoes reais do produto ficam em docs/STATUS.md e docs/DECISIONS.md.
+3. Este arquivo nao substitui regra de negocio. Ele define a camada visual/UX que deve guiar as proximas telas.
+
+Principios de UX
+1. Toda tela deve deixar claro: o que esta acontecendo, o que precisa de atencao e qual e o proximo passo.
+2. Do resumo ao detalhe: KPI, alerta ou grafico clicavel deve levar aos registros que formam o numero em ate dois cliques.
+3. Evitar tela puramente decorativa. Graficos precisam ter titulo, periodo, unidade, legenda/tooltip e estado sem dados.
+4. Estados obrigatorios: loading, vazio inicial, vazio filtrado, erro recuperavel, sem permissao e sucesso.
+5. Mobile deve ser uma versao real da tela, nao uma tabela quebrada. Tabelas grandes viram cards ou scroll controlado.
+6. Nenhuma acao deve depender apenas de hover, cor ou drag-and-drop.
+
+Direcao visual
+1. Produto premium, sereno, operacional e objetivo.
+2. Base clara: canvas #F6F7FB, cards #FFFFFF, bordas #E4E7EC.
+3. Sidebar grafite: #171821 com divisorias #303343 e itens ativos em #2A2D3D.
+4. Roxo Zenith #6847F5 deve ser acento de marca, CTA, foco e item ativo. Nao transformar tudo em roxo.
+5. Cores semanticas apenas quando significam status:
+   - sucesso #16A36A
+   - atencao #E79A16
+   - perigo #D94343
+6. Evitar gradientes grandes, sombras fortes, cards dentro de cards, hero marketing, orbs, excesso de arredondamento e dashboard enfeitado.
+7. Usar raio 8/10/12/16px conforme escala. Cards comuns ficam em 12px; shell/sidebar podem usar 16px.
+8. Tipografia: Inter/system, peso 400/500/600/700. Numeros com tabular-nums.
+9. Densidade media no desktop: interfaces ricas, mas escaneaveis.
+
+Estrutura global ja aplicada
+1. Shell principal: packages/ui/src/shell/AppShell.tsx
+   - sidebar fixa/recolhida no desktop
+   - topbar desktop com busca visual, atalho Ctrl K, Hoje, notificacoes e Novo
+   - header mobile com drawer
+2. Sidebar: packages/ui/src/navigation/Sidebar.tsx
+   - grafite premium
+   - recolhida por padrao
+   - expande por hover/foco/pin
+   - itens sempre links flat
+   - tooltip no estado recolhido
+3. Drawer mobile: packages/ui/src/navigation/MobileDrawer.tsx
+   - mesma identidade grafite da sidebar
+   - focus trap e fechamento por Escape/backdrop
+4. Abas de secao: packages/ui/src/shell/SectionTabs.tsx
+   - children do nav-config viram abas horizontais em pill sobre card branco
+   - sidebar nao deve voltar a ter accordion
+5. Tokens globais: apps/web/app/globals.css e apps/web/tailwind.config.ts
+
+Regras para novas telas
+1. Nao hardcodar navegacao em telas. Toda aba principal/subaba nasce em packages/ui/src/navigation/nav-config.ts.
+2. Se a subaba ainda nao tiver logica real, marcar comingSoon: true.
+3. Comecar pagina com cabecalho curto: eyebrow opcional, h1 objetivo, descricao de uma linha e CTA principal.
+4. Usar cards apenas para unidades de informacao, listas repetidas, paineis e modais. Nao criar pagina inteira como card dentro de card.
+5. KPI card deve ter rotulo, valor, periodo/variacao e link de drill-down quando existir.
+6. Tabelas precisam de filtros, ordenacao quando util e linhas com acao clara. Em mobile, adaptar.
+7. Kanban deve mostrar cliente, tipo, prazo, responsavel, prioridade, bloqueio e checklist. Drag-and-drop precisa ter alternativa acessivel.
+8. Timeline deve ser imutavel visualmente: data, ator, origem, entidade, resumo e link.
+9. Modais apenas para decisoes curtas. Fluxos longos usam pagina ou painel lateral.
+10. Formularios usam label persistente, ajuda contextual, validacao inline e confirmacao quando houver risco de perder edicao.
+
+Padroes por modulo
+Home / X-RAY
+1. Deve ser cockpit executivo: KPIs essenciais, fila de atencao e graficos por tema.
+2. O foco e priorizar acao, nao mostrar todos os dados possiveis.
+3. Secoes atuais: Financeiro, Clientes e saude, Comercial, Operacao, Pessoas, Conteudo.
+
+Operacao
+1. O board e o coracao diario. Deve ser mais visual que tabela.
+2. Cards devem ter leitura rapida: cliente, titulo, prazo, responsavel, status, checklist e bloqueio.
+3. Manter colunas customizaveis dentro de Fazendo, sem quebrar Task.status.
+
+Clientes
+1. Carteira deve priorizar Health, risco, entregas, responsavel, contrato/valor e proximo passo.
+2. Perfil 360 agrega informacao por links aos modulos, sem copiar dados.
+3. Health Score e Risco de churn devem sempre explicar fatores e data do calculo.
+
+Conteudo
+1. Planejamento, calendario, biblioteca e aprovacoes devem parecer um fluxo unico.
+2. Aprovacao por versao precisa ficar visualmente explicita.
+3. Cliente deve ver a peca no contexto correto no portal/link.
+
+Financeiro
+1. Separar competencia, vencimento e caixa visualmente.
+2. Valores sensiveis respeitam RBAC.
+3. DRE deve parecer cascata gerencial, nao uma tabela crua.
+4. Regua de cobranca deve mostrar momento, impacto e acao recomendada.
+
+Comercial
+1. Lead, pipeline, proposta, campanha e atribuicao devem formar narrativa unica.
+2. Nao misturar metrica reportada por plataforma com atribuicao Zenith.
+3. Propostas precisam de status, prazo, valor e proxima acao bem visiveis.
+
+Pessoas
+1. Capacidade sem vigilancia invasiva.
+2. Mostrar disponibilidade, carga e horas com contexto operacional.
+3. eNPS anonimo nao deve expor respondente.
+
+Portal do Cliente
+1. Visual mais simples e controlado, mas ainda premium.
+2. Nunca mostrar custo interno, margem, salario, auditoria interna ou dados de outro cliente.
+3. Priorizar aprovacoes, calendario, solicitacoes, arquivos e financeiro permitido.
+
+Automacoes e IA
+1. Automacoes devem mostrar gatilho, condicao, espera, acao, versao publicada e logs.
+2. Zenith AI deve citar fontes/registros e pedir confirmacao antes de acao sensivel.
+
+Checklist antes de concluir nova tela
+1. A tela usa AppShell/Sidebar/SectionTabs do packages/ui.
+2. Nao criou paleta visual paralela.
+3. Nao criou navegacao duplicada.
+4. Mobile foi considerado.
+5. Estados vazio/loading/erro/permissao foram tratados.
+6. Textos cabem nos containers.
+7. Cores semanticas nao sao o unico sinal.
+8. Lint, typecheck, testes e build do workspace afetado foram rodados quando aplicavel.
+9. docs/STATUS.md, docs/DECISIONS.md e CHANGELOG.md foram atualizados quando a entrega muda produto/padrao.
+
+Como usar o prototipo
+1. O prototipo visual fica em /prototype.
+2. Ele roda isolado em localhost:5000 e nao depende de banco/auth.
+3. Use o prototipo como referencia de composicao, hierarquia, densidade e tom visual.
+4. Nao copiar literalmente dados fake para regras de negocio; sao apenas demonstracao.
+
+Resumo da regra de ouro
+ZENITH FLOW deve parecer um centro de comando premium para agencia: calmo, rapido, explicavel e acionavel. Toda tela precisa ajudar o usuario a decidir o proximo movimento.

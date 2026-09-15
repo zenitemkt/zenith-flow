@@ -60,7 +60,7 @@ export function ProposalDecisionActions({ token }: { token: string }) {
           onChange={(e) => setReason(e.target.value)}
           rows={3}
           required
-          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
         />
         {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
         <div className="flex justify-end gap-2">

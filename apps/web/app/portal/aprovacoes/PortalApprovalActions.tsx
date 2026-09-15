@@ -43,7 +43,7 @@ export function PortalApprovalActions({ contentItemId }: { contentItemId: string
           rows={2}
           required
           placeholder="O que precisa mudar?"
-          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
         />
         {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
         <div className="flex justify-end gap-2">
@@ -58,7 +58,7 @@ export function PortalApprovalActions({ contentItemId }: { contentItemId: string
             type="submit"
             disabled={loading || !note.trim()}
             className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             {loading ? "Enviando..." : "Enviar pedido"}
           </button>

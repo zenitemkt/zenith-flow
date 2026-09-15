@@ -55,7 +55,7 @@ export function NewLeadModal() {
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Novo lead
       </button>
@@ -93,7 +93,7 @@ export function NewLeadModal() {
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar lead"}
             </button>

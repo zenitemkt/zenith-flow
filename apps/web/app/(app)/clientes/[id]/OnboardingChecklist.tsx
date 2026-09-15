@@ -56,7 +56,7 @@ export function OnboardingChecklist({ items }: { items: Item[] }) {
                 ? "border-[#16A36A] bg-[#16A36A] text-white"
                 : item.status === "BLOQUEADO"
                   ? "border-[#D0D5DD] text-[#98A2B3]"
-                  : "border-[#6847F5] text-transparent hover:bg-[#F1EDFE]"
+                  : "border-[#FF2B00] text-transparent hover:bg-[#FFF1EC]"
             }`}
           >
             {item.status === "CONCLUIDO" && <Check size={12} aria-hidden />}

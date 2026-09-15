@@ -70,7 +70,7 @@ export function NewTimeEntryForm({ tasks, defaultDate }: { tasks: TaskOption[]; 
           id="entry-task"
           value={taskId}
           onChange={(e) => setTaskId(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         >
           <option value="">Sem tarefa vinculada</option>
           {tasks.map((task) => (
@@ -91,7 +91,7 @@ export function NewTimeEntryForm({ tasks, defaultDate }: { tasks: TaskOption[]; 
         type="submit"
         disabled={loading}
         className="self-end flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Salvando..." : "Apontar"}
       </button>

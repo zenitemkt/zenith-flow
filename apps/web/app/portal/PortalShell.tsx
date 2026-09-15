@@ -51,7 +51,7 @@ export function PortalShell({
                   key={item.href}
                   href={item.href}
                   className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                    active ? "bg-[#F1EDFE] text-[#6847F5]" : "text-[#475467] hover:bg-[#F6F7FB]"
+                    active ? "bg-[#FFF1EC] text-[#FF2B00]" : "text-[#475467] hover:bg-[#F6F7FB]"
                   }`}
                 >
                   {item.label}

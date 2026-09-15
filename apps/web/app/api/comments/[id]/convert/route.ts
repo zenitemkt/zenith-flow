@@ -50,16 +50,43 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Informe um título." }, { status: 400 });
   }
 
+  const assigneeUserId = typeof body?.assigneeUserId === "string" && body.assigneeUserId ? body.assigneeUserId : null;
+  if (assigneeUserId) {
+    const validAssignee = await prisma.membership.findFirst({
+      where: { userId: assigneeUserId, agencyId: membership.agencyId, status: "ACTIVE", workspace: { kind: "AGENCY" } },
+    });
+    if (!validAssignee) {
+      return NextResponse.json({ error: "Responsável inválido para esta agência." }, { status: 400 });
+    }
+  }
+
+  const dueDateRaw = typeof body?.dueDate === "string" && body.dueDate ? body.dueDate : null;
+  const dueDate = dueDateRaw ? new Date(dueDateRaw) : null;
+  if (dueDate && Number.isNaN(dueDate.getTime())) {
+    return NextResponse.json({ error: "Prazo inválido." }, { status: 400 });
+  }
+
   const clientId = await resolveCommentEntityClientId(comment.thread.entityType as CommentEntityType, comment.thread.entityId);
 
   const task = await prisma.$transaction(async (tx) => {
     const project = await getOrCreateTaskProject(tx, membership.agencyId, clientId);
     const createdTask = await tx.task.create({
-      data: { projectId: project.id, title, description: comment.body },
+      data: {
+        projectId: project.id,
+        title,
+        description: comment.body,
+        assigneeUserId,
+        dueDate,
+        originEntityType: comment.thread.entityType,
+        originEntityId: comment.thread.entityId,
+      },
     });
     await tx.taskStatusHistory.create({
       data: { taskId: createdTask.id, toStatus: "BACKLOG", actorUserId: session.user.id },
     });
+    if (assigneeUserId) {
+      await tx.taskAssignee.create({ data: { taskId: createdTask.id, userId: assigneeUserId, order: 0 } });
+    }
     await tx.comment.update({ where: { id: comment.id }, data: { convertedTaskId: createdTask.id } });
     await tx.auditLog.create({
       data: {

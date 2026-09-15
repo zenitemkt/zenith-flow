@@ -62,7 +62,7 @@ export function LoginForm() {
           type="submit"
           disabled={loading}
           className="mt-2 flex h-11 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Entrando..." : "Entrar"}
         </button>
@@ -70,7 +70,7 @@ export function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-[#667085]">
         Ainda não tem uma agência?{" "}
-        <Link href="/signup" className="font-medium text-[#6847F5]">
+        <Link href="/signup" className="font-medium text-[#FF2B00]">
           Criar agência
         </Link>
       </p>

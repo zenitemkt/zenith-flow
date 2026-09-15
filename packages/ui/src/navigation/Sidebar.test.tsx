@@ -89,29 +89,34 @@ describe("Sidebar", () => {
     expect(homeLink).toHaveAttribute("aria-current", "page");
   });
 
-  it("does not open a submenu on hover, only on click", () => {
+  it("renders an item with children as a single link, never as an expand button", () => {
     renderSidebar();
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     fireEvent.mouseEnter(nav);
-    const trigger = screen.getByRole("button", { name: /Clientes/ });
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    const clientsLink = screen.getByRole("link", { name: /Clientes/ });
+    expect(clientsLink).toHaveAttribute("href", "/clientes");
+    expect(screen.queryByRole("button", { name: /Clientes/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Carteira")).not.toBeInTheDocument();
-
-    fireEvent.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Carteira")).toBeInTheDocument();
   });
 
-  it("closes an open submenu on Escape", () => {
+  it("marks the parent link as active when the current route matches a child href", () => {
+    renderSidebar("/clientes/carteira");
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    fireEvent.mouseEnter(nav);
+    const clientsLink = screen.getByRole("link", { name: /Clientes/ });
+    expect(clientsLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("blurs the focused item on Escape when the sidebar is not pinned", () => {
     renderSidebar();
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     fireEvent.mouseEnter(nav);
-    const trigger = screen.getByRole("button", { name: /Clientes/ });
-    fireEvent.click(trigger);
-    expect(screen.getByText("Carteira")).toBeInTheDocument();
+    const homeLink = screen.getByRole("link", { name: /Home/ });
+    homeLink.focus();
+    expect(document.activeElement).toBe(homeLink);
 
     fireEvent.keyDown(nav, { key: "Escape" });
-    expect(screen.queryByText("Carteira")).not.toBeInTheDocument();
+    expect(document.activeElement).not.toBe(homeLink);
   });
 
   it("keeps the sidebar expanded after pinning, even without hover", () => {

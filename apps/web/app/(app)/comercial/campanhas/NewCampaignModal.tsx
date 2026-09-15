@@ -73,7 +73,7 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Nova campanha
       </button>
@@ -88,7 +88,7 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
               id="campaign-client"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             >
               <option value="">Nenhum — campanha da própria agência</option>
               {clients.map((c) => (
@@ -161,7 +161,7 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar campanha"}
             </button>

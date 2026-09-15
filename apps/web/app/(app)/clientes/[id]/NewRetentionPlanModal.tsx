@@ -10,7 +10,7 @@ interface TeamMember {
 }
 
 const TEXTAREA_CLASS =
-  "min-h-[72px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]";
+  "min-h-[72px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]";
 
 export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: string; teamMembers: TeamMember[] }) {
   const router = useRouter();
@@ -70,7 +70,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
         onClick={() => setOpen(true)}
         disabled={teamMembers.length === 0}
         className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Criar plano de retenção
       </button>
@@ -111,7 +111,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
               required
               value={responsibleUserId}
               onChange={(e) => setResponsibleUserId(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             >
               {teamMembers.map((m) => (
                 <option key={m.userId} value={m.userId}>
@@ -142,7 +142,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
                 type="date"
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -154,7 +154,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
                 type="date"
                 value={reassessDate}
                 onChange={(e) => setReassessDate(e.target.value)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               />
             </div>
           </div>
@@ -173,7 +173,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar plano"}
             </button>

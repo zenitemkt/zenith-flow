@@ -48,7 +48,7 @@ export default async function ReativacoesPage() {
               <div key={client.id} className="rounded-xl border border-[#E4E7EC] bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <Link href={`/clientes/${client.id}`} className="font-medium text-[#101828] hover:text-[#6847F5]">
+                    <Link href={`/clientes/${client.id}`} className="font-medium text-[#101828] hover:text-[#FF2B00]">
                       {client.name}
                     </Link>
                     <p className="text-xs text-[#667085]">

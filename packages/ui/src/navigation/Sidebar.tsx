@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  Fragment,
-  useId,
-  useRef,
-  type ElementType,
-  type KeyboardEvent,
-} from "react";
+import { Fragment, useId, useRef, type ElementType, type KeyboardEvent } from "react";
 import {
   ChevronDown,
-  ChevronRight,
   HelpCircle,
   Bell,
   Settings,
@@ -53,15 +46,7 @@ export function Sidebar({
   onSignOut,
 }: SidebarProps) {
   const Link = linkComponent ?? "a";
-  const {
-    expanded,
-    pinned,
-    openSubmenuId,
-    togglePinned,
-    toggleSubmenu,
-    closeSubmenu,
-    handlers,
-  } = useSidebarState();
+  const { expanded, pinned, togglePinned, handlers } = useSidebarState();
   const reducedMotion = useReducedMotion();
   const navRef = useRef<HTMLElement | null>(null);
 
@@ -74,11 +59,6 @@ export function Sidebar({
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "Escape") {
-      if (openSubmenuId) {
-        event.stopPropagation();
-        closeSubmenu();
-        return;
-      }
       if (!pinned && document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
@@ -97,8 +77,8 @@ export function Sidebar({
       data-expanded={expanded}
       className={[
         "fixed left-3 top-3 bottom-3 z-40 hidden md:flex md:flex-col",
-        "rounded-[16px] border border-[#E4E7EC] bg-white",
-        expanded ? "w-[268px] shadow-lg" : "w-[68px] shadow-sm",
+        "rounded-[16px] border border-[#2F3140] bg-[#171821] text-white",
+        expanded ? "w-[280px] shadow-[0_18px_48px_rgba(16,24,40,0.22)]" : "w-[68px] shadow-sm",
         transitionClass,
       ].join(" ")}
     >
@@ -115,14 +95,12 @@ export function Sidebar({
         {groups.map((group, groupIndex) => (
           <Fragment key={group.id}>
             {groupIndex > 0 && (
-              <div className="my-2 border-t border-[#EEF0F3]" role="separator" />
+              <div className="my-2 border-t border-[#303343]" role="separator" />
             )}
             <SidebarGroup
               group={group}
               expanded={expanded}
               activePath={activePath}
-              openSubmenuId={openSubmenuId}
-              onToggleSubmenu={toggleSubmenu}
               Link={Link}
               textTransitionClass={textTransitionClass}
             />
@@ -156,23 +134,22 @@ function SidebarHeader({
   currentUser: { name: string; role: string; workspace: string };
 }) {
   return (
-    <div className="flex flex-col border-b border-[#EEF0F3] px-2 py-3">
+    <div className="flex flex-col border-b border-[#303343] px-2 py-3">
       <div className="flex items-center justify-between">
         <Link
           href="/"
           aria-label="Ir para a página inicial do ZENITH FLOW"
-          className="flex h-11 min-w-[44px] items-center gap-2 rounded-lg px-2 hover:bg-[#F6F7FB]"
+          className="flex h-11 min-w-[44px] items-center gap-2 rounded-lg px-2 text-white hover:bg-[#232532]"
         >
-          <span
+          <img
+            src="/logo-z.png"
+            alt=""
             aria-hidden
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
-            style={{ backgroundColor: "#6847F5" }}
-          >
-            Z
-          </span>
+            className="h-8 w-8 shrink-0 rounded-lg object-cover"
+          />
           {expanded && (
             <span
-              className={`whitespace-nowrap text-sm font-semibold text-[#101828] ${textTransitionClass}`}
+              className={`whitespace-nowrap text-sm font-semibold text-white ${textTransitionClass}`}
             >
               ZENITH FLOW
             </span>
@@ -184,7 +161,7 @@ function SidebarHeader({
             onClick={onTogglePin}
             aria-pressed={pinned}
             aria-label={pinned ? "Desafixar menu expandido" : "Fixar menu expandido"}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#667085] hover:bg-[#F6F7FB]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#AEB4C5] hover:bg-[#232532] hover:text-white"
           >
             {pinned ? <PinOff size={16} aria-hidden /> : <Pin size={16} aria-hidden />}
           </button>
@@ -194,16 +171,16 @@ function SidebarHeader({
       {expanded && (
         <button
           type="button"
-          className={`mt-2 flex items-center gap-2 rounded-lg border border-[#E4E7EC] px-2 py-2 text-left hover:bg-[#F6F7FB] ${textTransitionClass}`}
+          className={`mt-2 flex items-center gap-2 rounded-lg border border-[#343747] bg-[#232532] px-2 py-2 text-left hover:bg-[#2A2D3D] ${textTransitionClass}`}
           aria-label={`Workspace atual: ${currentUser.workspace}`}
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-semibold text-[#6847F5]">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-semibold text-[#FF2B00]">
             {currentUser.workspace.slice(0, 2).toUpperCase()}
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#101828]">
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#F9FAFB]">
             {currentUser.workspace}
           </span>
-          <ChevronDown size={14} className="shrink-0 text-[#667085]" aria-hidden />
+          <ChevronDown size={14} className="shrink-0 text-[#AEB4C5]" aria-hidden />
         </button>
       )}
     </div>
@@ -214,16 +191,12 @@ function SidebarGroup({
   group,
   expanded,
   activePath,
-  openSubmenuId,
-  onToggleSubmenu,
   Link,
   textTransitionClass,
 }: {
   group: NavigationGroup;
   expanded: boolean;
   activePath: string;
-  openSubmenuId: string | null;
-  onToggleSubmenu: (id: string) => void;
   Link: ElementType;
   textTransitionClass: string;
 }) {
@@ -234,7 +207,7 @@ function SidebarGroup({
       {expanded && (
         <p
           id={headingId}
-          className={`px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3] ${textTransitionClass}`}
+          className={`px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[#8E93A6] ${textTransitionClass}`}
         >
           {group.label}
         </p>
@@ -246,8 +219,6 @@ function SidebarGroup({
               item={item}
               expanded={expanded}
               activePath={activePath}
-              isSubmenuOpen={openSubmenuId === item.id}
-              onToggleSubmenu={onToggleSubmenu}
               Link={Link}
               textTransitionClass={textTransitionClass}
             />
@@ -262,29 +233,23 @@ function SidebarItem({
   item,
   expanded,
   activePath,
-  isSubmenuOpen,
-  onToggleSubmenu,
   Link,
   textTransitionClass,
 }: {
   item: NavigationItem;
   expanded: boolean;
   activePath: string;
-  isSubmenuOpen: boolean;
-  onToggleSubmenu: (id: string) => void;
   Link: ElementType;
   textTransitionClass: string;
 }) {
   const active = isItemActive(item, activePath);
   const Icon = item.icon;
-  const submenuId = useId();
-  const hasChildren = Boolean(item.children?.length);
 
   const rowClassName = [
-    "group flex h-11 w-full min-w-[44px] items-center gap-2 rounded-lg px-2.5 text-sm",
+    "group flex h-11 w-full min-w-[44px] items-center gap-2 rounded-lg px-2.5 text-sm transition-colors",
     active
-      ? "bg-[#F1EDFE] font-semibold text-[#4A2FD8]"
-      : "font-medium text-[#475467] hover:bg-[#F6F7FB]",
+      ? "bg-[#2A2D3D] font-semibold text-white shadow-[inset_3px_0_0_#FF2B00]"
+      : "font-medium text-[#CFD3DF] hover:bg-[#232532] hover:text-white",
   ].join(" ");
 
   const content = (
@@ -294,7 +259,7 @@ function SidebarItem({
           <Icon
             size={19}
             aria-hidden
-            className={active ? "text-[#6847F5]" : "text-[#667085]"}
+            className={active ? "text-white" : "text-[#AEB4C5] group-hover:text-white"}
           />
         )}
       </span>
@@ -309,78 +274,26 @@ function SidebarItem({
         </span>
       )}
       {expanded && item.badge != null && (
-        <span className="shrink-0 rounded-full bg-[#F1EDFE] px-1.5 text-xs font-semibold text-[#6847F5]">
+        <span className="shrink-0 rounded-full bg-[#FFF1EC] px-1.5 text-xs font-semibold text-[#FF2B00]">
           {item.badge}
         </span>
-      )}
-      {expanded && hasChildren && (
-        <ChevronRight
-          size={14}
-          aria-hidden
-          className={`shrink-0 text-[#98A2B3] transition-transform ${isSubmenuOpen ? "rotate-90" : ""}`}
-        />
       )}
     </>
   );
 
   return (
-    <div>
-      <Tooltip label={item.label} disabled={expanded}>
-        {(describedBy) =>
-          hasChildren ? (
-            <button
-              type="button"
-              aria-expanded={isSubmenuOpen}
-              aria-controls={submenuId}
-              aria-describedby={describedBy}
-              aria-current={active ? "page" : undefined}
-              onClick={() => onToggleSubmenu(item.id)}
-              className={rowClassName}
-            >
-              {content}
-            </button>
-          ) : (
-            <Link
-              href={item.href}
-              aria-describedby={describedBy}
-              aria-current={active ? "page" : undefined}
-              className={rowClassName}
-            >
-              {content}
-            </Link>
-          )
-        }
-      </Tooltip>
-
-      {hasChildren && expanded && isSubmenuOpen && (
-        <ul id={submenuId} className="ml-[26px] mt-0.5 flex flex-col gap-0.5 border-l border-[#EEF0F3] pl-3">
-          {item.children!.map((child) => {
-            const childActive = child.href === activePath;
-            return (
-              <li key={child.id}>
-                <Link
-                  href={child.href}
-                  aria-current={childActive ? "page" : undefined}
-                  className={[
-                    "flex h-9 items-center rounded-md px-2 text-sm",
-                    childActive
-                      ? "font-semibold text-[#4A2FD8]"
-                      : "text-[#667085] hover:bg-[#F6F7FB]",
-                  ].join(" ")}
-                >
-                  <span className="truncate">{child.label}</span>
-                  {child.comingSoon && (
-                    <span className="ml-1.5 shrink-0 rounded-full bg-[#FEF3C7] px-1.5 py-0.5 text-[10px] font-medium text-[#92600A]">
-                      em desenvolvimento
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+    <Tooltip label={item.label} disabled={expanded}>
+      {(describedBy) => (
+        <Link
+          href={item.href}
+          aria-describedby={describedBy}
+          aria-current={active ? "page" : undefined}
+          className={rowClassName}
+        >
+          {content}
+        </Link>
       )}
-    </div>
+    </Tooltip>
   );
 }
 
@@ -403,7 +316,7 @@ function SidebarFooter({
   ];
 
   return (
-    <div className="border-t border-[#EEF0F3] px-2 py-2">
+    <div className="border-t border-[#303343] px-2 py-2">
       <ul className="flex flex-col gap-0.5">
         {footerButtons.map(({ id, label, icon: Icon, onClick }) => (
           <li key={id}>
@@ -414,9 +327,9 @@ function SidebarFooter({
                   onClick={onClick}
                   aria-describedby={describedBy}
                   aria-label={expanded ? undefined : label}
-                  className="flex h-11 w-full min-w-[44px] items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
+                  className="flex h-11 w-full min-w-[44px] items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-[#CFD3DF] hover:bg-[#232532] hover:text-white"
                 >
-                  <Icon size={19} aria-hidden className="shrink-0 text-[#667085]" />
+                  <Icon size={19} aria-hidden className="shrink-0 text-[#AEB4C5]" />
                   {expanded && (
                     <span className={`truncate ${textTransitionClass}`}>{label}</span>
                   )}
@@ -429,10 +342,10 @@ function SidebarFooter({
 
       <button
         type="button"
-        className="mt-1 flex h-12 w-full min-w-[44px] items-center gap-2 rounded-lg px-2 hover:bg-[#F6F7FB]"
+        className="mt-1 flex h-12 w-full min-w-[44px] items-center gap-2 rounded-lg px-2 hover:bg-[#232532]"
         aria-label={`Perfil de ${currentUser.name}`}
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F1EDFE] text-xs font-semibold text-[#6847F5]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFF1EC] text-xs font-semibold text-[#FF2B00]">
           {currentUser.name
             .split(" ")
             .map((part) => part[0])
@@ -441,10 +354,10 @@ function SidebarFooter({
         </span>
         {expanded && (
           <span className={`min-w-0 flex-1 text-left ${textTransitionClass}`}>
-            <span className="block truncate text-sm font-semibold text-[#101828]">
+            <span className="block truncate text-sm font-semibold text-white">
               {currentUser.name}
             </span>
-            <span className="block truncate text-xs text-[#667085]">{currentUser.role}</span>
+            <span className="block truncate text-xs text-[#AEB4C5]">{currentUser.role}</span>
           </span>
         )}
       </button>

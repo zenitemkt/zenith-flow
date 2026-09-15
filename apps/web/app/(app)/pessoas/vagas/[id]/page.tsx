@@ -88,7 +88,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                         {" — "}
                         <Link
                           href={`/pessoas/equipe/${candidate.convertedEmployeeId}`}
-                          className="text-[#6847F5] hover:underline"
+                          className="text-[#FF2B00] hover:underline"
                         >
                           ver na equipe
                         </Link>

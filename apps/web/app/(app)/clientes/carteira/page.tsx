@@ -79,7 +79,7 @@ export default async function CarteiraPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/clientes/${client.id}`}
-                        className="font-medium text-[#101828] hover:text-[#6847F5]"
+                        className="font-medium text-[#101828] hover:text-[#FF2B00]"
                       >
                         {client.name}
                       </Link>

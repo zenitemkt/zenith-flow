@@ -63,7 +63,7 @@ export default async function FeriasPage() {
                   <div>
                     <Link
                       href={`/pessoas/equipe/${leave.employee.id}`}
-                      className="text-sm font-semibold text-[#101828] hover:text-[#6847F5]"
+                      className="text-sm font-semibold text-[#101828] hover:text-[#FF2B00]"
                     >
                       {leave.employee.name}
                     </Link>

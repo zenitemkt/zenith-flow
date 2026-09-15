@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canActOnTask } from "@/lib/tasks";
+import { closeCurrentRun } from "@/lib/task-timer";
 import { prisma } from "@zenith/db";
 
 interface RouteParams {
@@ -40,6 +41,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await closeCurrentRun(tx, task, membership.agencyId);
     await tx.task.update({ where: { id: task.id }, data: { status: "CANCELADA", stageId: null } });
     await tx.taskStatusHistory.create({
       data: { taskId: task.id, fromStatus: task.status, toStatus: "CANCELADA", reason, actorUserId: session.user.id },

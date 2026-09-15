@@ -114,7 +114,7 @@ export function ClientPortalSection({
                 id="portal-invite-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as PortalMember["role"])}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
               >
                 <option value="CLIENT_VIEWER">Visualizador</option>
                 <option value="CLIENT_ADMIN">Admin</option>
@@ -124,7 +124,7 @@ export function ClientPortalSection({
               type="submit"
               disabled={loading}
               className="flex h-11 items-center justify-center whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Enviando..." : "Convidar"}
             </button>
@@ -133,7 +133,7 @@ export function ClientPortalSection({
           {error && <p className="mt-3 text-sm font-medium text-[#D94343]">{error}</p>}
 
           {inviteUrl && (
-            <div className="mt-3 rounded-lg bg-[#F1EDFE] p-3 text-sm text-[#4A2FD8]">
+            <div className="mt-3 rounded-lg bg-[#FFF1EC] p-3 text-sm text-[#C2270A]">
               <p className="mb-1 font-medium">
                 Convite criado. Envie este link pro cliente (envio automático de e-mail chega na Fase
                 2):

@@ -22,7 +22,7 @@ export function ClientFilterPills({
         href={buildHref(undefined)}
         className={`rounded-full px-3 py-1.5 text-sm font-medium ${
           !activeClientId
-            ? "bg-[#6847F5] text-white"
+            ? "bg-[#FF2B00] text-white"
             : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
         }`}
       >
@@ -34,7 +34,7 @@ export function ClientFilterPills({
           href={buildHref(client.id)}
           className={`rounded-full px-3 py-1.5 text-sm font-medium ${
             activeClientId === client.id
-              ? "bg-[#6847F5] text-white"
+              ? "bg-[#FF2B00] text-white"
               : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
           }`}
         >

@@ -12,7 +12,7 @@ interface EmployeeOption {
 }
 
 const TEXTAREA_CLASS =
-  "min-h-[64px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]";
+  "min-h-[64px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]";
 
 export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[] }) {
   const router = useRouter();
@@ -85,7 +85,7 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Nova pesquisa
       </button>
@@ -105,7 +105,7 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex.: eNPS semestral — H2 2026"
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -134,7 +134,7 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
               id="enps-comment-prompt"
               value={commentPrompt}
               onChange={(e) => setCommentPrompt(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -179,7 +179,7 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar pesquisa"}
             </button>

@@ -71,7 +71,7 @@ export default async function PortalFinanceiroPage() {
                           href={`/api/media/${entry.boletoAsset.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-[#6847F5] hover:underline"
+                          className="font-medium text-[#FF2B00] hover:underline"
                         >
                           Baixar PDF
                         </a>

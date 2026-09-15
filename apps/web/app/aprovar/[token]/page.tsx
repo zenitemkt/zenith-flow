@@ -41,7 +41,7 @@ export default async function AprovarPage({ params }: PageProps) {
                 href={approval.contentVersion.assetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mb-3 flex items-center justify-center rounded-lg border border-dashed border-[#D0D5DD] px-4 py-6 text-sm font-medium text-[#6847F5] hover:bg-[#F6F7FB]"
+                className="mb-3 flex items-center justify-center rounded-lg border border-dashed border-[#D0D5DD] px-4 py-6 text-sm font-medium text-[#FF2B00] hover:bg-[#F6F7FB]"
               >
                 Ver material (abre em outra aba)
               </a>

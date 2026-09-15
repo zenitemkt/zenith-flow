@@ -49,7 +49,7 @@ export default async function RecurringTasksPage() {
         <h1 className="text-lg font-semibold text-[#101828]">Recorrências</h1>
         <p className="text-sm text-[#667085]">
           Tarefas recorrentes de {membership.agency.name} — cada geração cria uma tarefa nova no board de{" "}
-          <a href="/operacao" className="text-[#6847F5] hover:underline">
+          <a href="/operacao" className="text-[#FF2B00] hover:underline">
             Operação
           </a>
           . Geração é manual, mesmo padrão de tudo que dependeria de um cron real.

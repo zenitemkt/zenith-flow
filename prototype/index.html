@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ZENITH FLOW - Protótipo Visual</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="#home" aria-label="ZENITH FLOW">
+          <span class="brand-mark">Z</span>
+          <span>
+            <strong>ZENITH</strong>
+            <small>FLOW</small>
+          </span>
+        </a>
+
+        <nav id="mainNav" class="nav-list"></nav>
+
+        <div class="sidebar-foot">
+          <button class="ghost-icon" type="button" title="Notificações">N</button>
+          <button class="ghost-icon" type="button" title="Configurações">C</button>
+          <div class="user-mini">
+            <span>KB</span>
+            <div>
+              <strong>Kevin Belluco</strong>
+              <small>Admin da agência</small>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <button id="mobileMenu" class="mobile-menu" type="button">Menu</button>
+          <button id="searchButton" class="command-button" type="button">
+            <span>Pesquisar, criar ou perguntar à Zenith AI</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <div class="top-actions">
+            <button class="quiet-button" type="button">Hoje</button>
+            <button class="primary-button" type="button">Novo card</button>
+          </div>
+        </header>
+
+        <section id="screen" class="screen" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div id="commandPalette" class="palette-backdrop" hidden>
+      <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div class="palette-search">
+          <span>AI</span>
+          <input id="paletteInput" type="search" placeholder="Digite: cliente, tarefa, cobrança, lead..." />
+        </div>
+        <div class="palette-grid">
+          <button type="button">Criar cliente</button>
+          <button type="button">Abrir quadro</button>
+          <button type="button">Nova cobrança</button>
+          <button type="button">Perguntar risco de churn</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

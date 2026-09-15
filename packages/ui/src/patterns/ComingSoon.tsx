@@ -12,7 +12,7 @@ export interface ComingSoonProps {
 export function ComingSoon({ title, description }: ComingSoonProps) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center rounded-2xl border border-dashed border-[#E4E7EC] bg-white px-6 py-16 text-center">
-      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F1EDFE] text-[#6847F5]">
+      <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF1EC] text-[#FF2B00]">
         <Construction size={22} aria-hidden />
       </span>
       <h1 className="text-lg font-semibold text-[#101828]">{title}</h1>

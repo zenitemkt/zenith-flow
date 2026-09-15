@@ -45,7 +45,7 @@ export function PositionsPanel({ positions }: { positions: Position[] }) {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-xs font-medium text-[#6847F5] hover:underline"
+            className="text-xs font-medium text-[#FF2B00] hover:underline"
           >
             + Novo cargo
           </button>
@@ -71,13 +71,13 @@ export function PositionsPanel({ positions }: { positions: Position[] }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ex.: Gestor de tráfego"
-            className="h-9 flex-1 max-w-xs rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+            className="h-9 flex-1 max-w-xs rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
           />
           <button
             type="submit"
             disabled={loading || !title.trim()}
             className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             Salvar
           </button>

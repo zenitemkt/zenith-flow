@@ -44,9 +44,18 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const defaultStage = await getOrCreateDefaultOperationStage(prisma, membership.agencyId);
+  const runUserId = task.assigneeUserId ?? session.user.id;
 
   await prisma.$transaction(async (tx) => {
-    await tx.task.update({ where: { id: task.id }, data: { status: "EM_ANDAMENTO", stageId: defaultStage.id } });
+    await tx.task.update({
+      where: { id: task.id },
+      data: {
+        status: "EM_ANDAMENTO",
+        stageId: defaultStage.id,
+        currentRunStartedAt: new Date(),
+        currentRunUserId: runUserId,
+      },
+    });
     await tx.taskStatusHistory.create({
       data: { taskId: task.id, fromStatus: "BACKLOG", toStatus: "EM_ANDAMENTO", actorUserId: session.user.id },
     });

@@ -40,7 +40,7 @@ export default async function JobsPage() {
             <Link
               key={job.id}
               href={`/pessoas/vagas/${job.id}`}
-              className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-white px-4 py-3 hover:border-[#6847F5]"
+              className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-white px-4 py-3 hover:border-[#FF2B00]"
             >
               <div>
                 <p className="text-sm font-medium text-[#101828]">{job.title}</p>

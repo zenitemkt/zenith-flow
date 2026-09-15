@@ -31,7 +31,7 @@ export function CampaignActions({ campaignId, status }: { campaignId: string; st
             disabled={loading !== null}
             onClick={() => void call("send", "send")}
             className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             {loading === "send" ? "Enviando..." : "Enviar"}
           </button>

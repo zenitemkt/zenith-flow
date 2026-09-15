@@ -47,7 +47,7 @@ export function MediaAssetList({
             href={`/api/media/${asset.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-[#6847F5] hover:underline"
+            className="text-sm font-medium text-[#FF2B00] hover:underline"
           >
             {asset.fileName}
           </a>

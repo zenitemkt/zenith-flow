@@ -54,7 +54,7 @@ export function UploadFileForm({
         <select
           value={selectedClientId}
           onChange={(e) => setSelectedClientId(e.target.value)}
-          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
         >
           <option value="">Sem cliente vinculado</option>
           {clientOptions.map((c) => (
@@ -69,13 +69,13 @@ export function UploadFileForm({
           ref={inputRef}
           type="file"
           required
-          className="flex-1 text-sm text-[#475467] file:mr-3 file:rounded-lg file:border-0 file:bg-[#F1EDFE] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#6847F5]"
+          className="flex-1 text-sm text-[#475467] file:mr-3 file:rounded-lg file:border-0 file:bg-[#FFF1EC] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#FF2B00]"
         />
         <button
           type="submit"
           disabled={loading}
           className="flex h-9 items-center justify-center whitespace-nowrap rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Enviando..." : "Enviar"}
         </button>

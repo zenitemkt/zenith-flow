@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         agencyId: membership.agencyId,
         clientId,
         title,
+        description: optionalString(body?.description),
         channel,
         format: optionalString(body?.format),
         campaign: optionalString(body?.campaign),

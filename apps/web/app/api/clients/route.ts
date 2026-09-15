@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma } from "@zenith/db";
+import { prisma, type MembershipRole } from "@zenith/db";
+
+const PORTAL_ROLES: MembershipRole[] = ["CLIENT_ADMIN", "CLIENT_VIEWER"];
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -36,6 +39,40 @@ export async function POST(request: Request) {
   const responsavelEmail = optionalString(body?.responsavelEmail);
   const responsavelTelefone = optionalString(body?.responsavelTelefone);
 
+  const portalEmail = optionalString(body?.portalEmail)?.toLowerCase() ?? null;
+  const portalPassword = typeof body?.portalPassword === "string" ? body.portalPassword : "";
+  const portalRole = (body?.portalRole as MembershipRole | undefined) ?? "CLIENT_VIEWER";
+
+  if (portalEmail) {
+    if (!portalEmail.includes("@")) {
+      return NextResponse.json({ error: "Informe um e-mail de acesso válido." }, { status: 400 });
+    }
+    if (portalPassword.length < 8) {
+      return NextResponse.json(
+        { error: "A senha de acesso do cliente precisa ter pelo menos 8 caracteres." },
+        { status: 400 },
+      );
+    }
+    if (!PORTAL_ROLES.includes(portalRole)) {
+      return NextResponse.json({ error: "Papel de portal inválido." }, { status: 400 });
+    }
+  }
+
+  // `auth.api.signUpEmail` grava em tabelas próprias (User/Account) fora da
+  // transação principal — precisa rodar antes, nunca dentro do `$transaction`.
+  let portalUserId: string | null = null;
+  if (portalEmail) {
+    const existingUser = await prisma.user.findUnique({ where: { email: portalEmail } });
+    if (existingUser) {
+      portalUserId = existingUser.id;
+    } else {
+      const signUpResult = await auth.api.signUpEmail({
+        body: { name: responsavelNome || name, email: portalEmail, password: portalPassword },
+      });
+      portalUserId = signUpResult.user.id;
+    }
+  }
+
   const client = await prisma.$transaction(async (tx) => {
     const created = await tx.client.create({
       data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp },
@@ -65,6 +102,36 @@ export async function POST(request: Request) {
         resourceId: created.id,
       },
     });
+
+    if (portalEmail && portalUserId) {
+      const workspace = await tx.workspace.create({
+        data: { agencyId: membership.agencyId, name: created.name, kind: "CLIENT" },
+      });
+      await tx.client.update({ where: { id: created.id }, data: { workspaceId: workspace.id } });
+      await tx.membership.create({
+        data: {
+          userId: portalUserId,
+          email: portalEmail,
+          agencyId: membership.agencyId,
+          workspaceId: workspace.id,
+          role: portalRole,
+          status: "ACTIVE",
+          invitedByUserId: session.user.id,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          agencyId: membership.agencyId,
+          actorUserId: session.user.id,
+          actorType: "user",
+          action: "portal.created_direct",
+          resourceType: "client",
+          resourceId: created.id,
+          metadata: { email: portalEmail, role: portalRole },
+        },
+      });
+    }
+
     return created;
   });
 

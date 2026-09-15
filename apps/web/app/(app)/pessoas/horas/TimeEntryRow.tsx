@@ -55,7 +55,7 @@ export function TimeEntryRow({ id, date, minutes, description, taskTitle, edited
             min={1}
             value={newMinutes}
             onChange={(e) => setNewMinutes(e.target.value)}
-            className="h-8 w-24 rounded-md border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+            className="h-8 w-24 rounded-md border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
           />
           <span className="text-xs text-[#98A2B3]">minutos</span>
         </div>
@@ -65,7 +65,7 @@ export function TimeEntryRow({ id, date, minutes, description, taskTitle, edited
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Motivo da correção (obrigatório — folha já enviada)"
-            className="h-8 rounded-md border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+            className="h-8 rounded-md border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
           />
         )}
         {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
@@ -81,7 +81,7 @@ export function TimeEntryRow({ id, date, minutes, description, taskTitle, edited
             type="submit"
             disabled={loading}
             className="flex h-7 items-center justify-center rounded-md px-2 text-xs font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             Salvar
           </button>
@@ -106,7 +106,7 @@ export function TimeEntryRow({ id, date, minutes, description, taskTitle, edited
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-xs font-medium text-[#6847F5] hover:underline"
+          className="text-xs font-medium text-[#FF2B00] hover:underline"
         >
           Editar
         </button>

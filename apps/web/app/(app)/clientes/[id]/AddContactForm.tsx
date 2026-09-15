@@ -43,7 +43,7 @@ export function AddContactForm({ clientId }: { clientId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-sm font-medium text-[#6847F5] hover:underline"
+        className="text-sm font-medium text-[#FF2B00] hover:underline"
       >
         + Adicionar contato
       </button>
@@ -61,7 +61,7 @@ export function AddContactForm({ clientId }: { clientId: string }) {
           type="submit"
           disabled={loading}
           className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Salvando..." : "Salvar"}
         </button>

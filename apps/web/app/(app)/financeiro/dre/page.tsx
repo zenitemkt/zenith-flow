@@ -96,7 +96,7 @@ export default async function DrePage({ searchParams }: PageProps) {
         <h2 className="mb-1 text-sm font-semibold text-[#101828]">Como ler</h2>
         <p className="text-xs text-[#667085]">
           Tudo por <strong>competência</strong> (data de referência do lançamento, não de pagamento) — diferente do
-          fluxo de caixa (<Link href="/financeiro/caixa" className="text-[#6847F5] hover:underline">Fluxo de caixa</Link>),
+          fluxo de caixa (<Link href="/financeiro/caixa" className="text-[#FF2B00] hover:underline">Fluxo de caixa</Link>),
           que é por liquidação. Investimento e transferência entre contas não entram nesta conta, por decisão
           explícita do manual (não alteram o resultado do período). Lançamentos sem categoria são tratados pelo
           tipo (Receita → receita bruta, Despesa → despesa operacional).

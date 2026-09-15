@@ -57,7 +57,7 @@ export function ClientContactItem({ clientId, contact }: { clientId: string; con
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome"
           required
-          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
         />
         <div className="grid grid-cols-2 gap-2">
           <input
@@ -65,20 +65,20 @@ export function ClientContactItem({ clientId, contact }: { clientId: string; con
             onChange={(e) => setEmail(e.target.value)}
             placeholder="E-mail"
             type="email"
-            className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+            className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
           />
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Telefone"
-            className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+            className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
           />
         </div>
         <input
           value={role}
           onChange={(e) => setRole(e.target.value)}
           placeholder="Finalidade (ex.: Geral, Financeiro)"
-          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
         />
         <label className="flex items-center gap-1.5 text-xs text-[#344054]">
           <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} />
@@ -90,7 +90,7 @@ export function ClientContactItem({ clientId, contact }: { clientId: string; con
             type="submit"
             disabled={loading}
             className="flex h-8 items-center justify-center rounded-md px-3 text-xs font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             Salvar
           </button>
@@ -113,7 +113,7 @@ export function ClientContactItem({ clientId, contact }: { clientId: string; con
           <p className="text-sm font-medium text-[#101828]">
             {contact.name}
             {contact.isPrimary && (
-              <span className="ml-2 rounded-full bg-[#F1EDFE] px-1.5 py-0.5 text-[10px] font-semibold text-[#6847F5]">
+              <span className="ml-2 rounded-full bg-[#FFF1EC] px-1.5 py-0.5 text-[10px] font-semibold text-[#FF2B00]">
                 Principal
               </span>
             )}
@@ -126,7 +126,7 @@ export function ClientContactItem({ clientId, contact }: { clientId: string; con
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="text-xs font-medium text-[#6847F5] hover:underline"
+            className="text-xs font-medium text-[#FF2B00] hover:underline"
           >
             Editar
           </button>

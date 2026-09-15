@@ -3,7 +3,6 @@ import {
   Users,
   Briefcase,
   Workflow,
-  FileText,
   Wallet,
   UserCog,
   BarChart3,
@@ -28,6 +27,13 @@ import type { NavigationGroup } from "./types";
  * 2026-09-07): processos do dia a dia (Produção, Comercial, Gestão) vêm logo
  * após a Home; Clientes (carteira/cadastro, acessado com bem menos frequência
  * que o resto) desce para depois de Gestão. Ver docs/DECISIONS.md.
+ *
+ * Sidebar sem accordion (pedido do usuário, 2026-09-08, inspirado no Kiiru):
+ * `href` de cada item com `children` aponta direto para a primeira "subdivisão"
+ * (children[0].href) — o item é sempre um link único, nunca um botão que abre
+ * submenu. `children` deixou de alimentar a sidebar e passou a alimentar as
+ * abas horizontais (`SectionTabs`, em `AppShell`) exibidas no topo do conteúdo
+ * quando a rota ativa bate com uma das subdivisões daquele item.
  */
 export const navigationGroups: NavigationGroup[] = [
   {
@@ -47,33 +53,21 @@ export const navigationGroups: NavigationGroup[] = [
         comingSoon: false,
         children: [
           { id: "operations-board", label: "Quadro", href: "/operacao", comingSoon: false },
+          { id: "operations-calendar", label: "Calendário", href: "/operacao/calendario", comingSoon: false },
+          { id: "operations-library", label: "Biblioteca", href: "/operacao/biblioteca", comingSoon: false },
           { id: "operations-recurring", label: "Recorrências", href: "/operacao/recorrencias", comingSoon: false },
-          { id: "operations-vendors", label: "Fornecedores", href: "/operacao/fornecedores", comingSoon: false },
-        ],
-      },
-      {
-        id: "content",
-        label: "Conteúdo",
-        icon: FileText,
-        href: "/conteudo",
-        comingSoon: false,
-        children: [
-          { id: "content-planning", label: "Planejamento", href: "/conteudo/planejamento", comingSoon: false },
-          { id: "content-calendar", label: "Calendário", href: "/conteudo/calendario", comingSoon: false },
-          { id: "content-library", label: "Biblioteca", href: "/conteudo/biblioteca", comingSoon: false },
-          { id: "content-approvals", label: "Aprovações", href: "/conteudo/aprovacoes", comingSoon: false },
-          { id: "content-publishing", label: "Publicação", href: "/conteudo/publicacao", comingSoon: true },
+          { id: "operations-publishing", label: "Publicação", href: "/operacao/publicacao", comingSoon: true },
         ],
       },
       {
         id: "commercial",
         label: "Comercial",
         icon: Briefcase,
-        href: "/comercial",
+        href: "/comercial/pipeline",
         comingSoon: false,
         children: [
-          { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
           { id: "commercial-pipeline", label: "Pipeline", href: "/comercial/pipeline", comingSoon: false },
+          { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
           { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
           { id: "commercial-campaigns", label: "Campanhas", href: "/comercial/campanhas", comingSoon: false },
           { id: "commercial-products", label: "Produtos", href: "/comercial/produtos", comingSoon: true },
@@ -90,7 +84,7 @@ export const navigationGroups: NavigationGroup[] = [
         id: "finance",
         label: "Financeiro",
         icon: Wallet,
-        href: "/financeiro",
+        href: "/financeiro/visao-geral",
         comingSoon: false,
         children: [
           { id: "finance-overview", label: "Visão geral", href: "/financeiro/visao-geral", comingSoon: false },
@@ -106,7 +100,7 @@ export const navigationGroups: NavigationGroup[] = [
         id: "people",
         label: "Pessoas",
         icon: UserCog,
-        href: "/pessoas",
+        href: "/pessoas/equipe",
         comingSoon: false,
         children: [
           { id: "people-team", label: "Equipe", href: "/pessoas/equipe", comingSoon: false },
@@ -128,7 +122,7 @@ export const navigationGroups: NavigationGroup[] = [
         id: "clients",
         label: "Clientes",
         icon: Users,
-        href: "/clientes",
+        href: "/clientes/carteira",
         comingSoon: false,
         children: [
           { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
@@ -170,13 +164,19 @@ export const navigationGroups: NavigationGroup[] = [
         id: "settings",
         label: "Configurações",
         icon: Settings,
-        href: "/configuracoes",
-        comingSoon: true,
+        href: "/configuracoes/equipe",
+        comingSoon: false,
         children: [
           {
             id: "settings-team",
             label: "Equipe e permissões",
             href: "/configuracoes/equipe",
+            comingSoon: false,
+          },
+          {
+            id: "settings-appearance",
+            label: "Aparência",
+            href: "/configuracoes/aparencia",
             comingSoon: false,
           },
         ],

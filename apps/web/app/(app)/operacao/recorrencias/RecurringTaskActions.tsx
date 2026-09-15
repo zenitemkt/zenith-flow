@@ -46,7 +46,7 @@ export function RecurringTaskActions({
             disabled={loading}
             onClick={() => void call("generate")}
             className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             Gerar agora
           </button>

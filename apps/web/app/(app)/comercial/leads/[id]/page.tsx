@@ -67,7 +67,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
           {lead.convertedClient && (
             <p className="mt-1 text-sm text-[#98A2B3]">
               Convertido em{" "}
-              <Link href={`/clientes/${lead.convertedClient.id}`} className="font-medium text-[#6847F5] hover:underline">
+              <Link href={`/clientes/${lead.convertedClient.id}`} className="font-medium text-[#FF2B00] hover:underline">
                 {lead.convertedClient.name}
               </Link>
             </p>
@@ -141,14 +141,14 @@ export default async function LeadDetailPage({ params }: PageProps) {
               <div
                 key={tp.sessionId}
                 className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                  tp.weight > 0 ? "border-[#6847F5] bg-[#F1EDFE]" : "border-[#EEF0F3]"
+                  tp.weight > 0 ? "border-[#FF2B00] bg-[#FFF1EC]" : "border-[#EEF0F3]"
                 }`}
               >
                 <span className="text-[#101828]">{tp.channel}</span>
                 <span className="flex items-center gap-2 text-xs text-[#98A2B3]">
                   {tp.occurredAt.toLocaleString("pt-BR")}
                   {tp.weight > 0 && (
-                    <span className="rounded-full bg-[#6847F5] px-2 py-0.5 text-[10px] font-semibold text-white">
+                    <span className="rounded-full bg-[#FF2B00] px-2 py-0.5 text-[10px] font-semibold text-white">
                       crédito
                     </span>
                   )}

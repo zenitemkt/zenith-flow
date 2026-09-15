@@ -94,7 +94,7 @@ export function TimerWidget({ tasks }: { tasks: TaskOption[] }) {
         <select
           value={taskId}
           onChange={(e) => setTaskId(e.target.value)}
-          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
         >
           <option value="">Sem tarefa vinculada</option>
           {tasks.map((task) => (
@@ -108,7 +108,7 @@ export function TimerWidget({ tasks }: { tasks: TaskOption[] }) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="O que você fez? (opcional)"
-          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#6847F5]"
+          className="h-9 rounded-lg border border-[#D0D5DD] px-2 text-sm outline-none focus:border-[#FF2B00]"
         />
         {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
         <div className="flex justify-end gap-2">
@@ -123,7 +123,7 @@ export function TimerWidget({ tasks }: { tasks: TaskOption[] }) {
             type="submit"
             disabled={loading}
             className="flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: "#6847F5" }}
+            style={{ backgroundColor: "#FF2B00" }}
           >
             {loading ? "Salvando..." : "Apontar"}
           </button>

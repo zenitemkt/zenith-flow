@@ -32,7 +32,7 @@ export function PublishButton({ workflowId }: { workflowId: string }) {
             type="button"
             disabled={loading}
             onClick={() => void publish()}
-            className="rounded-lg bg-[#6847F5] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-[#FF2B00] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
           >
             {loading ? "Publicando..." : "Confirmar"}
           </button>
@@ -50,7 +50,7 @@ export function PublishButton({ workflowId }: { workflowId: string }) {
       type="button"
       onClick={() => setConfirming(true)}
       className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white"
-      style={{ backgroundColor: "#6847F5" }}
+      style={{ backgroundColor: "#FF2B00" }}
     >
       Publicar
     </button>

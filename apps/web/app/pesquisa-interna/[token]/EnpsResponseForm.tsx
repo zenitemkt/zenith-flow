@@ -45,7 +45,7 @@ export function EnpsResponseForm({ token, commentPrompt }: { token: string; comm
             onClick={() => setScore(n)}
             className={`flex h-10 items-center justify-center rounded-lg border text-sm font-semibold ${
               score === n
-                ? "border-[#6847F5] bg-[#6847F5] text-white"
+                ? "border-[#FF2B00] bg-[#FF2B00] text-white"
                 : "border-[#D0D5DD] text-[#344054] hover:bg-[#F6F7FB]"
             }`}
           >
@@ -68,7 +68,7 @@ export function EnpsResponseForm({ token, commentPrompt }: { token: string; comm
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={3}
-            className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+            className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
           />
         </div>
       )}
@@ -80,7 +80,7 @@ export function EnpsResponseForm({ token, commentPrompt }: { token: string; comm
         disabled={score === null || loading}
         onClick={() => void handleSubmit()}
         className="flex h-11 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Enviando..." : "Enviar resposta anônima"}
       </button>

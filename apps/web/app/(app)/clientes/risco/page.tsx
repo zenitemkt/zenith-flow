@@ -68,7 +68,7 @@ export default async function ChurnRiskPage() {
               {rows.map(({ client, snapshot }) => (
                 <tr key={client.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
                   <td className="px-4 py-3">
-                    <Link href={`/clientes/${client.id}`} className="font-medium text-[#101828] hover:text-[#6847F5]">
+                    <Link href={`/clientes/${client.id}`} className="font-medium text-[#101828] hover:text-[#FF2B00]">
                       {client.name}
                     </Link>
                   </td>

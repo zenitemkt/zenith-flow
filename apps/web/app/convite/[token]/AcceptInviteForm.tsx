@@ -52,7 +52,7 @@ export function AcceptInviteForm({ token, email }: { token: string; email: strin
     return (
       <p className="text-sm text-[#667085]">
         Já existe uma conta com o e-mail <strong>{email}</strong>.{" "}
-        <Link href="/login" className="font-medium text-[#6847F5]">
+        <Link href="/login" className="font-medium text-[#FF2B00]">
           Faça login
         </Link>{" "}
         e peça para quem convidou vincular seu acesso — aceite automático de convite para conta
@@ -89,7 +89,7 @@ export function AcceptInviteForm({ token, email }: { token: string; email: strin
         type="submit"
         disabled={loading}
         className="mt-2 flex h-11 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         {loading ? "Ativando..." : "Aceitar convite e entrar"}
       </button>

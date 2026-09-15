@@ -48,7 +48,7 @@ export function EditProposalForm({ proposalId, initial }: Props) {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -61,7 +61,7 @@ export function EditProposalForm({ proposalId, initial }: Props) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={5}
-          className="min-h-[120px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+          className="min-h-[120px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -74,7 +74,7 @@ export function EditProposalForm({ proposalId, initial }: Props) {
           inputMode="decimal"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#6847F5]"
+          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         />
       </div>
 
@@ -85,7 +85,7 @@ export function EditProposalForm({ proposalId, initial }: Props) {
           type="submit"
           disabled={loading}
           className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Salvando..." : "Salvar alterações"}
         </button>

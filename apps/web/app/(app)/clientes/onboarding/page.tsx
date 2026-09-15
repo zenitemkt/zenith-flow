@@ -63,13 +63,13 @@ export default async function ClientsOnboardingPage() {
       <Link
         key={row.client.id}
         href={`/clientes/${row.client.id}`}
-        className="flex items-center justify-between gap-3 rounded-lg border border-[#EEF0F3] bg-white px-3 py-2.5 hover:border-[#6847F5]"
+        className="flex items-center justify-between gap-3 rounded-lg border border-[#EEF0F3] bg-white px-3 py-2.5 hover:border-[#FF2B00]"
       >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-[#101828]">{row.client.name}</p>
           <div className="mt-1.5 h-1.5 w-full max-w-[240px] overflow-hidden rounded-full bg-[#F2F4F7]">
             <div
-              className="h-full rounded-full bg-[#6847F5]"
+              className="h-full rounded-full bg-[#FF2B00]"
               style={{ width: `${row.percent}%` }}
             />
           </div>

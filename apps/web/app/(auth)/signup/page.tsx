@@ -94,7 +94,7 @@ export default function SignupPage() {
           type="submit"
           disabled={loading}
           className="mt-2 flex h-11 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-          style={{ backgroundColor: "#6847F5" }}
+          style={{ backgroundColor: "#FF2B00" }}
         >
           {loading ? "Criando..." : "Criar agência"}
         </button>
@@ -102,7 +102,7 @@ export default function SignupPage() {
 
       <p className="mt-6 text-center text-sm text-[#667085]">
         Já tem uma conta?{" "}
-        <Link href="/login" className="font-medium text-[#6847F5]">
+        <Link href="/login" className="font-medium text-[#FF2B00]">
           Entrar
         </Link>
       </p>

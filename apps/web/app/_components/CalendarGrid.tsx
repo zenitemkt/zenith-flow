@@ -58,7 +58,7 @@ export function CalendarGrid<T extends CalendarItem>({
                   <p
                     className={`mb-1 text-xs font-semibold ${
                       isToday
-                        ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#6847F5] text-white"
+                        ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#FF2B00] text-white"
                         : "text-[#98A2B3]"
                     }`}
                   >

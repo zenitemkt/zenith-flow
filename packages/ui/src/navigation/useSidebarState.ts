@@ -32,11 +32,7 @@ export interface SidebarState {
   expanded: boolean;
   /** true quando o usuário fixou o menu aberto manualmente. */
   pinned: boolean;
-  /** id do grupo com submenu aberto, ou null. */
-  openSubmenuId: string | null;
   togglePinned: () => void;
-  toggleSubmenu: (id: string) => void;
-  closeSubmenu: () => void;
   handlers: {
     onMouseEnter: () => void;
     onMouseLeave: () => void;
@@ -49,7 +45,6 @@ export function useSidebarState(): SidebarState {
   const [pinned, setPinned] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [openSubmenuId, setOpenSubmenuId] = useState<string | null>(null);
   const collapseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -98,21 +93,12 @@ export function useSidebarState(): SidebarState {
 
   useEffect(() => clearCollapseTimeout, [clearCollapseTimeout]);
 
-  const toggleSubmenu = useCallback((id: string) => {
-    setOpenSubmenuId((prev) => (prev === id ? null : id));
-  }, []);
-
-  const closeSubmenu = useCallback(() => setOpenSubmenuId(null), []);
-
   const expanded = pinned || hovering || focused;
 
   return {
     expanded,
     pinned,
-    openSubmenuId,
     togglePinned,
-    toggleSubmenu,
-    closeSubmenu,
     handlers: { onMouseEnter, onMouseLeave, onFocus, onBlur },
   };
 }

@@ -169,7 +169,7 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
                           value={lostReason}
                           onChange={(e) => setLostReason(e.target.value)}
                           placeholder="Motivo da perda"
-                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#6847F5]"
+                          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
                         />
                         <div className="flex gap-1">
                           <button

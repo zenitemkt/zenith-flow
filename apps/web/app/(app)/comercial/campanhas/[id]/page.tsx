@@ -60,7 +60,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
             {campaign.client && (
               <>
                 {" · "}
-                <Link href={`/clientes/${campaign.client.id}`} className="font-medium text-[#6847F5] hover:underline">
+                <Link href={`/clientes/${campaign.client.id}`} className="font-medium text-[#FF2B00] hover:underline">
                   {campaign.client.name}
                 </Link>{" "}
                 <span className="text-xs text-[#98A2B3]">(visível no portal em Tráfego pago)</span>
@@ -135,7 +135,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
                 key={m}
                 href={`/comercial/campanhas/${campaign.id}?model=${m}`}
                 className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                  m === model ? "bg-[#6847F5] text-white" : "border border-[#D0D5DD] text-[#344054]"
+                  m === model ? "bg-[#FF2B00] text-white" : "border border-[#D0D5DD] text-[#344054]"
                 }`}
               >
                 {ATTRIBUTION_MODEL_LABELS[m]}
@@ -159,7 +159,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
               <Link
                 key={row.leadId}
                 href={`/comercial/leads/${row.leadId}`}
-                className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm hover:border-[#6847F5]"
+                className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm hover:border-[#FF2B00]"
               >
                 <span className="font-medium text-[#101828]">{row.leadName}</span>
                 <span className="flex items-center gap-3 text-xs text-[#667085]">

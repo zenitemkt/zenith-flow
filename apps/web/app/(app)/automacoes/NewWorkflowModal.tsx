@@ -50,7 +50,7 @@ export function NewWorkflowModal() {
         type="button"
         onClick={() => setOpen(true)}
         className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#6847F5" }}
+        style={{ backgroundColor: "#FF2B00" }}
       >
         Nova automação
       </button>
@@ -65,7 +65,7 @@ export function NewWorkflowModal() {
               id="triggerEvent"
               value={triggerEvent}
               onChange={(e) => setTriggerEvent(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#6847F5] focus:ring-2 focus:ring-[#EDE9FE]"
+              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             >
               {TRIGGER_EVENTS.map((t) => (
                 <option key={t.event} value={t.event}>
@@ -89,7 +89,7 @@ export function NewWorkflowModal() {
               type="submit"
               disabled={loading}
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#6847F5" }}
+              style={{ backgroundColor: "#FF2B00" }}
             >
               {loading ? "Criando..." : "Criar automação"}
             </button>
