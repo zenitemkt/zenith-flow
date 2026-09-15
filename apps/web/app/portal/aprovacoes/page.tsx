@@ -1,6 +1,7 @@
 import { requirePortalContext } from "@/lib/portal";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
 import { prisma } from "@zenith/db";
+import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { PortalApprovalActions } from "./PortalApprovalActions";
 
 export default async function PortalApprovalsPage() {
@@ -43,27 +44,20 @@ export default async function PortalApprovalsPage() {
               const item = approval.contentVersion.contentItem;
               return (
                 <div key={approval.id} className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-[#101828]">{item.title}</p>
-                      <p className="text-xs text-[#98A2B3]">
-                        {CONTENT_CHANNEL_LABELS[item.channel]} · v{approval.contentVersion.versionNumber}
-                      </p>
-                      {item.caption && (
-                        <p className="mt-2 max-w-md text-sm text-[#475467]">{item.caption}</p>
-                      )}
-                    </div>
-                    {approval.contentVersion.assetUrl && (
-                      <a
-                        href={approval.contentVersion.assetUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="whitespace-nowrap text-sm font-medium text-[#FF2B00] hover:underline"
-                      >
-                        Ver material
-                      </a>
+                  <div className="mb-3">
+                    <p className="text-sm font-semibold text-[#101828]">{item.title}</p>
+                    <p className="text-xs text-[#98A2B3]">
+                      {CONTENT_CHANNEL_LABELS[item.channel]} · v{approval.contentVersion.versionNumber}
+                    </p>
+                    {item.caption && (
+                      <p className="mt-2 max-w-md text-sm text-[#475467]">{item.caption}</p>
                     )}
                   </div>
+                  {approval.contentVersion.assetUrl && (
+                    <div className="mb-3">
+                      <MaterialPreview url={approval.contentVersion.assetUrl} />
+                    </div>
+                  )}
                   <PortalApprovalActions contentItemId={item.id} />
                 </div>
               );

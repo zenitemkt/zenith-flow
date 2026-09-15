@@ -11,16 +11,22 @@ interface ClientOption {
   name: string;
 }
 
+interface PersonOption {
+  userId: string;
+  name: string;
+}
+
 const CHANNELS = Object.entries(CONTENT_CHANNEL_LABELS);
 const FORMAT_OPTIONS = ["Reels", "Carrossel", "Stories", "Post estático", "Vídeo", "Outro"];
 
-export function NewContentModal({ clients }: { clients: ClientOption[] }) {
+export function NewContentModal({ clients, people }: { clients: ClientOption[]; people: PersonOption[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [clientId, setClientId] = useState(clients[0]?.id ?? "");
   const [channels, setChannels] = useState<string[]>(["INSTAGRAM"]);
+  const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [format, setFormat] = useState("");
   const [campaign, setCampaign] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
@@ -32,6 +38,7 @@ export function NewContentModal({ clients }: { clients: ClientOption[] }) {
     setTitle("");
     setDescription("");
     setChannels(["INSTAGRAM"]);
+    setAssigneeUserIds([]);
     setFormat("");
     setCampaign("");
     setScheduledDate("");
@@ -42,6 +49,10 @@ export function NewContentModal({ clients }: { clients: ClientOption[] }) {
 
   function toggleChannel(value: string) {
     setChannels((prev) => (prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]));
+  }
+
+  function toggleAssignee(userId: string) {
+    setAssigneeUserIds((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -60,7 +71,17 @@ export function NewContentModal({ clients }: { clients: ClientOption[] }) {
         fetch("/api/content", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, clientId, channel, format, campaign, scheduledDate, caption }),
+          body: JSON.stringify({
+            title,
+            description,
+            clientId,
+            channel,
+            format,
+            campaign,
+            scheduledDate,
+            caption,
+            assigneeUserIds,
+          }),
         }),
       ),
     );
@@ -141,6 +162,35 @@ export function NewContentModal({ clients }: { clients: ClientOption[] }) {
               ))}
             </select>
           </div>
+          {people.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[#344054]">Responsável (opcional)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {people.map((person) => {
+                  const active = assigneeUserIds.includes(person.userId);
+                  return (
+                    <button
+                      key={person.userId}
+                      type="button"
+                      onClick={() => toggleAssignee(person.userId)}
+                      aria-pressed={active}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                        active
+                          ? "bg-[#FF2B00] text-white"
+                          : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
+                      }`}
+                    >
+                      {person.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-[#98A2B3]">
+                Sem responsável, o card entra na coluna "Backend". Com mais de um, ele entra na coluna de quem foi
+                marcado primeiro.
+              </p>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-[#344054]">
               Canais para publicar

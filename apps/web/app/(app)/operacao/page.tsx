@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageAnyTask } from "@/lib/rbac";
+import { getAgencyMembers } from "@/lib/team";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 import { prisma } from "@zenith/db";
 import { ContentBoard, type BoardContentItem } from "./ContentBoard";
 import { NewContentModal } from "./NewContentModal";
+import { RefreshButton } from "./RefreshButton";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -18,7 +20,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
 
   const activeClientId = searchParams.clientId;
 
-  const [items, clients] = await Promise.all([
+  const [items, clients, people] = await Promise.all([
     prisma.contentItem.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -36,6 +38,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    getAgencyMembers(membership.agencyId),
   ]);
 
   const boardItems: BoardContentItem[] = items.map((item) => {
@@ -51,6 +54,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
       clientName: item.client.name,
       hasVersion: Boolean(latestVersion),
       approvalToken: item.status === "AGUARDANDO_CLIENTE" ? (latestVersion?.approval?.token ?? null) : null,
+      assigneeUserIds: item.assigneeUserIds,
     };
   });
 
@@ -63,7 +67,10 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
             {boardItems.length} peça{boardItems.length === 1 ? "" : "s"} em produção em {membership.agency.name}.
           </p>
         </div>
-        <NewContentModal clients={clients} />
+        <div className="flex items-center gap-2">
+          <RefreshButton />
+          <NewContentModal clients={clients} people={people} />
+        </div>
       </div>
 
       <ClientFilterPills
@@ -72,7 +79,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         buildHref={(clientId) => (clientId ? `/operacao?clientId=${clientId}` : "/operacao")}
       />
 
-      <ContentBoard items={boardItems} canManage={canManageAnyTask(membership.role)} />
+      <ContentBoard items={boardItems} people={people} canManage={canManageAnyTask(membership.role)} />
     </div>
   );
 }

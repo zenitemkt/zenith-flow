@@ -755,6 +755,11 @@ model ContentItem {
   caption       String?
   scheduledDate DateTime?
   status        ContentStatus  @default(IDEIA)
+  /// Ordem importa: o primeiro da lista decide em qual coluna de responsável
+  /// o card cai no Kanban de Operação enquanto ainda está em "A Fazer"
+  /// (Ideia/Pauta) — vazio cai na coluna "Backend" (pedido do usuário,
+  /// 2026-09-15).
+  assigneeUserIds String[]     @default([])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 

@@ -24,6 +24,11 @@ import {
 } from "@/lib/content";
 import { NewVersionModal } from "@/app/(app)/conteudo/[id]/NewVersionModal";
 
+export interface PersonOption {
+  userId: string;
+  name: string;
+}
+
 export interface BoardContentItem {
   id: string;
   title: string;
@@ -35,6 +40,8 @@ export interface BoardContentItem {
   clientName: string;
   hasVersion: boolean;
   approvalToken: string | null;
+  /** Ordem importa: o primeiro decide a coluna de responsável enquanto o card está em "A Fazer". */
+  assigneeUserIds: string[];
 }
 
 const COLUMN_TARGET_STATUS: Partial<Record<ContentBoardColumnId, ContentStatus>> = {
@@ -114,6 +121,7 @@ function ContentCard({
   canDrag,
   busy,
   justSubmittedUrl,
+  assigneeNames,
   onAdvance,
   onSubmit,
   onRefresh,
@@ -122,6 +130,7 @@ function ContentCard({
   canDrag: boolean;
   busy: boolean;
   justSubmittedUrl: string | null;
+  assigneeNames: string[];
   onAdvance: (item: BoardContentItem, toStatus: ContentStatus) => void;
   onSubmit: (item: BoardContentItem) => void;
   onRefresh: () => void;
@@ -151,11 +160,18 @@ function ContentCard({
         {CONTENT_CHANNEL_LABELS[item.channel]}
         {item.format ? ` · ${item.format}` : ""}
       </p>
-      <span
-        className={`mt-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}
-      >
-        {CONTENT_STATUS_LABELS[item.status]}
-      </span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        <span
+          className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}
+        >
+          {CONTENT_STATUS_LABELS[item.status]}
+        </span>
+        {assigneeNames.length > 0 && (
+          <span className="inline-block rounded bg-[#EEF2FF] px-1.5 py-0.5 text-[10px] font-medium text-[#3730A3]">
+            {assigneeNames.join(" + ")}
+          </span>
+        )}
+      </div>
 
       <div className="mt-2 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
         {(item.status === "IDEIA" || item.status === "PAUTA") && (
@@ -168,16 +184,22 @@ function ContentCard({
             Mover pra Fazendo →
           </button>
         )}
-        {item.status === "AJUSTES" && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onAdvance(item, "PRODUCAO")}
-            className="flex h-7 items-center justify-center rounded-md border border-[#D0D5DD] text-[11px] font-medium text-[#344054] hover:border-[#FF2B00] hover:text-[#FF2B00] disabled:opacity-60"
-          >
-            Corrigido, mover pra Produção →
-          </button>
-        )}
+        {(item.status === "PRODUCAO" || item.status === "AJUSTES") &&
+          (item.hasVersion ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onSubmit(item)}
+              className="flex h-7 items-center justify-center rounded-md text-[11px] font-semibold text-white disabled:opacity-60"
+              style={{ backgroundColor: "#FF2B00" }}
+            >
+              Enviar pra cliente aprovar
+            </button>
+          ) : (
+            <div className="[&_button]:h-7 [&_button]:w-full [&_button]:text-[11px]">
+              <NewVersionModal contentId={item.id} />
+            </div>
+          ))}
         {item.status === "REVISAO_INTERNA" && !item.hasVersion && (
           <div className="[&_button]:h-7 [&_button]:w-full [&_button]:text-[11px]">
             <NewVersionModal contentId={item.id} />
@@ -205,6 +227,17 @@ function ContentCard({
             )}
           </div>
         )}
+        {item.status === "APROVADO" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAdvance(item, "AGENDADO")}
+            className="flex h-7 items-center justify-center rounded-md text-[11px] font-semibold text-white disabled:opacity-60"
+            style={{ backgroundColor: "#FF2B00" }}
+          >
+            Mover para Concluído
+          </button>
+        )}
         <ScheduleDateField item={item} onSaved={onRefresh} />
       </div>
 
@@ -227,17 +260,19 @@ function BoardColumn({
   canDrag,
   busyId,
   justSubmitted,
+  peopleById,
   onAdvance,
   onSubmit,
   onRefresh,
 }: {
-  columnId: ContentBoardColumnId;
+  columnId: string;
   title: string;
   items: BoardContentItem[];
   droppable: boolean;
   canDrag: boolean;
   busyId: string | null;
   justSubmitted: Record<string, string>;
+  peopleById: Map<string, string>;
   onAdvance: (item: BoardContentItem, toStatus: ContentStatus) => void;
   onSubmit: (item: BoardContentItem) => void;
   onRefresh: () => void;
@@ -245,8 +280,8 @@ function BoardColumn({
   const { setNodeRef, isOver } = useDroppable({ id: columnId, disabled: !droppable });
 
   return (
-    <div className="flex min-w-[260px] flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
+    <div className="flex min-w-[260px] flex-col gap-2 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
+      <p className="px-0.5 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
         {title} · {items.length}
       </p>
       <div
@@ -262,6 +297,7 @@ function BoardColumn({
             canDrag={canDrag}
             busy={busyId === item.id}
             justSubmittedUrl={justSubmitted[item.id] ?? null}
+            assigneeNames={item.assigneeUserIds.map((id) => peopleById.get(id) ?? "Ex-membro")}
             onAdvance={onAdvance}
             onSubmit={onSubmit}
             onRefresh={onRefresh}
@@ -277,7 +313,23 @@ function BoardColumn({
   );
 }
 
-export function ContentBoard({ items, canManage }: { items: BoardContentItem[]; canManage: boolean }) {
+function sortByScheduledDate(items: BoardContentItem[]): BoardContentItem[] {
+  return [...items].sort((a, b) => {
+    const aTime = a.scheduledDateISO ? new Date(a.scheduledDateISO).getTime() : Infinity;
+    const bTime = b.scheduledDateISO ? new Date(b.scheduledDateISO).getTime() : Infinity;
+    return aTime - bTime;
+  });
+}
+
+export function ContentBoard({
+  items,
+  people,
+  canManage,
+}: {
+  items: BoardContentItem[];
+  people: PersonOption[];
+  canManage: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -288,20 +340,27 @@ export function ContentBoard({ items, canManage }: { items: BoardContentItem[]; 
     useSensor(KeyboardSensor),
   );
 
-  const columns = useMemo(
-    () =>
-      CONTENT_BOARD_COLUMNS.map((column) => ({
-        ...column,
-        items: items
-          .filter((item) => contentBoardColumnForStatus(item.status) === column.id)
-          .sort((a, b) => {
-            const aTime = a.scheduledDateISO ? new Date(a.scheduledDateISO).getTime() : Infinity;
-            const bTime = b.scheduledDateISO ? new Date(b.scheduledDateISO).getTime() : Infinity;
-            return aTime - bTime;
-          }),
-      })),
-    [items],
-  );
+  const peopleById = useMemo(() => new Map(people.map((p) => [p.userId, p.name])), [people]);
+
+  const columns = useMemo(() => {
+    const aFazer = items.filter((item) => contentBoardColumnForStatus(item.status) === "a_fazer");
+    const backendColumn = {
+      id: "backend",
+      title: "Backend",
+      items: sortByScheduledDate(aFazer.filter((item) => item.assigneeUserIds.length === 0)),
+    };
+    const personColumns = people.map((person) => ({
+      id: `person-${person.userId}`,
+      title: person.name,
+      items: sortByScheduledDate(aFazer.filter((item) => item.assigneeUserIds[0] === person.userId)),
+    }));
+    const pipelineColumns = CONTENT_BOARD_COLUMNS.filter((column) => column.id !== "a_fazer").map((column) => ({
+      id: column.id,
+      title: column.title,
+      items: sortByScheduledDate(items.filter((item) => contentBoardColumnForStatus(item.status) === column.id)),
+    }));
+    return [backendColumn, ...personColumns, ...pipelineColumns];
+  }, [items, people]);
 
   async function changeStatus(item: BoardContentItem, toStatus: ContentStatus) {
     setError(null);
@@ -323,6 +382,21 @@ export function ContentBoard({ items, canManage }: { items: BoardContentItem[]; 
   async function submitForApproval(item: BoardContentItem) {
     setError(null);
     setBusyId(item.id);
+
+    if (item.status === "PRODUCAO") {
+      const moveResponse = await fetch(`/api/content/${item.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toStatus: "REVISAO_INTERNA" }),
+      });
+      if (!moveResponse.ok) {
+        const moveBody = await moveResponse.json().catch(() => null);
+        setBusyId(null);
+        setError(moveBody?.error ?? "Não foi possível mover para revisão interna.");
+        return;
+      }
+    }
+
     const response = await fetch(`/api/content/${item.id}/submit`, { method: "POST" });
     const body = await response.json().catch(() => null);
     setBusyId(null);
@@ -334,12 +408,39 @@ export function ContentBoard({ items, canManage }: { items: BoardContentItem[]; 
     router.refresh();
   }
 
+  async function reassign(item: BoardContentItem, assigneeUserIds: string[]) {
+    setError(null);
+    setBusyId(item.id);
+    const response = await fetch(`/api/content/${item.id}/assignees`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assigneeUserIds }),
+    });
+    setBusyId(null);
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Não foi possível mudar o responsável.");
+      return;
+    }
+    router.refresh();
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
     const item = items.find((i) => i.id === String(active.id));
     if (!item) return;
-    const targetColumn = over.id as ContentBoardColumnId;
+    const targetId = String(over.id);
+
+    if (targetId === "backend" || targetId.startsWith("person-")) {
+      const targetUserId = targetId === "backend" ? null : targetId.slice("person-".length);
+      const currentUserId = item.assigneeUserIds[0] ?? null;
+      if (targetUserId === currentUserId) return;
+      await reassign(item, targetUserId ? [targetUserId] : []);
+      return;
+    }
+
+    const targetColumn = targetId as ContentBoardColumnId;
     const currentColumn = contentBoardColumnForStatus(item.status);
     if (targetColumn === currentColumn) return;
     const targetStatus = COLUMN_TARGET_STATUS[targetColumn];
@@ -358,10 +459,11 @@ export function ContentBoard({ items, canManage }: { items: BoardContentItem[]; 
               columnId={column.id}
               title={column.title}
               items={column.items}
-              droppable={column.id in COLUMN_TARGET_STATUS}
+              droppable={column.id === "backend" || column.id.startsWith("person-") || column.id in COLUMN_TARGET_STATUS}
               canDrag={canManage}
               busyId={busyId}
               justSubmitted={justSubmitted}
+              peopleById={peopleById}
               onAdvance={(item, toStatus) => void changeStatus(item, toStatus)}
               onSubmit={(item) => void submitForApproval(item)}
               onRefresh={() => router.refresh()}

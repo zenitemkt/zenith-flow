@@ -1,5 +1,6 @@
 import { prisma } from "@zenith/db";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { ApprovalActions } from "./ApprovalActions";
 
 interface PageProps {
@@ -17,7 +18,7 @@ export default async function AprovarPage({ params }: PageProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F6F7FB] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-sm">
+      <div className="w-full max-w-2xl rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-sm">
         {expired || !approval ? (
           <>
             <h1 className="mb-1 text-lg font-semibold text-[#101828]">Link inválido</h1>
@@ -37,14 +38,17 @@ export default async function AprovarPage({ params }: PageProps) {
             </h1>
 
             {approval.contentVersion.assetUrl && (
-              <a
-                href={approval.contentVersion.assetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mb-3 flex items-center justify-center rounded-lg border border-dashed border-[#D0D5DD] px-4 py-6 text-sm font-medium text-[#FF2B00] hover:bg-[#F6F7FB]"
-              >
-                Ver material (abre em outra aba)
-              </a>
+              <div className="mb-3 flex flex-col gap-1.5">
+                <MaterialPreview url={approval.contentVersion.assetUrl} />
+                <a
+                  href={approval.contentVersion.assetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="self-end text-xs font-medium text-[#98A2B3] hover:text-[#FF2B00] hover:underline"
+                >
+                  Abrir em outra aba ↗
+                </a>
+              </div>
             )}
 
             {approval.contentVersion.contentItem.caption && (

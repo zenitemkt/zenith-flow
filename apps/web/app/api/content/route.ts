@@ -47,6 +47,18 @@ export async function POST(request: Request) {
   const scheduledDateRaw = optionalString(body?.scheduledDate);
   const scheduledDate = scheduledDateRaw ? new Date(scheduledDateRaw) : null;
 
+  const assigneeUserIds = Array.isArray(body?.assigneeUserIds)
+    ? body.assigneeUserIds.filter((id: unknown): id is string => typeof id === "string")
+    : [];
+  if (assigneeUserIds.length > 0) {
+    const validMembers = await prisma.membership.count({
+      where: { agencyId: membership.agencyId, status: "ACTIVE", userId: { in: assigneeUserIds } },
+    });
+    if (validMembers !== new Set(assigneeUserIds).size) {
+      return NextResponse.json({ error: "Responsável inválido para esta agência." }, { status: 400 });
+    }
+  }
+
   const item = await prisma.$transaction(async (tx) => {
     const created = await tx.contentItem.create({
       data: {
@@ -59,6 +71,7 @@ export async function POST(request: Request) {
         campaign: optionalString(body?.campaign),
         caption: optionalString(body?.caption),
         scheduledDate,
+        assigneeUserIds,
       },
     });
     await tx.contentStatusHistory.create({

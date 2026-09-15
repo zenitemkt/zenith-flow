@@ -68,14 +68,20 @@ export default async function PipelinePage() {
         <NewOpportunityModal clients={clients} leads={leads} />
       </div>
 
-      {hasFunnelData && (
-        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-2 text-sm font-semibold text-[#101828]">Funil de oportunidades</h2>
+      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+        <h2 className="mb-2 text-sm font-semibold text-[#101828]">Funil de oportunidades</h2>
+        {hasFunnelData ? (
           <div className="mx-auto w-full max-w-md">
             <FunnelChart data={funnelData} orientation="vertical" color="#FF2B00" layers={3} />
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="py-6 text-center text-sm text-[#667085]">
+            {stages.length === 0
+              ? "Configure os estágios do pipeline e crie a primeira oportunidade para ver o funil."
+              : "Nenhuma oportunidade ainda. Crie a primeira para ver o funil."}
+          </p>
+        )}
+      </section>
 
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
