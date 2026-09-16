@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { reaisToCents, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
+import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenith/db";
 
 function optionalString(value: unknown): string | null {
@@ -111,5 +113,6 @@ export async function POST(request: Request) {
     return created;
   });
 
+  revalidateTag(financeEntriesCacheTag(membership.agencyId));
   return NextResponse.json({ id: entry.id }, { status: 201 });
 }

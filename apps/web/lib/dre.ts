@@ -1,4 +1,6 @@
-import type { FinanceCategoryNature, FinanceEntryType } from "@zenith/db";
+import { unstable_cache } from "next/cache";
+import { prisma, type FinanceCategoryNature, type FinanceEntryType } from "@zenith/db";
+import { financeEntriesCacheTag } from "./finance-cache";
 
 /**
  * Seção 26.2 do manual — cascata do DRE gerencial, por competência (seção
@@ -77,4 +79,26 @@ export function computeDre(entries: DreEntryInput[]): DreResult {
     despesasFinanceirasCents,
     resultadoCents,
   };
+}
+
+/**
+ * Busca cacheada dos lançamentos do mês (a query em si, não o cálculo puro
+ * de `computeDre` acima) — invalidada via `revalidateTag` sempre que uma
+ * rota de `/api/finance/entries` grava em `FinanceEntry` (ver
+ * `financeEntriesCacheTag`). Mês fechado navegado de novo não recalcula.
+ */
+export function getCachedDreEntries(agencyId: string, rangeStart: Date, rangeEnd: Date) {
+  return unstable_cache(
+    () =>
+      prisma.financeEntry.findMany({
+        where: {
+          agencyId,
+          status: { not: "CANCELADO" },
+          competencyDate: { gte: rangeStart, lt: rangeEnd },
+        },
+        include: { category: { select: { nature: true } } },
+      }),
+    ["dre-entries", agencyId, rangeStart.toISOString(), rangeEnd.toISOString()],
+    { tags: [financeEntriesCacheTag(agencyId)] },
+  )();
 }

@@ -1,17 +1,21 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@zenith/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import { FINANCE_TYPE_LABELS } from "@/lib/finance";
+import { DEFAULT_PAGE_SIZE, pageCountFor } from "@/lib/pagination";
 import { prisma, type FinanceEntryType } from "@zenith/db";
 import { NewFinanceEntryModal } from "./NewFinanceEntryModal";
 import { FinanceEntryTable } from "./FinanceEntryTable";
 
-export async function FinanceListPageContent({ type }: { type: FinanceEntryType }) {
+export async function FinanceListPageContent({ type, page }: { type: FinanceEntryType; page: number }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const [entries, categories, clients, projects] = await Promise.all([
+  const [total, entries, categories, clients, projects] = await Promise.all([
+    prisma.financeEntry.count({ where: { agencyId: membership.agencyId, type } }),
     prisma.financeEntry.findMany({
       where: { agencyId: membership.agencyId, type },
       include: {
@@ -22,6 +26,8 @@ export async function FinanceListPageContent({ type }: { type: FinanceEntryType 
         boletoAsset: { select: { id: true, fileName: true } },
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      skip: (page - 1) * DEFAULT_PAGE_SIZE,
+      take: DEFAULT_PAGE_SIZE,
     }),
     prisma.financeCategory.findMany({
       where: { agencyId: membership.agencyId, type },
@@ -41,6 +47,8 @@ export async function FinanceListPageContent({ type }: { type: FinanceEntryType 
 
   const typeLabel = FINANCE_TYPE_LABELS[type];
   const plural = type === "RECEITA" ? "Contas a receber" : "Contas a pagar";
+  const pageCount = pageCountFor(total);
+  const basePath = type === "RECEITA" ? "/financeiro/receber" : "/financeiro/pagar";
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,14 +56,15 @@ export async function FinanceListPageContent({ type }: { type: FinanceEntryType 
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">{plural}</h1>
           <p className="text-sm text-[#667085]">
-            {entries.length} {typeLabel.toLowerCase()}
-            {entries.length === 1 ? "" : "s"} em {membership.agency.name}.
+            {total} {typeLabel.toLowerCase()}
+            {total === 1 ? "" : "s"} em {membership.agency.name}.
           </p>
         </div>
         <NewFinanceEntryModal type={type} categories={categories} clients={clients} projects={projects} />
       </div>
 
       <FinanceEntryTable entries={entries} showBoleto={type === "RECEITA"} />
+      <Pagination page={page} pageCount={pageCount} hrefForPage={(p) => `${basePath}?page=${p}`} linkComponent={Link} />
     </div>
   );
 }

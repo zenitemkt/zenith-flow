@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { isFinanceEntryEditable, reaisToCents } from "@/lib/finance";
+import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma } from "@zenith/db";
 
 interface RouteParams {
@@ -53,5 +55,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     data: { description, amountCents: reaisToCents(amount), dueDate },
   });
 
+  revalidateTag(financeEntriesCacheTag(membership.agencyId));
   return NextResponse.json({ ok: true });
 }

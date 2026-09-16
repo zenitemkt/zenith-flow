@@ -14,6 +14,12 @@
 - `JobStageBoard` (Kanban de vagas): mesmo fix de `useMemo`/agrupamento por `Map` já aplicado ao `PipelineBoard`.
 - `next.config.mjs`: `experimental.optimizePackageImports` para `lucide-react`/`recharts`.
 
+### Performance (Fase 4 — otimizações avançadas)
+
+- Paginação (30 itens/página, `count()` + `skip`/`take` em paralelo, componente `Pagination` novo em `packages/ui`) em `clientes/carteira`, `comercial/leads` e `financeiro/receber`/`pagar` — antes traziam a tabela inteira de uma vez.
+- Cache (`unstable_cache`, tag por agência) na consulta de lançamentos do DRE (`lib/dre.ts`), invalidado via `revalidateTag` nos 6 pontos de escrita de `FinanceEntry` (criar, editar, mudar status, anexar/remover boleto, estornar, criar tarefa de cobrança) — mês fechado navegado de novo não recalcula.
+- Indicadores e Cohort **não** ganharam cache nesta rodada: dependem também de `ClientStatusHistory`, escrito em vários pontos espalhados — mapear a invalidação certa exigiria mais uma fatia dedicada; registrado como pendência.
+
 ### UX — performance percebida
 
 - Novo `ToastProvider`/`useToast()` (`packages/ui`) integrado ao `AppShell` — feedback de sucesso/erro consistente (`aria-live`, auto-dismiss), substituindo mensagens de erro soltas por componente.

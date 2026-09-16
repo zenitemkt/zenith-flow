@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@zenith/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS } from "@/lib/clients";
 import { HEALTH_BAND_BADGE_CLASS, bandForScore } from "@/lib/health-score";
+import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
 import { prisma } from "@zenith/db";
 import { NewClientForm } from "./NewClientForm";
 
@@ -16,24 +18,31 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
   REATIVADO: "bg-[#EEF2FF] text-[#3730A3]",
 };
 
-export default async function CarteiraPage() {
+export default async function CarteiraPage({ searchParams }: { searchParams: { page?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const [clients, healthSnapshots] = await Promise.all([
+  const page = parsePage(searchParams.page);
+
+  const [total, clients] = await Promise.all([
+    prisma.client.count({ where: { agencyId: membership.agencyId } }),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
       include: { contacts: { where: { isPrimary: true }, take: 1 } },
       orderBy: { createdAt: "desc" },
-    }),
-    prisma.healthScoreSnapshot.findMany({
-      where: { agencyId: membership.agencyId },
-      orderBy: { createdAt: "desc" },
-      select: { clientId: true, score: true },
+      skip: (page - 1) * DEFAULT_PAGE_SIZE,
+      take: DEFAULT_PAGE_SIZE,
     }),
   ]);
+  const pageCount = pageCountFor(total);
+
+  const healthSnapshots = await prisma.healthScoreSnapshot.findMany({
+    where: { agencyId: membership.agencyId, clientId: { in: clients.map((c) => c.id) } },
+    orderBy: { createdAt: "desc" },
+    select: { clientId: true, score: true },
+  });
 
   const latestScoreByClientId = new Map<string, number>();
   for (const snapshot of healthSnapshots) {
@@ -48,7 +57,7 @@ export default async function CarteiraPage() {
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">Carteira de clientes</h1>
           <p className="text-sm text-[#667085]">
-            {clients.length} cliente{clients.length === 1 ? "" : "s"} em {membership.agency.name}.
+            {total} cliente{total === 1 ? "" : "s"} em {membership.agency.name}.
           </p>
         </div>
         <NewClientForm />
@@ -113,6 +122,14 @@ export default async function CarteiraPage() {
               })}
             </tbody>
           </table>
+          <div className="px-4 py-3">
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              hrefForPage={(p) => `/clientes/carteira?page=${p}`}
+              linkComponent={Link}
+            />
+          </div>
         </div>
       )}
     </div>

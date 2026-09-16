@@ -25,3 +25,5 @@ export { Skeleton } from "./patterns/Skeleton";
 export type { SkeletonProps } from "./patterns/Skeleton";
 export { ToastProvider, useToast } from "./patterns/ToastProvider";
 export type { ToastContextValue } from "./patterns/ToastProvider";
+export { Pagination } from "./patterns/Pagination";
+export type { PaginationProps } from "./patterns/Pagination";

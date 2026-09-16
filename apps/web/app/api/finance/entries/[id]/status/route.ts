@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionFinanceEntry } from "@/lib/finance";
+import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma, type FinanceEntryStatus } from "@zenith/db";
 
 interface RouteParams {
@@ -58,5 +60,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
   });
 
+  revalidateTag(financeEntriesCacheTag(membership.agencyId));
   return NextResponse.json({ ok: true });
 }

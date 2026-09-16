@@ -1,20 +1,29 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Pagination } from "@zenith/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS } from "@/lib/leads";
+import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
 import { prisma } from "@zenith/db";
 import { NewLeadModal } from "./NewLeadModal";
 
-export default async function LeadsPage() {
+export default async function LeadsPage({ searchParams }: { searchParams: { page?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const leads = await prisma.lead.findMany({
-    where: { agencyId: membership.agencyId },
-    orderBy: { createdAt: "desc" },
-  });
+  const page = parsePage(searchParams.page);
+  const [total, leads] = await Promise.all([
+    prisma.lead.count({ where: { agencyId: membership.agencyId } }),
+    prisma.lead.findMany({
+      where: { agencyId: membership.agencyId },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * DEFAULT_PAGE_SIZE,
+      take: DEFAULT_PAGE_SIZE,
+    }),
+  ]);
+  const pageCount = pageCountFor(total);
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,7 +31,7 @@ export default async function LeadsPage() {
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">Leads</h1>
           <p className="text-sm text-[#667085]">
-            {leads.length} lead{leads.length === 1 ? "" : "s"} em {membership.agency.name} (seção 39 do manual).
+            {total} lead{total === 1 ? "" : "s"} em {membership.agency.name} (seção 39 do manual).
           </p>
         </div>
         <NewLeadModal />
@@ -63,6 +72,9 @@ export default async function LeadsPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-4 py-3">
+            <Pagination page={page} pageCount={pageCount} hrefForPage={(p) => `/comercial/leads?page=${p}`} linkComponent={Link} />
+          </div>
         </div>
       )}
     </div>

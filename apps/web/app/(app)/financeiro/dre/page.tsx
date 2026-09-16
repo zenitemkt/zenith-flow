@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { parseMonth, monthParam, adjacentMonths, MONTH_LABELS } from "@/lib/content-calendar";
-import { computeDre } from "@/lib/dre";
+import { computeDre, getCachedDreEntries } from "@/lib/dre";
 import { formatCents } from "@/lib/finance";
-import { prisma } from "@zenith/db";
 
 interface PageProps {
   searchParams: { month?: string };
@@ -21,14 +20,7 @@ export default async function DrePage({ searchParams }: PageProps) {
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
   const { prevMonth, nextMonth } = adjacentMonths(year, month);
 
-  const entries = await prisma.financeEntry.findMany({
-    where: {
-      agencyId: membership.agencyId,
-      status: { not: "CANCELADO" },
-      competencyDate: { gte: rangeStart, lt: rangeEnd },
-    },
-    include: { category: { select: { nature: true } } },
-  });
+  const entries = await getCachedDreEntries(membership.agencyId, rangeStart, rangeEnd);
 
   const dre = computeDre(entries.map((e) => ({ amountCents: e.amountCents, type: e.type, nature: e.category?.nature ?? null })));
 
