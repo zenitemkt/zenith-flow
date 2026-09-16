@@ -9,6 +9,16 @@
 - `FunnelChart` e `InteractiveContentCalendar` (únicos consumidores de `framer-motion`) agora usam `next/dynamic`, isolando `recharts`/`framer-motion` em chunks separados das rotas Pipeline e Calendário editorial.
 - `PipelineBoard`: agrupamento de oportunidades por estágio memoizado (`useMemo`), evitando refiltrar a lista inteira a cada estágio renderizado.
 - `clientes/[id]`: consultas independentes ao banco (health score, risco de churn, planos de retenção, equipe, membros do portal) agora rodam em paralelo num único `Promise.all`, em vez de 2 delas ficarem fora e serem aguardadas em sequência.
+- Índices compostos aditivos no Prisma (`Opportunity[agencyId,status]`, `FinanceEntry[agencyId,status,dueDate]`, `ContentItem[agencyId,status]`), casando com os filtros reais de Pipeline, Cobranças/Dashboard e Operação (migration `20260916015704_composite_status_indexes`, sem downtime).
+- `getCurrentMembership`: `select` explícito em vez de `include: { agency: true, workspace: true }` — só `agency.name`/`agency.trackingWriteKey` são usados em todo o código (`workspace` nunca é lido); elimina overfetch nos ~50 pontos de chamada por request.
+- `JobStageBoard` (Kanban de vagas): mesmo fix de `useMemo`/agrupamento por `Map` já aplicado ao `PipelineBoard`.
+- `next.config.mjs`: `experimental.optimizePackageImports` para `lucide-react`/`recharts`.
+
+### UX — performance percebida
+
+- Novo `ToastProvider`/`useToast()` (`packages/ui`) integrado ao `AppShell` — feedback de sucesso/erro consistente (`aria-live`, auto-dismiss), substituindo mensagens de erro soltas por componente.
+- Novo `Skeleton` (`packages/ui`) e `loading.tsx` em 5 rotas: fallback genérico em `(app)/` (cobre por padrão toda rota autenticada sem skeleton próprio, via herança de Suspense do App Router) + específicos em Pipeline, Operação, Clientes/Carteira e Financeiro/DRE.
+- `PipelineBoard` (piloto): mover oportunidade de estágio e marcar Ganha/Perdida agora atualizam a tela imediatamente (estado local otimista), com rollback automático e toast de erro se o servidor recusar — antes esperava o round-trip completo (`fetch` → `router.refresh()`) para qualquer feedback visual.
 
 ### Corrigido
 

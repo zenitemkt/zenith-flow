@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@zenith/ui";
 import { formatOpportunityValue } from "@/lib/pipeline";
 
 export interface BoardStage {
@@ -22,6 +23,7 @@ export interface BoardOpportunity {
 
 export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[]; opportunities: BoardOpportunity[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [lostTargetId, setLostTargetId] = useState<string | null>(null);
   const [lostReason, setLostReason] = useState("");
@@ -29,15 +31,26 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
 
   const [stageBusyId, setStageBusyId] = useState<string | null>(null);
 
+  /**
+   * Espelho local de `opportunities`, atualizado otimisticamente antes da
+   * resposta do servidor (mover/ganhar/perder não esperam o round-trip
+   * completo para refletir na tela) e resincronizado sempre que o servidor
+   * manda dados novos via `router.refresh()`.
+   */
+  const [localOpportunities, setLocalOpportunities] = useState(opportunities);
+  useEffect(() => {
+    setLocalOpportunities(opportunities);
+  }, [opportunities]);
+
   const opportunitiesByStage = useMemo(() => {
     const map = new Map<string, BoardOpportunity[]>();
-    for (const opp of opportunities) {
+    for (const opp of localOpportunities) {
       const list = map.get(opp.stageId);
       if (list) list.push(opp);
       else map.set(opp.stageId, [opp]);
     }
     return map;
-  }, [opportunities]);
+  }, [localOpportunities]);
 
   async function moveStage(stageId: string, direction: "left" | "right") {
     setError(null);
@@ -50,15 +63,21 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
     setStageBusyId(null);
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível mover o estágio.");
+      const message = body?.error ?? "Não foi possível mover o estágio.";
+      setError(message);
+      toast.error(message);
       return;
     }
     router.refresh();
   }
 
-  async function move(opportunityId: string, stageId: string) {
+  async function move(opportunityId: string, stageId: string, targetName: string) {
     setError(null);
     setBusyId(opportunityId);
+    const previous = localOpportunities;
+    setLocalOpportunities((current) =>
+      current.map((opp) => (opp.id === opportunityId ? { ...opp, stageId } : opp)),
+    );
     const response = await fetch(`/api/opportunities/${opportunityId}/move`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,16 +85,22 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
     });
     setBusyId(null);
     if (!response.ok) {
+      setLocalOpportunities(previous);
       const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível mover a oportunidade.");
+      const message = body?.error ?? "Não foi possível mover a oportunidade.";
+      setError(message);
+      toast.error(message);
       return;
     }
+    toast.success(`Movida para ${targetName}.`);
     router.refresh();
   }
 
   async function markStatus(opportunityId: string, toStatus: "WON" | "LOST", reason: string | null) {
     setError(null);
     setBusyId(opportunityId);
+    const previous = localOpportunities;
+    setLocalOpportunities((current) => current.filter((opp) => opp.id !== opportunityId));
     const response = await fetch(`/api/opportunities/${opportunityId}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -83,12 +108,16 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
     });
     setBusyId(null);
     if (!response.ok) {
+      setLocalOpportunities(previous);
       const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível atualizar a oportunidade.");
+      const message = body?.error ?? "Não foi possível atualizar a oportunidade.";
+      setError(message);
+      toast.error(message);
       return;
     }
     setLostTargetId(null);
     setLostReason("");
+    toast.success(toStatus === "WON" ? "Oportunidade marcada como ganha." : "Oportunidade marcada como perdida.");
     router.refresh();
   }
 
@@ -145,7 +174,7 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
                             key={target.id}
                             type="button"
                             disabled={busyId === opp.id}
-                            onClick={() => void move(opp.id, target.id)}
+                            onClick={() => void move(opp.id, target.id, target.name)}
                             className="rounded-md border border-[#D0D5DD] px-2 py-1 text-[11px] font-medium text-[#344054] hover:bg-[#F6F7FB] disabled:opacity-40"
                           >
                             {target.name}

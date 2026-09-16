@@ -8,6 +8,7 @@ import type { NavigationGroup } from "../navigation/types";
 import { SectionTabs, findTabbedItemForPath } from "./SectionTabs";
 import { CommandPalette } from "./CommandPalette";
 import { CommandPaletteProvider } from "./CommandPaletteContext";
+import { ToastProvider } from "../patterns/ToastProvider";
 
 export type ThemeMode = "LIGHT" | "DARK";
 
@@ -71,6 +72,7 @@ export function AppShell({
   }, []);
 
   return (
+    <ToastProvider>
     <div className="min-h-screen bg-[#F6F7FB] text-[#101828] dark:bg-[#0B0D12] dark:text-[#F3F4F6]">
       <Sidebar
         groups={groups}
@@ -164,5 +166,6 @@ export function AppShell({
         linkComponent={linkComponent}
       />
     </div>
+    </ToastProvider>
   );
 }
