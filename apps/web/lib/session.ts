@@ -18,10 +18,30 @@ export const getServerSession = cache(async function getServerSession() {
  * qual foi convidado). Troca entre múltiplas agências é FUTURO (seção 7.3 do
  * manual — seletor de workspace) e será implementada quando fizer sentido.
  */
+/**
+ * `select` explícito em vez de `include: { agency: true, workspace: true }`:
+ * só `agency.name` e `agency.trackingWriteKey` são usados em todo o código
+ * (`membership.workspace` nunca é lido) — evita trazer a linha inteira de
+ * `Agency`/`Workspace` em ~50 pontos de chamada por request.
+ */
 export const getCurrentMembership = cache(async function getCurrentMembership(userId: string) {
   return prisma.membership.findFirst({
     where: { userId, status: "ACTIVE" },
-    include: { agency: true, workspace: true },
+    select: {
+      id: true,
+      userId: true,
+      email: true,
+      agencyId: true,
+      workspaceId: true,
+      role: true,
+      status: true,
+      invitedByUserId: true,
+      inviteToken: true,
+      inviteExpiresAt: true,
+      createdAt: true,
+      updatedAt: true,
+      agency: { select: { name: true, trackingWriteKey: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 });

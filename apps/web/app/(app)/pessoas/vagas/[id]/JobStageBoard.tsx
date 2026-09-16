@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export interface BoardStage {
@@ -24,6 +24,16 @@ export function JobStageBoard({ stages, candidates }: { stages: BoardStage[]; ca
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const candidatesByStage = useMemo(() => {
+    const map = new Map<string, BoardCandidate[]>();
+    for (const candidate of candidates) {
+      const list = map.get(candidate.stageId);
+      if (list) list.push(candidate);
+      else map.set(candidate.stageId, [candidate]);
+    }
+    return map;
+  }, [candidates]);
 
   async function moveStage(stageId: string, direction: "left" | "right") {
     setError(null);
@@ -96,7 +106,7 @@ export function JobStageBoard({ stages, candidates }: { stages: BoardStage[]; ca
       {error && <p className="rounded-lg bg-[#FEE4E2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}
       <div className="grid grid-cols-1 gap-4 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4">
         {stages.map((stage, index) => {
-          const stageCandidates = candidates.filter((c) => c.stageId === stage.id);
+          const stageCandidates = candidatesByStage.get(stage.id) ?? [];
           return (
             <div key={stage.id} className="flex min-w-[240px] flex-col gap-2">
               <div className="flex items-center justify-between gap-1">

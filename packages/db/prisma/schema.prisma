@@ -767,6 +767,7 @@ model ContentItem {
   statusHistory ContentStatusHistory[]
 
   @@index([agencyId])
+  @@index([agencyId, status])
   @@index([clientId])
   @@map("content_item")
 }
@@ -1339,6 +1340,7 @@ model FinanceEntry {
   statusHistory FinanceEntryStatusHistory[]
 
   @@index([agencyId])
+  @@index([agencyId, status, dueDate])
   @@index([clientId])
   @@index([projectId])
   @@map("finance_entry")
@@ -1828,6 +1830,7 @@ model Opportunity {
   proposals     Proposal[]
 
   @@index([agencyId])
+  @@index([agencyId, status])
   @@index([clientId])
   @@index([leadId])
   @@index([stageId])
