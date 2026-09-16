@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireSessionAndMembership, getUserThemePreference } from "@/lib/session";
+import { requireSessionAndMembership, getUserThemePreference, getActiveMemberships } from "@/lib/session";
 import { ROLE_LABELS, isClientRole } from "@/lib/rbac";
 import { Shell } from "../_components/Shell";
 
@@ -24,10 +24,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     workspace: membership.agency.name,
   };
 
-  const themePreference = await getUserThemePreference(session.user.id);
+  const [themePreference, memberships] = await Promise.all([
+    getUserThemePreference(session.user.id),
+    getActiveMemberships(session.user.id),
+  ]);
+
+  const agencies = memberships.map((m) => ({ id: m.agencyId, name: m.agency.name }));
 
   return (
-    <Shell currentUser={currentUser} initialTheme={themePreference}>
+    <Shell
+      currentUser={currentUser}
+      initialTheme={themePreference}
+      agencies={agencies}
+      currentAgencyId={membership.agencyId}
+    >
       {children}
     </Shell>
   );

@@ -12,7 +12,8 @@
     "start": "npm run start --workspace=apps/web",
     "lint": "npm run lint --workspace=apps/web",
     "test": "npm run test --workspace=packages/ui && npm run test --workspace=packages/db",
-    "test:watch": "npm run test:watch --workspace=packages/ui"
+    "test:watch": "npm run test:watch --workspace=packages/ui",
+    "postinstall": "npm run generate --workspace=packages/db"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,

@@ -20,6 +20,10 @@ export interface AppShellProps {
   onSignOut?: () => void;
   /** Preferência de tema salva na conta — vinda do servidor, evita "flash" claro/escuro na primeira renderização. */
   initialTheme?: ThemeMode;
+  /** Agências às quais o usuário pertence — alimenta o seletor no cabeçalho do menu. 1 item = sem seletor. */
+  agencies?: { id: string; name: string }[];
+  currentAgencyId?: string;
+  onSwitchAgency?: (agencyId: string) => void;
   children: ReactNode;
 }
 
@@ -30,6 +34,9 @@ export function AppShell({
   currentUser,
   onSignOut,
   initialTheme = "LIGHT",
+  agencies,
+  currentAgencyId,
+  onSwitchAgency,
   children,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -80,6 +87,9 @@ export function AppShell({
         linkComponent={linkComponent}
         currentUser={currentUser}
         onSignOut={onSignOut}
+        agencies={agencies}
+        currentAgencyId={currentAgencyId}
+        onSwitchAgency={onSwitchAgency}
       />
 
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#E4E7EC] bg-white/95 px-4 backdrop-blur dark:border-[#303343] dark:bg-[#171821]/95 md:hidden">

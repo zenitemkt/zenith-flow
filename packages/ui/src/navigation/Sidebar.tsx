@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useId, useRef, type ElementType, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type ElementType, type KeyboardEvent } from "react";
 import {
+  Check,
   ChevronDown,
   HelpCircle,
   Bell,
@@ -25,6 +26,10 @@ export interface SidebarProps {
     workspace: string;
   };
   onSignOut?: () => void;
+  /** Agências do usuário — 2+ habilita o seletor no cabeçalho; 0/1 mantém o rótulo estático. */
+  agencies?: { id: string; name: string }[];
+  currentAgencyId?: string;
+  onSwitchAgency?: (agencyId: string) => void;
 }
 
 const DEFAULT_USER = {
@@ -44,6 +49,9 @@ export function Sidebar({
   linkComponent,
   currentUser = DEFAULT_USER,
   onSignOut,
+  agencies,
+  currentAgencyId,
+  onSwitchAgency,
 }: SidebarProps) {
   const Link = linkComponent ?? "a";
   const { expanded, pinned, togglePinned, handlers } = useSidebarState();
@@ -89,6 +97,9 @@ export function Sidebar({
         Link={Link}
         textTransitionClass={textTransitionClass}
         currentUser={currentUser}
+        agencies={agencies}
+        currentAgencyId={currentAgencyId}
+        onSwitchAgency={onSwitchAgency}
       />
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 [scrollbar-width:thin]">
@@ -125,6 +136,9 @@ function SidebarHeader({
   Link,
   textTransitionClass,
   currentUser,
+  agencies,
+  currentAgencyId,
+  onSwitchAgency,
 }: {
   expanded: boolean;
   pinned: boolean;
@@ -132,7 +146,12 @@ function SidebarHeader({
   Link: ElementType;
   textTransitionClass: string;
   currentUser: { name: string; role: string; workspace: string };
+  agencies?: { id: string; name: string }[];
+  currentAgencyId?: string;
+  onSwitchAgency?: (agencyId: string) => void;
 }) {
+  const canSwitch = (agencies?.length ?? 0) > 1 && Boolean(onSwitchAgency);
+
   return (
     <div className="flex flex-col border-b border-[#303343] px-2 py-3">
       <div className="flex items-center justify-between">
@@ -169,19 +188,98 @@ function SidebarHeader({
       </div>
 
       {expanded && (
-        <button
-          type="button"
-          className={`mt-2 flex items-center gap-2 rounded-lg border border-[#343747] bg-[#232532] px-2 py-2 text-left hover:bg-[#2A2D3D] ${textTransitionClass}`}
-          aria-label={`Workspace atual: ${currentUser.workspace}`}
-        >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-semibold text-[#FF2B00]">
-            {currentUser.workspace.slice(0, 2).toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#F9FAFB]">
-            {currentUser.workspace}
-          </span>
+        <AgencySwitcher
+          workspace={currentUser.workspace}
+          textTransitionClass={textTransitionClass}
+          agencies={agencies}
+          currentAgencyId={currentAgencyId}
+          onSwitchAgency={canSwitch ? onSwitchAgency : undefined}
+        />
+      )}
+    </div>
+  );
+}
+
+function AgencySwitcher({
+  workspace,
+  textTransitionClass,
+  agencies,
+  currentAgencyId,
+  onSwitchAgency,
+}: {
+  workspace: string;
+  textTransitionClass: string;
+  agencies?: { id: string; name: string }[];
+  currentAgencyId?: string;
+  onSwitchAgency?: (agencyId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative mt-2">
+      <button
+        type="button"
+        onClick={() => onSwitchAgency && setOpen((value) => !value)}
+        aria-haspopup={onSwitchAgency ? "listbox" : undefined}
+        aria-expanded={onSwitchAgency ? open : undefined}
+        aria-label={`Agência atual: ${workspace}${onSwitchAgency ? " — trocar de agência" : ""}`}
+        className={`flex w-full items-center gap-2 rounded-lg border border-[#343747] bg-[#232532] px-2 py-2 text-left hover:bg-[#2A2D3D] ${textTransitionClass}`}
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-semibold text-[#FF2B00]">
+          {workspace.slice(0, 2).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#F9FAFB]">
+          {workspace}
+        </span>
+        {onSwitchAgency && (
           <ChevronDown size={14} className="shrink-0 text-[#AEB4C5]" aria-hidden />
-        </button>
+        )}
+      </button>
+
+      {open && onSwitchAgency && agencies && (
+        <ul
+          role="listbox"
+          aria-label="Trocar de agência"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-lg border border-[#343747] bg-[#232532] py-1 shadow-[0_18px_48px_rgba(16,24,40,0.4)]"
+        >
+          {agencies.map((agency) => {
+            const active = agency.id === currentAgencyId;
+            return (
+              <li key={agency.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    setOpen(false);
+                    if (!active) onSwitchAgency(agency.id);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#F9FAFB] hover:bg-[#2A2D3D]"
+                >
+                  <span className="min-w-0 flex-1 truncate">{agency.name}</span>
+                  {active && <Check size={14} className="shrink-0 text-[#FF2B00]" aria-hidden />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );
