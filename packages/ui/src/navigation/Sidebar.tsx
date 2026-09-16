@@ -6,7 +6,6 @@ import {
   ChevronDown,
   HelpCircle,
   Bell,
-  Settings,
   Pin,
   PinOff,
   LogOut,
@@ -409,7 +408,6 @@ function SidebarFooter({
   const footerButtons = [
     { id: "help", label: "Ajuda", icon: HelpCircle, onClick: undefined },
     { id: "notifications", label: "Notificações", icon: Bell, onClick: undefined },
-    { id: "settings", label: "Configurações", icon: Settings, onClick: undefined },
     ...(onSignOut ? [{ id: "sign-out", label: "Sair", icon: LogOut, onClick: onSignOut }] : []),
   ];
 
