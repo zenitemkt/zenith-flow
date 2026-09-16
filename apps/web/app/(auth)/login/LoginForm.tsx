@@ -33,7 +33,7 @@ export function LoginForm() {
   return (
     <>
       <h1 className="mb-1 text-lg font-semibold text-[#101828]">Entrar</h1>
-      <p className="mb-6 text-sm text-[#667085]">Acesse o workspace da sua agência.</p>
+      <p className="mb-6 text-sm text-[#667085]">Acesse o workspace da Zenite Hub Marketing</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <FormField
