@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ElementType, type ReactNode } from "react";
-import { Bell, Menu, Moon, Plus, Search, Sun } from "lucide-react";
+import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { Sidebar } from "../navigation/Sidebar";
 import { MobileDrawer } from "../navigation/MobileDrawer";
 import type { NavigationGroup } from "../navigation/types";
@@ -144,15 +144,6 @@ export function AppShell({
           className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/25 disabled:opacity-60 dark:border-[#303343] dark:bg-[#171821] dark:text-[#CFD3DF] dark:hover:bg-[#232532]"
         >
           {theme === "DARK" ? <Sun size={17} aria-hidden /> : <Moon size={17} aria-hidden />}
-        </button>
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          aria-label="Criar novo"
-          className="flex h-10 items-center gap-2 rounded-[10px] bg-[#FF2B00] px-3.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(255,43,0,0.24)] hover:bg-[#E02600] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/35"
-        >
-          <Plus size={17} aria-hidden />
-          Novo
         </button>
       </header>
 
