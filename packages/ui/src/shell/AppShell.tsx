@@ -147,6 +147,8 @@ export function AppShell({
         </button>
         <button
           type="button"
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Criar novo"
           className="flex h-10 items-center gap-2 rounded-[10px] bg-[#FF2B00] px-3.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(255,43,0,0.24)] hover:bg-[#E02600] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/35"
         >
           <Plus size={17} aria-hidden />
