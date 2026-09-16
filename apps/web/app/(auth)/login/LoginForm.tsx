@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { FormField } from "@/app/_components/FormField";
@@ -67,13 +66,6 @@ export function LoginForm() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-[#667085]">
-        Ainda não tem uma agência?{" "}
-        <Link href="/signup" className="font-medium text-[#FF2B00]">
-          Criar agência
-        </Link>
-      </p>
     </>
   );
 }
