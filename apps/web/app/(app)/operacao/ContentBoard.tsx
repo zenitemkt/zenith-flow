@@ -50,12 +50,17 @@ export interface BoardContentItem {
  * qualquer coluna, mesmo pulando etapas — ex. cliente aprovou pelo
  * WhatsApp e o card vai direto pra Concluído sem passar por aprovação
  * dentro do sistema.
+ * "Concluído" cobre AGENDADO e PUBLICADO (ver CONTENT_BOARD_COLUMNS), mas
+ * arrastar pra lá aplica PUBLICADO — "Agendado" ainda soa como pendente,
+ * e quem arrasta direto pra essa coluna já considera a peça finalizada
+ * (pedido do usuário, 2026-09-16: o log/card mostrava "Agendado" e
+ * confundia por não parecer concluído).
  */
 const COLUMN_TARGET_STATUS: Partial<Record<ContentBoardColumnId, ContentStatus>> = {
   fazendo: "PRODUCAO",
   aguardando_aprovacao: "REVISAO_INTERNA",
   agendar: "APROVADO",
-  concluido: "AGENDADO",
+  concluido: "PUBLICADO",
 };
 
 function toDateInputValue(iso: string | null) {
