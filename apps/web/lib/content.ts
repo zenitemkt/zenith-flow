@@ -28,8 +28,11 @@ export const CONTENT_CHANNEL_LABELS: Record<ContentChannel, string> = {
  * "Pauta" foi removida do fluxo (pedido do usuário, 2026-09-15) — o enum
  * continua existindo por compatibilidade com itens antigos, mas nada novo
  * passa por ela; IDEIA vai direto pra PRODUCAO.
- * AGUARDANDO_CLIENTE não tem transição manual daqui — só sai desse estado
- * via decisão do cliente no link público (POST /api/approvals/:token).
+ * Usado só para sugerir o próximo passo na página do conteúdo
+ * (ContentStatusActions) — não bloqueia mais mudanças fora dessa ordem,
+ * porque o card pode ter avançado fora do sistema (ex.: cliente aprovou
+ * pelo WhatsApp) e o board de Operação permite arrastar entre quaisquer
+ * colunas (pedido do usuário, 2026-09-16).
  */
 export const CONTENT_STATUS_TRANSITIONS: Record<ContentStatus, ContentStatus[]> = {
   IDEIA: ["PRODUCAO"],
@@ -45,7 +48,7 @@ export const CONTENT_STATUS_TRANSITIONS: Record<ContentStatus, ContentStatus[]> 
 };
 
 export function canTransitionContent(from: ContentStatus, to: ContentStatus): boolean {
-  return CONTENT_STATUS_TRANSITIONS[from]?.includes(to) ?? false;
+  return from !== to;
 }
 
 /** Estados a partir dos quais dá pra enviar a versão mais recente para aprovação do cliente. */

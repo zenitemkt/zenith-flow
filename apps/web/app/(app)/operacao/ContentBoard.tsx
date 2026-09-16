@@ -44,9 +44,17 @@ export interface BoardContentItem {
   assigneeUserIds: string[];
 }
 
+/**
+ * Status aplicado quando o card é solto numa coluna do pipeline. Livre
+ * (pedido do usuário, 2026-09-16): dá pra arrastar de qualquer coluna pra
+ * qualquer coluna, mesmo pulando etapas — ex. cliente aprovou pelo
+ * WhatsApp e o card vai direto pra Concluído sem passar por aprovação
+ * dentro do sistema.
+ */
 const COLUMN_TARGET_STATUS: Partial<Record<ContentBoardColumnId, ContentStatus>> = {
   fazendo: "PRODUCAO",
   aguardando_aprovacao: "REVISAO_INTERNA",
+  agendar: "APROVADO",
   concluido: "AGENDADO",
 };
 
@@ -435,8 +443,13 @@ export function ContentBoard({
     if (targetId === "backend" || targetId.startsWith("person-")) {
       const targetUserId = targetId === "backend" ? null : targetId.slice("person-".length);
       const currentUserId = item.assigneeUserIds[0] ?? null;
-      if (targetUserId === currentUserId) return;
-      await reassign(item, targetUserId ? [targetUserId] : []);
+      const needsStatusChange = contentBoardColumnForStatus(item.status) !== "a_fazer";
+      if (needsStatusChange) {
+        await changeStatus(item, "IDEIA");
+      }
+      if (targetUserId !== currentUserId) {
+        await reassign(item, targetUserId ? [targetUserId] : []);
+      }
       return;
     }
 

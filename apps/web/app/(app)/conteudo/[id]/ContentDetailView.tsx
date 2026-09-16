@@ -15,6 +15,8 @@ import { ContentStatusActions } from "./ContentStatusActions";
 import { NewVersionModal } from "./NewVersionModal";
 import { SubmitForApprovalButton } from "./SubmitForApprovalButton";
 import { EditVersionLinkButton } from "./EditVersionLinkButton";
+import { EditContentDetailsButton } from "./EditContentDetailsButton";
+import { ChecklistPanel } from "./ChecklistPanel";
 
 export async function ContentDetailView({ id }: { id: string }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -31,6 +33,7 @@ export async function ContentDetailView({ id }: { id: string }) {
         include: { approval: true },
       },
       statusHistory: { orderBy: { createdAt: "desc" } },
+      checklistItems: { orderBy: { order: "asc" } },
     },
   });
 
@@ -70,6 +73,11 @@ export async function ContentDetailView({ id }: { id: string }) {
           <span className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#475467]">
             {CONTENT_STATUS_LABELS[item.status]}
           </span>
+          <EditContentDetailsButton
+            contentId={item.id}
+            initialTitle={item.title}
+            initialDescription={item.description ?? ""}
+          />
           <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} />
           {canSubmit && <SubmitForApprovalButton contentId={item.id} />}
         </div>
@@ -134,6 +142,8 @@ export async function ContentDetailView({ id }: { id: string }) {
               ))}
             </div>
           </section>
+
+          <ChecklistPanel contentId={item.id} items={item.checklistItems} />
 
           <CommentThreadPanel
             entityType="content_item"

@@ -763,8 +763,9 @@ model ContentItem {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  versions      ContentVersion[]
-  statusHistory ContentStatusHistory[]
+  versions       ContentVersion[]
+  statusHistory  ContentStatusHistory[]
+  checklistItems ContentChecklistItem[]
 
   @@index([agencyId])
   @@index([agencyId, status])
@@ -807,6 +808,22 @@ model ContentApproval {
   createdAt        DateTime       @default(now())
 
   @@map("content_approval")
+}
+
+/// Puramente informativo, mesmo padrão do TaskChecklistItem — não bloqueia
+/// nenhuma transição de status do card.
+model ContentChecklistItem {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+  title         String
+  order         Int
+  done          Boolean     @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([contentItemId])
+  @@map("content_checklist_item")
 }
 
 /// Append-only, mesmo padrão das demais *StatusHistory.
