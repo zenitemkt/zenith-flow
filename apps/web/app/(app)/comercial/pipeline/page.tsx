@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
 import { prisma } from "@zenith/db";
 import { PipelineBoard } from "./PipelineBoard";
 import { NewOpportunityModal } from "./NewOpportunityModal";
-import { FunnelChart, type FunnelStage } from "@/app/_components/charts/FunnelChart";
+import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
+
+/** Code-split: recharts + framer-motion só baixam quando esta rota é visitada. */
+const FunnelChart = dynamic(() =>
+  import("@/app/_components/charts/FunnelChart").then((m) => m.FunnelChart),
+);
 
 export default async function PipelinePage() {
   const { session, membership } = await requireSessionAndMembership();

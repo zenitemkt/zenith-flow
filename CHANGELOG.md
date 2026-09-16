@@ -2,7 +2,17 @@
 
 ## [Unreleased]
 
+### Performance
+
+- Sessão/membership (`getServerSession`/`getCurrentMembership`) agora usam `cache()` do React — eliminadas as consultas duplicadas ao banco que aconteciam a cada navegação (layout raiz + layout da área logada + a própria página revalidavam a mesma sessão e o mesmo tema separadamente).
+- Fonte Inter passou a ser carregada de fato via `next/font/google` (self-hosted, sem request externo em runtime) — antes era só referenciada no CSS sem nenhum mecanismo de carregamento.
+- `FunnelChart` e `InteractiveContentCalendar` (únicos consumidores de `framer-motion`) agora usam `next/dynamic`, isolando `recharts`/`framer-motion` em chunks separados das rotas Pipeline e Calendário editorial.
+- `PipelineBoard`: agrupamento de oportunidades por estágio memoizado (`useMemo`), evitando refiltrar a lista inteira a cada estágio renderizado.
+- `clientes/[id]`: consultas independentes ao banco (health score, risco de churn, planos de retenção, equipe, membros do portal) agora rodam em paralelo num único `Promise.all`, em vez de 2 delas ficarem fora e serem aguardadas em sequência.
+
 ### Corrigido
+
+- `NewContentModal`: aspas retas dentro de JSX trocadas por `&quot;` (erro de lint `react/no-unescaped-entities` que bloqueava o build de produção).
 
 - Revisão completa do board de Operação: "Ver card de origem" às vezes não abria o card (bug no deep-link `?openTask=`, agora corrigido com limpeza de URL em vez de "lembrar" o último id aberto); arrastar um card (drag-and-drop) não iniciava nem fechava o cronômetro de horas — só os botões do popup faziam isso, agora `/api/tasks/:id/move` tem o mesmo comportamento de `/start`/`/pause`/`/complete`; arrastar direto de "A Fazer" pra "Concluído" dava erro (agora funciona, igual ao botão "Concluir").
 - Lentidão no board de Operação: a aplicação estava conectando no host direto do Postgres (Neon) em vez do host pooled recomendado — corrigido em `apps/web/.env.local`/`packages/db/.env` (`DATABASE_URL` agora pooled, `DIRECT_URL` novo só pra migrações). Auto-suspend do plano free do Neon continua existindo (a primeira ação depois de um tempo parado ainda pode demorar um pouco).

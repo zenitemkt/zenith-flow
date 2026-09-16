@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatOpportunityValue } from "@/lib/pipeline";
 
@@ -28,6 +28,16 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
   const [error, setError] = useState<string | null>(null);
 
   const [stageBusyId, setStageBusyId] = useState<string | null>(null);
+
+  const opportunitiesByStage = useMemo(() => {
+    const map = new Map<string, BoardOpportunity[]>();
+    for (const opp of opportunities) {
+      const list = map.get(opp.stageId);
+      if (list) list.push(opp);
+      else map.set(opp.stageId, [opp]);
+    }
+    return map;
+  }, [opportunities]);
 
   async function moveStage(stageId: string, direction: "left" | "right") {
     setError(null);
@@ -87,7 +97,7 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
       {error && <p className="rounded-lg bg-[#FEE4E2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}
       <div className="grid grid-cols-1 gap-4 overflow-x-auto sm:grid-cols-2 lg:grid-cols-4">
         {stages.map((stage, index) => {
-          const stageOpportunities = opportunities.filter((o) => o.stageId === stage.id);
+          const stageOpportunities = opportunitiesByStage.get(stage.id) ?? [];
           return (
             <div key={stage.id} className="flex min-w-[240px] flex-col gap-2">
               <div className="flex items-center justify-between gap-1">

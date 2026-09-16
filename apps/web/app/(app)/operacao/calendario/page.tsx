@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { prisma } from "@zenith/db";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
-import { InteractiveContentCalendar, type CalendarContentItem } from "./InteractiveContentCalendar";
+import type { CalendarContentItem } from "./InteractiveContentCalendar";
+
+/** Code-split: framer-motion só baixa quando esta rota é visitada. */
+const InteractiveContentCalendar = dynamic(() =>
+  import("./InteractiveContentCalendar").then((m) => m.InteractiveContentCalendar),
+);
 
 const NON_PENDING_STATUSES = ["AGENDADO", "PUBLICADO", "ARQUIVADO"] as const;
 

@@ -1,8 +1,10 @@
 # Status de implementação — ZENITH FLOW
 
-Última atualização: 2026-09-07.
+Última atualização: 2026-09-15.
 
 ## Implementado
+
+- **Auditoria de performance (2026-09-15)**: `getServerSession`/`getCurrentMembership` (`apps/web/lib/session.ts`) agora usam `cache()` do React — antes, uma navegação típica revalidava sessão/membership no banco 3x (layout raiz + `(app)/layout.tsx` + a própria página) e a preferência de tema 2x; agora cada um roda só 1x por requisição, sem mudar nenhum comportamento. Fonte "Inter" passou a ser carregada de verdade via `next/font/google` (antes só era referenciada no CSS, sem nenhum `<link>`/`next/font` — o app provavelmente renderizava na fonte do sistema). `FunnelChart` (Pipeline) e `InteractiveContentCalendar` (Calendário editorial) — os dois únicos pontos que usam `framer-motion` — passaram a ser importados via `next/dynamic`, isolando `recharts`/`framer-motion` em chunks próprios. `PipelineBoard` agrupa oportunidades por estágio com `useMemo` (era um `.filter()` por estágio a cada render). `clientes/[id]/page.tsx` paralelizou todas as queries independentes num único `Promise.all` (eram 2 sequenciais fora dele). Identificado mas **não corrigido nesta rodada** (ver auditoria completa na conversa): ausência de optimistic UI em todo o app (todo fluxo de mutação é `fetch` → `router.refresh()`, sem atualização otimista) e 25+ listagens sem paginação (`findMany` sem `take`) — ambos exigem mudança de padrão mais ampla, tratados como próxima fatia.
 
 - **Fundacao visual Codex premium** (2026-09-11): prototipo navegavel em `/prototype` aprovado pelo usuario e primeira aplicacao no codigo real. `AppShell` ganhou topbar desktop com busca visual/atalho/acoes; `Sidebar` e `MobileDrawer` adotaram a base grafite premium; `SectionTabs` virou barra de abas em pill; Home/X-RAY recebeu lapidacao visual sem alterar regra de negocio. Criado `visualcodex.txt` na raiz com regras para Codex/Claude manterem consistencia visual nas proximas telas.
 

@@ -50,32 +50,27 @@ export default async function ClientProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const latestHealthScore = await prisma.healthScoreSnapshot.findFirst({
-    where: { clientId: client.id },
-    orderBy: { createdAt: "desc" },
-  });
-  const healthBreakdown = latestHealthScore?.breakdown as unknown as HealthScoreBreakdown | undefined;
-
-  const [latestChurnRisk, retentionPlans, teamMembersRaw] = await Promise.all([
+  const [latestHealthScore, latestChurnRisk, retentionPlans, teamMembersRaw, portalMembersRaw] = await Promise.all([
+    prisma.healthScoreSnapshot.findFirst({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
     prisma.churnRiskSnapshot.findFirst({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
     prisma.retentionPlan.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
     getAgencyMembers(membership.agencyId),
-  ]);
-  const churnSignals = latestChurnRisk?.signals as unknown as ChurnRiskSignals | undefined;
-  const teamMemberById = new Map(teamMembersRaw.map((m) => [m.userId, m.name]));
-
-  const portalMembers = client.workspaceId
-    ? (
-        await prisma.membership.findMany({
+    client.workspaceId
+      ? prisma.membership.findMany({
           where: { workspaceId: client.workspaceId },
           select: { id: true, email: true, role: true, status: true },
           orderBy: { createdAt: "asc" },
         })
-      ).filter(
-        (m): m is typeof m & { role: "CLIENT_ADMIN" | "CLIENT_VIEWER" } =>
-          m.role === "CLIENT_ADMIN" || m.role === "CLIENT_VIEWER",
-      )
-    : [];
+      : Promise.resolve(null),
+  ]);
+  const healthBreakdown = latestHealthScore?.breakdown as unknown as HealthScoreBreakdown | undefined;
+  const churnSignals = latestChurnRisk?.signals as unknown as ChurnRiskSignals | undefined;
+  const teamMemberById = new Map(teamMembersRaw.map((m) => [m.userId, m.name]));
+
+  const portalMembers = (portalMembersRaw ?? []).filter(
+    (m): m is typeof m & { role: "CLIENT_ADMIN" | "CLIENT_VIEWER" } =>
+      m.role === "CLIENT_ADMIN" || m.role === "CLIENT_VIEWER",
+  );
 
   const latestRun = client.onboardingRuns[0];
 

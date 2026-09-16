@@ -186,7 +186,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
                 })}
               </div>
               <p className="text-xs text-[#98A2B3]">
-                Sem responsável, o card entra na coluna "Backend". Com mais de um, ele entra na coluna de quem foi
+                Sem responsável, o card entra na coluna &quot;Backend&quot;. Com mais de um, ele entra na coluna de quem foi
                 marcado primeiro.
               </p>
             </div>

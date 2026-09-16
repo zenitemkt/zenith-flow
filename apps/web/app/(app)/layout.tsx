@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-import { requireSessionAndMembership } from "@/lib/session";
+import { requireSessionAndMembership, getUserThemePreference } from "@/lib/session";
 import { ROLE_LABELS, isClientRole } from "@/lib/rbac";
-import { prisma } from "@zenith/db";
 import { Shell } from "../_components/Shell";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -25,13 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     workspace: membership.agency.name,
   };
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { themePreference: true },
-  });
+  const themePreference = await getUserThemePreference(session.user.id);
 
   return (
-    <Shell currentUser={currentUser} initialTheme={user?.themePreference ?? "LIGHT"}>
+    <Shell currentUser={currentUser} initialTheme={themePreference}>
       {children}
     </Shell>
   );

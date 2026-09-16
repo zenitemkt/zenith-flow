@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { getServerSession } from "@/lib/session";
-import { prisma } from "@zenith/db";
+import { Inter } from "next/font/google";
+import { getServerSession, getUserThemePreference } from "@/lib/session";
 import "./globals.css";
+
+/** Auto-hospedada pelo Next (baixada no build, sem request ao Google em runtime). */
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
   title: "ZENITH FLOW",
@@ -10,17 +13,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
-  let isDark = false;
-  if (session) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { themePreference: true },
-    });
-    isDark = user?.themePreference === "DARK";
-  }
+  const isDark = session ? (await getUserThemePreference(session.user.id)) === "DARK" : false;
 
   return (
-    <html lang="pt-BR" className={isDark ? "dark" : undefined}>
+    <html lang="pt-BR" className={`${inter.variable}${isDark ? " dark" : ""}`}>
       <body>{children}</body>
     </html>
   );
