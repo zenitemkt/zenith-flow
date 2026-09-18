@@ -260,7 +260,7 @@ function ContentCard({
         onPointerDown={(e) => e.stopPropagation()}
         aria-label="Abrir peça completa"
         title="Abrir peça completa"
-        className="mt-2 flex h-7 w-7 items-center justify-center self-end rounded-full text-white transition-opacity hover:opacity-90"
+        className="mt-2 flex h-7 w-7 ml-auto items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
         style={{ backgroundColor: "#FF2B00" }}
       >
         <ArrowRight size={14} aria-hidden />
