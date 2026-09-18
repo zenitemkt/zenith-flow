@@ -80,3 +80,34 @@ export function reaisToCents(value: number): number {
 export function isOverdue(entry: { status: FinanceEntryStatus; dueDate: Date }): boolean {
   return entry.status === "PENDENTE" && isPastDueDate(entry.dueDate);
 }
+
+export type FinancePeriod = "this_month" | "last_month" | "last_3_months" | "all";
+
+export const FINANCE_PERIOD_LABELS: Record<FinancePeriod, string> = {
+  this_month: "Este mês",
+  last_month: "Mês passado",
+  last_3_months: "3 meses anteriores",
+  all: "Todo período",
+};
+
+export const FINANCE_PERIODS: FinancePeriod[] = ["this_month", "last_month", "last_3_months", "all"];
+
+/** `?period=` da URL → período válido (qualquer entrada desconhecida cai em "all"). */
+export function parseFinancePeriod(value: string | undefined): FinancePeriod {
+  return value && (FINANCE_PERIODS as string[]).includes(value) ? (value as FinancePeriod) : "all";
+}
+
+/** Faixa de `dueDate` (vencimento) correspondente ao período — `null` = sem filtro ("todo período"). */
+export function financePeriodRange(period: FinancePeriod, now: Date = new Date()): { gte: Date; lt: Date } | null {
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  switch (period) {
+    case "this_month":
+      return { gte: monthStart, lt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)) };
+    case "last_month":
+      return { gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)), lt: monthStart };
+    case "last_3_months":
+      return { gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1)), lt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)) };
+    case "all":
+      return null;
+  }
+}

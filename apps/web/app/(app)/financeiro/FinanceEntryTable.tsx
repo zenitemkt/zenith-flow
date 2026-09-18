@@ -1,7 +1,8 @@
 import type { FinanceEntryStatus, FinanceEntryType } from "@zenith/db";
-import { FINANCE_STATUS_LABELS, formatCents, isOverdue } from "@/lib/finance";
+import { FINANCE_STATUS_LABELS, formatCents, isOverdue, isFinanceEntryEditable } from "@/lib/finance";
 import { FinanceEntryActions } from "./FinanceEntryActions";
 import { AttachBoletoButton } from "./AttachBoletoButton";
+import { EditFinanceEntryButton } from "./EditFinanceEntryButton";
 import { FINANCE_STATUS_TRANSITIONS } from "@/lib/finance";
 
 export interface FinanceEntryRow {
@@ -90,15 +91,25 @@ export function FinanceEntryTable({ entries, showBoleto = false }: { entries: Fi
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  {!isReversal && (
-                    <FinanceEntryActions
-                      entryId={entry.id}
-                      type={entry.type}
-                      status={entry.status}
-                      options={FINANCE_STATUS_TRANSITIONS[entry.status]}
-                      canReverse={entry.status === "LIQUIDADO" && !entry.reversedBy}
-                    />
-                  )}
+                  <div className="flex items-start justify-end gap-1.5">
+                    {!isReversal && isFinanceEntryEditable(entry.status) && (
+                      <EditFinanceEntryButton
+                        entryId={entry.id}
+                        description={entry.description}
+                        amountCents={entry.amountCents}
+                        dueDateISO={entry.dueDate.toISOString().slice(0, 10)}
+                      />
+                    )}
+                    {!isReversal && (
+                      <FinanceEntryActions
+                        entryId={entry.id}
+                        type={entry.type}
+                        status={entry.status}
+                        options={FINANCE_STATUS_TRANSITIONS[entry.status]}
+                        canReverse={entry.status === "LIQUIDADO" && !entry.reversedBy}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             );

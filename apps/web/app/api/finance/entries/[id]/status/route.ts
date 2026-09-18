@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionFinanceEntry } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
+import { endOfDayUTC } from "@/lib/dates";
 import { prisma, type FinanceEntryStatus } from "@zenith/db";
 
 interface RouteParams {
@@ -41,13 +42,29 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Transição de status não permitida." }, { status: 400 });
   }
 
+  /**
+   * O mês que conta pro fluxo de caixa é o da data em que o dinheiro
+   * efetivamente entrou/saiu (settledDate), não o de criação/vencimento —
+   * ex.: boleto enviado dia 28, cliente só paga dia 5 do mês seguinte, esse
+   * recebimento conta no mês do dia 5 (pedido do usuário, 2026-09-18).
+   * Por isso LIQUIDADO exige a data informada por quem está registrando.
+   */
+  let settledDate = entry.settledDate;
+  if (toStatus === "LIQUIDADO") {
+    const raw = typeof body?.settledDate === "string" ? new Date(body.settledDate) : null;
+    if (!raw || isNaN(raw.getTime())) {
+      return NextResponse.json({ error: "Informe a data em que o valor foi recebido/pago." }, { status: 400 });
+    }
+    if (endOfDayUTC(raw) > new Date()) {
+      return NextResponse.json({ error: "A data não pode ser no futuro." }, { status: 400 });
+    }
+    settledDate = raw;
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.financeEntry.update({
       where: { id: entry.id },
-      data: {
-        status: toStatus,
-        settledDate: toStatus === "LIQUIDADO" ? new Date() : entry.settledDate,
-      },
+      data: { status: toStatus, settledDate },
     });
     await tx.financeEntryStatusHistory.create({
       data: {

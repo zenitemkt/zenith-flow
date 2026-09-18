@@ -21,16 +21,18 @@ export function FinanceEntryActions({
   const router = useRouter();
   const [reversing, setReversing] = useState(false);
   const [reason, setReason] = useState("");
+  const [settling, setSettling] = useState(false);
+  const [settledDate, setSettledDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function move(toStatus: FinanceEntryStatus) {
+  async function move(toStatus: FinanceEntryStatus, extra?: { settledDate?: string }) {
     setError(null);
     setLoading(true);
     const response = await fetch(`/api/finance/entries/${entryId}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ toStatus }),
+      body: JSON.stringify({ toStatus, ...extra }),
     });
     setLoading(false);
     if (!response.ok) {
@@ -38,7 +40,14 @@ export function FinanceEntryActions({
       setError(body?.error ?? "Não foi possível mudar o status.");
       return;
     }
+    setSettling(false);
     router.refresh();
+  }
+
+  async function handleSettleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!settledDate) return;
+    await move("LIQUIDADO", { settledDate });
   }
 
   async function handleReverseSubmit(event: FormEvent) {
@@ -59,6 +68,44 @@ export function FinanceEntryActions({
     }
     setReversing(false);
     router.refresh();
+  }
+
+  if (settling) {
+    const label = type === "RECEITA" ? "Data de recebimento" : "Data de pagamento";
+    return (
+      <form onSubmit={handleSettleSubmit} className="flex flex-col gap-2">
+        <label className="text-xs font-medium text-[#344054]" htmlFor={`settle-date-${entryId}`}>
+          {label}
+        </label>
+        <input
+          id={`settle-date-${entryId}`}
+          type="date"
+          autoFocus
+          value={settledDate}
+          onChange={(e) => setSettledDate(e.target.value)}
+          max={new Date().toISOString().slice(0, 10)}
+          className="h-8 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
+        />
+        {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setSettling(false)}
+            className="flex h-7 items-center justify-center rounded-md px-2 text-xs font-medium text-[#475467] hover:bg-[#F6F7FB]"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={loading || !settledDate}
+            className="flex h-7 items-center justify-center rounded-md px-2 text-xs font-semibold text-white disabled:opacity-60"
+            style={{ backgroundColor: "#FF2B00" }}
+          >
+            Confirmar
+          </button>
+        </div>
+      </form>
+    );
   }
 
   if (reversing) {
@@ -104,7 +151,14 @@ export function FinanceEntryActions({
             key={option}
             type="button"
             disabled={loading}
-            onClick={() => void move(option)}
+            onClick={() => {
+              if (option === "LIQUIDADO") {
+                setSettledDate(new Date().toISOString().slice(0, 10));
+                setSettling(true);
+                return;
+              }
+              void move(option);
+            }}
             className="flex h-7 items-center justify-center rounded-md border border-[#D0D5DD] px-2 text-xs font-medium text-[#344054] hover:bg-[#F6F7FB] disabled:opacity-60"
           >
             {FINANCE_STATUS_LABELS[type][option]}
