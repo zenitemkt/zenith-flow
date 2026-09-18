@@ -57,6 +57,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setError(null);
 
     if (channels.length === 0) {

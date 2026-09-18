@@ -16,6 +16,7 @@ import { NewVersionModal } from "./NewVersionModal";
 import { SubmitForApprovalButton } from "./SubmitForApprovalButton";
 import { EditVersionLinkButton } from "./EditVersionLinkButton";
 import { EditContentDetailsButton } from "./EditContentDetailsButton";
+import { DeleteContentButton } from "./DeleteContentButton";
 import { ChecklistPanel } from "./ChecklistPanel";
 
 export async function ContentDetailView({ id }: { id: string }) {
@@ -80,6 +81,7 @@ export async function ContentDetailView({ id }: { id: string }) {
           />
           <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} />
           {canSubmit && <SubmitForApprovalButton contentId={item.id} />}
+          <DeleteContentButton contentId={item.id} title={item.title} />
         </div>
       </div>
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -257,9 +258,12 @@ function ContentCard({
       <Link
         href={`/conteudo/${item.id}`}
         onPointerDown={(e) => e.stopPropagation()}
-        className="mt-2 block text-[11px] font-medium text-[#667085] hover:text-[#FF2B00] hover:underline"
+        aria-label="Abrir peça completa"
+        title="Abrir peça completa"
+        className="mt-2 flex h-7 w-7 items-center justify-center self-end rounded-full text-white transition-opacity hover:opacity-90"
+        style={{ backgroundColor: "#FF2B00" }}
       >
-        Abrir peça completa →
+        <ArrowRight size={14} aria-hidden />
       </Link>
     </div>
   );

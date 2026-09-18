@@ -22,6 +22,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
 
