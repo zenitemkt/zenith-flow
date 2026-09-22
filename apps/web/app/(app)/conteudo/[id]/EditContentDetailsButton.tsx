@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { Modal } from "@zenith/ui";
+import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 
 export function EditContentDetailsButton({

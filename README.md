@@ -1,4 +1,4 @@
-# ZENITH FLOW
+# ZENITE MKT
 
 Agency Operating System — implementação incremental a partir do `ZENITH_FLOW_Manual_Mestre_v2.0.pdf` (fonte de verdade funcional, visual e técnica; ver raiz do repositório).
 

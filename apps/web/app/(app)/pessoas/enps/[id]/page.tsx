@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canViewEnps } from "@/lib/rbac";
 import { ENPS_STATUS_LABELS, ENPS_STATUS_BADGE_CLASS } from "@/lib/enps";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { CampaignActions } from "./CampaignActions";
 import { EditCampaignForm } from "./EditCampaignForm";
 import { CopyLinkButton } from "./CopyLinkButton";

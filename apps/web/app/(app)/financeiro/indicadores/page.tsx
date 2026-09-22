@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { computeDSO, computeLogoChurnRate, INDICATOR_WINDOW_DAYS } from "@/lib/finance-indicators";
 import { statusAsOf } from "@/lib/cohort";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export default async function IndicadoresPage() {
   const { session, membership } = await requireSessionAndMembership();

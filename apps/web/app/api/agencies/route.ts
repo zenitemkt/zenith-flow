@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { slugify, randomSuffix } from "@/lib/slug";
 import { DEFAULT_ONBOARDING_TEMPLATE_NAME, DEFAULT_ONBOARDING_ITEMS } from "@/lib/onboarding";
 import { DEFAULT_PIPELINE_STAGE_NAMES } from "@/lib/pipeline";

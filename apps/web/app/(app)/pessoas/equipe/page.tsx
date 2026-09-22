@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { getAgencyMembers } from "@/lib/team";
 import { EMPLOYEE_STATUS_LABELS } from "@/lib/employees";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewEmployeeModal } from "./NewEmployeeModal";
 import { PositionsPanel } from "./PositionsPanel";
 

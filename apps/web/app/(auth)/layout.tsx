@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           >
             Z
           </span>
-          <span className="text-sm font-semibold tracking-wide text-[#101828]">ZENITH FLOW</span>
+          <span className="text-sm font-semibold tracking-wide text-[#101828]">ZENITE MKT</span>
         </div>
         <div className="rounded-2xl border border-[#E4E7EC] bg-white p-6 shadow-sm">{children}</div>
       </div>

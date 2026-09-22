@@ -12,9 +12,9 @@ import { getXrayDashboard } from "@/lib/dashboard-xray";
 import { DonutChart } from "@/app/_components/charts/DonutChart";
 import { BarsChart } from "@/app/_components/charts/BarsChart";
 import { TrendAreaChart } from "@/app/_components/charts/TrendAreaChart";
-import { KpiCard, AttentionList, MiniPanel, type AttentionItem, type Tone } from "@zenith/ui";
+import { KpiCard, AttentionList, MiniPanel, type AttentionItem, type Tone } from "@zenite-mkt/ui";
 import { AskAiButton } from "@/app/_components/AskAiButton";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 const COCKPIT_BAR_COLORS = ["#FF2B00", "#168F9D", "#316FDC"];
 
@@ -32,7 +32,7 @@ function ThemeHeader({ title, subtitle }: { title: string; subtitle?: string }) 
   return (
     <div className="mt-2 border-t border-[#E4E7EC] pt-6">
       <span className="mb-2 inline-flex items-center rounded-full bg-[#FFF1EC] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#FF2B00]">
-        Raio-x Zenith
+        Raio-x Zenite
       </span>
       <h2 className="text-lg font-semibold text-[#101828]">{title}</h2>
       {subtitle && <p className="mt-1 text-sm text-[#667085]">{subtitle}</p>}
@@ -351,9 +351,9 @@ export default async function HomePage() {
         </MiniPanel>
         <MiniPanel
           icon={<Sparkles size={15} aria-hidden />}
-          title="Zenith AI"
+          title="Zenite AI"
           ctaLabel="Saber mais"
-          href="/zenith-ai"
+          href="/zenite-ai"
           linkComponent={Link}
         >
           Assistente de IA ainda não habilitado para esta agência.

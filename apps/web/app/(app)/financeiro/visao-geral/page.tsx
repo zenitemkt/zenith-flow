@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { formatCents } from "@/lib/finance";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { TrendAreaChart } from "@/app/_components/charts/TrendAreaChart";
 
 const MONTH_LABELS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { LEAVE_TYPE_LABELS, LEAVE_STATUS_LABELS, LEAVE_STATUS_TRANSITIONS } from "@/lib/employees";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { LeaveStatusActions } from "../equipe/[id]/LeaveStatusActions";
 
 const LEAVE_STATUS_BADGE_CLASS: Record<string, string> = {

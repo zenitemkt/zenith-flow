@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pagination } from "@zenith/ui";
+import { Pagination } from "@zenite-mkt/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS } from "@/lib/leads";
 import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewLeadModal } from "./NewLeadModal";
 
 export default async function LeadsPage({ searchParams }: { searchParams: { page?: string } }) {

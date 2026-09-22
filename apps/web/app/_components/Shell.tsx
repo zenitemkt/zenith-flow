@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AppShell, navigationGroups, type ThemeMode } from "@zenith/ui";
+import { AppShell, navigationGroups, type ThemeMode } from "@zenite-mkt/ui";
 import { authClient } from "@/lib/auth-client";
 
 interface ShellProps {

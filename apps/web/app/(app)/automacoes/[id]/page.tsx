@@ -9,7 +9,7 @@ import {
   findTriggerEvent,
   type WorkflowStep,
 } from "@/lib/workflows";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { WorkflowStatusActions } from "./WorkflowStatusActions";
 import { PublishButton } from "./PublishButton";
 import { DraftStepBuilder } from "./DraftStepBuilder";

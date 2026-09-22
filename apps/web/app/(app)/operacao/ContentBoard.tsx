@@ -14,7 +14,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import type { ContentChannel, ContentStatus } from "@zenith/db";
+import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
 import {
   CONTENT_BOARD_COLUMNS,
   CONTENT_CHANNEL_LABELS,

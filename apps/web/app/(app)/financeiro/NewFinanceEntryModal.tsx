@@ -2,10 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "@zenith/ui";
+import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { FINANCE_CATEGORY_NATURE_LABELS, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
-import type { FinanceEntryType, FinanceCategoryNature } from "@zenith/db";
+import type { FinanceEntryType, FinanceCategoryNature } from "@zenite-mkt/db";
 
 interface Option {
   id: string;

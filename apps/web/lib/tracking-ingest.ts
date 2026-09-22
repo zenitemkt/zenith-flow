@@ -1,4 +1,4 @@
-import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zenith/db";
+import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zenite-mkt/db";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import {

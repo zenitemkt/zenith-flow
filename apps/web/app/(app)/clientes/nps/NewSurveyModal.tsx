@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "@zenith/ui";
+import { Modal } from "@zenite-mkt/ui";
 import { DEFAULT_NPS_QUESTION, DEFAULT_NPS_COMMENT_PROMPT } from "@/lib/nps";
 
 interface ClientOption {

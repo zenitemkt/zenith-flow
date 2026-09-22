@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma, type RecurrenceMode } from "@zenith/db";
+import { prisma, type RecurrenceMode } from "@zenite-mkt/db";
 import { generateRecurringTaskRun } from "@/lib/recurring-tasks";
 
 function optionalString(value: unknown): string | null {

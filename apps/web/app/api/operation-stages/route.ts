@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { getOrCreateDefaultOperationStage } from "@/lib/operation-stages";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Cria uma nova coluna customizável no balde "Fazendo" do board de Operação (pedido do usuário, 2026-09-07). */
 export async function POST(request: Request) {

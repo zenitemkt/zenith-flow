@@ -1,4 +1,4 @@
-import type { OpportunityStatus } from "@zenith/db";
+import type { OpportunityStatus } from "@zenite-mkt/db";
 
 /** Seção 39: "custom pipeline" — 4 estágios padrão semeados no signup, mesmo padrão do onboarding de clientes. Agência edita livremente depois. */
 export const DEFAULT_PIPELINE_STAGE_NAMES = ["Novo contato", "Qualificação", "Proposta enviada", "Negociação"];

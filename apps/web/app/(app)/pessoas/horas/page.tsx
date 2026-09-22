@@ -7,7 +7,7 @@ import {
   startOfWeekUTC,
   formatMinutes,
 } from "@/lib/timesheets";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewTimeEntryForm } from "./NewTimeEntryForm";
 import { TimerWidget } from "./TimerWidget";
 import { TimeEntryRow } from "./TimeEntryRow";

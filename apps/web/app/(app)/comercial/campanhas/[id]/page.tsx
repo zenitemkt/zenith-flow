@@ -4,7 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS, CAMPAIGN_STATUS_TRANSITIONS } from "@/lib/campaigns";
 import { formatCents } from "@/lib/finance";
 import { ATTRIBUTION_MODELS, ATTRIBUTION_MODEL_LABELS, computeCampaignAttribution, type AttributionModel } from "@/lib/attribution";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { CampaignStatusActions } from "./CampaignStatusActions";
 import { AddDailyMetricForm } from "./AddDailyMetricForm";
 
@@ -128,7 +128,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[#101828]">Atribuição Zenith</h2>
+          <h2 className="text-sm font-semibold text-[#101828]">Atribuição Zenite</h2>
           <div className="flex gap-1.5">
             {ATTRIBUTION_MODELS.map((m) => (
               <Link
@@ -144,7 +144,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           </div>
         </div>
         <p className="mb-3 text-xs text-[#98A2B3]">
-          Calculada a partir do tracking e do CRM próprios do Zenith Flow — pode divergir do que a plataforma de
+          Calculada a partir do tracking e do CRM próprios do Zenite Mkt — pode divergir do que a plataforma de
           anúncios reporta acima (janela, identidade e modelagem diferentes). Nunca são a mesma coisa.
         </p>
         <div className="mb-3 rounded-lg border border-[#EEF0F3] p-3">

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "@zenith/ui";
+import { Modal } from "@zenite-mkt/ui";
 import { DEFAULT_ENPS_QUESTION, DEFAULT_ENPS_COMMENT_PROMPT } from "@/lib/enps";
 
 interface EmployeeOption {

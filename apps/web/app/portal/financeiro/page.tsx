@@ -1,6 +1,6 @@
 import { requirePortalContext } from "@/lib/portal";
 import { FINANCE_STATUS_LABELS, formatCents, isOverdue } from "@/lib/finance";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   PREVISTO: "bg-[#F2F4F7] text-[#475467]",

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
 import { generateTrackingWriteKey } from "@/lib/tracking-server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Gera (ou rotaciona) a chave pública do coletor — invalida o snippet já publicado no site do cliente. */
 export async function POST() {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { isValidWorkflowStep } from "@/lib/workflows";
-import { prisma, Prisma } from "@zenith/db";
+import { prisma, Prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { WORKFLOW_STATUS_LABELS, WORKFLOW_STATUS_BADGE_CLASS, findTriggerEvent } from "@/lib/workflows";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewWorkflowModal } from "./NewWorkflowModal";
 import { ProcessPendingButton } from "./ProcessPendingButton";
 

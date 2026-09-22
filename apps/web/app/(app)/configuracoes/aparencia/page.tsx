@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ThemeToggleForm } from "./ThemeToggleForm";
 
 export default async function AparenciaPage() {

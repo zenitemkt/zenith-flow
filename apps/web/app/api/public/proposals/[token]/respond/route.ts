@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isProposalExpired } from "@/lib/proposals";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { token: string };

@@ -3,7 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionLead } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { prisma, type LeadStatus } from "@zenith/db";
+import { prisma, type LeadStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

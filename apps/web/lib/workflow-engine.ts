@@ -1,4 +1,4 @@
-import { Prisma, prisma } from "@zenith/db";
+import { Prisma, prisma } from "@zenite-mkt/db";
 import { getOrCreateTaskProject } from "@/lib/task-projects";
 import { interpolate, type ConditionOperator, type WorkflowStep } from "@/lib/workflows";
 

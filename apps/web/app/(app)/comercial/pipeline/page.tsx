@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { PipelineBoard } from "./PipelineBoard";
 import { NewOpportunityModal } from "./NewOpportunityModal";
 import type { FunnelStage } from "@/app/_components/charts/FunnelChart";

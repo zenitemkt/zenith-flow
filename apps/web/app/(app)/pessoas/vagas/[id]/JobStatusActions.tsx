@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { JOB_STATUS_LABELS } from "@/lib/hr-jobs";
-import type { JobStatus } from "@zenith/db";
+import type { JobStatus } from "@zenite-mkt/db";
 
 export function JobStatusActions({ jobId, options }: { jobId: string; options: JobStatus[] }) {
   const router = useRouter();

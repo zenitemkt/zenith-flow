@@ -18,7 +18,7 @@ import {
 import type { NavigationGroup } from "./types";
 
 /**
- * Estrutura de navegação da Fase 1 do ZENITH FLOW (Manual Mestre v2.0, seção 4.4 e
+ * Estrutura de navegação da Fase 1 do ZENITE MKT (Manual Mestre v2.0, seção 4.4 e
  * especificação de sidebar). Todos os itens nascem com comingSoon: true e são
  * habilitados individualmente conforme cada fatia funcional é implementada —
  * ver docs/STATUS.md para o que já está ativo.
@@ -142,7 +142,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "Inteligência e automação",
     items: [
       { id: "automations", label: "Automações", icon: Zap, href: "/automacoes", comingSoon: false },
-      { id: "zenith-ai", label: "Zenith AI", icon: Sparkles, href: "/zenith-ai", comingSoon: true },
+      { id: "zenite-ai", label: "Zenite AI", icon: Sparkles, href: "/zenite-ai", comingSoon: true },
     ],
   },
   {

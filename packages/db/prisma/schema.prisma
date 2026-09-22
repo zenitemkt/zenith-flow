@@ -93,7 +93,7 @@ model Verification {
 }
 
 // ---------------------------------------------------------------------------
-// Domínio ZENITH FLOW — Agência, workspace, membros e RBAC (seção 7 do manual)
+// Domínio ZENITE MKT — Agência, workspace, membros e RBAC (seção 7 do manual)
 // ---------------------------------------------------------------------------
 
 enum WorkspaceKind {
@@ -2113,7 +2113,7 @@ model Campaign {
 
 /// "Métricas diárias" (seção 36) — uma linha por dia por campanha, sempre a
 /// visão "reportada pela plataforma de anúncios" (ou digitada à mão nesta
-/// fatia, sem conector). Nunca confundir com "Atribuição Zenith" (calculada
+/// fatia, sem conector). Nunca confundir com "Atribuição Zenite" (calculada
 /// à parte, sobre dado próprio de tracking+CRM) — a seção 36 é explícita
 /// que as duas podem divergir e precisam de rótulo claro, nunca fingir
 /// equivalência.

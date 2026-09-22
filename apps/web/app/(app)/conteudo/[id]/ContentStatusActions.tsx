@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContentStatus } from "@zenith/db";
+import type { ContentStatus } from "@zenite-mkt/db";
 import { CONTENT_STATUS_LABELS } from "@/lib/content";
 
 export function ContentStatusActions({

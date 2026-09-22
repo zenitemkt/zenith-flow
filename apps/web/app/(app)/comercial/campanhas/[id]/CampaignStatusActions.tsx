@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignStatus } from "@zenith/db";
+import type { CampaignStatus } from "@zenite-mkt/db";
 import { CAMPAIGN_STATUS_LABELS } from "@/lib/campaigns";
 
 export function CampaignStatusActions({ campaignId, options }: { campaignId: string; options: CampaignStatus[] }) {

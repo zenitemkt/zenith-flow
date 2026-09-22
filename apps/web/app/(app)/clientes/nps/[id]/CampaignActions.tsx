@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { SurveyStatus } from "@zenith/db";
+import type { SurveyStatus } from "@zenite-mkt/db";
 
 export function CampaignActions({ campaignId, status }: { campaignId: string; status: SurveyStatus }) {
   const router = useRouter();

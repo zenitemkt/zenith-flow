@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue } from "@/lib/proposals";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ProposalActions } from "./ProposalActions";
 import { EditProposalForm } from "./EditProposalForm";
 import { CopyProposalLinkButton } from "./CopyProposalLinkButton";

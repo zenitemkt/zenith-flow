@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { JOB_STATUS_LABELS, JOB_STATUS_BADGE_CLASS } from "@/lib/hr-jobs";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewJobModal } from "./NewJobModal";
 
 export default async function JobsPage() {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { looksLikeBot, normalizeReferrer, normalizeTrackingUrl, TRACKING_MAX_EVENTS_PER_REQUEST } from "@/lib/tracking";
 import { processTrackingEvent, resolveSession, resolveVisitor } from "@/lib/tracking-ingest";
 

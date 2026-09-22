@@ -10,7 +10,7 @@ import {
   COLLECTION_TASK_ELIGIBLE_STAGES,
   type CollectionStage,
 } from "@/lib/collection-ladder";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { CreateCollectionTaskButton } from "./CreateCollectionTaskButton";
 
 const STAGE_ORDER: CollectionStage[] = ["RECUPERACAO", "ESCALONAR", "ATRASO_3", "ATRASO_1", "VENCIMENTO", "LEMBRETE"];

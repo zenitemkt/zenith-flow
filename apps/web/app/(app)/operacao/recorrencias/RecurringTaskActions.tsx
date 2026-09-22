@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RecurringTaskStatus } from "@zenith/db";
+import type { RecurringTaskStatus } from "@zenite-mkt/db";
 
 export function RecurringTaskActions({
   templateId,

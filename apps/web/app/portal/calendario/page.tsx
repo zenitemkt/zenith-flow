@@ -3,7 +3,7 @@ import { requirePortalContext } from "@/lib/portal";
 import { CONTENT_CHANNEL_LABELS, CONTENT_STATUS_BADGE_CLASS, CONTENT_STATUS_LABELS } from "@/lib/content";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { CalendarGrid } from "@/app/_components/CalendarGrid";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface PageProps {
   searchParams: { month?: string };

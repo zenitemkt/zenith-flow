@@ -1,4 +1,4 @@
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Pessoas internas ativas da agência (workspace kind AGENCY) — usado em seletores de responsável/membro. */
 export async function getAgencyMembers(agencyId: string) {

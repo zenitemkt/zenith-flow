@@ -1,4 +1,4 @@
-import { prisma, type Campaign, type TrackingSession } from "@zenith/db";
+import { prisma, type Campaign, type TrackingSession } from "@zenite-mkt/db";
 
 /**
  * Seção 36 do manual — "Modelos iniciais". `positional` ("posicional

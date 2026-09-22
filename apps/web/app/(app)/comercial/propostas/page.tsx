@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue } from "@/lib/proposals";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewProposalModal } from "./NewProposalModal";
 
 export default async function ProposalsPage() {

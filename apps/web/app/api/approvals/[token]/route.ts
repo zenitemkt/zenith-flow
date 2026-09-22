@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, type ApprovalStatus } from "@zenith/db";
+import { prisma, type ApprovalStatus } from "@zenite-mkt/db";
 import { applyApprovalDecision } from "@/lib/content-approval";
 
 interface RouteParams {

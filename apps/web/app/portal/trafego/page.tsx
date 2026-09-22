@@ -1,12 +1,12 @@
 import { requirePortalContext } from "@/lib/portal";
 import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS } from "@/lib/campaigns";
 import { formatCents } from "@/lib/finance";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /**
  * Somente leitura — o cliente nunca cria/edita campanha nem métrica, só
  * acompanha o que a agência já cadastrou (`/comercial/campanhas`, seção 36).
- * Sem o painel "Atribuição Zenith" (isso é sobre o funil comercial da
+ * Sem o painel "Atribuição Zenite" (isso é sobre o funil comercial da
  * própria agência, seção 39 — não faz sentido pro cliente).
  */
 export default async function PortalTrafegoPage() {

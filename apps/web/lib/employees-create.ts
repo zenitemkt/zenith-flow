@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from "@zenith/db";
+import { prisma, type Prisma } from "@zenite-mkt/db";
 
 type Client = Prisma.TransactionClient | typeof prisma;
 

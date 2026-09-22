@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { headers, cookies } from "next/headers";
 import { auth } from "./auth";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /**
  * `cache()` do React dedupe chamadas com os mesmos argumentos dentro da MESMA

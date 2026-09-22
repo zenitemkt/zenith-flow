@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma, type ContentChannel } from "@zenith/db";
+import { prisma, type ContentChannel } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;

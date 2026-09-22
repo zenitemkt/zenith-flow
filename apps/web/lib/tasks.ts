@@ -1,4 +1,4 @@
-import type { MembershipRole, WorkItemStatus } from "@zenith/db";
+import type { MembershipRole, WorkItemStatus } from "@zenite-mkt/db";
 import { canManageAnyTask } from "@/lib/rbac";
 
 /**

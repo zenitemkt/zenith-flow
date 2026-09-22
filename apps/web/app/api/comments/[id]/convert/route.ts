@@ -3,7 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { resolveCommentEntityClientId, type CommentEntityType } from "@/lib/comments";
 import { getOrCreateTaskProject } from "@/lib/task-projects";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

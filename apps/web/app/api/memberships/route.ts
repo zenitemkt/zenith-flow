@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
-import { prisma, type MembershipRole } from "@zenith/db";
+import { prisma, type MembershipRole } from "@zenite-mkt/db";
 
 const INVITABLE_ROLES: MembershipRole[] = ["AGENCY_ADMIN", "MANAGER", "ANALYST", "FINANCE", "HR"];
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;

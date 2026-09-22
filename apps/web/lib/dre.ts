@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { prisma, type FinanceCategoryNature, type FinanceEntryType } from "@zenith/db";
+import { prisma, type FinanceCategoryNature, type FinanceEntryType } from "@zenite-mkt/db";
 import { financeEntriesCacheTag } from "./finance-cache";
 
 /**

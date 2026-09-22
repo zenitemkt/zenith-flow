@@ -88,7 +88,7 @@ export function MobileDrawer({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF2B00] text-xs font-bold text-white">
               Z
             </span>
-            ZENITH FLOW
+            ZENITE MKT
           </span>
           <button
             type="button"

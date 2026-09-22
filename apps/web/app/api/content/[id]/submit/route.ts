@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { SUBMITTABLE_STATUSES } from "@/lib/content";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

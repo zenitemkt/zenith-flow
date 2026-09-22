@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EmployeeStatus } from "@zenith/db";
+import type { EmployeeStatus } from "@zenite-mkt/db";
 import { EMPLOYEE_STATUS_LABELS } from "@/lib/employees";
 
 export function EmployeeStatusActions({

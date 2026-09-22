@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 import type { CalendarContentItem } from "./InteractiveContentCalendar";
 

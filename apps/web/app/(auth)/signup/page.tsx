@@ -58,7 +58,7 @@ export default function SignupPage() {
           required
           value={agencyName}
           onChange={(e) => setAgencyName(e.target.value)}
-          placeholder="Zenith Marketing e Mídia"
+          placeholder="Zenite Mkt"
         />
         <FormField
           label="Seu nome"

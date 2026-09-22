@@ -1,4 +1,4 @@
-import { Prisma, prisma, type RecurringTaskStatus, type RecurrenceMode } from "@zenith/db";
+import { Prisma, prisma, type RecurringTaskStatus, type RecurrenceMode } from "@zenite-mkt/db";
 import { getOrCreateTaskProject } from "./task-projects";
 
 export const RECURRING_TASK_STATUS_LABELS: Record<RecurringTaskStatus, string> = {

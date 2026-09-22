@@ -1,4 +1,4 @@
-import type { WorkflowStatus, WorkflowRunStatus, WorkflowStepType } from "@zenith/db";
+import type { WorkflowStatus, WorkflowRunStatus, WorkflowStepType } from "@zenite-mkt/db";
 
 export const WORKFLOW_STATUS_LABELS: Record<WorkflowStatus, string> = {
   RASCUNHO: "Rascunho",

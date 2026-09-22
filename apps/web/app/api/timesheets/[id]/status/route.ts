@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole, canApproveTimesheets } from "@/lib/rbac";
 import { canTransitionTimesheet } from "@/lib/timesheets";
-import { prisma, type TimesheetStatus } from "@zenith/db";
+import { prisma, type TimesheetStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

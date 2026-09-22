@@ -1,4 +1,4 @@
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { bandForScore, HEALTH_BAND_LABELS, type HealthBand } from "./health-score";
 import { CHURN_BAND_LABELS, type ChurnBand } from "./churn-risk";
 import { CLIENT_STATUS_LABELS } from "./clients";
@@ -11,7 +11,7 @@ import { computeDSO, computeLogoChurnRate, INDICATOR_WINDOW_DAYS } from "./finan
 import { statusAsOf } from "./cohort";
 import { startOfWeekUTC } from "./timesheets";
 import { getAgencyMembers } from "./team";
-import type { ClientStatus, LeadStatus, ProposalStatus, ContentStatus, WorkItemStatus, EmployeeStatus } from "@zenith/db";
+import type { ClientStatus, LeadStatus, ProposalStatus, ContentStatus, WorkItemStatus, EmployeeStatus } from "@zenite-mkt/db";
 
 /**
  * X-RAY da agência (Home): consolida, por tema, os indicadores que o dono

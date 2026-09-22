@@ -133,7 +133,7 @@ describe("Sidebar", () => {
       vi.advanceTimersByTime(500);
     });
     expect(nav.getAttribute("data-expanded")).toBe("true");
-    expect(window.localStorage.getItem("zenith:sidebar:pinned")).toBe("true");
+    expect(window.localStorage.getItem("zenite:sidebar:pinned")).toBe("true");
   });
 
   it("renders a coming-soon badge for unimplemented items", () => {

@@ -1,4 +1,4 @@
-import type { MembershipRole } from "@zenith/db";
+import type { MembershipRole } from "@zenite-mkt/db";
 
 /** Rótulos e papéis iniciais — seção 7.1 do manual. */
 export const ROLE_LABELS: Record<MembershipRole, string> = {

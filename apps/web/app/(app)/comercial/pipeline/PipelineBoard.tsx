@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@zenith/ui";
+import { useToast } from "@zenite-mkt/ui";
 import { formatOpportunityValue } from "@/lib/pipeline";
 
 export interface BoardStage {

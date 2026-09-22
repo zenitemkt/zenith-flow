@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pagination } from "@zenith/ui";
+import { Pagination } from "@zenite-mkt/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS } from "@/lib/clients";
 import { HEALTH_BAND_BADGE_CLASS, bandForScore } from "@/lib/health-score";
 import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewClientForm } from "./NewClientForm";
 
 const STATUS_BADGE_CLASS: Record<string, string> = {

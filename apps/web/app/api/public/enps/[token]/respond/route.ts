@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { token: string };

@@ -1,4 +1,4 @@
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { ApprovalActions } from "./ApprovalActions";

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { startOfWeekUTC, roundMinutes } from "@/lib/timesheets";
-import { prisma, type TimeEntrySource } from "@zenith/db";
+import { prisma, type TimeEntrySource } from "@zenite-mkt/db";
 
 const VALID_SOURCES: TimeEntrySource[] = ["MANUAL", "TIMER"];
 

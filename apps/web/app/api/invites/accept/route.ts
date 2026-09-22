@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export async function POST(request: Request) {
   const session = await getServerSession();

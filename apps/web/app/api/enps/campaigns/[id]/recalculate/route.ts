@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canViewEnps } from "@/lib/rbac";
 import { computeEnpsBreakdown } from "@/lib/enps";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

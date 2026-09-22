@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Pagination } from "@zenith/ui";
+import { Pagination } from "@zenite-mkt/ui";
 import { requireSessionAndMembership } from "@/lib/session";
 import {
   FINANCE_TYPE_LABELS,
@@ -10,7 +10,7 @@ import {
   type FinancePeriod,
 } from "@/lib/finance";
 import { DEFAULT_PAGE_SIZE, pageCountFor } from "@/lib/pagination";
-import { prisma, type FinanceEntryType } from "@zenith/db";
+import { prisma, type FinanceEntryType } from "@zenite-mkt/db";
 import { NewFinanceEntryModal } from "./NewFinanceEntryModal";
 import { FinanceEntryTable } from "./FinanceEntryTable";
 

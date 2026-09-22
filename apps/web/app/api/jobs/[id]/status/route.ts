@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { JOB_STATUS_TRANSITIONS } from "@/lib/hr-jobs";
-import { prisma, type JobStatus } from "@zenith/db";
+import { prisma, type JobStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

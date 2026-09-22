@@ -27,7 +27,7 @@ const groups = [
     title: "Inteligência",
     items: [
       { id: "automacoes", label: "Automações", icon: "A" },
-      { id: "zenith-ai", label: "Zenith AI", icon: "AI" },
+      { id: "zenite-ai", label: "Zenite AI", icon: "AI" },
     ],
   },
   {
@@ -100,7 +100,7 @@ function pageHead(title, subtitle, action = "Criar novo") {
   return `
     <div class="page-head">
       <div>
-        <p class="eyebrow">ZENITH FLOW</p>
+        <p class="eyebrow">ZENITE MKT</p>
         <h1>${title}</h1>
         <p class="lead">${subtitle}</p>
       </div>
@@ -189,7 +189,7 @@ function home() {
     <div class="grid three" style="margin-top:16px">
       ${miniPanel("Financeiro", "DSO em 18 dias, cobrança em D+7 para 2 clientes.", "Abrir régua")}
       ${miniPanel("Comercial", "Pipeline com R$ 83 mil em proposta enviada.", "Ver funil")}
-      ${miniPanel("Zenith AI", "Anomalia: margem menor em clientes com muito retrabalho.", "Ver fontes")}
+      ${miniPanel("Zenite AI", "Anomalia: margem menor em clientes com muito retrabalho.", "Ver fontes")}
     </div>
   `;
 }
@@ -334,7 +334,7 @@ function comercial() {
     </div>
     <div class="grid two" style="margin-top:16px">
       <section class="card"><div class="card-title"><h2>Funil comercial</h2><small>Por estágio</small></div>${bars([{label:"Novo",value:82},{label:"Diagnóstico",value:56},{label:"Proposta",value:38},{label:"Negociação",value:24},{label:"Ganho",value:16},{label:"Perdido",value:10}])}</section>
-      <section class="card"><div class="card-title"><h2>Jornada de aquisição</h2><small>Zenith attribution</small></div>${attention([
+      <section class="card"><div class="card-title"><h2>Jornada de aquisição</h2><small>Zenite attribution</small></div>${attention([
         {title:"Google · campanha_brand", meta:"Primeiro toque · 40 sessões", badge:"R$ 18k"},
         {title:"Meta · remarketing_setembro", meta:"Último não direto antes da proposta", badge:"Crédito", tone:"success"},
         {title:"Direto", meta:"Ignorado no Last non-direct", badge:"Contexto"},

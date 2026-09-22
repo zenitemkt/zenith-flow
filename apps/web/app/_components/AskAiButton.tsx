@@ -1,6 +1,6 @@
 "use client";
 
-import { useCommandPalette } from "@zenith/ui";
+import { useCommandPalette } from "@zenite-mkt/ui";
 
 /** Abre o command palette global (Ctrl K) — CTA principal do cabeçalho da Home, como no protótipo. */
 export function AskAiButton() {

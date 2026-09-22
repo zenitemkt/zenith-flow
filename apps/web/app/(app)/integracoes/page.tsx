@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
 import { generateTrackingWriteKey } from "@/lib/tracking-server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { RotateWriteKeyButton } from "./RotateWriteKeyButton";
 import { SendTestEventButton } from "./SendTestEventButton";
 
@@ -32,7 +32,7 @@ export default async function IntegracoesPage() {
     }),
   ]);
 
-  const snippetExample = `fetch("https://SEU_DOMINIO_ZENITH_FLOW/api/collect/v1/events", {
+  const snippetExample = `fetch("https://SEU_DOMINIO_ZENITE_FLOW/api/collect/v1/events", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({

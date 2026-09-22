@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, type TrackingConsentCategory } from "@zenith/db";
+import { prisma, type TrackingConsentCategory } from "@zenite-mkt/db";
 import { TRACKING_CONSENT_CATEGORIES } from "@/lib/tracking";
 import { resolveVisitor } from "@/lib/tracking-ingest";
 

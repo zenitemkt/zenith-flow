@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { buildCohortRows, startOfMonthUTC, COHORT_MONTH_WINDOW } from "@/lib/cohort";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 function retentionCellClass(value: number | null): string {
   if (value === null) return "text-[#D0D5DD]";

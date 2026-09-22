@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { applyApprovalDecision } from "@/lib/content-approval";
-import { prisma, type ApprovalStatus } from "@zenith/db";
+import { prisma, type ApprovalStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { itemId: string };

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageTeam, ROLE_LABELS } from "@/lib/rbac";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { InviteMemberForm } from "./InviteMemberForm";
 
 const STATUS_LABELS: Record<string, string> = {

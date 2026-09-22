@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS } from "@/lib/campaigns";
 import { formatCents } from "@/lib/finance";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewCampaignModal } from "./NewCampaignModal";
 
 export default async function CampaignsPage() {

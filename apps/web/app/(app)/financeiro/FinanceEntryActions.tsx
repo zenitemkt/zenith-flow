@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { FinanceEntryStatus, FinanceEntryType } from "@zenith/db";
+import type { FinanceEntryStatus, FinanceEntryType } from "@zenite-mkt/db";
 import { FINANCE_STATUS_LABELS } from "@/lib/finance";
 
 export function FinanceEntryActions({

@@ -1,4 +1,4 @@
-import { prisma, type CommentStatus, type CommentThreadStatus } from "@zenith/db";
+import { prisma, type CommentStatus, type CommentThreadStatus } from "@zenite-mkt/db";
 
 /**
  * Tipos de entidade comentável — texto livre no banco (não enum), mas

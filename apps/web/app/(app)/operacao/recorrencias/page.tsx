@@ -7,7 +7,7 @@ import {
   formatPeriodLabel,
   hasPendingGeneration,
 } from "@/lib/recurring-tasks";
-import { prisma, type RecurringTaskStatus } from "@zenith/db";
+import { prisma, type RecurringTaskStatus } from "@zenite-mkt/db";
 import { RecurringTaskActions } from "./RecurringTaskActions";
 
 const STATUS_BADGE_CLASS: Record<RecurringTaskStatus, string> = {

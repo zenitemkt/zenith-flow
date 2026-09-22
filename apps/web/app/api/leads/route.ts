@@ -3,7 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;

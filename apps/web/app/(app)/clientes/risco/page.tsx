@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CHURN_BAND_LABELS, CHURN_BAND_BADGE_CLASS } from "@/lib/churn-risk";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export default async function ChurnRiskPage() {
   const { session, membership } = await requireSessionAndMembership();

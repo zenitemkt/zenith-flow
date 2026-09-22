@@ -5,7 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { canTransitionFinanceEntry } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { endOfDayUTC } from "@/lib/dates";
-import { prisma, type FinanceEntryStatus } from "@zenith/db";
+import { prisma, type FinanceEntryStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

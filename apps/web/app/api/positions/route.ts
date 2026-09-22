@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Seção 20 do manual: "cargos" — catálogo simples, sem faixa salarial. */
 export async function POST(request: Request) {

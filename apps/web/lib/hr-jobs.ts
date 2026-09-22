@@ -1,4 +1,4 @@
-import type { JobStatus, CandidateStatus } from "@zenith/db";
+import type { JobStatus, CandidateStatus } from "@zenite-mkt/db";
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   ABERTA: "Aberta",

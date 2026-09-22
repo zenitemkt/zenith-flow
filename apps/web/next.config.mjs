@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@zenith/ui"],
+  transpilePackages: ["@zenite-mkt/ui"],
   reactStrictMode: true,
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],

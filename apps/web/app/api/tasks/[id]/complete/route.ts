@@ -5,7 +5,7 @@ import { advanceAssigneeQueue } from "@/lib/task-assignees";
 import { canActOnTask } from "@/lib/tasks";
 import { closeCurrentRun } from "@/lib/task-timer";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

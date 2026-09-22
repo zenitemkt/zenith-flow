@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const PIN_STORAGE_KEY = "zenith:sidebar:pinned";
+const PIN_STORAGE_KEY = "zenite:sidebar:pinned";
 const COLLAPSE_DELAY_MS = 200;
 
 function readStoredPin(): boolean {

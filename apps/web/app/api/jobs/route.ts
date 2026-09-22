@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { DEFAULT_JOB_STAGE_NAMES } from "@/lib/hr-jobs";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Seção 20: "vaga recebe pipeline configurável" — cada Job semeia seu próprio funil, mesmo padrão do Pipeline comercial. */
 export async function POST(request: Request) {

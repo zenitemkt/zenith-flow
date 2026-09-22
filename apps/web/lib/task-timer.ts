@@ -1,4 +1,4 @@
-import type { Prisma } from "@zenith/db";
+import type { Prisma } from "@zenite-mkt/db";
 import { roundMinutes, startOfWeekUTC } from "@/lib/timesheets";
 
 type TxClient = Prisma.TransactionClient;

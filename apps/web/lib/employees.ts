@@ -1,4 +1,4 @@
-import type { EmployeeStatus, LeaveRequestStatus, LeaveType } from "@zenith/db";
+import type { EmployeeStatus, LeaveRequestStatus, LeaveType } from "@zenite-mkt/db";
 
 export const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
   ATIVO: "Ativo",

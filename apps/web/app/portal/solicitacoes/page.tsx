@@ -1,5 +1,5 @@
 import { requirePortalContext } from "@/lib/portal";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { NewPortalRequestModal } from "./NewPortalRequestModal";
 
 const STATUS_LABELS: Record<string, string> = {

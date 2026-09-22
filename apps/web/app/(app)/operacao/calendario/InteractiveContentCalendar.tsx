@@ -13,7 +13,7 @@ import {
   CONTENT_STATUS_LABELS,
   contentCalendarBucket,
 } from "@/lib/content";
-import type { ContentChannel, ContentStatus } from "@zenith/db";
+import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
 
 export interface CalendarContentItem {
   id: string;

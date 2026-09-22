@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { findTriggerEvent } from "@/lib/workflows";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /** Cria um workflow em rascunho (seção 40) — nasce sem passos, editados depois em /automacoes/:id. */
 export async function POST(request: Request) {

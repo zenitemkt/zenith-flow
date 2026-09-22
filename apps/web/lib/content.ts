@@ -1,4 +1,4 @@
-import type { ContentStatus, ContentChannel } from "@zenith/db";
+import type { ContentStatus, ContentChannel } from "@zenite-mkt/db";
 
 export const CONTENT_STATUS_LABELS: Record<ContentStatus, string> = {
   IDEIA: "Ideia",

@@ -8,7 +8,7 @@ import {
   CONTENT_STATUS_TRANSITIONS,
   SUBMITTABLE_STATUSES,
 } from "@/lib/content";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { loadCommentThreadView, getMentionableMembers } from "@/lib/comments";
 import { CommentThreadPanel } from "@/app/_components/CommentThreadPanel";
 import { ContentStatusActions } from "./ContentStatusActions";

@@ -34,7 +34,7 @@ export interface SidebarProps {
 const DEFAULT_USER = {
   name: "Kevin Belluco",
   role: "Admin da Agência",
-  workspace: "Zenith Marketing e Mídia",
+  workspace: "Zenite Mkt",
 };
 
 function isItemActive(item: NavigationItem, activePath: string): boolean {
@@ -156,7 +156,7 @@ function SidebarHeader({
       <div className="flex items-center justify-between">
         <Link
           href="/"
-          aria-label="Ir para a página inicial do ZENITH FLOW"
+          aria-label="Ir para a página inicial do ZENITE MKT"
           className="flex h-11 min-w-[44px] items-center gap-2 rounded-lg px-2 text-white hover:bg-[#232532]"
         >
           <img
@@ -169,7 +169,7 @@ function SidebarHeader({
             <span
               className={`whitespace-nowrap text-sm font-semibold text-white ${textTransitionClass}`}
             >
-              ZENITH FLOW
+              ZENITE MKT
             </span>
           )}
         </Link>

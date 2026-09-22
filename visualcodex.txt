@@ -1,7 +1,7 @@
-VISUALCODEX - Guia visual para continuar o ZENITH FLOW
+VISUALCODEX - Guia visual para continuar o ZENITE MKT
 
 Objetivo
-Este arquivo deve ser lido por qualquer agente antes de criar ou alterar telas no ZENITH FLOW. A direcao visual base foi definida pelo prototipo em /prototype e aplicada parcialmente no codigo real em packages/ui. A programacao funcional pode continuar normalmente, mas novas telas devem seguir esta linguagem para evitar visual inconsistente.
+Este arquivo deve ser lido por qualquer agente antes de criar ou alterar telas no ZENITE MKT. A direcao visual base foi definida pelo prototipo em /prototype e aplicada parcialmente no codigo real em packages/ui. A programacao funcional pode continuar normalmente, mas novas telas devem seguir esta linguagem para evitar visual inconsistente.
 
 Fonte funcional
 1. O Manual Mestre continua sendo a fonte de verdade funcional, tecnica e visual: ZENITH_FLOW_Manual_Mestre_v2.0 (1).pdf.
@@ -20,7 +20,7 @@ Direcao visual
 1. Produto premium, sereno, operacional e objetivo.
 2. Base clara: canvas #F6F7FB, cards #FFFFFF, bordas #E4E7EC.
 3. Sidebar grafite: #171821 com divisorias #303343 e itens ativos em #2A2D3D.
-4. Roxo Zenith #6847F5 deve ser acento de marca, CTA, foco e item ativo. Nao transformar tudo em roxo.
+4. Roxo Zenite #6847F5 deve ser acento de marca, CTA, foco e item ativo. Nao transformar tudo em roxo.
 5. Cores semanticas apenas quando significam status:
    - sucesso #16A36A
    - atencao #E79A16
@@ -90,7 +90,7 @@ Financeiro
 
 Comercial
 1. Lead, pipeline, proposta, campanha e atribuicao devem formar narrativa unica.
-2. Nao misturar metrica reportada por plataforma com atribuicao Zenith.
+2. Nao misturar metrica reportada por plataforma com atribuicao Zenite.
 3. Propostas precisam de status, prazo, valor e proxima acao bem visiveis.
 
 Pessoas
@@ -105,7 +105,7 @@ Portal do Cliente
 
 Automacoes e IA
 1. Automacoes devem mostrar gatilho, condicao, espera, acao, versao publicada e logs.
-2. Zenith AI deve citar fontes/registros e pedir confirmacao antes de acao sensivel.
+2. Zenite AI deve citar fontes/registros e pedir confirmacao antes de acao sensivel.
 
 Checklist antes de concluir nova tela
 1. A tela usa AppShell/Sidebar/SectionTabs do packages/ui.
@@ -125,4 +125,4 @@ Como usar o prototipo
 4. Nao copiar literalmente dados fake para regras de negocio; sao apenas demonstracao.
 
 Resumo da regra de ouro
-ZENITH FLOW deve parecer um centro de comando premium para agencia: calmo, rapido, explicavel e acionavel. Toda tela precisa ajudar o usuario a decidir o proximo movimento.
+ZENITE MKT deve parecer um centro de comando premium para agencia: calmo, rapido, explicavel e acionavel. Toda tela precisa ajudar o usuario a decidir o proximo movimento.

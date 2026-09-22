@@ -3,7 +3,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { canManageAnyTask } from "@/lib/rbac";
 import { getAgencyMembers } from "@/lib/team";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ContentBoard, type BoardContentItem } from "./ContentBoard";
 import { NewContentModal } from "./NewContentModal";
 import { RefreshButton } from "./RefreshButton";

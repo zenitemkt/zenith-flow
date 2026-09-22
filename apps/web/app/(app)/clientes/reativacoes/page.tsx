@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ReactivationInfoForm } from "./ReactivationInfoForm";
 
 export default async function ReativacoesPage() {

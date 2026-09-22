@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma, type MembershipRole } from "@zenith/db";
+import { prisma, type MembershipRole } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };

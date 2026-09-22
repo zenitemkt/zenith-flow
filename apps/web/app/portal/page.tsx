@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePortalContext } from "@/lib/portal";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export default async function PortalHomePage() {
   const { client } = await requirePortalContext();

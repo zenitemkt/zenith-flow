@@ -1,4 +1,4 @@
-import type { FinanceEntryType, FinanceEntryStatus, FinanceCategoryNature } from "@zenith/db";
+import type { FinanceEntryType, FinanceEntryStatus, FinanceCategoryNature } from "@zenite-mkt/db";
 import { isPastDueDate } from "./dates";
 
 export const FINANCE_TYPE_LABELS: Record<FinanceEntryType, string> = {

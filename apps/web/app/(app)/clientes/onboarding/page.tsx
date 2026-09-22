@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { prisma } from "@zenith/db";
-import type { OnboardingRunStatus } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
+import type { OnboardingRunStatus } from "@zenite-mkt/db";
 
 const RUN_STATUS_LABELS: Record<OnboardingRunStatus, string> = {
   EM_ANDAMENTO: "Em andamento",

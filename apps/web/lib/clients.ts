@@ -1,4 +1,4 @@
-import type { ClientStatus } from "@zenith/db";
+import type { ClientStatus } from "@zenite-mkt/db";
 
 export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
   PROSPECT: "Prospect",

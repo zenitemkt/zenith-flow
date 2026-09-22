@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { generateProposalToken } from "@/lib/proposals-server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { WorkflowStatus } from "@zenith/db";
+import type { WorkflowStatus } from "@zenite-mkt/db";
 import { WORKFLOW_STATUS_LABELS } from "@/lib/workflows";
 
 export function WorkflowStatusActions({ workflowId, options }: { workflowId: string; options: WorkflowStatus[] }) {

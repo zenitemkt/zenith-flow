@@ -4,7 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { reaisToCents, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
-import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenith/db";
+import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;

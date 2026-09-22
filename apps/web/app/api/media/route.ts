@@ -5,7 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/media";
 import { buildObjectKey } from "@/lib/media-server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export async function POST(request: Request) {
   const session = await getServerSession();

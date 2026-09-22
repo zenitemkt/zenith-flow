@@ -1,4 +1,4 @@
-import type { TrackingConsentCategory } from "@zenith/db";
+import type { TrackingConsentCategory } from "@zenite-mkt/db";
 
 export const TRACKING_CONSENT_CATEGORIES: TrackingConsentCategory[] = [
   "ESSENCIAL",

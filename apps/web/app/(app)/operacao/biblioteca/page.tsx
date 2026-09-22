@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";

@@ -1,4 +1,4 @@
-import type { CampaignStatus } from "@zenith/db";
+import type { CampaignStatus } from "@zenite-mkt/db";
 
 export const CAMPAIGN_STATUS_LABELS: Record<CampaignStatus, string> = {
   ATIVA: "Ativa",

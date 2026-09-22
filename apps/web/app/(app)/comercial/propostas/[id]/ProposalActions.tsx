@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ProposalStatus } from "@zenith/db";
+import type { ProposalStatus } from "@zenite-mkt/db";
 
 export function ProposalActions({ proposalId, status }: { proposalId: string; status: ProposalStatus }) {
   const router = useRouter();

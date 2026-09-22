@@ -1,4 +1,4 @@
-import type { TimesheetStatus } from "@zenith/db";
+import type { TimesheetStatus } from "@zenite-mkt/db";
 
 export const TIMESHEET_STATUS_LABELS: Record<TimesheetStatus, string> = {
   RASCUNHO: "Rascunho",

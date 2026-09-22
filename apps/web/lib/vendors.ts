@@ -1,4 +1,4 @@
-import type { VendorStatus, VendorOrderStatus } from "@zenith/db";
+import type { VendorStatus, VendorOrderStatus } from "@zenite-mkt/db";
 
 export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
   HOMOLOGADO: "Homologado",

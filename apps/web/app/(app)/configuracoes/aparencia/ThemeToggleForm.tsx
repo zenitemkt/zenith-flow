@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ThemePreference } from "@zenith/db";
+import type { ThemePreference } from "@zenite-mkt/db";
 
 const OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: "LIGHT", label: "Claro" },

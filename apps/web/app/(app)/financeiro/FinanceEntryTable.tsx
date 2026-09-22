@@ -1,4 +1,4 @@
-import type { FinanceEntryStatus, FinanceEntryType } from "@zenith/db";
+import type { FinanceEntryStatus, FinanceEntryType } from "@zenite-mkt/db";
 import { FINANCE_STATUS_LABELS, formatCents, isOverdue, isFinanceEntryEditable } from "@/lib/finance";
 import { FinanceEntryActions } from "./FinanceEntryActions";
 import { AttachBoletoButton } from "./AttachBoletoButton";

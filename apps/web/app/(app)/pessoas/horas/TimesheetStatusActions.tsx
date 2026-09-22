@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { TimesheetStatus } from "@zenith/db";
+import type { TimesheetStatus } from "@zenite-mkt/db";
 import { TIMESHEET_STATUS_LABELS } from "@/lib/timesheets";
 
 export function TimesheetStatusActions({

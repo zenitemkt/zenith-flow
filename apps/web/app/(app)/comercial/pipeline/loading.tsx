@@ -1,4 +1,4 @@
-import { Skeleton } from "@zenith/ui";
+import { Skeleton } from "@zenite-mkt/ui";
 
 export default function PipelineLoading() {
   return (

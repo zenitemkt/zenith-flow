@@ -1,4 +1,4 @@
-import { prisma, type ApprovalStatus } from "@zenith/db";
+import { prisma, type ApprovalStatus } from "@zenite-mkt/db";
 
 type Decision = Extract<ApprovalStatus, "APROVADO" | "AJUSTES_SOLICITADOS">;
 

@@ -7,7 +7,7 @@ import {
   LEAVE_STATUS_LABELS,
   LEAVE_STATUS_TRANSITIONS,
 } from "@/lib/employees";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { EmployeeStatusActions } from "./EmployeeStatusActions";
 import { NewLeaveRequestModal } from "./NewLeaveRequestModal";
 import { LeaveStatusActions } from "./LeaveStatusActions";

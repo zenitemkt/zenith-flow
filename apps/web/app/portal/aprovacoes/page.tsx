@@ -1,6 +1,6 @@
 import { requirePortalContext } from "@/lib/portal";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { PortalApprovalActions } from "./PortalApprovalActions";
 

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ComingSoon, findNavigationItemByHref } from "@zenith/ui";
+import { ComingSoon, findNavigationItemByHref } from "@zenite-mkt/ui";
 
 interface PageProps {
   params: { slug: string[] };

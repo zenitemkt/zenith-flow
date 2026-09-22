@@ -28,5 +28,5 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`ZENITH FLOW visual prototype running at http://localhost:${port}`);
+  console.log(`ZENITE MKT visual prototype running at http://localhost:${port}`);
 });

@@ -1,4 +1,4 @@
-import type { LeadStatus } from "@zenith/db";
+import type { LeadStatus } from "@zenite-mkt/db";
 
 /** Seção 39: "Lead: new -> working -> qualified -> disqualified -> converted." */
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {

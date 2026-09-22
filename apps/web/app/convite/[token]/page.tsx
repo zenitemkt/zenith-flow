@@ -1,4 +1,4 @@
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { AcceptInviteForm } from "./AcceptInviteForm";
 

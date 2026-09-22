@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "./session";
 import { isClientRole } from "./rbac";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 /**
  * Seção 18 do manual: o Portal do Cliente reaproveita a mesma sessão

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS, CLIENT_STATUS_TRANSITIONS } from "@/lib/clients";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { StatusActions } from "./StatusActions";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 import { AddContactForm } from "./AddContactForm";

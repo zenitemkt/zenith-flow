@@ -1,4 +1,4 @@
-import { Skeleton } from "@zenith/ui";
+import { Skeleton } from "@zenite-mkt/ui";
 
 /**
  * Fallback genérico: por padrão do App Router, este `loading.tsx` cobre

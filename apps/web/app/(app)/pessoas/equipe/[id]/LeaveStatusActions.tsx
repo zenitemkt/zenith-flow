@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { LeaveRequestStatus } from "@zenith/db";
+import type { LeaveRequestStatus } from "@zenite-mkt/db";
 import { LEAVE_STATUS_LABELS } from "@/lib/employees";
 
 export function LeaveStatusActions({

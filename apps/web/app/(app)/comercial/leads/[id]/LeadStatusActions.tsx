@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LeadStatus } from "@zenith/db";
+import type { LeadStatus } from "@zenite-mkt/db";
 import { LEAD_STATUS_LABELS } from "@/lib/leads";
 
 const REASON_REQUIRED: LeadStatus[] = ["DESQUALIFICADO"];

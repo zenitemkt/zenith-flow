@@ -3,7 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canViewEnps } from "@/lib/rbac";
 import { DEFAULT_ENPS_QUESTION, DEFAULT_ENPS_COMMENT_PROMPT } from "@/lib/enps";
 import { generateEnpsToken } from "@/lib/enps-server";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;

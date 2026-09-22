@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
-import { prisma, type MembershipRole } from "@zenith/db";
+import { prisma, type MembershipRole } from "@zenite-mkt/db";
 
 const INVITABLE_ROLES: MembershipRole[] = ["AGENCY_ADMIN", "MANAGER", "ANALYST", "FINANCE", "HR"];
 

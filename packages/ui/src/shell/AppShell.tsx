@@ -103,7 +103,7 @@ export function AppShell({
         </button>
         <span className="flex items-center gap-2 text-sm font-semibold text-[#101828] dark:text-white">
           <img src="/logo-z.png" alt="" aria-hidden className="h-6 w-6 rounded-md object-cover" />
-          ZENITH FLOW
+          ZENITE MKT
         </span>
       </header>
 
@@ -112,11 +112,11 @@ export function AppShell({
           type="button"
           onClick={() => setPaletteOpen(true)}
           className="flex h-10 min-w-[320px] flex-1 items-center justify-between rounded-[10px] border border-[#E4E7EC] bg-white px-3.5 text-sm text-[#667085] shadow-[0_1px_0_rgba(16,24,40,0.03)] hover:border-[#D0D5DD] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/25 dark:border-[#303343] dark:bg-[#171821] dark:text-[#AEB4C5] dark:hover:border-[#454965]"
-          aria-label="Pesquisar, criar ou perguntar à Zenith AI"
+          aria-label="Pesquisar, criar ou perguntar à Zenite AI"
         >
           <span className="flex min-w-0 items-center gap-2">
             <Search size={17} className="shrink-0 text-[#98A2B3]" aria-hidden />
-            <span className="truncate">Pesquisar, criar ou perguntar à Zenith AI</span>
+            <span className="truncate">Pesquisar, criar ou perguntar à Zenite AI</span>
           </span>
           <kbd className="ml-3 rounded-md border border-[#D0D5DD] bg-[#F9FAFB] px-1.5 py-0.5 text-[11px] font-semibold text-[#475467] dark:border-[#454965] dark:bg-[#232532] dark:text-[#CFD3DF]">
             Ctrl K

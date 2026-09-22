@@ -1,4 +1,4 @@
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { PROPOSAL_STATUS_LABELS, formatProposalValue, isProposalExpired } from "@/lib/proposals";
 import { ProposalDecisionActions } from "./ProposalDecisionActions";
 

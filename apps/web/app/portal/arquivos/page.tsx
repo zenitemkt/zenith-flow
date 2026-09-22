@@ -1,6 +1,6 @@
 import { requirePortalContext } from "@/lib/portal";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 
 export default async function PortalArquivosPage() {
   const { client } = await requirePortalContext();

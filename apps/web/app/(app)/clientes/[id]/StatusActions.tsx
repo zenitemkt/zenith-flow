@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ClientStatus } from "@zenith/db";
+import type { ClientStatus } from "@zenite-mkt/db";
 import { CLIENT_STATUS_LABELS } from "@/lib/clients";
 
 const REASON_REQUIRED: ClientStatus[] = ["PAUSADO", "EM_ENCERRAMENTO"];

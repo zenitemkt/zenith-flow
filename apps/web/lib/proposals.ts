@@ -1,4 +1,4 @@
-import type { ProposalStatus } from "@zenith/db";
+import type { ProposalStatus } from "@zenite-mkt/db";
 
 /** Seção 39: "Proposal: draft -> sent -> viewed -> accepted/rejected/expired." */
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {

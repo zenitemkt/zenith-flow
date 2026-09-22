@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
-import { prisma, type ThemePreference } from "@zenith/db";
+import { prisma, type ThemePreference } from "@zenite-mkt/db";
 
 const VALID_THEMES: ThemePreference[] = ["LIGHT", "DARK"];
 

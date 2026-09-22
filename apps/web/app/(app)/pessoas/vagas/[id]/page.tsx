@@ -8,7 +8,7 @@ import {
   CANDIDATE_STATUS_LABELS,
   CANDIDATE_STATUS_BADGE_CLASS,
 } from "@/lib/hr-jobs";
-import { prisma } from "@zenith/db";
+import { prisma } from "@zenite-mkt/db";
 import { JobStageBoard } from "./JobStageBoard";
 import { NewCandidateModal } from "./NewCandidateModal";
 import { JobStatusActions } from "./JobStatusActions";

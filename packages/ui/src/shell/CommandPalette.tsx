@@ -39,9 +39,9 @@ const DEFAULT_QUICK_ACTIONS: FlatNavItem[] = [
 
 /**
  * Busca/navegação rápida global (protótipo `/prototype`: `#commandPalette`).
- * A marca "AI" já reflete a intenção da seção 42 do manual (Zenith AI), mas
+ * A marca "AI" já reflete a intenção da seção 42 do manual (Zenite AI), mas
  * hoje só faz busca real na navegação — sem inventar resposta de IA que
- * ainda não existe (`zenith-ai` segue `comingSoon: true`).
+ * ainda não existe (`zenite-ai` segue `comingSoon: true`).
  */
 export function CommandPalette({ open, onClose, groups, linkComponent, quickActions }: CommandPaletteProps) {
   const Link = linkComponent ?? "a";
@@ -81,7 +81,7 @@ export function CommandPalette({ open, onClose, groups, linkComponent, quickActi
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Pesquisar, criar ou perguntar à Zenith AI"
+        aria-label="Pesquisar, criar ou perguntar à Zenite AI"
         onKeyDown={(e) => {
           if (e.key === "Escape") onClose();
         }}
