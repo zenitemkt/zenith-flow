@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue } from "@/lib/proposals";
+import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue, type TimelineStep } from "@/lib/proposals";
 import { prisma } from "@zenite-mkt/db";
 import { ProposalActions } from "./ProposalActions";
 import { EditProposalForm } from "./EditProposalForm";
@@ -8,9 +8,12 @@ import { CopyProposalLinkButton } from "./CopyProposalLinkButton";
 
 interface PageProps {
   params: { id: string };
+  searchParams: { send?: string };
 }
 
-export default async function ProposalDetailPage({ params }: PageProps) {
+const LOCKED_STATUSES = ["ACEITA", "REJEITADA", "EXPIRADA"] as const;
+
+export default async function ProposalDetailPage({ params, searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
@@ -19,8 +22,8 @@ export default async function ProposalDetailPage({ params }: PageProps) {
   const proposal = await prisma.proposal.findUnique({
     where: { id: params.id },
     include: {
-      client: { select: { name: true } },
-      lead: { select: { name: true } },
+      client: { select: { name: true, email: true, phone: true, whatsapp: true } },
+      lead: { select: { name: true, email: true, phone: true } },
       opportunity: { select: { name: true } },
       statusHistory: { orderBy: { createdAt: "desc" } },
     },
@@ -29,6 +32,11 @@ export default async function ProposalDetailPage({ params }: PageProps) {
   if (!proposal || proposal.agencyId !== membership.agencyId) {
     notFound();
   }
+
+  const editable = !LOCKED_STATUSES.includes(proposal.status as (typeof LOCKED_STATUSES)[number]);
+  const timelineSteps = (proposal.timelineSteps as TimelineStep[] | null) ?? [];
+  const defaultEmail = proposal.recipientEmail ?? proposal.client?.email ?? proposal.lead?.email ?? null;
+  const defaultWhatsapp = proposal.recipientWhatsapp ?? proposal.client?.whatsapp ?? proposal.client?.phone ?? proposal.lead?.phone ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,19 +58,47 @@ export default async function ProposalDetailPage({ params }: PageProps) {
             </div>
           )}
         </div>
-        <ProposalActions proposalId={proposal.id} status={proposal.status} />
+        <ProposalActions
+          proposalId={proposal.id}
+          status={proposal.status}
+          autoOpenSend={searchParams.send === "1"}
+          defaultEmail={defaultEmail}
+          defaultWhatsapp={defaultWhatsapp}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-[#101828]">Conteúdo</h2>
-          {proposal.status === "RASCUNHO" ? (
+          {editable ? (
             <EditProposalForm
               proposalId={proposal.id}
-              initial={{ name: proposal.name, content: proposal.content, valueCents: proposal.valueCents }}
+              initial={{
+                name: proposal.name,
+                content: proposal.content,
+                valueCents: proposal.valueCents,
+                paymentTerms: proposal.paymentTerms,
+                timelineSteps,
+              }}
             />
           ) : (
-            <div className="whitespace-pre-wrap rounded-lg bg-[#F9FAFB] p-3 text-sm text-[#344054]">{proposal.content}</div>
+            <div className="flex flex-col gap-3">
+              <div className="whitespace-pre-wrap rounded-lg bg-[#F9FAFB] p-3 text-sm text-[#344054]">{proposal.content}</div>
+              {proposal.paymentTerms && (
+                <p className="text-sm text-[#344054]">
+                  <span className="font-medium">Forma de pagamento:</span> {proposal.paymentTerms}
+                </p>
+              )}
+              {timelineSteps.length > 0 && (
+                <ul className="text-sm text-[#344054]">
+                  {timelineSteps.map((step, i) => (
+                    <li key={i}>
+                      {step.label} — {step.days} dia{step.days === 1 ? "" : "s"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {proposal.status === "REJEITADA" && proposal.rejectedReason && (
             <p className="mt-3 text-sm text-[#B42318]">Motivo da recusa: {proposal.rejectedReason}</p>

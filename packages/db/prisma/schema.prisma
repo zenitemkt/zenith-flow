@@ -1902,6 +1902,20 @@ model Proposal {
   opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
   content         String
   valueCents      Int?
+  /// Forma de pagamento em texto livre (ex.: "50% na assinatura, 50% na entrega final").
+  paymentTerms    String?
+  /// Prazos e Etapas (seção "linha do tempo" da proposta pública) — array de
+  /// `{ label: string; days: number }`. Opcional: a seção some da página
+  /// pública se não houver etapas cadastradas.
+  timelineSteps   Json?
+  /// Snapshot do que foi realmente usado no último envio (independente do
+  /// e-mail/telefone cadastrado no Client/Lead vinculado, que pode mudar depois).
+  recipientEmail    String?
+  recipientEmailCc  String?
+  recipientEmailBcc String?
+  recipientWhatsapp String?
+  emailSentAt       DateTime?
+  whatsappSentAt    DateTime?
   status          ProposalStatus @default(RASCUNHO)
   token           String         @unique
   sentAt          DateTime?

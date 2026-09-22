@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { prisma } from "@zenite-mkt/db";
+import { parseTimelineSteps } from "@/lib/proposals";
+import { prisma, Prisma } from "@zenite-mkt/db";
+
+/** Estados finais — a proposta já foi decidida pelo cliente, não editamos mais. */
+const LOCKED_STATUSES = ["ACEITA", "REJEITADA", "EXPIRADA"] as const;
 
 interface RouteParams {
   params: { id: string };
@@ -13,7 +17,11 @@ function optionalString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-/** Conteúdo só é editável enquanto RASCUNHO — depois de enviada, o cliente já pode ter visto. */
+/**
+ * Editável em qualquer status, exceto os finais (ACEITA/REJEITADA/EXPIRADA) —
+ * o time pode ajustar valor/escopo/etapas mesmo depois de enviada, mas não
+ * depois que o cliente já decidiu.
+ */
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
   if (!session) {
@@ -31,8 +39,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!proposal || proposal.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
   }
-  if (proposal.status !== "RASCUNHO") {
-    return NextResponse.json({ error: "Só é possível editar enquanto a proposta está em rascunho." }, { status: 400 });
+  if (LOCKED_STATUSES.includes(proposal.status as (typeof LOCKED_STATUSES)[number])) {
+    return NextResponse.json({ error: "Esta proposta já foi decidida pelo cliente e não pode mais ser editada." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);
@@ -44,10 +52,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const valueRaw = body?.value;
   const valueCents =
     valueRaw === null || valueRaw === undefined || valueRaw === "" ? null : Math.round(Number(valueRaw) * 100);
+  const paymentTerms = optionalString(body?.paymentTerms);
+  const timelineSteps = parseTimelineSteps(body?.timelineSteps);
 
   await prisma.proposal.update({
     where: { id: proposal.id },
-    data: { name, content, valueCents },
+    data: {
+      name,
+      content,
+      valueCents,
+      paymentTerms,
+      timelineSteps: (timelineSteps as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+    },
   });
 
   return NextResponse.json({ ok: true });

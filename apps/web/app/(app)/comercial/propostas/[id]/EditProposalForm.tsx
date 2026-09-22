@@ -2,10 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { TimelineStepsEditor } from "../TimelineStepsEditor";
+import type { TimelineStep } from "@/lib/proposals";
 
 interface Props {
   proposalId: string;
-  initial: { name: string; content: string; valueCents: number | null };
+  initial: { name: string; content: string; valueCents: number | null; paymentTerms: string | null; timelineSteps: TimelineStep[] };
 }
 
 export function EditProposalForm({ proposalId, initial }: Props) {
@@ -13,6 +15,8 @@ export function EditProposalForm({ proposalId, initial }: Props) {
   const [name, setName] = useState(initial.name);
   const [content, setContent] = useState(initial.content);
   const [value, setValue] = useState(initial.valueCents !== null ? (initial.valueCents / 100).toString() : "");
+  const [paymentTerms, setPaymentTerms] = useState(initial.paymentTerms ?? "");
+  const [timelineSteps, setTimelineSteps] = useState<TimelineStep[]>(initial.timelineSteps);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -24,7 +28,13 @@ export function EditProposalForm({ proposalId, initial }: Props) {
     const response = await fetch(`/api/proposals/${proposalId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, content, value: value ? Number(value.replace(",", ".")) : null }),
+      body: JSON.stringify({
+        name,
+        content,
+        value: value ? Number(value.replace(",", ".")) : null,
+        paymentTerms: paymentTerms || null,
+        timelineSteps: timelineSteps.filter((s) => s.label.trim()),
+      }),
     });
     setLoading(false);
     if (!response.ok) {
@@ -53,7 +63,7 @@ export function EditProposalForm({ proposalId, initial }: Props) {
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="edit-proposal-content" className="text-sm font-medium text-[#344054]">
-          Conteúdo
+          Escopo do projeto
         </label>
         <textarea
           id="edit-proposal-content"
@@ -64,19 +74,33 @@ export function EditProposalForm({ proposalId, initial }: Props) {
           className="min-h-[120px] rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="edit-proposal-value" className="text-sm font-medium text-[#344054]">
-          Valor (R$)
-        </label>
-        <input
-          id="edit-proposal-value"
-          type="text"
-          inputMode="decimal"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="edit-proposal-value" className="text-sm font-medium text-[#344054]">
+            Investimento (R$)
+          </label>
+          <input
+            id="edit-proposal-value"
+            type="text"
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="edit-proposal-payment" className="text-sm font-medium text-[#344054]">
+            Forma de pagamento
+          </label>
+          <input
+            id="edit-proposal-payment"
+            value={paymentTerms}
+            onChange={(e) => setPaymentTerms(e.target.value)}
+            className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
+          />
+        </div>
       </div>
+      <TimelineStepsEditor steps={timelineSteps} onChange={setTimelineSteps} />
 
       {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 

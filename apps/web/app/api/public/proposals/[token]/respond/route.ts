@@ -43,6 +43,33 @@ export async function POST(request: Request, { params }: RouteParams) {
     await tx.proposalStatusHistory.create({
       data: { proposalId: proposal.id, fromStatus: proposal.status, toStatus: decision, reason },
     });
+
+    // Aceite avança a Oportunidade vinculada pra próxima etapa do Pipeline
+    // da agência — só faz sentido enquanto ela ainda está aberta.
+    if (decision === "ACEITA" && proposal.opportunityId) {
+      const opportunity = await tx.opportunity.findUnique({ where: { id: proposal.opportunityId } });
+      if (opportunity && opportunity.status === "OPEN") {
+        const currentStage = await tx.pipelineStage.findUnique({ where: { id: opportunity.stageId } });
+        if (currentStage) {
+          const nextStage = await tx.pipelineStage.findFirst({
+            where: { agencyId: currentStage.agencyId, order: { gt: currentStage.order } },
+            orderBy: { order: "asc" },
+          });
+          if (nextStage) {
+            await tx.opportunity.update({ where: { id: opportunity.id }, data: { stageId: nextStage.id } });
+            await tx.opportunityStatusHistory.create({
+              data: {
+                opportunityId: opportunity.id,
+                fromStageId: opportunity.stageId,
+                toStageId: nextStage.id,
+                toStatus: "OPEN",
+                reason: "Proposta aceita",
+              },
+            });
+          }
+        }
+      }
+    }
   });
 
   return NextResponse.json({ ok: true, status: decision });

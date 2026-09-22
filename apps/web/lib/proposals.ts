@@ -32,3 +32,31 @@ export function formatProposalValue(cents: number | null): string {
   if (cents === null) return "—";
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+export interface TimelineStep {
+  label: string;
+  days: number;
+}
+
+/** Valida o formato bruto vindo do body da requisição antes de gravar em `timelineSteps` (Json). */
+export function parseTimelineSteps(value: unknown): TimelineStep[] | null {
+  if (value === null || value === undefined) return null;
+  if (!Array.isArray(value)) return null;
+  const steps: TimelineStep[] = [];
+  for (const item of value) {
+    const label = typeof item?.label === "string" ? item.label.trim() : "";
+    const days = Number(item?.days);
+    if (!label || !Number.isFinite(days) || days < 0) continue;
+    steps.push({ label, days: Math.round(days) });
+  }
+  return steps.length > 0 ? steps : null;
+}
+
+/** CC/CCO aceitam múltiplos endereços separados por vírgula (seção do popup de envio). */
+export function splitEmailList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0 && item.includes("@"));
+}

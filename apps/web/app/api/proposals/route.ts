@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { generateProposalToken } from "@/lib/proposals-server";
-import { prisma } from "@zenite-mkt/db";
+import { parseTimelineSteps } from "@/lib/proposals";
+import { prisma, Prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -32,6 +33,8 @@ export async function POST(request: Request) {
   const valueRaw = body?.value;
   const valueCents =
     valueRaw === null || valueRaw === undefined || valueRaw === "" ? null : Math.round(Number(valueRaw) * 100);
+  const paymentTerms = optionalString(body?.paymentTerms);
+  const timelineSteps = parseTimelineSteps(body?.timelineSteps);
 
   if (!name || !content) {
     return NextResponse.json({ error: "Dê um nome e um conteúdo à proposta." }, { status: 400 });
@@ -69,6 +72,8 @@ export async function POST(request: Request) {
         leadId,
         opportunityId,
         valueCents,
+        paymentTerms,
+        timelineSteps: (timelineSteps as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         token: generateProposalToken(),
         createdByUserId: session.user.id,
       },
