@@ -23,7 +23,11 @@ export function DeleteContentButton({ contentId, title }: { contentId: string; t
       setError(body?.error ?? "Não foi possível excluir a peça.");
       return;
     }
-    router.push("/operacao");
+    // Fecha voltando no histórico (não `push`) — o card aberto pode ser o
+    // modal interceptado sobre `/operacao`; empurrar pra lá re-renderizaria
+    // esta mesma página com o id já apagado antes de sair dela, disparando
+    // `notFound()` e estourando a tela inteira.
+    router.back();
     router.refresh();
   }
 

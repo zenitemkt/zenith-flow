@@ -102,8 +102,11 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
       router.push(`/conteudo/${bodies[0].id}`);
     } else {
       router.push("/operacao");
-      router.refresh();
     }
+    // Em ambos os casos o quadro por baixo (`/operacao`) ganhou card(s) novo(s)
+    // — sem isso, só aparece depois de uma navegação nova (bug reportado pelo
+    // Kevin: card criado não aparecia até trocar de aba e voltar).
+    router.refresh();
   }
 
   if (clients.length === 0) {
