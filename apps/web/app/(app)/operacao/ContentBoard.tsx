@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -352,6 +352,17 @@ export function ContentBoard({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [justSubmitted, setJustSubmitted] = useState<Record<string, string>>({});
 
+  /**
+   * Espelho local de `items`, atualizado otimisticamente antes da resposta do
+   * servidor (arrastar card muda a tela na hora, sem esperar o round-trip) e
+   * resincronizado sempre que o servidor manda dados novos via
+   * `router.refresh()` — mesmo padrão já usado em `PipelineBoard`.
+   */
+  const [localItems, setLocalItems] = useState(items);
+  useEffect(() => {
+    setLocalItems(items);
+  }, [items]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
@@ -360,7 +371,7 @@ export function ContentBoard({
   const peopleById = useMemo(() => new Map(people.map((p) => [p.userId, p.name])), [people]);
 
   const columns = useMemo(() => {
-    const aFazer = items.filter((item) => contentBoardColumnForStatus(item.status) === "a_fazer");
+    const aFazer = localItems.filter((item) => contentBoardColumnForStatus(item.status) === "a_fazer");
     const backendColumn = {
       id: "backend",
       title: "Backend",
@@ -374,14 +385,16 @@ export function ContentBoard({
     const pipelineColumns = CONTENT_BOARD_COLUMNS.filter((column) => column.id !== "a_fazer").map((column) => ({
       id: column.id,
       title: column.title,
-      items: sortByScheduledDate(items.filter((item) => contentBoardColumnForStatus(item.status) === column.id)),
+      items: sortByScheduledDate(localItems.filter((item) => contentBoardColumnForStatus(item.status) === column.id)),
     }));
     return [backendColumn, ...personColumns, ...pipelineColumns];
-  }, [items, people]);
+  }, [localItems, people]);
 
   async function changeStatus(item: BoardContentItem, toStatus: ContentStatus) {
     setError(null);
     setBusyId(item.id);
+    const previous = localItems;
+    setLocalItems((current) => current.map((i) => (i.id === item.id ? { ...i, status: toStatus } : i)));
     const response = await fetch(`/api/content/${item.id}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -389,6 +402,7 @@ export function ContentBoard({
     });
     setBusyId(null);
     if (!response.ok) {
+      setLocalItems(previous);
       const body = await response.json().catch(() => null);
       setError(body?.error ?? "Não foi possível mover o card.");
       return;
@@ -428,6 +442,8 @@ export function ContentBoard({
   async function reassign(item: BoardContentItem, assigneeUserIds: string[]) {
     setError(null);
     setBusyId(item.id);
+    const previous = localItems;
+    setLocalItems((current) => current.map((i) => (i.id === item.id ? { ...i, assigneeUserIds } : i)));
     const response = await fetch(`/api/content/${item.id}/assignees`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -435,6 +451,7 @@ export function ContentBoard({
     });
     setBusyId(null);
     if (!response.ok) {
+      setLocalItems(previous);
       const body = await response.json().catch(() => null);
       setError(body?.error ?? "Não foi possível mudar o responsável.");
       return;
@@ -445,7 +462,7 @@ export function ContentBoard({
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
-    const item = items.find((i) => i.id === String(active.id));
+    const item = localItems.find((i) => i.id === String(active.id));
     if (!item) return;
     const targetId = String(over.id);
 

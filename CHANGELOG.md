@@ -4,6 +4,8 @@
 
 ### Performance
 
+- **Região do servidor = região do banco** (`vercel.json`): `"regions": ["gru1"]` — as funções da Vercel rodavam na região padrão (EUA, `iad1`) enquanto o Neon está em São Paulo (`sa-east-1`); cada consulta ao banco perdia ~120ms de viagem, multiplicado por 8-12 consultas por ação. Mesmo diagnóstico e correção já validados no sistema 9FOURGROUP · Marketing (documentado em `Kanban - Performance e Card Aberto.docx`). Só faz efeito no próximo deploy.
+- Query do quadro de Operação/Conteúdo (`apps/web/app/(app)/operacao/page.tsx`) trocou `include` solto por `select` explícito — corta `description`/`campaign`/`caption` (campos que o card fechado nunca mostra) do payload enviado a cada carga do board.
 - Sessão/membership (`getServerSession`/`getCurrentMembership`) agora usam `cache()` do React — eliminadas as consultas duplicadas ao banco que aconteciam a cada navegação (layout raiz + layout da área logada + a própria página revalidavam a mesma sessão e o mesmo tema separadamente).
 - Fonte Inter passou a ser carregada de fato via `next/font/google` (self-hosted, sem request externo em runtime) — antes era só referenciada no CSS sem nenhum mecanismo de carregamento.
 - `FunnelChart` e `InteractiveContentCalendar` (únicos consumidores de `framer-motion`) agora usam `next/dynamic`, isolando `recharts`/`framer-motion` em chunks separados das rotas Pipeline e Calendário editorial.
@@ -25,6 +27,7 @@
 - Novo `ToastProvider`/`useToast()` (`packages/ui`) integrado ao `AppShell` — feedback de sucesso/erro consistente (`aria-live`, auto-dismiss), substituindo mensagens de erro soltas por componente.
 - Novo `Skeleton` (`packages/ui`) e `loading.tsx` em 5 rotas: fallback genérico em `(app)/` (cobre por padrão toda rota autenticada sem skeleton próprio, via herança de Suspense do App Router) + específicos em Pipeline, Operação, Clientes/Carteira e Financeiro/DRE.
 - `PipelineBoard` (piloto): mover oportunidade de estágio e marcar Ganha/Perdida agora atualizam a tela imediatamente (estado local otimista), com rollback automático e toast de erro se o servidor recusar — antes esperava o round-trip completo (`fetch` → `router.refresh()`) para qualquer feedback visual.
+- `ContentBoard` (quadro de Operação/Conteúdo): arrastar card entre colunas e reatribuir responsável agora também são otimistas, mesmo padrão do `PipelineBoard` (espelho local `localItems`, rollback se o servidor recusar). Ficou de fora "Enviar pra cliente aprovar" — depende de um token gerado pelo servidor em duas chamadas sequenciais, não dá pra simular sem risco de mostrar estado inconsistente.
 
 ### Corrigido
 
