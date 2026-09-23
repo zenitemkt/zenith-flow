@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { ensureProposalSent, normalizeWhatsappNumber, buildWhatsappMessage, buildWhatsappLink } from "@/lib/proposals-server";
+import { ensureProposalSent, buildProposalWhatsappMessage } from "@/lib/proposals-server";
+import { normalizeWhatsappNumber, buildWhatsappLink } from "@/lib/whatsapp";
 import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
@@ -48,5 +49,5 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
   });
 
-  return NextResponse.json({ ok: true, waLink: buildWhatsappLink(phone, buildWhatsappMessage(publicUrl)) });
+  return NextResponse.json({ ok: true, waLink: buildWhatsappLink(phone, buildProposalWhatsappMessage(publicUrl)) });
 }

@@ -8,16 +8,25 @@ export function CampaignActions({ campaignId, status }: { campaignId: string; st
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
 
   async function call(path: string, key: string) {
     setError(null);
+    setResult(null);
     setLoading(key);
     const response = await fetch(`/api/nps/campaigns/${campaignId}/${path}`, { method: "POST" });
+    const body = await response.json().catch(() => null);
     setLoading(null);
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
       setError(body?.error ?? "Não foi possível concluir a ação.");
       return;
+    }
+    if (key === "send" && typeof body?.sent === "number") {
+      setResult(
+        body.failed > 0
+          ? `Enviado (${body.sent}), falhou (${body.failed})`
+          : `Enviado (${body.sent})`,
+      );
     }
     router.refresh();
   }
@@ -68,6 +77,7 @@ export function CampaignActions({ campaignId, status }: { campaignId: string; st
         )}
       </div>
       {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
+      {result && <p className="text-xs font-medium text-[#166534]">{result}</p>}
     </div>
   );
 }

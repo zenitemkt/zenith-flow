@@ -18,16 +18,19 @@ export function InviteMemberForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState("ANALYST");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function resetFeedback() {
     setError(null);
     setSuccess(null);
     setInviteUrl(null);
+    setEmailSent(false);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -38,7 +41,9 @@ export function InviteMemberForm() {
     const response = await fetch(mode === "direct" ? "/api/memberships/direct" : "/api/memberships", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(mode === "direct" ? { name, email, password, role } : { email, role }),
+      body: JSON.stringify(
+        mode === "direct" ? { name, email, password, role } : { email, role, phone: phone || undefined },
+      ),
     });
     const body = await response.json().catch(() => null);
 
@@ -52,10 +57,15 @@ export function InviteMemberForm() {
       setSuccess(`Colaborador criado — ${email} já pode entrar com a senha definida.`);
     } else {
       setInviteUrl(new URL(body.inviteUrl, window.location.origin).toString());
+      setEmailSent(Boolean(body.emailSent));
+      if (body.waLink) {
+        window.open(body.waLink, "_blank");
+      }
     }
     setName("");
     setEmail("");
     setPassword("");
+    setPhone("");
     router.refresh();
   }
 
@@ -108,6 +118,15 @@ export function InviteMemberForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="pessoa@agencia.com"
           />
+          {mode === "link" && (
+            <FormField
+              label="WhatsApp (opcional)"
+              name="invite-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 91234-5678"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end">
@@ -162,8 +181,9 @@ export function InviteMemberForm() {
       {inviteUrl && (
         <div className="mt-3 rounded-lg bg-[#FFF1EC] p-3 text-sm text-[#C2270A]">
           <p className="mb-1 font-medium">
-            Convite criado. O envio automático de e-mail chega na Fase 2 — por enquanto, envie este
-            link manualmente:
+            {emailSent
+              ? "Convite criado e e-mail enviado. Link, se precisar mandar de novo:"
+              : "Convite criado (e-mail não configurado ou falhou) — envie este link manualmente:"}
           </p>
           <code className="block break-all text-xs">{inviteUrl}</code>
         </div>

@@ -28,7 +28,13 @@ export async function ContentDetailView({ id }: { id: string }) {
   const item = await prisma.contentItem.findUnique({
     where: { id },
     include: {
-      client: { select: { id: true, name: true } },
+      client: {
+        select: {
+          id: true,
+          name: true,
+          contacts: { select: { email: true, phone: true, isPrimary: true }, orderBy: { isPrimary: "desc" } },
+        },
+      },
       versions: {
         orderBy: { versionNumber: "desc" },
         include: { approval: true },
@@ -43,6 +49,7 @@ export async function ContentDetailView({ id }: { id: string }) {
   }
 
   const canSubmit = SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
+  const primaryContact = item.client.contacts.find((c) => c.isPrimary) ?? item.client.contacts.find((c) => c.email);
   const [thread, mentionableMembers, agencyMembers] = await Promise.all([
     loadCommentThreadView("content_item", item.id),
     getMentionableMembers(membership.agencyId),
@@ -80,7 +87,13 @@ export async function ContentDetailView({ id }: { id: string }) {
             initialDescription={item.description ?? ""}
           />
           <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} />
-          {canSubmit && <SubmitForApprovalButton contentId={item.id} />}
+          {canSubmit && (
+            <SubmitForApprovalButton
+              contentId={item.id}
+              defaultEmail={primaryContact?.email ?? null}
+              defaultWhatsapp={primaryContact?.phone ?? null}
+            />
+          )}
           <DeleteContentButton contentId={item.id} title={item.title} />
         </div>
       </div>

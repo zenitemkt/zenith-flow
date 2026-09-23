@@ -17,6 +17,7 @@ export async function createEmployeeRecord(
     userId,
     name,
     email,
+    phone,
     role,
     positionId,
     actorUserId,
@@ -25,6 +26,7 @@ export async function createEmployeeRecord(
     userId: string | null;
     name: string;
     email: string | null;
+    phone?: string | null;
     role: string | null;
     positionId: string | null;
     actorUserId: string;
@@ -32,7 +34,7 @@ export async function createEmployeeRecord(
   client: Client = prisma,
 ) {
   const employee = await client.employee.create({
-    data: { agencyId, userId, name, email, role, positionId, hiredAt: new Date() },
+    data: { agencyId, userId, name, email, phone: phone ?? null, role, positionId, hiredAt: new Date() },
   });
   await client.employeeStatusHistory.create({
     data: { employeeId: employee.id, toStatus: "ATIVO", actorUserId },

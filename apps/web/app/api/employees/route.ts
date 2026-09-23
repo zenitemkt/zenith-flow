@@ -30,6 +30,7 @@ export async function POST(request: Request) {
   }
 
   const email = optionalString(body?.email);
+  const phone = optionalString(body?.phone);
   const role = optionalString(body?.role);
   const userId = optionalString(body?.userId);
   const positionId = optionalString(body?.positionId);
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 
   const created = await prisma.$transaction((tx) =>
     createEmployeeRecord(
-      { agencyId: membership.agencyId, userId, name, email, role, positionId, actorUserId: session.user.id },
+      { agencyId: membership.agencyId, userId, name, email, phone, role, positionId, actorUserId: session.user.id },
       tx,
     ),
   );

@@ -37,6 +37,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
         userId: null,
         name: candidate.name,
         email: candidate.email,
+        phone: candidate.phone,
         role: candidate.job.title,
         positionId: candidate.job.positionId,
         actorUserId: session.user.id,

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { SURVEY_STATUS_LABELS, SURVEY_STATUS_BADGE_CLASS } from "@/lib/nps";
+import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
 import { prisma } from "@zenite-mkt/db";
 import { CampaignActions } from "./CampaignActions";
 import { EditCampaignForm } from "./EditCampaignForm";
@@ -25,7 +26,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   const campaign = await prisma.surveyCampaign.findUnique({
     where: { id: params.id },
     include: {
-      recipients: { include: { client: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+      recipients: {
+        include: {
+          client: { select: { name: true, contacts: { select: { email: true, phone: true, isPrimary: true } } } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
       npsSnapshots: { orderBy: { computedAt: "desc" }, take: 1 },
     },
   });
@@ -97,29 +103,42 @@ export default async function CampaignDetailPage({ params }: PageProps) {
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-[#101828]">Destinatários</h2>
           <div className="flex flex-col gap-2">
-            {campaign.recipients.map((r) => (
-              <div key={r.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-[#101828]">{r.client.name}</p>
-                  <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#475467]">
-                    {RECIPIENT_STATUS_LABELS[r.status]}
-                  </span>
-                </div>
-                <p className="text-xs text-[#667085]">
-                  {r.contactName} · {r.email}
-                </p>
-                {r.status === "RESPONDIDO" ? (
-                  <p className="mt-1 text-xs text-[#475467]">
-                    Nota: <span className="font-semibold text-[#101828]">{r.score}</span>
-                    {r.comment ? ` · "${r.comment}"` : ""}
-                  </p>
-                ) : campaign.status !== "RASCUNHO" ? (
-                  <div className="mt-2">
-                    <CopyLinkButton token={r.token} />
+            {campaign.recipients.map((r) => {
+              const phone =
+                r.client.contacts.find((c) => c.email === r.email)?.phone ??
+                r.client.contacts.find((c) => c.isPrimary)?.phone ??
+                null;
+              return (
+                <div key={r.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-[#101828]">{r.client.name}</p>
+                    <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#475467]">
+                      {RECIPIENT_STATUS_LABELS[r.status]}
+                    </span>
                   </div>
-                ) : null}
-              </div>
-            ))}
+                  <p className="text-xs text-[#667085]">
+                    {r.contactName} · {r.email}
+                  </p>
+                  {r.status === "RESPONDIDO" ? (
+                    <p className="mt-1 text-xs text-[#475467]">
+                      Nota: <span className="font-semibold text-[#101828]">{r.score}</span>
+                      {r.comment ? ` · "${r.comment}"` : ""}
+                    </p>
+                  ) : campaign.status !== "RASCUNHO" ? (
+                    <div className="mt-2 flex gap-1.5">
+                      <CopyLinkButton token={r.token} />
+                      {phone && (
+                        <WhatsappLinkButton
+                          phone={phone}
+                          intro="Oi! Segue nossa pesquisa rápida, sua opinião é muito importante pra gente:"
+                          path={`/pesquisa/${r.token}`}
+                        />
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>

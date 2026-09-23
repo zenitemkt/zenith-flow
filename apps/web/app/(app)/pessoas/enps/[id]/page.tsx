@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canViewEnps } from "@/lib/rbac";
 import { ENPS_STATUS_LABELS, ENPS_STATUS_BADGE_CLASS } from "@/lib/enps";
+import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
 import { prisma } from "@zenite-mkt/db";
 import { CampaignActions } from "./CampaignActions";
 import { EditCampaignForm } from "./EditCampaignForm";
@@ -29,7 +30,7 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
   const campaign = await prisma.enpsCampaign.findUnique({
     where: { id: params.id },
     include: {
-      invites: { include: { employee: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+      invites: { include: { employee: { select: { name: true, phone: true } } }, orderBy: { createdAt: "asc" } },
       responses: { orderBy: { createdAt: "desc" } },
       snapshots: { orderBy: { computedAt: "desc" }, take: 1 },
     },
@@ -129,8 +130,15 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
                   </span>
                 </div>
                 {invite.status !== "RESPONDIDO" && campaign.status !== "RASCUNHO" && (
-                  <div className="mt-2">
+                  <div className="mt-2 flex gap-1.5">
                     <CopyLinkButton token={invite.token} />
+                    {invite.employee.phone && (
+                      <WhatsappLinkButton
+                        phone={invite.employee.phone}
+                        intro="Oi! Segue nossa pesquisa interna anônima, sua opinião é importante:"
+                        path={`/pesquisa-interna/${invite.token}`}
+                      />
+                    )}
                   </div>
                 )}
               </div>

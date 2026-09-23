@@ -29,6 +29,14 @@
 - `PipelineBoard` (piloto): mover oportunidade de estágio e marcar Ganha/Perdida agora atualizam a tela imediatamente (estado local otimista), com rollback automático e toast de erro se o servidor recusar — antes esperava o round-trip completo (`fetch` → `router.refresh()`) para qualquer feedback visual.
 - `ContentBoard` (quadro de Operação/Conteúdo): arrastar card entre colunas e reatribuir responsável agora também são otimistas, mesmo padrão do `PipelineBoard` (espelho local `localItems`, rollback se o servidor recusar). Ficou de fora "Enviar pra cliente aprovar" — depende de um token gerado pelo servidor em duas chamadas sequenciais, não dá pra simular sem risco de mostrar estado inconsistente.
 
+### Adicionado
+
+- **Envio real por e-mail/WhatsApp estendido de Propostas pra NPS, eNPS, convite de equipe e aprovação de conteúdo**: até aqui só Propostas mandava e-mail de verdade (Resend) e link `wa.me`. `lib/email.ts` ganhou um núcleo genérico (`sendEmail`) reaproveitado por 4 novos templates (`sendNpsInviteEmail`, `sendEnpsInviteEmail`, `sendTeamInviteEmail`, `sendContentApprovalEmail`); `lib/whatsapp.ts` (novo) reúne os helpers de link `wa.me` que antes viviam presos em `lib/proposals-server.ts`.
+  - **NPS e eNPS**: o botão "Enviar" da campanha agora dispara e-mail de verdade pra cada destinatário/convidado pendente quando o Resend está configurado (sem provedor configurado, mantém o comportamento antigo — marca tudo enviado em lote, sem mandar nada). Cada linha da lista ganhou um botão de WhatsApp manual (não rastreado), condicionado a existir telefone — do contato do cliente (NPS) ou da pessoa (eNPS, novo campo `Employee.phone`, opcional).
+  - **Convite de equipe**: `POST /api/memberships` (modo "Enviar link de convite") agora manda o e-mail de convite de verdade quando configurado, e o formulário ganhou um campo de WhatsApp opcional que abre a conversa com o link assim que o convite é criado.
+  - **Aprovação de conteúdo**: novo popup `SendApprovalModal` (mesmo padrão do `SendProposalModal`) abre automaticamente depois de "Enviar para aprovação do cliente", pré-preenchido com o contato principal do cliente quando existir — dois canais independentes, e-mail e WhatsApp.
+  - `Employee.phone` (novo campo opcional) também aparece no cadastro de pessoa e é herdado automaticamente na conversão de candidato contratado.
+
 ### Corrigido
 
 - `NewContentModal`: criar peça em um canal só (caso comum) nunca chamava `router.refresh()` — o card novo não aparecia no quadro de Operação até uma navegação nova (ex.: trocar de aba e voltar). Agora atualiza sempre, independente de quantos canais foram escolhidos.

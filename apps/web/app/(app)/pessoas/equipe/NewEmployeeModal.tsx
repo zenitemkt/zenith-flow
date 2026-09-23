@@ -27,6 +27,7 @@ export function NewEmployeeModal({
   const [userId, setUserId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [positionId, setPositionId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export function NewEmployeeModal({
     setUserId("");
     setName("");
     setEmail("");
+    setPhone("");
     setRole("");
     setPositionId("");
     setError(null);
@@ -62,7 +64,7 @@ export function NewEmployeeModal({
     const response = await fetch("/api/employees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, role, userId: userId || null, positionId: positionId || null }),
+      body: JSON.stringify({ name, email, phone, role, userId: userId || null, positionId: positionId || null }),
     });
 
     setLoading(false);
@@ -128,6 +130,13 @@ export function NewEmployeeModal({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+          <FormField
+            label="WhatsApp (opcional)"
+            name="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="(11) 91234-5678"
           />
           {positions.length > 0 && (
             <div className="flex flex-col gap-1.5">

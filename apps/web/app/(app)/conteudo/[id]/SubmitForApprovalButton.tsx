@@ -2,16 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { SendApprovalModal } from "./SendApprovalModal";
 
-export function SubmitForApprovalButton({ contentId }: { contentId: string }) {
+export function SubmitForApprovalButton({
+  contentId,
+  defaultEmail,
+  defaultWhatsapp,
+}: {
+  contentId: string;
+  defaultEmail?: string | null;
+  defaultWhatsapp?: string | null;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvalUrl, setApprovalUrl] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   async function submit() {
     setError(null);
-    setApprovalUrl(null);
     setLoading(true);
     const response = await fetch(`/api/content/${contentId}/submit`, { method: "POST" });
     const body = await response.json().catch(() => null);
@@ -23,6 +32,7 @@ export function SubmitForApprovalButton({ contentId }: { contentId: string }) {
     }
 
     setApprovalUrl(new URL(body.approvalUrl, window.location.origin).toString());
+    setModalOpen(true);
     router.refresh();
   }
 
@@ -39,10 +49,14 @@ export function SubmitForApprovalButton({ contentId }: { contentId: string }) {
       </button>
       {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
       {approvalUrl && (
-        <div className="max-w-xs rounded-lg bg-[#FFF1EC] p-2 text-right text-xs text-[#C2270A]">
-          <p className="mb-1 font-medium">Link de aprovação (válido por 14 dias):</p>
-          <code className="block break-all">{approvalUrl}</code>
-        </div>
+        <SendApprovalModal
+          contentId={contentId}
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          approvalUrl={approvalUrl}
+          defaultEmail={defaultEmail}
+          defaultWhatsapp={defaultWhatsapp}
+        />
       )}
     </div>
   );
