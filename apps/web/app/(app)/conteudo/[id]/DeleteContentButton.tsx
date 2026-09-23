@@ -27,8 +27,11 @@ export function DeleteContentButton({ contentId, title }: { contentId: string; t
     // modal interceptado sobre `/operacao`; empurrar pra lá re-renderizaria
     // esta mesma página com o id já apagado antes de sair dela, disparando
     // `notFound()` e estourando a tela inteira.
+    // `refresh()` chamado no mesmo instante que `back()` não pega o quadro
+    // atualizado (a navegação de histórico ainda não terminou) — por isso
+    // espera o `popstate` real da navegação antes de pedir os dados novos.
+    window.addEventListener("popstate", () => router.refresh(), { once: true });
     router.back();
-    router.refresh();
   }
 
   return (
