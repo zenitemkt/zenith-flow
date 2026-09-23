@@ -31,6 +31,9 @@
 
 ### Corrigido
 
+- `NewContentModal`: criar peça em um canal só (caso comum) nunca chamava `router.refresh()` — o card novo não aparecia no quadro de Operação até uma navegação nova (ex.: trocar de aba e voltar). Agora atualiza sempre, independente de quantos canais foram escolhidos.
+- `DeleteContentButton`: excluir um card fechava com `router.push("/operacao")`, o que re-renderizava a própria página do card (já excluído) antes de sair dela — disparava `notFound()` e estourava a tela inteira ("404 This page could not be found"), já que o card aberto costuma ser o modal interceptado sobre `/operacao`. Corrigido pra fechar com `router.back()`, mesmo padrão que Esc/X/clicar fora já usam no `ModalOverlay`.
+
 - `NewContentModal`: aspas retas dentro de JSX trocadas por `&quot;` (erro de lint `react/no-unescaped-entities` que bloqueava o build de produção).
 
 - Revisão completa do board de Operação: "Ver card de origem" às vezes não abria o card (bug no deep-link `?openTask=`, agora corrigido com limpeza de URL em vez de "lembrar" o último id aberto); arrastar um card (drag-and-drop) não iniciava nem fechava o cronômetro de horas — só os botões do popup faziam isso, agora `/api/tasks/:id/move` tem o mesmo comportamento de `/start`/`/pause`/`/complete`; arrastar direto de "A Fazer" pra "Concluído" dava erro (agora funciona, igual ao botão "Concluir").
