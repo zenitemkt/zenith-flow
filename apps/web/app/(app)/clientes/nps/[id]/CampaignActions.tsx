@@ -4,13 +4,33 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SurveyStatus } from "@zenite-mkt/db";
 
-export function CampaignActions({ campaignId, status }: { campaignId: string; status: SurveyStatus }) {
+export function CampaignActions({
+  campaignId,
+  status,
+  pendingCount,
+  emailConfigured,
+}: {
+  campaignId: string;
+  status: SurveyStatus;
+  pendingCount: number;
+  emailConfigured: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
   async function call(path: string, key: string) {
+    if (key === "send") {
+      const n = pendingCount;
+      const who = `${n} destinatário${n === 1 ? "" : "s"} pendente${n === 1 ? "" : "s"}`;
+      const confirmed = window.confirm(
+        emailConfigured
+          ? `Isso vai mandar e-mail de verdade pra ${who}. Confirma?`
+          : `Isso vai marcar ${who} como enviado (sem e-mail real — Resend não configurado). Confirma?`,
+      );
+      if (!confirmed) return;
+    }
     setError(null);
     setResult(null);
     setLoading(key);

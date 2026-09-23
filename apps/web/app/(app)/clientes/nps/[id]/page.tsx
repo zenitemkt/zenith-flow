@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { SURVEY_STATUS_LABELS, SURVEY_STATUS_BADGE_CLASS } from "@/lib/nps";
+import { isEmailConfigured } from "@/lib/email";
 import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
 import { prisma } from "@zenite-mkt/db";
 import { CampaignActions } from "./CampaignActions";
@@ -56,7 +57,12 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           </div>
           <p className="text-sm text-[#667085]">{campaign.recipients.length} destinatário(s)</p>
         </div>
-        <CampaignActions campaignId={campaign.id} status={campaign.status} />
+        <CampaignActions
+          campaignId={campaign.id}
+          status={campaign.status}
+          pendingCount={campaign.recipients.filter((r) => r.status === "PENDENTE").length}
+          emailConfigured={isEmailConfigured()}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

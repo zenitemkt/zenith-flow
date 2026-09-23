@@ -12,6 +12,8 @@ const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "HR", label: "RH" },
 ];
 
+type ChannelStatus = "idle" | "loading" | "done" | "error";
+
 export function InviteMemberForm() {
   const router = useRouter();
   const [mode, setMode] = useState<"direct" | "link">("direct");
@@ -22,15 +24,23 @@ export function InviteMemberForm() {
   const [role, setRole] = useState("ANALYST");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Convite recém-criado, aguardando decisão explícita de enviar (ou não) — nunca dispara sozinho.
+  const [createdInvite, setCreatedInvite] = useState<{ id: string; url: string; phone: string } | null>(null);
+  const [emailStatus, setEmailStatus] = useState<ChannelStatus>("idle");
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const [waStatus, setWaStatus] = useState<ChannelStatus>("idle");
+  const [waMessage, setWaMessage] = useState<string | null>(null);
 
   function resetFeedback() {
     setError(null);
     setSuccess(null);
-    setInviteUrl(null);
-    setEmailSent(false);
+    setCreatedInvite(null);
+    setEmailStatus("idle");
+    setEmailMessage(null);
+    setWaStatus("idle");
+    setWaMessage(null);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -41,9 +51,7 @@ export function InviteMemberForm() {
     const response = await fetch(mode === "direct" ? "/api/memberships/direct" : "/api/memberships", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        mode === "direct" ? { name, email, password, role } : { email, role, phone: phone || undefined },
-      ),
+      body: JSON.stringify(mode === "direct" ? { name, email, password, role } : { email, role }),
     });
     const body = await response.json().catch(() => null);
 
@@ -56,17 +64,52 @@ export function InviteMemberForm() {
     if (mode === "direct") {
       setSuccess(`Colaborador criado — ${email} já pode entrar com a senha definida.`);
     } else {
-      setInviteUrl(new URL(body.inviteUrl, window.location.origin).toString());
-      setEmailSent(Boolean(body.emailSent));
-      if (body.waLink) {
-        window.open(body.waLink, "_blank");
-      }
+      setCreatedInvite({
+        id: body.membershipId,
+        url: new URL(body.inviteUrl, window.location.origin).toString(),
+        phone,
+      });
     }
     setName("");
     setEmail("");
     setPassword("");
     setPhone("");
     router.refresh();
+  }
+
+  async function handleSendEmail() {
+    if (!createdInvite) return;
+    setEmailStatus("loading");
+    setEmailMessage(null);
+    const response = await fetch(`/api/memberships/${createdInvite.id}/send-invite-email`, { method: "POST" });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      setEmailStatus("error");
+      setEmailMessage(body?.error ?? "Não foi possível enviar o e-mail.");
+      return;
+    }
+    setEmailStatus("done");
+    setEmailMessage("Enviado ✓");
+  }
+
+  async function handleSendWhatsapp() {
+    if (!createdInvite) return;
+    setWaStatus("loading");
+    setWaMessage(null);
+    const response = await fetch(`/api/memberships/${createdInvite.id}/send-invite-whatsapp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: createdInvite.phone }),
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      setWaStatus("error");
+      setWaMessage(body?.error ?? "Não foi possível gerar o link do WhatsApp.");
+      return;
+    }
+    window.open(body.waLink, "_blank");
+    setWaStatus("done");
+    setWaMessage("Aberto ✓");
   }
 
   return (
@@ -92,7 +135,7 @@ export function InviteMemberForm() {
             }}
             className={`rounded-md px-2.5 py-1 ${mode === "link" ? "bg-[#FFF1EC] text-[#C2270A]" : "text-[#667085]"}`}
           >
-            Enviar link de convite
+            Convite por link
           </button>
         </div>
       </div>
@@ -168,7 +211,7 @@ export function InviteMemberForm() {
           className="flex h-11 items-center justify-center self-start whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
           style={{ backgroundColor: "#FF2B00" }}
         >
-          {loading ? "Salvando..." : mode === "direct" ? "Criar colaborador" : "Enviar convite"}
+          {loading ? "Salvando..." : mode === "direct" ? "Criar colaborador" : "Criar convite"}
         </button>
       </form>
 
@@ -178,14 +221,48 @@ export function InviteMemberForm() {
         <p className="mt-3 rounded-lg bg-[#DCFCE7] p-3 text-sm font-medium text-[#166534]">{success}</p>
       )}
 
-      {inviteUrl && (
-        <div className="mt-3 rounded-lg bg-[#FFF1EC] p-3 text-sm text-[#C2270A]">
-          <p className="mb-1 font-medium">
-            {emailSent
-              ? "Convite criado e e-mail enviado. Link, se precisar mandar de novo:"
-              : "Convite criado (e-mail não configurado ou falhou) — envie este link manualmente:"}
-          </p>
-          <code className="block break-all text-xs">{inviteUrl}</code>
+      {createdInvite && (
+        <div className="mt-3 flex flex-col gap-3 rounded-lg bg-[#FFF1EC] p-3 text-sm text-[#C2270A]">
+          <div>
+            <p className="mb-1 font-medium">Convite criado. Link:</p>
+            <code className="block break-all text-xs">{createdInvite.url}</code>
+          </div>
+          <p className="text-xs font-medium text-[#344054]">Quer mandar agora?</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={emailStatus === "loading"}
+                onClick={() => void handleSendEmail()}
+                className="flex h-9 items-center justify-center rounded-lg px-3 text-xs font-semibold text-white disabled:opacity-60"
+                style={{ backgroundColor: "#FF2B00" }}
+              >
+                {emailStatus === "loading" ? "Enviando..." : "Enviar e-mail"}
+              </button>
+              {emailMessage && (
+                <span className={`text-xs font-medium ${emailStatus === "error" ? "text-[#D94343]" : "text-[#166534]"}`}>
+                  {emailMessage}
+                </span>
+              )}
+            </div>
+            {createdInvite.phone && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={waStatus === "loading"}
+                  onClick={() => void handleSendWhatsapp()}
+                  className="flex h-9 items-center justify-center rounded-lg border border-[#16A36A] px-3 text-xs font-semibold text-[#16A36A] hover:bg-[#DCFCE7] disabled:opacity-60"
+                >
+                  {waStatus === "loading" ? "Gerando link..." : "Abrir WhatsApp"}
+                </button>
+                {waMessage && (
+                  <span className={`text-xs font-medium ${waStatus === "error" ? "text-[#D94343]" : "text-[#166534]"}`}>
+                    {waMessage}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

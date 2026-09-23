@@ -1,3 +1,13 @@
+## 2026-09-23 — Correção: nenhum envio deve disparar sozinho, sempre pedir confirmação explícita
+
+**Contexto**: na primeira versão desta fatia, criar um convite de equipe já disparava o e-mail automaticamente (só o WhatsApp exigia telefone preenchido pra abrir sozinho) — o Kevin apontou que isso deveria "perguntar" antes de mandar, não mandar direto.
+
+**Decisão 1 — convite de equipe virou 2 passos, igual Propostas/Conteúdo**: `POST /api/memberships` voltou a só criar o convite e devolver o link (sem enviar nada). Duas rotas novas (`POST /api/memberships/:id/send-invite-email`, `.../send-invite-whatsapp`) fazem o envio de verdade, chamadas só quando a pessoa clica em "Enviar e-mail"/"Abrir WhatsApp" no painel que aparece depois de criar o convite — mesmo padrão de "criar primeiro, enviar depois, com um clique de cada vez" que Propostas e Aprovação de Conteúdo já tinham desde o início.
+
+**Decisão 2 — NPS/eNPS não viraram um popup de 2 passos (são campanhas em lote, não um contato só) — ganharam uma confirmação (`window.confirm`) antes do envio**: diferente de convite/proposta/aprovação (um destinatário por vez, onde dá pra mostrar um popup revisável), aqui um clique manda e-mail pra todos os pendentes de uma vez — a barreira certa é uma confirmação simples, honesta sobre quantos destinatários e se vai mandar e-mail de verdade ou só marcar como enviado (quando o Resend não está configurado). `CampaignActions` (NPS e eNPS) ganhou `pendingCount`/`emailConfigured` como props, calculados no `page.tsx` (`isEmailConfigured()` já existia, só nunca tinha sido exposto pra um Server Component antes).
+
+**Testado**: `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos, suíte completa (26/26 arquivos, 76/76 testes) sem regressão.
+
 ## 2026-09-23 — Envio real por e-mail/WhatsApp estendido de Propostas pra NPS, eNPS, convite de equipe e aprovação de conteúdo
 
 **Contexto**: ao levantar "o que falta desenvolver" pro Kevin, notei que `docs/STATUS.md`/`docs/ROADMAP.md` ainda diziam que envio real de e-mail/WhatsApp estava pendente em todos os fluxos — mas o commit `e29a7f5` (22/09, sessão anterior) já tinha implementado isso pra Propostas (Resend + link `wa.me`), só a documentação não foi atualizada. Como o Resend já estava integrado e configurado (variáveis já em `.env.example`), o Kevin pediu pra estender o mesmo caminho pros outros 4 fluxos que ainda só geravam link copiável: NPS, eNPS, convite de equipe e aprovação de conteúdo.

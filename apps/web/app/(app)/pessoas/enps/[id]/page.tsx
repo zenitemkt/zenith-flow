@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canViewEnps } from "@/lib/rbac";
 import { ENPS_STATUS_LABELS, ENPS_STATUS_BADGE_CLASS } from "@/lib/enps";
+import { isEmailConfigured } from "@/lib/email";
 import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
 import { prisma } from "@zenite-mkt/db";
 import { CampaignActions } from "./CampaignActions";
@@ -57,7 +58,12 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
             {respondedCount} de {campaign.invites.length} responderam
           </p>
         </div>
-        <CampaignActions campaignId={campaign.id} status={campaign.status} />
+        <CampaignActions
+          campaignId={campaign.id}
+          status={campaign.status}
+          pendingCount={campaign.invites.filter((i) => i.status === "PENDENTE").length}
+          emailConfigured={isEmailConfigured()}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
