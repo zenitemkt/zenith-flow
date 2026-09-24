@@ -1,73 +1,51 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { prisma } from "@zenite-mkt/db";
-import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
-import { UploadFileForm } from "@/app/_components/UploadFileForm";
-import { MediaAssetList } from "@/app/_components/MediaAssetList";
+import { DriveFolderCard } from "./DriveFolderCard";
 
-interface PageProps {
-  searchParams: { clientId?: string };
-}
-
-export default async function BibliotecaPage({ searchParams }: PageProps) {
+/**
+ * Biblioteca de conteúdo = atalho pra pasta de cada cliente no Google Drive
+ * (pedido do Kevin, 2026-09-24): os arquivos ficam no Drive, onde a equipe já
+ * trabalha, e o sistema só guarda o link — sem upload, sem custo de storage.
+ * Todo cliente cadastrado aparece aqui automaticamente.
+ */
+export default async function BibliotecaPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const activeClientId = searchParams.clientId;
+  const clients = await prisma.client.findMany({
+    where: { agencyId: membership.agencyId },
+    select: { id: true, name: true, driveUrl: true },
+    orderBy: { name: "asc" },
+  });
 
-  const [assets, clients] = await Promise.all([
-    prisma.mediaAsset.findMany({
-      where: {
-        agencyId: membership.agencyId,
-        ...(activeClientId ? { clientId: activeClientId } : {}),
-      },
-      include: { client: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  const activeClient = clients.find((c) => c.id === activeClientId);
+  const linked = clients.filter((client) => client.driveUrl).length;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Biblioteca de conteúdo</h1>
         <p className="text-sm text-[#667085]">
-          {assets.length} arquivo{assets.length === 1 ? "" : "s"}
-          {activeClient ? ` de ${activeClient.name}` : ""} — materiais reaproveitáveis (imagens, vídeos,
-          documentos) que não precisam virar link externo.
+          A pasta de cada cliente no Google Drive, a um clique.{" "}
+          {clients.length > 0 && `${linked} de ${clients.length} com pasta vinculada.`}
         </p>
       </div>
 
-      <ClientFilterPills
-        clients={clients}
-        activeClientId={activeClientId}
-        buildHref={(clientId) => (clientId ? `/operacao/biblioteca?clientId=${clientId}` : "/operacao/biblioteca")}
-      />
-
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <div className="mb-3">
-          <MediaAssetList
-            showClient
-            assets={assets.map((a) => ({
-              id: a.id,
-              fileName: a.fileName,
-              contentType: a.contentType,
-              sizeBytes: a.sizeBytes,
-              createdAt: a.createdAt.toISOString(),
-              clientName: a.client?.name,
-            }))}
-          />
+      {clients.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
+          <p className="text-sm text-[#667085]">
+            Cadastre um cliente e a pasta dele aparece aqui pra você vincular ao Drive.
+          </p>
         </div>
-        <UploadFileForm clientOptions={clients} />
-      </section>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {clients.map((client) => (
+            <DriveFolderCard key={client.id} clientId={client.id} clientName={client.name} driveUrl={client.driveUrl} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

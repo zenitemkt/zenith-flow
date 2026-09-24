@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -90,7 +90,7 @@ function ScheduleDateField({
   }
 
   return (
-    <div className="flex items-center gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
+    <div data-card-control className="flex items-center gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
       <span className="text-[10px] font-medium uppercase tracking-wide text-[#98A2B3]">Publicação</span>
       <input
         type="date"
@@ -130,6 +130,13 @@ function CopyLinkButton({ url }: { url: string }) {
   );
 }
 
+/**
+ * Clique em qualquer lugar do card abre a peça — exceto em controles
+ * (botões, campo de data, links) e dentro de um popup aberto a partir do card.
+ */
+const CARD_OPEN_IGNORE =
+  'button, a, input, select, textarea, label, [role="dialog"], [role="presentation"], [data-card-control]';
+
 function ContentCard({
   item,
   canDrag,
@@ -139,6 +146,7 @@ function ContentCard({
   onAdvance,
   onSubmit,
   onRefresh,
+  onOpen,
 }: {
   item: BoardContentItem;
   canDrag: boolean;
@@ -148,6 +156,7 @@ function ContentCard({
   onAdvance: (item: BoardContentItem, toStatus: ContentStatus) => void;
   onSubmit: (item: BoardContentItem) => void;
   onRefresh: () => void;
+  onOpen: (item: BoardContentItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id });
   const style = transform
@@ -162,7 +171,11 @@ function ContentCard({
       ref={setNodeRef}
       style={style}
       {...dragProps}
-      className={`touch-none rounded-lg border bg-white p-3 shadow-sm ${
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest(CARD_OPEN_IGNORE)) return;
+        onOpen(item);
+      }}
+      className={`touch-none cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-colors hover:border-[#FF2B00]/40 ${
         isDragging ? "opacity-50" : ""
       } border-[#E4E7EC]`}
     >
@@ -231,7 +244,7 @@ function ContentCard({
           </button>
         )}
         {item.status === "AGUARDANDO_CLIENTE" && (
-          <div className="rounded-md bg-[#FFF1EC] p-1.5 text-[10px] text-[#C2270A]">
+          <div data-card-control className="cursor-text rounded-md bg-[#FFF1EC] p-1.5 text-[10px] text-[#C2270A]">
             <p className="font-medium">Aguardando resposta do cliente</p>
             {approvalUrl && (
               <>
@@ -281,6 +294,7 @@ function BoardColumn({
   onAdvance,
   onSubmit,
   onRefresh,
+  onOpen,
 }: {
   columnId: string;
   title: string;
@@ -293,6 +307,7 @@ function BoardColumn({
   onAdvance: (item: BoardContentItem, toStatus: ContentStatus) => void;
   onSubmit: (item: BoardContentItem) => void;
   onRefresh: () => void;
+  onOpen: (item: BoardContentItem) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: columnId, disabled: !droppable });
 
@@ -318,6 +333,7 @@ function BoardColumn({
             onAdvance={onAdvance}
             onSubmit={onSubmit}
             onRefresh={onRefresh}
+            onOpen={onOpen}
           />
         ))}
         {items.length === 0 && (
@@ -362,6 +378,21 @@ export function ContentBoard({
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
+
+  // O navegador dispara "click" logo depois de soltar um card arrastado —
+  // sem essa trava, todo arraste terminaria abrindo a peça.
+  const justDraggedRef = useRef(false);
+
+  function openItem(item: BoardContentItem) {
+    if (justDraggedRef.current) return;
+    router.push(`/conteudo/${item.id}`);
+  }
+
+  function releaseDragLock() {
+    setTimeout(() => {
+      justDraggedRef.current = false;
+    }, 0);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -490,7 +521,17 @@ export function ContentBoard({
   return (
     <div className="flex flex-col gap-3">
       {error && <p className="rounded-lg bg-[#FEE4E2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}
-      <DndContext sensors={sensors} onDragEnd={(e) => void handleDragEnd(e)}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={() => {
+          justDraggedRef.current = true;
+        }}
+        onDragCancel={releaseDragLock}
+        onDragEnd={(e) => {
+          releaseDragLock();
+          void handleDragEnd(e);
+        }}
+      >
         <div className="grid auto-cols-[260px] grid-flow-col gap-4 overflow-x-auto pb-2">
           {columns.map((column) => (
             <BoardColumn
@@ -506,6 +547,7 @@ export function ContentBoard({
               onAdvance={(item, toStatus) => void changeStatus(item, toStatus)}
               onSubmit={(item) => void submitForApproval(item)}
               onRefresh={() => router.refresh()}
+              onOpen={openItem}
             />
           ))}
         </div>

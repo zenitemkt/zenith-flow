@@ -76,6 +76,9 @@
 .dark .zenite-app .hover\:text-\[\#FF2B00\]:hover { color: #ff8a5c; }
 .dark .zenite-app .hover\:text-\[\#D94343\]:hover { color: #ff8a80; }
 .dark .zenite-app .hover\:border-\[\#D0D5DD\]:hover { border-color: rgba(255, 255, 255, 0.2); }
+/* hovers de borda em brasa precisam vencer a borda traduzida acima */
+.dark .zenite-app .hover\:border-\[\#FF2B00\]:hover { border-color: #ff2b00; }
+.dark .zenite-app .hover\:border-\[\#FF2B00\]\/40:hover { border-color: rgba(255, 43, 0, 0.4); }
 .dark .zenite-app .focus\:ring-\[\#EDE9FE\]:focus { --tw-ring-color: rgba(255, 43, 0, 0.25); }
 
 /* ---------- campos sem cor de fundo explícita ---------- */

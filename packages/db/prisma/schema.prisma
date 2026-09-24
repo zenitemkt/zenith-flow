@@ -265,6 +265,9 @@ model Client {
   /// não há modelo de receita recorrente ainda (mesmo bloqueio da seção 29).
   competitorName       String?
   reactivationEligible Boolean      @default(true)
+  /// Pasta do cliente no Google Drive (logos, artes, materiais) — a Biblioteca
+  /// de conteúdo virou atalho pra essa pasta em vez de upload próprio (2026-09-24).
+  driveUrl             String?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
