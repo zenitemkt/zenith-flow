@@ -50,7 +50,7 @@ export function ProposalDecisionActions({ token }: { token: string }) {
   if (decision === "REJEITADA") {
     return (
       <form onSubmit={handleRejectSubmit} className="flex flex-col gap-2">
-        <label htmlFor="reject-reason" className="text-sm font-medium text-[#344054]">
+        <label htmlFor="reject-reason" className="text-sm font-medium text-[#CFD3DF]">
           O que motivou a recusa?
         </label>
         <textarea
@@ -60,14 +60,14 @@ export function ProposalDecisionActions({ token }: { token: string }) {
           onChange={(e) => setReason(e.target.value)}
           rows={3}
           required
-          className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
+          className="resize-none rounded-lg border border-[#343747] bg-[#0F1017] px-3 py-2 text-sm text-white outline-none placeholder:text-[#6B6E7B] focus:border-[#FF2B00] focus:ring-2 focus:ring-[#FF2B00]/25"
         />
-        {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+        {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
         <div className="flex justify-end gap-2">
           <button
             type="button"
             onClick={() => setDecision(null)}
-            className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
+            className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#AEB4C5] hover:bg-[#232532]"
           >
             Voltar
           </button>
@@ -86,7 +86,7 @@ export function ProposalDecisionActions({ token }: { token: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+      {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
       <button
         type="button"
         disabled={loading}
@@ -100,7 +100,7 @@ export function ProposalDecisionActions({ token }: { token: string }) {
         type="button"
         disabled={loading}
         onClick={() => setDecision("REJEITADA")}
-        className="flex h-11 items-center justify-center rounded-lg border border-[#D0D5DD] text-sm font-semibold text-[#344054] hover:bg-[#F6F7FB] disabled:opacity-60"
+        className="flex h-11 items-center justify-center rounded-lg border border-[#343747] text-sm font-semibold text-[#CFD3DF] hover:bg-[#232532] disabled:opacity-60"
       >
         Recusar
       </button>

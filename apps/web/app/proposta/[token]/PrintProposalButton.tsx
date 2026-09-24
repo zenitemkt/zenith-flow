@@ -8,7 +8,7 @@ export function PrintProposalButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="flex h-9 items-center gap-1.5 rounded-lg border border-[#D0D5DD] px-3 text-xs font-medium text-[#344054] hover:bg-[#F6F7FB] print:hidden"
+      className="flex h-9 items-center gap-1.5 rounded-lg border border-[#343747] px-3 text-xs font-medium text-[#CFD3DF] hover:bg-[#232532] print:hidden"
     >
       <Printer size={14} aria-hidden />
       Imprimir / Salvar PDF

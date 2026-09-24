@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ElementType, type KeyboardEvent } from "react";
 import { X } from "lucide-react";
 import type { NavigationGroup, NavigationItem } from "./types";
+import { AgencySwitcher } from "./AgencySwitcher";
 
 function isItemActive(item: NavigationItem, activePath: string): boolean {
   if (item.href === activePath) return true;
@@ -15,6 +16,12 @@ export interface MobileDrawerProps {
   groups: NavigationGroup[];
   activePath: string;
   linkComponent?: ElementType;
+  /** Nome da agência atual, exibido no seletor do cabeçalho. */
+  workspace?: string;
+  /** Agências do usuário — 2+ habilita o seletor. */
+  agencies?: { id: string; name: string }[];
+  currentAgencyId?: string;
+  onSwitchAgency?: (agencyId: string) => void;
 }
 
 function getFocusable(container: HTMLElement): HTMLElement[] {
@@ -31,6 +38,10 @@ export function MobileDrawer({
   groups,
   activePath,
   linkComponent,
+  workspace,
+  agencies,
+  currentAgencyId,
+  onSwitchAgency,
 }: MobileDrawerProps) {
   const Link = linkComponent ?? "a";
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -83,21 +94,31 @@ export function MobileDrawer({
         onKeyDown={handleKeyDown}
         className="absolute left-0 top-0 flex h-full w-[85vw] max-w-[320px] flex-col bg-[#171821] text-white shadow-xl"
       >
-        <div className="flex items-center justify-between border-b border-[#303343] px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF2B00] text-xs font-bold text-white">
-              Z
+        <div className="border-b border-[#303343] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-semibold text-white">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF2B00] text-xs font-bold text-white">
+                Z
+              </span>
+              ZENITE MKT
             </span>
-            ZENITE MKT
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar navegação"
-            className="flex h-11 w-11 items-center justify-center rounded-lg text-[#AEB4C5] hover:bg-[#232532] hover:text-white"
-          >
-            <X size={20} aria-hidden />
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar navegação"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-[#AEB4C5] hover:bg-[#232532] hover:text-white"
+            >
+              <X size={20} aria-hidden />
+            </button>
+          </div>
+          {workspace && (
+            <AgencySwitcher
+              workspace={workspace}
+              agencies={agencies}
+              currentAgencyId={currentAgencyId}
+              onSwitchAgency={(agencies?.length ?? 0) > 1 ? onSwitchAgency : undefined}
+            />
+          )}
         </div>
         <nav aria-label="Navegação principal (mobile)" className="flex-1 overflow-y-auto px-3 py-2">
           {groups.map((group) => (

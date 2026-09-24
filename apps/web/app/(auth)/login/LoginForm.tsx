@@ -72,13 +72,6 @@ export function LoginForm() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
-
-      <p className="mt-6 text-center text-sm text-[#9CA0AD]">
-        Novo por aqui?{" "}
-        <Link href="/signup" className="font-semibold text-[#FF6A3D] hover:text-[#FF8C5C]">
-          Criar agência
-        </Link>
-      </p>
     </>
   );
 }

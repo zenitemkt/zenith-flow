@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Corrigido
+
+- **Login no Portal do Cliente (`portal.hubzenite.com.br`) sempre falhava com "E-mail ou senha inválidos", mesmo com credencial correta**: `authClient` (`lib/auth-client.ts`) fixava a chamada de login no domínio principal, virando um pedido cross-origin quando a página era servida pelo subdomínio do portal — o Better Auth rejeitava por checagem de origem, e a mensagem de erro genérica escondia a causa real. Provavelmente afetava qualquer cliente logando pelo Portal desde que o roteamento por host foi ao ar (23/09). Corrigido removendo o `baseURL` fixo, deixando cada host resolver sua própria origem.
+- **Trocar de agência pelo celular não funcionava**: o `MobileDrawer` (navegação <768px) nunca recebia as props de agência (`agencies`/`currentAgencyId`/`onSwitchAgency`) — o seletor só existia no menu lateral desktop. `AgencySwitcher` extraído para componente próprio (`packages/ui/src/navigation/AgencySwitcher.tsx`), reaproveitado nos dois lugares.
+
+### Removido
+
+- Link "Novo por aqui? Criar agência" na tela de login (`/signup` continua acessível diretamente pela URL).
+- Valor (`R$ X.XXX,00`) em destaque no corpo do e-mail de proposta — mantém só o texto e o botão "Ver proposta"; o valor continua visível na página pública.
+
+### Alterado
+
+- **`/proposta/[token]`** ganhou a mesma identidade visual escura do login (halo de luz laranja, badge "Z", card `#171821` centralizado) — impressão/"Salvar PDF" continua no visual claro original.
+- **Favicon do app**: era o logo completo ("Z" + "marketing hub" em fundo escuro); agora é um círculo laranja sólido com "Z" branco, igual ao badge do login/menu lateral (`app/icon.svg`, vale pra todo o app incluindo o Portal do Cliente).
+
 ### Adicionado
 
 - **"Esqueci minha senha"** (`/esqueci-senha`, `/redefinir-senha`): fluxo real via Better Auth (`emailAndPassword.sendResetPassword`), sem migration nova (reaproveita a tabela `Verification` já existente). Vale pra equipe interna e pro Portal do Cliente, mesmo login único. Link expira em 1h e redefinir a senha revoga todas as sessões ativas da conta (`revokeSessionsOnPasswordReset: true`). Mensagem de sucesso é sempre a mesma, exista ou não o e-mail informado, pra não expor quais contas existem no sistema.

@@ -153,6 +153,10 @@ export function AppShell({
         groups={groups}
         activePath={activePath}
         linkComponent={linkComponent}
+        workspace={currentUser?.workspace}
+        agencies={agencies}
+        currentAgencyId={currentAgencyId}
+        onSwitchAgency={onSwitchAgency}
       />
 
       <main className="px-4 py-6 md:ml-[92px] md:px-8 md:py-7">

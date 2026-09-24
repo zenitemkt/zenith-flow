@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 import type { Proposal } from "@zenite-mkt/db";
-import { formatProposalValue } from "./proposals";
 
 export class EmailNotConfiguredError extends Error {
   constructor() {
@@ -67,11 +66,9 @@ interface SendProposalEmailArgs {
 }
 
 export async function sendProposalEmail({ to, cc, bcc, proposal, publicUrl, agencyName }: SendProposalEmailArgs): Promise<void> {
-  const value = proposal.valueCents !== null ? formatProposalValue(proposal.valueCents) : null;
   const html = emailShell(`
     <p>Olá!</p>
     <p>${agencyName} enviou uma proposta comercial pra você: <strong>${proposal.name}</strong>.</p>
-    ${value ? `<p style="font-size: 20px; font-weight: 600; color: #166534;">${value}</p>` : ""}
     ${ctaButton(publicUrl, "Ver proposta")}
   `);
   await sendEmail({ to, cc, bcc, subject: `Proposta comercial — ${proposal.name}`, html });
