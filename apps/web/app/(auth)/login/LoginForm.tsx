@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { FormField } from "@/app/_components/FormField";
+import { AuthField } from "../AuthField";
 
 export function LoginForm() {
   const router = useRouter();
@@ -32,11 +33,11 @@ export function LoginForm() {
 
   return (
     <>
-      <h1 className="mb-1 text-lg font-semibold text-[#101828]">Entrar</h1>
-      <p className="mb-6 text-sm text-[#667085]">Acesse o workspace da Zenite Hub Marketing</p>
+      <h1 className="mb-1 text-2xl font-bold text-white">Entrar</h1>
+      <p className="mb-6 text-sm text-[#9CA0AD]">Para continuar no workspace da Zenite Hub Marketing</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormField
+        <AuthField
           label="E-mail"
           type="email"
           name="email"
@@ -45,17 +46,22 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <FormField
-          label="Senha"
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="flex flex-col gap-1.5">
+          <AuthField
+            label="Senha"
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Link href="/esqueci-senha" className="self-end text-xs font-medium text-[#FF6A3D] hover:text-[#FF8C5C]">
+            Esqueci minha senha
+          </Link>
+        </div>
 
-        {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+        {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
 
         <button
           type="submit"
@@ -66,6 +72,13 @@ export function LoginForm() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-[#9CA0AD]">
+        Novo por aqui?{" "}
+        <Link href="/signup" className="font-semibold text-[#FF6A3D] hover:text-[#FF8C5C]">
+          Criar agência
+        </Link>
+      </p>
     </>
   );
 }

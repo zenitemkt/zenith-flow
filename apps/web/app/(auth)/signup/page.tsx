@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { FormField } from "@/app/_components/FormField";
+import { AuthField } from "../AuthField";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -46,13 +46,13 @@ export default function SignupPage() {
 
   return (
     <>
-      <h1 className="mb-1 text-lg font-semibold text-[#101828]">Criar sua agência</h1>
-      <p className="mb-6 text-sm text-[#667085]">
+      <h1 className="mb-1 text-2xl font-bold text-white">Criar sua agência</h1>
+      <p className="mb-6 text-sm text-[#9CA0AD]">
         Leva menos de um minuto. Você começa como Admin da Agência.
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormField
+        <AuthField
           label="Nome da agência"
           name="agencyName"
           required
@@ -60,7 +60,7 @@ export default function SignupPage() {
           onChange={(e) => setAgencyName(e.target.value)}
           placeholder="Zenite Mkt"
         />
-        <FormField
+        <AuthField
           label="Seu nome"
           name="name"
           autoComplete="name"
@@ -68,7 +68,7 @@ export default function SignupPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <FormField
+        <AuthField
           label="E-mail"
           type="email"
           name="email"
@@ -77,7 +77,7 @@ export default function SignupPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <FormField
+        <AuthField
           label="Senha"
           type="password"
           name="password"
@@ -88,7 +88,7 @@ export default function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+        {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
 
         <button
           type="submit"
@@ -100,9 +100,9 @@ export default function SignupPage() {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[#667085]">
+      <p className="mt-6 text-center text-sm text-[#9CA0AD]">
         Já tem uma conta?{" "}
-        <Link href="/login" className="font-medium text-[#FF2B00]">
+        <Link href="/login" className="font-semibold text-[#FF6A3D] hover:text-[#FF8C5C]">
           Entrar
         </Link>
       </p>

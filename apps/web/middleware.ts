@@ -4,6 +4,8 @@ import { getSessionCookie } from "better-auth/cookies";
 const PUBLIC_PATH_PREFIXES = [
   "/login",
   "/signup",
+  "/esqueci-senha",
+  "/redefinir-senha",
   "/convite",
   "/aprovar",
   "/pesquisa",
@@ -28,7 +30,16 @@ function isPublicPath(pathname: string): boolean {
  */
 const PORTAL_HOST = process.env.PORTAL_HOST ?? "portal.hubzenite.com.br";
 
-const PORTAL_ALLOWED_PREFIXES = ["/portal", "/login", "/convite", "/api/auth", "/api/portal", "/api/media"];
+const PORTAL_ALLOWED_PREFIXES = [
+  "/portal",
+  "/login",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  "/convite",
+  "/api/auth",
+  "/api/portal",
+  "/api/media",
+];
 
 function isPortalHost(host: string | null): boolean {
   return host === PORTAL_HOST;

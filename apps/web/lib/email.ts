@@ -147,3 +147,20 @@ export async function sendContentApprovalEmail({ to, cc, bcc, contentTitle, publ
   `);
   await sendEmail({ to, cc, bcc, subject: `Aprovação pendente — ${contentTitle}`, html });
 }
+
+interface SendPasswordResetEmailArgs {
+  to: string;
+  url: string;
+  userName: string;
+}
+
+/** Chamada por `emailAndPassword.sendResetPassword` (apps/web/lib/auth.ts) — vale tanto pra equipe interna quanto pro Portal do Cliente, mesmo login único. */
+export async function sendPasswordResetEmail({ to, url, userName }: SendPasswordResetEmailArgs): Promise<void> {
+  const html = emailShell(`
+    <p>Olá, ${userName}!</p>
+    <p>Recebemos um pedido pra redefinir sua senha. Se não foi você, pode ignorar este e-mail — sua senha continua a mesma.</p>
+    ${ctaButton(url, "Redefinir senha")}
+    <p style="color:#667085; font-size: 13px;">Este link expira em 1 hora.</p>
+  `);
+  await sendEmail({ to, subject: "Redefinir sua senha", html });
+}
