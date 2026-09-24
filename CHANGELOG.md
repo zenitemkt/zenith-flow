@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Portal do Cliente — aba "Peças gráficas"**: cliente solicita cotação de impressão (cartão de visitas, panfletos, placas, banners, lonas, adesivos ou outro) direto pelo Portal. Sem tabela nova — reaproveita o mesmo pipeline de "Solicitações" (vira uma tarefa sem responsável em "Não atribuída" no Operação).
+
 ### Corrigido
 
 - **Card duplicado ao criar em Operação/Conteúdo, e a mesma classe de bug em todo o resto do produto**: formulários de criação só travavam reenvio via estado do React, que pode não atualizar a tempo de bloquear um segundo clique/toque muito rápido — cada envio criava um registro novo, sem checagem de idempotência nas rotas. Corrigido com uma trava síncrona compartilhada (`useSubmitGuard`, novo hook em `lib/`), aplicada em 21 formulários de criação (todos os popups "Novo/Nova" do produto + `AddContactForm`/`AddNoteForm`/`AddLeadNoteForm`/`NewTimeEntryForm`/`InviteMemberForm`).

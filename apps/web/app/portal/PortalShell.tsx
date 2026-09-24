@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/portal/calendario", label: "Calendário" },
   { href: "/portal/aprovacoes", label: "Aprovações" },
   { href: "/portal/solicitacoes", label: "Solicitações" },
+  { href: "/portal/grafica", label: "Peças gráficas" },
   { href: "/portal/arquivos", label: "Arquivos" },
   { href: "/portal/trafego", label: "Tráfego pago" },
   { href: "/portal/financeiro", label: "Financeiro" },
