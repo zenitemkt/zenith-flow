@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Corrigido
+
+- **Card duplicado ao criar em Operação/Conteúdo**: o popup "Nova tarefa" (`NewContentModal.tsx`) só travava reenvio via estado do React, que pode não atualizar a tempo de bloquear um segundo clique/toque muito rápido — cada envio criava um `ContentItem` novo, sem checagem de idempotência na rota. Corrigido com uma trava síncrona (`useRef`).
+
 ### Alterado
 
 - **`portal.hubzenite.com.br` deixou de ser restrito só ao Portal do Cliente**: agora serve o app inteiro, igual ao domínio principal — equipe e cliente logam pelo mesmo domínio e caem direto no lugar certo (roteamento por papel, não mais por host). Reverte a decisão de 23/09 que redirecionava equipe interna pro domínio `.vercel.app` (exigia logar de novo lá, já que o cookie é por host) — pedido explícito do Kevin.

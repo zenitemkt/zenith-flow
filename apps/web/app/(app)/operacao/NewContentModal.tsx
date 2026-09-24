@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
@@ -33,6 +33,16 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  /**
+   * Trava síncrona contra clique/toque duplo — `disabled={loading}` no botão
+   * não basta porque o React só aplica o atributo no próximo render, e dois
+   * cliques bem rápidos (comum em toque duplo no celular ou conexão lenta)
+   * podem disparar `handleSubmit` duas vezes antes disso, criando o mesmo
+   * card duplicado (bug reportado pelo Kevin, 2026-09-24). Uma ref muda na
+   * hora, sem esperar re-render, então bloqueia mesmo a segunda chamada
+   * vinda do mesmo closure "antigo".
+   */
+  const submittingRef = useRef(false);
 
   function close() {
     setTitle("");
@@ -57,7 +67,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (loading) return;
+    if (submittingRef.current) return;
     setError(null);
 
     if (channels.length === 0) {
@@ -65,48 +75,52 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
 
-    const responses = await Promise.all(
-      channels.map((channel) =>
-        fetch("/api/content", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            description,
-            clientId,
-            channel,
-            format,
-            campaign,
-            scheduledDate,
-            caption,
-            assigneeUserIds,
+    try {
+      const responses = await Promise.all(
+        channels.map((channel) =>
+          fetch("/api/content", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title,
+              description,
+              clientId,
+              channel,
+              format,
+              campaign,
+              scheduledDate,
+              caption,
+              assigneeUserIds,
+            }),
           }),
-        }),
-      ),
-    );
+        ),
+      );
 
-    setLoading(false);
+      const failed = responses.find((response) => !response.ok);
+      if (failed) {
+        const body = await failed.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a peça.");
+        return;
+      }
 
-    const failed = responses.find((response) => !response.ok);
-    if (failed) {
-      const body = await failed.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a peça.");
-      return;
+      const bodies = await Promise.all(responses.map((response) => response.json()));
+      close();
+      if (bodies.length === 1) {
+        router.push(`/conteudo/${bodies[0].id}`);
+      } else {
+        router.push("/operacao");
+      }
+      // Em ambos os casos o quadro por baixo (`/operacao`) ganhou card(s) novo(s)
+      // — sem isso, só aparece depois de uma navegação nova (bug reportado pelo
+      // Kevin: card criado não aparecia até trocar de aba e voltar).
+      router.refresh();
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
     }
-
-    const bodies = await Promise.all(responses.map((response) => response.json()));
-    close();
-    if (bodies.length === 1) {
-      router.push(`/conteudo/${bodies[0].id}`);
-    } else {
-      router.push("/operacao");
-    }
-    // Em ambos os casos o quadro por baixo (`/operacao`) ganhou card(s) novo(s)
-    // — sem isso, só aparece depois de uma navegação nova (bug reportado pelo
-    // Kevin: card criado não aparecia até trocar de aba e voltar).
-    router.refresh();
   }
 
   if (clients.length === 0) {
