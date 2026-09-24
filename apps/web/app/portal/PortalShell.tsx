@@ -35,14 +35,25 @@ export function PortalShell({
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F7FB]">
-      <header className="border-b border-[#E4E7EC] bg-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#0A0B10]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[-220px] h-[640px] w-[640px] -translate-x-1/2 rounded-full opacity-60 blur-[130px]"
+        style={{ background: "radial-gradient(circle, #FF2B00 0%, transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[calc(50%+220px)] top-[160px] h-[420px] w-[420px] rounded-full opacity-40 blur-[110px]"
+        style={{ background: "radial-gradient(circle, #FF7A1A 0%, transparent 70%)" }}
+      />
+
+      <header className="relative border-b border-[#2F3140]">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8E93A6]">
               {agencyName}
             </p>
-            <p className="text-sm font-semibold text-[#101828]">{clientName}</p>
+            <p className="text-sm font-semibold text-white">{clientName}</p>
           </div>
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map((item) => {
@@ -52,7 +63,7 @@ export function PortalShell({
                   key={item.href}
                   href={item.href}
                   className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                    active ? "bg-[#FFF1EC] text-[#FF2B00]" : "text-[#475467] hover:bg-[#F6F7FB]"
+                    active ? "bg-[#232532] text-[#FF6A3D]" : "text-[#CFD3DF] hover:bg-[#232532] hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -62,14 +73,14 @@ export function PortalShell({
             <button
               type="button"
               onClick={handleSignOut}
-              className="ml-2 rounded-lg px-3 py-2 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
+              className="ml-2 rounded-lg px-3 py-2 text-sm font-medium text-[#CFD3DF] hover:bg-[#232532] hover:text-white"
             >
               Sair
             </button>
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-6">{children}</main>
+      <main className="relative mx-auto max-w-5xl px-6 py-6">{children}</main>
     </div>
   );
 }

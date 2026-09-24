@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Alterado
+
+- **Portal do Cliente — fundo escuro com halo laranja**, mesma identidade visual do login e da proposta pública. Cards/tabelas de conteúdo continuam brancos; só fundo, cabeçalho e títulos que ficavam fora dos cards passaram a claro-sobre-escuro.
+
 ### Adicionado
 
 - **Portal do Cliente — aba "Peças gráficas"**: cliente solicita cotação de impressão (cartão de visitas, panfletos, placas, banners, lonas, adesivos ou outro) direto pelo Portal. Sem tabela nova — reaproveita o mesmo pipeline de "Solicitações" (vira uma tarefa sem responsável em "Não atribuída" no Operação).

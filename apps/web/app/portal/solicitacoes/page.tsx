@@ -20,8 +20,8 @@ export default async function PortalRequestsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-[#101828]">Solicitações</h1>
-          <p className="text-sm text-[#667085]">
+          <h1 className="text-lg font-semibold text-white">Solicitações</h1>
+          <p className="text-sm text-[#9CA0AD]">
             {tasks.length} solicitação{tasks.length === 1 ? "" : "ões"} enviada
             {tasks.length === 1 ? "" : "s"}.
           </p>

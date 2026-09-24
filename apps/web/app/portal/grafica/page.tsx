@@ -20,8 +20,8 @@ export default async function PortalGraphicRequestsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-[#101828]">Peças gráficas</h1>
-          <p className="text-sm text-[#667085]">
+          <h1 className="text-lg font-semibold text-white">Peças gráficas</h1>
+          <p className="text-sm text-[#9CA0AD]">
             Solicite uma cotação de impressão — cartão de visitas, panfletos, placas, banners, lonas, adesivos e outros.
           </p>
         </div>

@@ -28,8 +28,8 @@ export default async function PortalFinanceiroPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Financeiro</h1>
-        <p className="text-sm text-[#667085]">Suas faturas com a agência (seção 18 do manual).</p>
+        <h1 className="text-lg font-semibold text-white">Financeiro</h1>
+        <p className="text-sm text-[#9CA0AD]">Suas faturas com a agência (seção 18 do manual).</p>
       </div>
 
       {entries.length === 0 ? (

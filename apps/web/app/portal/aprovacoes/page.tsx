@@ -26,12 +26,12 @@ export default async function PortalApprovalsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Aprovações</h1>
-        <p className="text-sm text-[#667085]">O que está esperando sua decisão, e o que você já respondeu.</p>
+        <h1 className="text-lg font-semibold text-white">Aprovações</h1>
+        <p className="text-sm text-[#9CA0AD]">O que está esperando sua decisão, e o que você já respondeu.</p>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-[#101828]">
+        <h2 className="text-sm font-semibold text-white">
           Esperando sua decisão ({pendingApprovals.length})
         </h2>
         {pendingApprovals.length === 0 ? (
@@ -67,9 +67,9 @@ export default async function PortalApprovalsPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-[#101828]">Respondidas recentemente</h2>
+        <h2 className="text-sm font-semibold text-white">Respondidas recentemente</h2>
         {decidedApprovals.length === 0 ? (
-          <p className="text-sm text-[#98A2B3]">Nenhuma decisão registrada ainda.</p>
+          <p className="text-sm text-[#9CA0AD]">Nenhuma decisão registrada ainda.</p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
             <table className="w-full text-left text-sm">

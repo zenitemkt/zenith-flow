@@ -29,8 +29,8 @@ export default async function PortalHomePage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Olá, {client.name}</h1>
-        <p className="text-sm text-[#667085]">
+        <h1 className="text-lg font-semibold text-white">Olá, {client.name}</h1>
+        <p className="text-sm text-[#9CA0AD]">
           Acompanhe o conteúdo planejado e aprove o que estiver esperando por você.
         </p>
       </div>

@@ -28,8 +28,8 @@ export default async function PortalCalendarioPage({ searchParams }: PageProps) 
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-[#101828]">Calendário</h1>
-          <p className="text-sm text-[#667085]">
+          <h1 className="text-lg font-semibold text-white">Calendário</h1>
+          <p className="text-sm text-[#9CA0AD]">
             {items.length} peça{items.length === 1 ? "" : "s"} agendada{items.length === 1 ? "" : "s"} em{" "}
             {MONTH_LABELS[month]} de {year}.
           </p>
@@ -41,7 +41,7 @@ export default async function PortalCalendarioPage({ searchParams }: PageProps) 
           >
             ← Anterior
           </Link>
-          <span className="text-sm font-semibold text-[#101828]">
+          <span className="text-sm font-semibold text-white">
             {MONTH_LABELS[month]} {year}
           </span>
           <Link

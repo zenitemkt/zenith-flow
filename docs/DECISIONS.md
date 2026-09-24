@@ -1,3 +1,15 @@
+## 2026-09-24 — Portal do Cliente ganha identidade visual escura no fundo (não no conteúdo)
+
+**Contexto**: depois de eu criar uma conta de cliente de teste e o Kevin dar uma olhada ("O painel do usuario ta top!"), ele pediu que o fundo branco virasse o mesmo preto com degradê laranja do login. Antes de mexer, perguntei explicitamente até onde o escuro deveria ir — se só o fundo (cards continuam brancos) ou tudo (igual ao tratamento que dei na página pública de Proposta mais cedo na mesma sessão). Ele escolheu a opção mais contida: só fundo e cabeçalho escuros.
+
+**Decisão 1 — reaproveitar o exato tratamento visual do `(auth)/layout.tsx`, não inventar uma paleta nova**: mesmo halo (duas radial-gradient laranja/`#FF7A1A` desfocadas), mesmo `#0A0B10` de base — terceira vez que esse tratamento é usado no produto (login, proposta pública, agora Portal), reforça que é uma identidade visual coerente pro que é "de frente pro cliente/externo", não um design ad-hoc por tela.
+
+**Decisão 2 — mudar só o fundo obrigou a tocar em texto que ficava fora dos cards, em 7 arquivos**: a escolha "cards continuam brancos" pareceria, à primeira vista, uma mudança só em `PortalShell.tsx` — mas cada uma das 7 páginas do Portal tem um bloco de título/subtítulo (`<h1>`/`<p>`) que renderiza DIRETO sobre o canvas da página, fora de qualquer card branco (ex.: `<h1 className="text-[#101828]">Financeiro</h1>` antes do card da tabela). Deixar isso do jeito que estava teria criado texto quase-preto sobre fundo quase-preto, ilegível — não é scope creep, é a mesma mudança aprovada exigindo consistência em todo lugar onde ela se aplica. Idem pros dois sub-cabeçalhos de `Aprovações` ("Esperando sua decisão"/"Respondidas recentemente") e o rótulo de mês entre as setas do `Calendário`.
+
+**Decisão 3 — `MediaAssetList` (usado em Arquivos) não virou "ciente do tema"**: esse componente é compartilhado com a Biblioteca interna (`/operacao/biblioteca`), que continua com tema claro — mudar as cores dele quebraria a outra tela. Em vez disso, `/portal/arquivos/page.tsx` passou a envolver a lista com um `<div className="... bg-white ...">` próprio, replicando o padrão que as outras 6 páginas do Portal já usam (seção envolvida num card branco) sem tocar no componente compartilhado.
+
+**Testado**: `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos. Sem verificação manual em navegador nesta sessão em NENHUMA das 7 telas — o Kevin só viu a Home antes de pedir a mudança; as outras 6 (Calendário, Aprovações, Solicitações, Peças gráficas, Arquivos, Tráfego pago, Financeiro) receberam a mesma correção de texto por inferência do mesmo padrão, não por olhar cada uma renderizada. Recomenda-se conferir todas depois do deploy.
+
 ## 2026-09-24 — Portal do Cliente: cotação de peças gráficas reaproveita o pipeline de Solicitações, sem tabela nova
 
 **Contexto**: Kevin pediu uma aba no Portal do Cliente pra ele solicitar cotação de impressão (cartão de visitas, panfletos, placas, banners, lonas, adesivos etc.). Perguntei se era pra construir agora ou só anotar (como o Mapa de Anúncios) — ele confirmou "começar a construir agora".

@@ -21,8 +21,8 @@ export default async function PortalTrafegoPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Tráfego pago</h1>
-        <p className="text-sm text-[#667085]">Campanhas de mídia paga que a agência gerencia pra você.</p>
+        <h1 className="text-lg font-semibold text-white">Tráfego pago</h1>
+        <p className="text-sm text-[#9CA0AD]">Campanhas de mídia paga que a agência gerencia pra você.</p>
       </div>
 
       {campaigns.length === 0 ? (
