@@ -3,10 +3,19 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@zenite-mkt/db";
 import { sendPasswordResetEmail, isEmailConfigured } from "./email";
 
+const PORTAL_HOST = process.env.PORTAL_HOST ?? "portal.hubzenite.com.br";
+const MAIN_APP_URL = process.env.MAIN_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://zenith-flow-one.vercel.app";
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // Sem isso, o Better Auth só confia na origem derivada de `baseURL` (um
+  // único host) — qualquer pedido de login vindo de outro host, como
+  // portal.hubzenite.com.br, era rejeitado por checagem de origem (CSRF)
+  // antes mesmo de chegar na comparação de senha, e aparecia pro usuário
+  // como "e-mail ou senha inválidos" (bug encontrado em 2026-09-24).
+  trustedOrigins: [MAIN_APP_URL, `https://${PORTAL_HOST}`],
   emailAndPassword: {
     enabled: true,
     // Envio real de e-mail (verificação) fica para a Fase 2 (seção 41.1 do
