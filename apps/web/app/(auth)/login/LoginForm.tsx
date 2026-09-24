@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { AuthField } from "../AuthField";
 
@@ -43,6 +44,7 @@ export function LoginForm() {
           name="email"
           autoComplete="email"
           required
+          disabled={loading}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -53,6 +55,7 @@ export function LoginForm() {
             name="password"
             autoComplete="current-password"
             required
+            disabled={loading}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -66,9 +69,11 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-2 flex h-11 items-center justify-center rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+          aria-busy={loading}
+          className="mt-2 flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white disabled:opacity-80"
           style={{ backgroundColor: "#FF2B00" }}
         >
+          {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>

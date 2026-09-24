@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Indicador de carregamento no login**: ícone girando + campos desabilitados durante o envio (`LoginForm.tsx`) — a lentidão relatada no login pelo Portal é provavelmente o Neon "acordando" depois de ficar ocioso (scale-to-zero, configurável no painel do Neon, não no código).
+
 ### Corrigido
 
 - **Login no Portal do Cliente (`portal.hubzenite.com.br`) sempre falhava com "E-mail ou senha inválidos", mesmo com credencial correta**: duas causas encadeadas. (1) `authClient` (`lib/auth-client.ts`) fixava a chamada de login no domínio principal, virando um pedido cross-origin quando a página era servida pelo subdomínio do portal — corrigido removendo o `baseURL` fixo, cada host agora resolve sua própria origem. (2) mesmo com (1) corrigido, o servidor (`lib/auth.ts`) só confiava na origem de `BETTER_AUTH_URL` (uma única, o domínio `.vercel.app`) — qualquer pedido vindo de outro host, incluindo o portal, era rejeitado por checagem de origem antes mesmo de checar a senha; corrigido adicionando `trustedOrigins` incluindo o host do portal. Provavelmente afetava qualquer cliente logando pelo Portal desde que o roteamento por host foi ao ar (23/09).
