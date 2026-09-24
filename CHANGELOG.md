@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Roteamento por host para `portal.hubzenite.com.br`** (`BRIEFING_PORTAL_SUBDOMINIO.md`, seção 5): mesmo deploy Next.js, mas o middleware (`apps/web/middleware.ts`) agora só expõe `/portal`, `/login`, `/convite`, `/api/auth`, `/api/portal` e `/api/media` nesse host — qualquer outra rota interna é redirecionada de volta pra `/portal`, mesmo digitada direto na URL. A raiz (`/`) desse host é reescrita para `/portal` sem sair da URL limpa. Equipe interna que logar direto pelo subdomínio do portal (sem ser cliente) é redirecionada pro domínio principal (`lib/portal.ts`, `requirePortalContext()`) em vez de cair num loop de redirecionamento — esse comportamento (redirecionar, não bloquear) foi uma escolha razoável documentada no briefing como decisão do Kevin a confirmar, não uma certeza. Domínio configurável via `PORTAL_HOST`/`MAIN_APP_URL` (fallback pro domínio Vercel atual). Falta só o DNS (`A portal.hubzenite.com.br → 76.76.21.21`, fora do alcance desta sessão) pra funcionar em produção.
+
 ### Performance
 
 - **Região do servidor = região do banco** (`vercel.json`): `"regions": ["gru1"]` — as funções da Vercel rodavam na região padrão (EUA, `iad1`) enquanto o Neon está em São Paulo (`sa-east-1`); cada consulta ao banco perdia ~120ms de viagem, multiplicado por 8-12 consultas por ação. Mesmo diagnóstico e correção já validados no sistema 9FOURGROUP · Marketing (documentado em `Kanban - Performance e Card Aberto.docx`). Só faz efeito no próximo deploy.
