@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 import { LogOut } from "lucide-react";
+import { ZenithArc, ZenithGrain } from "@zenite-mkt/ui";
 import { authClient } from "@/lib/auth-client";
 
 const NAV_ITEMS = [
@@ -17,34 +18,9 @@ const NAV_ITEMS = [
   { href: "/portal/financeiro", label: "Financeiro" },
 ];
 
-const GRAIN =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
-
 function isActive(pathname: string, href: string) {
   if (href === "/portal") return pathname === "/portal";
   return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-/**
- * A marca do portal: a borda de um "planeta" escuro sendo iluminada por trás,
- * como o sol cruzando o horizonte visto do alto — o zênite que dá nome à
- * agência. É o único elemento decorativo; o resto da interface fica quieto.
- */
-function ZenithArc() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 h-[640px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
-    >
-      <div
-        className="zenite-dawn absolute left-1/2 top-[-2476px] h-[2640px] w-[2640px] rounded-full bg-[#07080C] lg:top-[-2528px]"
-        style={{
-          boxShadow:
-            "0 1px 0 0 rgba(255,168,110,0.95), 0 4px 18px 0 rgba(255,90,30,0.75), 0 30px 90px 10px rgba(255,43,0,0.38), 0 90px 220px 60px rgba(255,43,0,0.16)",
-        }}
-      />
-    </div>
-  );
 }
 
 export function PortalShell({
@@ -98,12 +74,8 @@ export function PortalShell({
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#0A0B10] text-[#F5F2EE] selection:bg-[#FF2B00]/40 selection:text-white">
-      <ZenithArc />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 opacity-[0.04] mix-blend-overlay"
-        style={{ backgroundImage: GRAIN }}
-      />
+      <ZenithArc rimClassName="top-[-2476px] lg:top-[-2528px]" />
+      <ZenithGrain />
 
       <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0A0B10]/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">

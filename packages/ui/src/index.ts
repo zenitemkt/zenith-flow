@@ -8,6 +8,7 @@ export { AppShell } from "./shell/AppShell";
 export type { AppShellProps, ThemeMode } from "./shell/AppShell";
 export { SectionTabs, findTabbedItemForPath } from "./shell/SectionTabs";
 export type { SectionTabsProps } from "./shell/SectionTabs";
+export { ZenithArc, ZenithGrain } from "./shell/ZenithArc";
 export { CommandPalette } from "./shell/CommandPalette";
 export type { CommandPaletteProps } from "./shell/CommandPalette";
 export { useCommandPalette } from "./shell/CommandPaletteContext";

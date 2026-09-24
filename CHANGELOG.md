@@ -4,6 +4,7 @@
 
 ### Alterado
 
+- **Painel da equipe — tema "zênite" vira o tema escuro completo e o padrão**: cards, tabelas, formulários e modais escuros, arco de luz e fonte de títulos iguais aos do Portal. O tema claro continua disponível no botão sol/lua.
 - **Portal do Cliente — redesign completo**: superfícies escuras em todas as telas, arco de luz "zênite" no topo, fonte de títulos própria, Home com saudação acionável e linha do tempo de publicações, calendário com legenda de status e agenda no celular, resumo financeiro, métricas derivadas no tráfego pago.
 - **Portal do Cliente — fundo escuro com halo laranja**, mesma identidade visual do login e da proposta pública. Cards/tabelas de conteúdo continuam brancos; só fundo, cabeçalho e títulos que ficavam fora dos cards passaram a claro-sobre-escuro.
 

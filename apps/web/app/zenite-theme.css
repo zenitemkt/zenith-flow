@@ -1,0 +1,97 @@
+/*
+ * Tema "zênite" do painel da equipe (2026-09-24) — ver docs/DECISIONS.md.
+ *
+ * As ~150 telas/componentes internos foram escritos com uma paleta clara
+ * fixa (bg-white, text-[#101828], border-[#E4E7EC]...). Em vez de reescrever
+ * cada arquivo, este arquivo traduz essa paleta pros tokens do zênite, só
+ * quando o tema escuro está ativo (`.dark` no <html>) e só dentro do shell
+ * interno (`.zenite-app`, raiz do AppShell). O tema claro não muda nada.
+ *
+ * Tokens: noite #0A0B10 (fundo), crepúsculo #13141C (superfície), #181922
+ * (superfície elevada), texto branco quente #F5F2EE, brasa #FF2B00.
+ * Telas novas devem preferir as classes `dark:` explícitas — isto aqui é a
+ * ponte pro código que já existe.
+ */
+
+/* ---------- superfícies ---------- */
+.dark .zenite-app .bg-white { background-color: #13141c; }
+.dark .zenite-app .bg-\[\#F9FAFB\] { background-color: #181922; }
+.dark .zenite-app .bg-\[\#F6F7FB\] { background-color: #0f1016; }
+.dark .zenite-app .bg-\[\#FAFAFB\] { background-color: rgba(0, 0, 0, 0.22); }
+.dark .zenite-app .bg-\[\#F2F4F7\] { background-color: rgba(255, 255, 255, 0.07); }
+.dark .zenite-app .bg-\[\#E4E7EC\] { background-color: rgba(255, 255, 255, 0.07); }
+.dark .zenite-app .bg-\[\#101828\] { background-color: #22232e; }
+
+/* ---------- tons de marca e de status ---------- */
+.dark .zenite-app .bg-\[\#FFF1EC\],
+.dark .zenite-app .bg-\[\#EDE9FE\] { background-color: rgba(255, 43, 0, 0.13); }
+.dark .zenite-app .bg-\[\#FFF9F7\],
+.dark .zenite-app .bg-\[\#FFF7F5\] { background-color: rgba(255, 43, 0, 0.06); }
+.dark .zenite-app .bg-\[\#DCFCE7\] { background-color: rgba(22, 163, 106, 0.15); }
+.dark .zenite-app .bg-\[\#FEE4E2\],
+.dark .zenite-app .bg-\[\#FEE2E2\] { background-color: rgba(217, 67, 67, 0.16); }
+.dark .zenite-app .bg-\[\#FEF3C7\],
+.dark .zenite-app .bg-\[\#FFF2CC\] { background-color: rgba(245, 181, 68, 0.13); }
+.dark .zenite-app .bg-\[\#EEF2FF\],
+.dark .zenite-app .bg-\[\#EEF4FF\] { background-color: rgba(99, 102, 241, 0.16); }
+
+/* ---------- texto ---------- */
+.dark .zenite-app .text-\[\#101828\] { color: #f5f2ee; }
+.dark .zenite-app .text-\[\#344054\] { color: #d6d3cf; }
+.dark .zenite-app .text-\[\#475467\] { color: #bdbbc4; }
+.dark .zenite-app .text-\[\#667085\] { color: #a3a5b2; }
+.dark .zenite-app .text-\[\#98A2B3\] { color: #8b8d9a; }
+.dark .zenite-app .text-\[\#D0D5DD\] { color: #5e6070; }
+.dark .zenite-app .text-\[\#FF2B00\] { color: #ff6a3d; }
+.dark .zenite-app .text-\[\#C2270A\] { color: #ff8a5c; }
+.dark .zenite-app .text-\[\#166534\],
+.dark .zenite-app .text-\[\#0B6B43\] { color: #5ee0a6; }
+.dark .zenite-app .text-\[\#16A36A\] { color: #3dd68c; }
+.dark .zenite-app .text-\[\#B42318\],
+.dark .zenite-app .text-\[\#A11D1D\] { color: #ff8a80; }
+.dark .zenite-app .text-\[\#D94343\] { color: #ff7b72; }
+.dark .zenite-app .text-\[\#92600A\],
+.dark .zenite-app .text-\[\#9A5B00\] { color: #f7c66a; }
+.dark .zenite-app .text-\[\#3730A3\] { color: #b4befe; }
+.dark .zenite-app .text-\[\#2859B8\] { color: #93b4ff; }
+
+/* ---------- bordas ---------- */
+.dark .zenite-app .border-\[\#E4E7EC\] { border-color: rgba(255, 255, 255, 0.08); }
+.dark .zenite-app .border-\[\#D0D5DD\] { border-color: rgba(255, 255, 255, 0.12); }
+.dark .zenite-app .border-\[\#EEF0F3\],
+.dark .zenite-app .border-\[\#F2F4F7\] { border-color: rgba(255, 255, 255, 0.06); }
+.dark .zenite-app .border-\[\#F9C7B4\] { border-color: rgba(255, 43, 0, 0.35); }
+
+/* ---------- estados (hover/foco) ---------- */
+.dark .zenite-app .hover\:bg-\[\#F6F7FB\]:hover { background-color: rgba(255, 255, 255, 0.05); }
+.dark .zenite-app .hover\:bg-\[\#F9FAFB\]:hover { background-color: rgba(255, 255, 255, 0.04); }
+.dark .zenite-app .hover\:bg-white:hover { background-color: rgba(255, 255, 255, 0.06); }
+.dark .zenite-app .hover\:bg-\[\#F2F4F7\]:hover { background-color: rgba(255, 255, 255, 0.08); }
+.dark .zenite-app .hover\:bg-\[\#FFF1EC\]:hover,
+.dark .zenite-app .hover\:bg-\[\#FFF9F7\]:hover,
+.dark .zenite-app .hover\:bg-\[\#FFF7F5\]:hover { background-color: rgba(255, 43, 0, 0.09); }
+.dark .zenite-app .hover\:bg-\[\#DCFCE7\]:hover { background-color: rgba(22, 163, 106, 0.22); }
+.dark .zenite-app .hover\:bg-\[\#FEE4E2\]:hover { background-color: rgba(217, 67, 67, 0.22); }
+.dark .zenite-app .hover\:text-\[\#101828\]:hover { color: #f5f2ee; }
+.dark .zenite-app .hover\:text-\[\#FF2B00\]:hover { color: #ff8a5c; }
+.dark .zenite-app .hover\:text-\[\#D94343\]:hover { color: #ff8a80; }
+.dark .zenite-app .hover\:border-\[\#D0D5DD\]:hover { border-color: rgba(255, 255, 255, 0.2); }
+.dark .zenite-app .focus\:ring-\[\#EDE9FE\]:focus { --tw-ring-color: rgba(255, 43, 0, 0.25); }
+
+/* ---------- campos sem cor de fundo explícita ---------- */
+.dark .zenite-app :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), textarea, select):not([class*="bg-"]) {
+  background-color: #0c0d13;
+}
+
+.dark .zenite-app ::placeholder { color: #5e6070; }
+
+/* ---------- tipografia de títulos e seleção ---------- */
+.dark .zenite-app main h1 {
+  font-family: var(--font-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.dark .zenite-app ::selection {
+  background: rgba(255, 43, 0, 0.4);
+  color: #fff;
+}

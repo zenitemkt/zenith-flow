@@ -9,6 +9,7 @@ import { SectionTabs, findTabbedItemForPath } from "./SectionTabs";
 import { CommandPalette } from "./CommandPalette";
 import { CommandPaletteProvider } from "./CommandPaletteContext";
 import { ToastProvider } from "../patterns/ToastProvider";
+import { ZenithArc, ZenithGrain } from "./ZenithArc";
 
 export type ThemeMode = "LIGHT" | "DARK";
 
@@ -80,7 +81,9 @@ export function AppShell({
 
   return (
     <ToastProvider>
-    <div className="min-h-screen bg-[#F6F7FB] text-[#101828] dark:bg-[#0B0D12] dark:text-[#F3F4F6]">
+    <div className="zenite-app relative min-h-screen overflow-x-clip bg-[#F6F7FB] text-[#101828] dark:bg-[#0A0B10] dark:text-[#F5F2EE]">
+      <ZenithArc className="hidden dark:block md:left-[92px]" rimClassName="top-[-2552px] md:top-[-2536px]" />
+      <ZenithGrain className="hidden dark:block" />
       <Sidebar
         groups={groups}
         activePath={activePath}
@@ -92,7 +95,7 @@ export function AppShell({
         onSwitchAgency={onSwitchAgency}
       />
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#E4E7EC] bg-white/95 px-4 backdrop-blur dark:border-[#303343] dark:bg-[#171821]/95 md:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[#E4E7EC] bg-white/95 px-4 backdrop-blur dark:border-white/[0.06] dark:bg-[#0A0B10]/70 dark:backdrop-blur-xl md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -107,7 +110,7 @@ export function AppShell({
         </span>
       </header>
 
-      <header className="sticky top-0 z-20 hidden h-[68px] items-center gap-3 border-b border-[#E4E7EC]/80 bg-[#F6F7FB]/90 px-8 backdrop-blur-xl dark:border-[#303343]/80 dark:bg-[#0B0D12]/90 md:ml-[92px] md:flex">
+      <header className="sticky top-0 z-20 hidden h-[68px] items-center gap-3 border-b border-[#E4E7EC]/80 bg-[#F6F7FB]/90 px-8 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[#0A0B10]/60 md:ml-[92px] md:flex">
         <button
           type="button"
           onClick={() => setPaletteOpen(true)}
@@ -159,7 +162,7 @@ export function AppShell({
         onSwitchAgency={onSwitchAgency}
       />
 
-      <main className="px-4 py-6 md:ml-[92px] md:px-8 md:py-7">
+      <main className="relative px-4 py-6 dark:pt-12 md:ml-[92px] md:px-8 md:py-7 md:dark:pt-14">
         {tabbedItem && (
           <SectionTabs item={tabbedItem} activePath={activePath} linkComponent={linkComponent} />
         )}

@@ -1,3 +1,15 @@
+## 2026-09-24 — Identidade "zênite": redesign do Portal e tema escuro padrão do painel da equipe
+
+**Contexto**: o fundo escuro com cards brancos no Portal (entrada abaixo) ficou ruim na prática — Kevin mandou print. Pediu um redesign de verdade ("aja como designer, me surpreenda"), gostou muito, e pediu o mesmo no painel da equipe.
+
+**Decisão 1 — um único elemento de assinatura, o resto quieto**: o nome vem de "zênite", o ponto mais alto do céu. A assinatura é o arco de um planeta escuro com a borda acesa em brasa no topo de cada tela (`ZenithArc`, `packages/ui`), que sobe uma vez ao carregar. Nada de blobs de gradiente espalhados, cards-número idênticos ou animação por seção. Superfícies escuras (`#13141C`) em vez de cards brancos, texto branco quente, laranja só em ação e no que pede atenção do cliente. Fonte de títulos Schibsted Grotesk, corpo continua Inter.
+
+**Decisão 2 — no Portal, redesign tela a tela; no painel interno, camada de tradução de tokens**: o Portal tem 8 telas e foi reescrito com um kit próprio (`app/portal/_components`). O painel interno tem 46 telas/~150 arquivos com paleta clara fixa — reescrever tudo à mão era desproporcional e arriscado. `app/zenite-theme.css` traduz cada cor da paleta antiga pro token do zênite sob `.dark .zenite-app`. É a mesma "ponte" que o `globals.css` já anunciava como pendência ("o conteúdo de cada tela ainda usa cor fixa clara... até esse trabalho maior ser feito tela a tela"). Trade-off aceito: quem lê `bg-white` no código precisa saber que no escuro ele vira `#13141C`; o comentário no topo do arquivo explica, e telas novas devem usar `dark:` explícito.
+
+**Decisão 3 — zênite vira o tema escuro e o padrão, não substitui o claro (escolha do Kevin)**: migration muda o default e passa os usuários existentes pra `DARK`; o sol/lua continua como rota de volta caso alguma tela ainda tenha um detalhe esquisito.
+
+**Decisão 4 — conta temporária pra verificar visualmente**: pra ver o painel da equipe renderizado sem ter a senha de ninguém, criei uma conta Analista temporária na Zenite Mkt, tirei os prints e apaguei (usuário, conta, sessões, membership) na mesma sessão. Não usei sessão forjada de conta real.
+
 ## 2026-09-24 — Portal do Cliente ganha identidade visual escura no fundo (não no conteúdo)
 
 **Contexto**: depois de eu criar uma conta de cliente de teste e o Kevin dar uma olhada ("O painel do usuario ta top!"), ele pediu que o fundo branco virasse o mesmo preto com degradê laranja do login. Antes de mexer, perguntei explicitamente até onde o escuro deveria ir — se só o fundo (cards continuam brancos) ou tudo (igual ao tratamento que dei na página pública de Proposta mais cedo na mesma sessão). Ele escolheu a opção mais contida: só fundo e cabeçalho escuros.

@@ -32,7 +32,8 @@ model User {
   image           String?
   /// Tema da interface (pedido do usuário, 2026-09-11) — salvo na conta, não
   /// no navegador, pra valer em qualquer dispositivo em que a pessoa logar.
-  themePreference ThemePreference @default(LIGHT)
+  /// Padrão DARK (identidade "zênite") desde 2026-09-24.
+  themePreference ThemePreference @default(DARK)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 

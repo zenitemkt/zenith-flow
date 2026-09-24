@@ -70,7 +70,7 @@ export const getCurrentMembership = cache(async function getCurrentMembership(us
 
 export const getUserThemePreference = cache(async function getUserThemePreference(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { themePreference: true } });
-  return user?.themePreference ?? "LIGHT";
+  return user?.themePreference ?? "DARK";
 });
 
 export async function requireSessionAndMembership() {
