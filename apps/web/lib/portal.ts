@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { requireSessionAndMembership } from "./session";
 import { isClientRole } from "./rbac";
 import { prisma } from "@zenite-mkt/db";
@@ -12,21 +11,15 @@ import { prisma } from "@zenite-mkt/db";
  * Sem sistema de login separado.
  */
 
-const PORTAL_HOST = process.env.PORTAL_HOST ?? "portal.hubzenite.com.br";
-const MAIN_APP_URL = process.env.MAIN_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://zenith-flow-one.vercel.app";
-
 export async function requirePortalContext() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session) redirect("/login");
 
+  // Equipe interna acessando /portal (em qualquer host — portal.hubzenite.com.br
+  // já não é mais restrito só ao Portal, ver middleware.ts) volta pro "/" do
+  // mesmo host, onde cai no dashboard interno normal — sem trocar de domínio
+  // nem pedir login de novo (pedido do Kevin, 2026-09-24).
   if (!membership || !isClientRole(membership.role)) {
-    // BRIEFING_PORTAL_SUBDOMINIO.md (seção 6, decisão 3): equipe interna que
-    // loga direto em portal.hubzenite.com.br não tem "/" pra voltar nesse
-    // host (o middleware só expõe o portal ali) — manda pro domínio
-    // principal em vez de gerar um loop de redirecionamento.
-    if (headers().get("host") === PORTAL_HOST) {
-      redirect(MAIN_APP_URL);
-    }
     redirect("/");
   }
 
