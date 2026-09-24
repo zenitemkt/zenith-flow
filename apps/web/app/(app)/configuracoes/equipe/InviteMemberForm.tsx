@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "AGENCY_ADMIN", label: "Admin da Agência" },
@@ -25,6 +26,7 @@ export function InviteMemberForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   // Convite recém-criado, aguardando decisão explícita de enviar (ou não) — nunca dispara sozinho.
   const [createdInvite, setCreatedInvite] = useState<{ id: string; url: string; phone: string } | null>(null);
@@ -45,36 +47,38 @@ export function InviteMemberForm() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    resetFeedback();
-    setLoading(true);
+    await guardSubmit(async () => {
+      resetFeedback();
+      setLoading(true);
 
-    const response = await fetch(mode === "direct" ? "/api/memberships/direct" : "/api/memberships", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(mode === "direct" ? { name, email, password, role } : { email, role }),
-    });
-    const body = await response.json().catch(() => null);
-
-    setLoading(false);
-    if (!response.ok) {
-      setError(body?.error ?? "Não foi possível concluir.");
-      return;
-    }
-
-    if (mode === "direct") {
-      setSuccess(`Colaborador criado — ${email} já pode entrar com a senha definida.`);
-    } else {
-      setCreatedInvite({
-        id: body.membershipId,
-        url: new URL(body.inviteUrl, window.location.origin).toString(),
-        phone,
+      const response = await fetch(mode === "direct" ? "/api/memberships/direct" : "/api/memberships", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mode === "direct" ? { name, email, password, role } : { email, role }),
       });
-    }
-    setName("");
-    setEmail("");
-    setPassword("");
-    setPhone("");
-    router.refresh();
+      const body = await response.json().catch(() => null);
+
+      setLoading(false);
+      if (!response.ok) {
+        setError(body?.error ?? "Não foi possível concluir.");
+        return;
+      }
+
+      if (mode === "direct") {
+        setSuccess(`Colaborador criado — ${email} já pode entrar com a senha definida.`);
+      } else {
+        setCreatedInvite({
+          id: body.membershipId,
+          url: new URL(body.inviteUrl, window.location.origin).toString(),
+          phone,
+        });
+      }
+      setName("");
+      setEmail("");
+      setPassword("");
+      setPhone("");
+      router.refresh();
+    });
   }
 
   async function handleSendEmail() {

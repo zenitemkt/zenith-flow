@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface MemberOption {
   userId: string;
@@ -32,6 +33,7 @@ export function NewEmployeeModal({
   const [positionId, setPositionId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setUserId("");
@@ -58,25 +60,27 @@ export function NewEmployeeModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/employees", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, phone, role, userId: userId || null, positionId: positionId || null }),
+      const response = await fetch("/api/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, role, userId: userId || null, positionId: positionId || null }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível cadastrar a pessoa.");
+        return;
+      }
+
+      const body = await response.json();
+      close();
+      router.push(`/pessoas/equipe/${body.id}`);
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível cadastrar a pessoa.");
-      return;
-    }
-
-    const body = await response.json();
-    close();
-    router.push(`/pessoas/equipe/${body.id}`);
   }
 
   return (

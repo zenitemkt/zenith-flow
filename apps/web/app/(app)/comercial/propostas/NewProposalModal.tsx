@@ -6,6 +6,7 @@ import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { TimelineStepsEditor } from "./TimelineStepsEditor";
 import type { TimelineStep } from "@/lib/proposals";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface Option {
   id: string;
@@ -27,6 +28,7 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
   const [leadId, setLeadId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setName("");
@@ -42,33 +44,35 @@ export function NewProposalModal({ clients, leads }: { clients: Option[]; leads:
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/proposals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        content,
-        value: value ? Number(value.replace(",", ".")) : null,
-        paymentTerms: paymentTerms || null,
-        timelineSteps: timelineSteps.filter((s) => s.label.trim()),
-        clientId: clientId || null,
-        leadId: leadId || null,
-      }),
+      const response = await fetch("/api/proposals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          content,
+          value: value ? Number(value.replace(",", ".")) : null,
+          paymentTerms: paymentTerms || null,
+          timelineSteps: timelineSteps.filter((s) => s.label.trim()),
+          clientId: clientId || null,
+          leadId: leadId || null,
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a proposta.");
+        return;
+      }
+
+      const body = await response.json();
+      close();
+      router.push(`/comercial/propostas/${body.id}?send=1`);
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a proposta.");
-      return;
-    }
-
-    const body = await response.json();
-    close();
-    router.push(`/comercial/propostas/${body.id}?send=1`);
   }
 
   return (

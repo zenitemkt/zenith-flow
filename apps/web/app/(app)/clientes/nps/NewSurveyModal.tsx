@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { DEFAULT_NPS_QUESTION, DEFAULT_NPS_COMMENT_PROMPT } from "@/lib/nps";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface ClientOption {
   id: string;
@@ -25,6 +26,7 @@ export function NewSurveyModal({ clients }: { clients: ClientOption[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setName("");
@@ -48,35 +50,37 @@ export function NewSurveyModal({ clients }: { clients: ClientOption[] }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    if (selected.size === 0) {
-      setError("Selecione ao menos um cliente.");
-      return;
-    }
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      if (selected.size === 0) {
+        setError("Selecione ao menos um cliente.");
+        return;
+      }
+      setLoading(true);
 
-    const response = await fetch("/api/nps/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        question,
-        commentPrompt,
-        headerText: headerText || null,
-        footerText: footerText || null,
-        clientIds: Array.from(selected),
-      }),
+      const response = await fetch("/api/nps/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          question,
+          commentPrompt,
+          headerText: headerText || null,
+          footerText: footerText || null,
+          clientIds: Array.from(selected),
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a pesquisa.");
+        return;
+      }
+
+      close();
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a pesquisa.");
-      return;
-    }
-
-    close();
-    router.refresh();
   }
 
   return (

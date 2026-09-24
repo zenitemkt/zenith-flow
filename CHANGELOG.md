@@ -4,7 +4,7 @@
 
 ### Corrigido
 
-- **Card duplicado ao criar em Operação/Conteúdo**: o popup "Nova tarefa" (`NewContentModal.tsx`) só travava reenvio via estado do React, que pode não atualizar a tempo de bloquear um segundo clique/toque muito rápido — cada envio criava um `ContentItem` novo, sem checagem de idempotência na rota. Corrigido com uma trava síncrona (`useRef`).
+- **Card duplicado ao criar em Operação/Conteúdo, e a mesma classe de bug em todo o resto do produto**: formulários de criação só travavam reenvio via estado do React, que pode não atualizar a tempo de bloquear um segundo clique/toque muito rápido — cada envio criava um registro novo, sem checagem de idempotência nas rotas. Corrigido com uma trava síncrona compartilhada (`useSubmitGuard`, novo hook em `lib/`), aplicada em 21 formulários de criação (todos os popups "Novo/Nova" do produto + `AddContactForm`/`AddNoteForm`/`AddLeadNoteForm`/`NewTimeEntryForm`/`InviteMemberForm`).
 
 ### Alterado
 

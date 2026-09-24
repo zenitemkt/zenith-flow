@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { DEFAULT_ENPS_QUESTION, DEFAULT_ENPS_COMMENT_PROMPT } from "@/lib/enps";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface EmployeeOption {
   id: string;
@@ -25,6 +26,7 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setName("");
@@ -48,35 +50,37 @@ export function NewEnpsCampaignModal({ employees }: { employees: EmployeeOption[
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    if (selected.size === 0) {
-      setError("Selecione ao menos uma pessoa.");
-      return;
-    }
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      if (selected.size === 0) {
+        setError("Selecione ao menos uma pessoa.");
+        return;
+      }
+      setLoading(true);
 
-    const response = await fetch("/api/enps/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        question,
-        commentPrompt,
-        headerText: headerText || null,
-        footerText: footerText || null,
-        employeeIds: Array.from(selected),
-      }),
+      const response = await fetch("/api/enps/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          question,
+          commentPrompt,
+          headerText: headerText || null,
+          footerText: footerText || null,
+          employeeIds: Array.from(selected),
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a pesquisa.");
+        return;
+      }
+
+      close();
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a pesquisa.");
-      return;
-    }
-
-    close();
-    router.refresh();
   }
 
   return (

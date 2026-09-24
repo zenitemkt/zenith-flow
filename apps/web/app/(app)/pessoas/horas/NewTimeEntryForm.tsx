@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface TaskOption {
   id: string;
@@ -17,34 +18,37 @@ export function NewTimeEntryForm({ tasks, defaultDate }: { tasks: TaskOption[]; 
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/time-entries", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date,
-        minutes: Number(minutes),
-        taskId: taskId || null,
-        description,
-        source: "MANUAL",
-      }),
+      const response = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          minutes: Number(minutes),
+          taskId: taskId || null,
+          description,
+          source: "MANUAL",
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível apontar as horas.");
+        return;
+      }
+
+      setMinutes("");
+      setDescription("");
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível apontar as horas.");
-      return;
-    }
-
-    setMinutes("");
-    setDescription("");
-    router.refresh();
   }
 
   return (

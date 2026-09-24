@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function NewCampaignModal({ clients }: { clients: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -19,6 +20,7 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
   const [utmCampaign, setUtmCampaign] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setName("");
@@ -36,35 +38,37 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        clientId: clientId || null,
-        channel,
-        objective,
-        budget: budget || null,
-        startDate: startDate || null,
-        endDate: endDate || null,
-        utmSource,
-        utmCampaign,
-      }),
+      const response = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          clientId: clientId || null,
+          channel,
+          objective,
+          budget: budget || null,
+          startDate: startDate || null,
+          endDate: endDate || null,
+          utmSource,
+          utmCampaign,
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a campanha.");
+        return;
+      }
+
+      const body = await response.json();
+      close();
+      router.push(`/comercial/campanhas/${body.id}`);
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a campanha.");
-      return;
-    }
-
-    const body = await response.json();
-    close();
-    router.push(`/comercial/campanhas/${body.id}`);
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface TeamMember {
   userId: string;
@@ -23,6 +24,7 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
   const [reassessDate, setReassessDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setAlertReason("");
@@ -36,31 +38,33 @@ export function NewRetentionPlanModal({ clientId, teamMembers }: { clientId: str
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch(`/api/clients/${clientId}/retention-plans`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        alertReason,
-        diagnosis,
-        responsibleUserId,
-        planDescription,
-        meetingDate: meetingDate || null,
-        reassessDate: reassessDate || null,
-      }),
+      const response = await fetch(`/api/clients/${clientId}/retention-plans`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alertReason,
+          diagnosis,
+          responsibleUserId,
+          planDescription,
+          meetingDate: meetingDate || null,
+          reassessDate: reassessDate || null,
+        }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar o plano.");
+        return;
+      }
+
+      close();
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar o plano.");
-      return;
-    }
-
-    close();
-    router.refresh();
   }
 
   return (

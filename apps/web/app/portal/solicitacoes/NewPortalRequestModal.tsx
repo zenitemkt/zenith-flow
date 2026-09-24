@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function NewPortalRequestModal() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export function NewPortalRequestModal() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setTitle("");
@@ -22,24 +24,26 @@ export function NewPortalRequestModal() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/portal/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description }),
+      const response = await fetch("/api/portal/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível enviar a solicitação.");
+        return;
+      }
+
+      close();
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível enviar a solicitação.");
-      return;
-    }
-
-    close();
-    router.refresh();
   }
 
   return (

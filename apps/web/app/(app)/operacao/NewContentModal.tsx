@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface ClientOption {
   id: string;
@@ -33,16 +34,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  /**
-   * Trava síncrona contra clique/toque duplo — `disabled={loading}` no botão
-   * não basta porque o React só aplica o atributo no próximo render, e dois
-   * cliques bem rápidos (comum em toque duplo no celular ou conexão lenta)
-   * podem disparar `handleSubmit` duas vezes antes disso, criando o mesmo
-   * card duplicado (bug reportado pelo Kevin, 2026-09-24). Uma ref muda na
-   * hora, sem esperar re-render, então bloqueia mesmo a segunda chamada
-   * vinda do mesmo closure "antigo".
-   */
-  const submittingRef = useRef(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setTitle("");
@@ -67,7 +59,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (submittingRef.current) return;
+    await guardSubmit(async () => {
     setError(null);
 
     if (channels.length === 0) {
@@ -75,7 +67,6 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
       return;
     }
 
-    submittingRef.current = true;
     setLoading(true);
 
     try {
@@ -118,9 +109,9 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
       // Kevin: card criado não aparecia até trocar de aba e voltar).
       router.refresh();
     } finally {
-      submittingRef.current = false;
       setLoading(false);
     }
+    });
   }
 
   if (clients.length === 0) {

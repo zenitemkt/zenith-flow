@@ -2,34 +2,38 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function AddNoteForm({ clientId }: { clientId: string }) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!body.trim()) return;
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch(`/api/clients/${clientId}/notes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      const response = await fetch(`/api/clients/${clientId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const responseBody = await response.json().catch(() => null);
+        setError(responseBody?.error ?? "Não foi possível salvar a nota.");
+        return;
+      }
+
+      setBody("");
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const responseBody = await response.json().catch(() => null);
-      setError(responseBody?.error ?? "Não foi possível salvar a nota.");
-      return;
-    }
-
-    setBody("");
-    router.refresh();
   }
 
   return (

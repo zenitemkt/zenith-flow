@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function NewVersionModal({ contentId }: { contentId: string }) {
   const router = useRouter();
@@ -12,6 +13,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setAssetUrl("");
@@ -22,25 +24,26 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (loading) return;
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch(`/api/content/${contentId}/versions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assetUrl, notes }),
+      const response = await fetch(`/api/content/${contentId}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetUrl, notes }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível adicionar a versão.");
+        return;
+      }
+
+      close();
+      router.refresh();
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível adicionar a versão.");
-      return;
-    }
-
-    close();
-    router.refresh();
   }
 
   return (

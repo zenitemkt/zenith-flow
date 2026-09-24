@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { TRIGGER_EVENTS } from "@/lib/workflows";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function NewWorkflowModal() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export function NewWorkflowModal() {
   const [triggerEvent, setTriggerEvent] = useState(TRIGGER_EVENTS[0]!.event);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function close() {
     setName("");
@@ -23,25 +25,27 @@ export function NewWorkflowModal() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
 
-    const response = await fetch("/api/workflows", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, triggerEvent }),
+      const response = await fetch("/api/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, triggerEvent }),
+      });
+
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a automação.");
+        return;
+      }
+
+      const body = await response.json();
+      close();
+      router.push(`/automacoes/${body.id}`);
     });
-
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a automação.");
-      return;
-    }
-
-    const body = await response.json();
-    close();
-    router.push(`/automacoes/${body.id}`);
   }
 
   return (
