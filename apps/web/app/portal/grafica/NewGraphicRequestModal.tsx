@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { Modal } from "@zenite-mkt/ui";
-import { FormField } from "@/app/_components/FormField";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
 import { GRAPHIC_ITEM_TYPES, GRAPHIC_REQUEST_TAG } from "@/lib/portal-requests";
+import { PortalField, inputClass, labelClass, primaryButtonClass, quietButtonClass } from "../_components/ui";
 
 export function NewGraphicRequestModal() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export function NewGraphicRequestModal() {
       setLoading(false);
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        setError(body?.error ?? "Não foi possível enviar o pedido de cotação.");
+        setError(body?.error ?? "Não foi possível enviar o pedido de cotação. Tente de novo.");
         return;
       }
 
@@ -67,52 +68,60 @@ export function NewGraphicRequestModal() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#FF2B00" }}
-      >
-        Nova cotação
+      <button type="button" onClick={() => setOpen(true)} className={primaryButtonClass}>
+        <Plus size={16} aria-hidden />
+        Pedir cotação
       </button>
       <Modal
         open={open}
         onClose={close}
+        tone="dark"
         title="Cotação de impressão"
-        description="Conte o que você precisa — nossa equipe vai orçar e te retornar."
+        description="Quanto mais detalhe, mais certeiro o orçamento."
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="graphic-item-type" className="text-sm font-medium text-[#344054]">
-              Tipo de peça
-            </label>
-            <select
-              id="graphic-item-type"
-              value={itemType}
-              onChange={(e) => setItemType(e.target.value)}
-              className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
-            >
-              {GRAPHIC_ITEM_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <fieldset className="flex flex-col gap-2">
+            <legend className={`${labelClass} mb-2`}>Tipo de peça</legend>
+            <div className="flex flex-wrap gap-2">
+              {GRAPHIC_ITEM_TYPES.map((type) => {
+                const selected = itemType === type;
+                return (
+                  <label
+                    key={type}
+                    className={`cursor-pointer rounded-full border px-3.5 py-1.5 text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#FF7A1A] ${
+                      selected
+                        ? "border-[#FF2B00]/60 bg-[#FF2B00]/[0.14] text-white"
+                        : "border-white/10 text-[#A3A5B2] hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="itemType"
+                      value={type}
+                      checked={selected}
+                      onChange={() => setItemType(type)}
+                      className="sr-only"
+                    />
+                    {type}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           {itemType === "Outro" && (
-            <FormField
+            <PortalField
               label="Qual peça?"
               name="customType"
               required
               autoFocus
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
-              placeholder="Ex.: Crachá, convite, folder..."
+              placeholder="Ex.: crachá, convite, folder…"
             />
           )}
 
-          <FormField
+          <PortalField
             label="Quantidade (opcional)"
             name="quantity"
             value={quantity}
@@ -121,36 +130,27 @@ export function NewGraphicRequestModal() {
           />
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="graphic-specs" className="text-sm font-medium text-[#344054]">
-              Especificações (opcional)
+            <label htmlFor="graphic-specs" className={labelClass}>
+              Detalhes (opcional)
             </label>
             <textarea
               id="graphic-specs"
               value={specs}
               onChange={(e) => setSpecs(e.target.value)}
               rows={3}
-              placeholder="Tamanho, papel/material, cores, referência visual, prazo desejado..."
-              className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
+              placeholder="Tamanho, papel ou material, cores, prazo desejado…"
+              className={`${inputClass} resize-none py-2.5`}
             />
           </div>
 
-          {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+          {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
 
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={close}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
-            >
+          <div className="mt-1 flex justify-end gap-2">
+            <button type="button" onClick={close} className={quietButtonClass}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#FF2B00" }}
-            >
-              {loading ? "Enviando..." : "Pedir cotação"}
+            <button type="submit" disabled={loading} className={primaryButtonClass}>
+              {loading ? "Enviando…" : "Pedir cotação"}
             </button>
           </div>
         </form>

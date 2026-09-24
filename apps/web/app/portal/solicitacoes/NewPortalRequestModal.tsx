@@ -2,9 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { Modal } from "@zenite-mkt/ui";
-import { FormField } from "@/app/_components/FormField";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
+import { PortalField, inputClass, labelClass, primaryButtonClass, quietButtonClass } from "../_components/ui";
 
 export function NewPortalRequestModal() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export function NewPortalRequestModal() {
       setLoading(false);
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        setError(body?.error ?? "Não foi possível enviar a solicitação.");
+        setError(body?.error ?? "Não foi possível enviar a solicitação. Tente de novo.");
         return;
       }
 
@@ -48,60 +49,49 @@ export function NewPortalRequestModal() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#FF2B00" }}
-      >
+      <button type="button" onClick={() => setOpen(true)} className={primaryButtonClass}>
+        <Plus size={16} aria-hidden />
         Nova solicitação
       </button>
       <Modal
         open={open}
         onClose={close}
+        tone="dark"
         title="Nova solicitação"
-        description="Conte o que você precisa — nossa equipe vai triar e te retornar."
+        description="Conte o que você precisa. A equipe vê na hora e te responde por aqui."
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <FormField
-            label="Título"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <PortalField
+            label="O que você precisa?"
             name="title"
             required
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Preciso de um novo material para..."
+            placeholder="Ex.: post sobre a promoção de sábado"
           />
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="portal-request-description" className="text-sm font-medium text-[#344054]">
-              Descrição
+            <label htmlFor="portal-request-description" className={labelClass}>
+              Detalhes (opcional)
             </label>
             <textarea
               id="portal-request-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
+              rows={4}
+              placeholder="Prazo, referências, textos que precisam aparecer…"
+              className={`${inputClass} resize-none py-2.5`}
             />
           </div>
 
-          {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
+          {error && <p className="text-sm font-medium text-[#FF8A80]">{error}</p>}
 
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={close}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
-            >
+          <div className="mt-1 flex justify-end gap-2">
+            <button type="button" onClick={close} className={quietButtonClass}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
-              style={{ backgroundColor: "#FF2B00" }}
-            >
-              {loading ? "Enviando..." : "Enviar solicitação"}
+            <button type="submit" disabled={loading} className={primaryButtonClass}>
+              {loading ? "Enviando…" : "Enviar solicitação"}
             </button>
           </div>
         </form>

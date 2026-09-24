@@ -40,6 +40,22 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Portal do Cliente: o arco do "zênite" sobe uma vez ao carregar — o único movimento automático do portal. */
+@keyframes zenite-dawn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 36px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.zenite-dawn {
+  animation: zenite-dawn 1.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

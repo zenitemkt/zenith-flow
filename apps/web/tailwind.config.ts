@@ -29,6 +29,9 @@ const config: Config = {
           danger: "#D94343",
         },
       },
+      fontFamily: {
+        display: ["var(--font-display)", "var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       borderRadius: {
         sm: "8px",
         md: "12px",

@@ -14,14 +14,15 @@ export const PORTAL_REQUEST_STATUS_LABELS: Record<string, string> = {
   CANCELADA: "Cancelada",
 };
 
+/** Variante escura — o Portal do Cliente tem identidade visual escura própria. */
 export const PORTAL_REQUEST_STATUS_BADGE_CLASS: Record<string, string> = {
-  BACKLOG: "bg-[#F2F4F7] text-[#475467]",
-  PLANEJADA: "bg-[#F2F4F7] text-[#475467]",
-  EM_ANDAMENTO: "bg-[#EEF2FF] text-[#3730A3]",
-  BLOQUEADA: "bg-[#EEF2FF] text-[#3730A3]",
-  REVISAO: "bg-[#EEF2FF] text-[#3730A3]",
-  CONCLUIDA: "bg-[#DCFCE7] text-[#166534]",
-  CANCELADA: "bg-[#FEE4E2] text-[#B42318]",
+  BACKLOG: "bg-white/[0.07] text-[#D6D3CF]",
+  PLANEJADA: "bg-white/[0.07] text-[#D6D3CF]",
+  EM_ANDAMENTO: "bg-[#FF7A1A]/[0.14] text-[#FFB27A]",
+  BLOQUEADA: "bg-[#FF7A1A]/[0.14] text-[#FFB27A]",
+  REVISAO: "bg-[#FF7A1A]/[0.14] text-[#FFB27A]",
+  CONCLUIDA: "bg-[#16A36A]/[0.15] text-[#5EE0A6]",
+  CANCELADA: "bg-[#D94343]/[0.15] text-[#FF8A80]",
 };
 
 /**
