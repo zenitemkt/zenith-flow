@@ -9,8 +9,10 @@ export function AddDailyMetricForm({ campaignId }: { campaignId: string }) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [spend, setSpend] = useState("");
   const [impressions, setImpressions] = useState("");
+  const [reach, setReach] = useState("");
   const [clicks, setClicks] = useState("");
   const [results, setResults] = useState("");
+  const [resultValue, setResultValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +24,15 @@ export function AddDailyMetricForm({ campaignId }: { campaignId: string }) {
     const response = await fetch(`/api/campaigns/${campaignId}/daily-metrics`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, spend: spend || 0, impressions: impressions || 0, clicks: clicks || 0, results: results || null }),
+      body: JSON.stringify({
+        date,
+        spend: spend || 0,
+        impressions: impressions || 0,
+        reach: reach || null,
+        clicks: clicks || 0,
+        results: results || null,
+        resultValue: resultValue || null,
+      }),
     });
 
     setLoading(false);
@@ -34,8 +44,10 @@ export function AddDailyMetricForm({ campaignId }: { campaignId: string }) {
 
     setSpend("");
     setImpressions("");
+    setReach("");
     setClicks("");
     setResults("");
+    setResultValue("");
     router.refresh();
   }
 
@@ -51,10 +63,24 @@ export function AddDailyMetricForm({ campaignId }: { campaignId: string }) {
         <FormField label="Impressões" name="impressions" type="number" min="0" value={impressions} onChange={(e) => setImpressions(e.target.value)} />
       </div>
       <div className="w-24">
+        <FormField label="Alcance" name="reach" type="number" min="0" value={reach} onChange={(e) => setReach(e.target.value)} />
+      </div>
+      <div className="w-24">
         <FormField label="Cliques" name="clicks" type="number" min="0" value={clicks} onChange={(e) => setClicks(e.target.value)} />
       </div>
       <div className="w-24">
         <FormField label="Resultados" name="results" type="number" min="0" value={results} onChange={(e) => setResults(e.target.value)} />
+      </div>
+      <div className="w-32">
+        <FormField
+          label="Valor gerado (R$)"
+          name="resultValue"
+          type="number"
+          min="0"
+          step="0.01"
+          value={resultValue}
+          onChange={(e) => setResultValue(e.target.value)}
+        />
       </div>
       <button
         type="submit"

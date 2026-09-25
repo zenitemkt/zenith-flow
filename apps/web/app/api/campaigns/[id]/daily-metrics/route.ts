@@ -50,15 +50,25 @@ export async function POST(request: Request, { params }: RouteParams) {
   const clicks = nonNegativeInt(body?.clicks);
   const reach = body?.reach === null || body?.reach === undefined || body?.reach === "" ? null : nonNegativeInt(body.reach);
   const results = body?.results === null || body?.results === undefined || body?.results === "" ? null : nonNegativeInt(body.results);
+  const resultValueCents =
+    body?.resultValue === null || body?.resultValue === undefined || body?.resultValue === ""
+      ? null
+      : reaisToCents(Number(body.resultValue));
 
-  if (!Number.isFinite(spendCents) || spendCents < 0 || impressions === null || clicks === null) {
+  if (
+    !Number.isFinite(spendCents) ||
+    spendCents < 0 ||
+    impressions === null ||
+    clicks === null ||
+    (resultValueCents !== null && !Number.isFinite(resultValueCents))
+  ) {
     return NextResponse.json({ error: "Valores inválidos." }, { status: 400 });
   }
 
   await prisma.campaignDailyMetric.upsert({
     where: { campaignId_date: { campaignId: campaign.id, date } },
-    create: { campaignId: campaign.id, date, spendCents, impressions, clicks, reach, results },
-    update: { spendCents, impressions, clicks, reach, results },
+    create: { campaignId: campaign.id, date, spendCents, impressions, clicks, reach, results, resultValueCents },
+    update: { spendCents, impressions, clicks, reach, results, resultValueCents },
   });
 
   return NextResponse.json({ ok: true }, { status: 201 });

@@ -4,6 +4,9 @@
 
 ## Implementado
 
+- **Nova aba "Tráfego - Raio X" (grupo Gestão, 2026-09-25)**: espelho manual das campanhas de mídia paga — drill-down Campanha → Conjunto de anúncios (`AdSet`, novo) → Anúncio (`Ad`, novo), métricas por campanha (gasto/dia, cliques, frequência, ROI, ROAS — `resultValueCents` novo em `CampaignDailyMetric`, `lib/campaign-xray.ts` calcula tudo em cima do que já existia) e um Mapa do Tráfego (`CampaignGeoTarget`, novo; Leaflet + OpenStreetMap, sem chave de API). Reaproveita 100% o modelo `Campaign`/`CampaignDailyMetric` já existente (seção 36) — nenhuma lógica nova de negócio pra Meta/Google especificamente, `channel` continua texto livre. Sem conector real com Meta/Google Ads ainda (seção 38, Fase 3 — exige OAuth oficial e developer token aprovado pelo Google); Kevin escolheu explicitamente "manual agora, integração real depois". Migration aditiva `20260925124524_traffic_xray_adset_ad_geo_target`. Decisão completa em `docs/DECISIONS.md`.
+  - Testado: `vitest run` de `packages/db` (27 arquivos/80 testes, 4 novos), `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos. Consulta principal da página confirmada rodando contra o banco real via script de leitura. **Sem verificação em navegador** — não havia conta de equipe disponível nesta sessão pra logar e testar o drill-down/modais/mapa ao vivo; recomenda-se o Kevin testar depois do deploy.
+
 - **Item "Toolkit" removido da sidebar (2026-09-25)**: nunca teve página nenhuma (`comingSoon`, sem rota `/toolkit`). Previsto no manual (seção 23) como Import Center (migração via CSV) + utilitários avulsos (QR Code, UTM, link de WhatsApp, calculadoras) — o Kevin decidiu que não valia o esforço frente ao ganho. Decisão em `docs/DECISIONS.md`.
   - Testado: `vitest run` de `packages/ui` (10/10), `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos.
 

@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Nova aba "Tráfego - Raio X"** (grupo Gestão): espelho manual das campanhas de mídia paga (Meta, Google e outros canais), sem precisar abrir o painel de cada plataforma — drill-down Campanha → Conjunto de anúncios → Anúncio, métricas (gasto/dia, cliques, frequência, ROI, ROAS) e um Mapa do Tráfego (Leaflet/OpenStreetMap, sem chave de API) com pino por cidade ou círculo por raio de segmentação. Dados digitados à mão nesta fatia — sem conector real com Meta/Google Ads ainda (fica pra quando as credenciais estiverem prontas).
 - **Aba "Arquivos" (Portal do Cliente e Clientes internos) também aponta pro Google Drive**: além do upload próprio que já existia, agora mostra um cartão "Pasta completa no Google Drive" quando o cliente tem uma pasta vinculada — mesmo link já usado pela Biblioteca de conteúdo. No painel interno, aparece ao filtrar por um cliente específico; no Portal, aparece automaticamente pro cliente logado.
 
 ### Removido

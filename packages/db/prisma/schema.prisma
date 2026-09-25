@@ -2091,10 +2091,11 @@ enum CampaignStatus {
   ENCERRADA
 }
 
-/// Ad set/anúncio (granularidade abaixo de campanha, seção 36) ficam de fora
-/// desta fatia — sem um conector real (seção 38) pra sincronizar automaticamente
-/// aquele nível, pedir pra alguém digitar isso à mão não tem caso de uso real
-/// ainda. `channel`/`utmSource`/`utmCampaign` são texto livre, mesmo padrão de
+/// Ad set/anúncio (granularidade abaixo de campanha, seção 36) ganharam
+/// modelo próprio em 2026-09-25 (`AdSet`/`Ad`, abaixo) — pedido explícito do
+/// Kevin pra "Tráfego - Raio X" (`docs/DECISIONS.md`), supersede a nota
+/// original desta fatia de que não haveria caso de uso real sem conector.
+/// `channel`/`utmSource`/`utmCampaign` são texto livre, mesmo padrão de
 /// `Lead.source` — fechar num enum exigiria prever cada plataforma de anúncio
 /// de antemão.
 /// `clientId` (pedido do usuário, 2026-09-07) distingue duas naturezas que
@@ -2124,10 +2125,73 @@ model Campaign {
   updatedAt   DateTime       @updatedAt
 
   dailyMetrics CampaignDailyMetric[]
+  adSets       AdSet[]
+  geoTargets   CampaignGeoTarget[]
 
   @@index([agencyId])
   @@index([clientId])
   @@map("campaign")
+}
+
+/// Conjunto de anúncios (seção 36: "segmentação resumida, budget e
+/// external_id") — nível estrutural pra navegar igual à plataforma de
+/// anúncios ("Tráfego - Raio X", 2026-09-25). Sem métrica diária própria: só
+/// a campanha tem `CampaignDailyMetric` nesta fatia (pedir isso por conjunto
+/// seria digitação manual demais pro time de 2 pessoas — ver docs/DECISIONS.md).
+model AdSet {
+  id               String   @id @default(cuid())
+  campaignId       String
+  campaign         Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  name             String
+  budgetCents      Int?
+  targetingSummary String?
+  externalId       String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  ads Ad[]
+
+  @@index([campaignId])
+  @@map("ad_set")
+}
+
+/// Anúncio/criativo (seção 36: "nome, asset reference, copy/hash e
+/// external_id"). `assetUrl` é um link (Drive ou outro) pra peça, mesmo
+/// padrão de link-em-vez-de-upload já usado em `Client.driveUrl`.
+model Ad {
+  id           String   @id @default(cuid())
+  adSetId      String
+  adSet        AdSet    @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  name         String
+  creativeNote String?
+  assetUrl     String?
+  externalId   String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([adSetId])
+  @@map("ad")
+}
+
+/// Segmentação geográfica da campanha, pro "Mapa do Tráfego" — pedido do
+/// Kevin (2026-09-25): pin por cidade (`radiusKm` nulo) ou raio de
+/// segmentação (`radiusKm` preenchido). Preenchido à mão (lat/lng), sem
+/// geocodificação automática — evita depender de mais uma chave de API
+/// externa nesta fatia manual.
+model CampaignGeoTarget {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  label      String
+  lat        Float
+  lng        Float
+  radiusKm   Float?
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId])
+  @@map("campaign_geo_target")
 }
 
 /// "Métricas diárias" (seção 36) — uma linha por dia por campanha, sempre a
@@ -2146,6 +2210,11 @@ model CampaignDailyMetric {
   reach       Int?
   clicks      Int      @default(0)
   results     Int?
+  /// "Valores reportados" (seção 36, ao lado de `results`) — valor em R$
+  /// gerado no dia, pra calcular ROI/ROAS no "Tráfego - Raio X" (2026-09-25).
+  /// Opcional: quem só quer ver gasto/cliques/frequência não precisa
+  /// preencher isso.
+  resultValueCents Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

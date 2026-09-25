@@ -5,6 +5,7 @@ import {
   Workflow,
   Wallet,
   UserCog,
+  Radar,
   Zap,
   Sparkles,
   MessageSquare,
@@ -109,6 +110,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "people-enps", label: "eNPS", href: "/pessoas/enps", comingSoon: false },
         ],
       },
+      { id: "traffic-xray", label: "Tráfego - Raio X", icon: Radar, href: "/trafego-raio-x", comingSoon: false },
     ],
   },
   {
