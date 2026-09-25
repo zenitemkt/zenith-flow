@@ -1,4 +1,4 @@
-import { Download, FileText, ImageIcon, Film } from "lucide-react";
+import { Download, ExternalLink, FileText, FolderOpen, ImageIcon, Film } from "lucide-react";
 import { requirePortalContext } from "@/lib/portal";
 import { formatBytes } from "@/lib/media";
 import { prisma } from "@zenite-mkt/db";
@@ -21,6 +21,27 @@ export default async function PortalArquivosPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Arquivos" description="Tudo o que a equipe compartilhou com você, pronto pra baixar." />
+
+      {client.driveUrl && (
+        <a
+          href={client.driveUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${panelClass} group flex items-center gap-4 px-5 py-4 transition-colors hover:border-[#FF7A1A]/40 sm:px-6`}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-[#0E0F15] text-[#FF7A1A]">
+            <FolderOpen size={18} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-[#F5F2EE]">Pasta completa no Google Drive</span>
+            <span className="text-xs text-[#8B8D9A]">Artes, contratos e outros materiais que não cabem aqui.</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-[#8B8D9A] transition-colors group-hover:text-[#FF8A5C]">
+            Abrir
+            <ExternalLink size={15} aria-hidden />
+          </span>
+        </a>
+      )}
 
       {assets.length === 0 ? (
         <EmptyState title="Nenhum arquivo por aqui ainda">

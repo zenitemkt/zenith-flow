@@ -4,6 +4,7 @@ import { prisma } from "@zenite-mkt/db";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
+import { DriveFolderCard } from "../../operacao/biblioteca/DriveFolderCard";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -28,7 +29,7 @@ export default async function ArquivosPage({ searchParams }: PageProps) {
     }),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, driveUrl: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -50,6 +51,12 @@ export default async function ArquivosPage({ searchParams }: PageProps) {
         activeClientId={activeClientId}
         buildHref={(clientId) => (clientId ? `/clientes/arquivos?clientId=${clientId}` : "/clientes/arquivos")}
       />
+
+      {activeClient && (
+        <div className="max-w-sm">
+          <DriveFolderCard clientId={activeClient.id} clientName={activeClient.name} driveUrl={activeClient.driveUrl} />
+        </div>
+      )}
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-3">

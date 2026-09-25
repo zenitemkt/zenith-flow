@@ -1,8 +1,17 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-09-24.
+Última atualização: 2026-09-25.
 
 ## Implementado
+
+- **Item "Toolkit" removido da sidebar (2026-09-25)**: nunca teve página nenhuma (`comingSoon`, sem rota `/toolkit`). Previsto no manual (seção 23) como Import Center (migração via CSV) + utilitários avulsos (QR Code, UTM, link de WhatsApp, calculadoras) — o Kevin decidiu que não valia o esforço frente ao ganho. Decisão em `docs/DECISIONS.md`.
+  - Testado: `vitest run` de `packages/ui` (10/10), `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos.
+
+- **Aba "Arquivos" (Portal e Clientes) ganha o link do Google Drive, sem substituir o upload próprio (2026-09-25)**: pendência da mudança da Biblioteca — agora mostra um cartão "Pasta completa no Google Drive" (mesmo `Client.driveUrl`, mesmo `DriveFolderCard`) acima da lista de arquivos enviados. `/portal/arquivos` mostra automaticamente pro cliente logado (só leitura); `/clientes/arquivos` mostra ao filtrar por um cliente (com botão de vincular/trocar, igual à Biblioteca). Decisão de manter o upload próprio (não virou puro link como a Biblioteca) documentada em `docs/DECISIONS.md` — o mesmo modelo de arquivo também serve o anexo de boleto do Financeiro.
+  - Testado: `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos. Verificação manual parcial (Playwright, conta de cliente de teste) confirmou o estado sem pasta vinculada; estado "com pasta" e o lado da equipe não foram verificados ao vivo nesta sessão.
+
+- **Item "Relatórios" removido da sidebar + bug corrigido no gráfico de contas a receber por estágio (2026-09-25)**: a próxima etapa combinada era construir "Relatórios", mas o Kevin questionou se não seria redundante com o dashboard (Home). Auditoria confirmou que o Home ("Raio-X Zenite") já cobre financeiro, comercial, operação/produtividade, pessoas, conteúdo e saúde da carteira — item "Relatórios" (`comingSoon`, sem página) removido de `nav-config.ts`. Auditoria também achou um bug real: o gráfico "Contas a receber por estágio da régua" no Home contava quantidade de títulos mas formatava como dinheiro (3 títulos virava "R$ 0,03") — corrigido pra somar o valor real em R$ por estágio (`lib/dashboard-xray.ts`). Decisão completa em `docs/DECISIONS.md`.
+  - Testado: `vitest run` de `packages/ui` (10/10), `tsc --noEmit`, `npm run build`/`lint` de `apps/web` limpos. Sem verificação manual em navegador do gráfico corrigido nesta sessão.
 
 - **Card do quadro de Operação abre com clique em qualquer lugar + Biblioteca vira atalho pro Google Drive de cada cliente (2026-09-24)**:
   - **Card**: antes só abria pela setinha laranja. Agora o clique em qualquer parte do card abre a peça (`ContentBoard.tsx`), exceto em controles: botões (mover, enviar, nova versão), a área de "Publicação" (data), a caixa com o link de aprovação e popups abertos a partir do card (`CARD_OPEN_IGNORE` + `data-card-control`). Uma trava (`justDraggedRef`) impede que soltar um card arrastado dispare o "clique" que o navegador gera no fim do arraste. A setinha continua lá como alvo de teclado.

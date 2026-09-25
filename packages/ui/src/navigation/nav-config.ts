@@ -5,12 +5,10 @@ import {
   Workflow,
   Wallet,
   UserCog,
-  BarChart3,
   Zap,
   Sparkles,
   MessageSquare,
   Globe,
-  Wrench,
   GraduationCap,
   Plug,
   Settings,
@@ -111,7 +109,6 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "people-enps", label: "eNPS", href: "/pessoas/enps", comingSoon: false },
         ],
       },
-      { id: "reports", label: "Relatórios", icon: BarChart3, href: "/relatorios", comingSoon: true },
     ],
   },
   {
@@ -151,7 +148,6 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat", comingSoon: true },
       { id: "client-portal", label: "Portal do Cliente", icon: Globe, href: "/portal", comingSoon: true },
-      { id: "toolkit", label: "Toolkit", icon: Wrench, href: "/toolkit", comingSoon: true },
       { id: "academy", label: "Academy", icon: GraduationCap, href: "/academy", comingSoon: true },
     ],
   },

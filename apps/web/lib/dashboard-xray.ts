@@ -146,7 +146,7 @@ export async function getXrayDashboard(agencyId: string) {
     }),
     prisma.financeEntry.findMany({
       where: { agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
-      select: { dueDate: true },
+      select: { dueDate: true, amountCents: true },
     }),
     prisma.financeEntry.aggregate({
       where: { agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
@@ -213,10 +213,10 @@ export async function getXrayDashboard(agencyId: string) {
     .sort((a, b) => b[1] - a[1])
     .map(([name, value], i) => ({ name, value, color: colorFor(i) }));
 
-  const ladderCounts = new Map<CollectionStage | "A_VENCER", number>();
+  const ladderAmounts = new Map<CollectionStage | "A_VENCER", number>();
   for (const entry of receivablesOpen) {
     const stage = collectionStageForDueDate(entry.dueDate, now) ?? "A_VENCER";
-    ladderCounts.set(stage, (ladderCounts.get(stage) ?? 0) + 1);
+    ladderAmounts.set(stage, (ladderAmounts.get(stage) ?? 0) + entry.amountCents);
   }
   const LADDER_ORDER: (CollectionStage | "A_VENCER")[] = [
     "A_VENCER",
@@ -227,10 +227,10 @@ export async function getXrayDashboard(agencyId: string) {
     "ESCALONAR",
     "RECUPERACAO",
   ];
-  const collectionLadderData: NamedCount[] = LADDER_ORDER.filter((stage) => (ladderCounts.get(stage) ?? 0) > 0).map(
+  const collectionLadderData: NamedCount[] = LADDER_ORDER.filter((stage) => (ladderAmounts.get(stage) ?? 0) > 0).map(
     (stage) => ({
       name: stage === "A_VENCER" ? "A vencer (> 5 dias)" : COLLECTION_STAGE_LABELS[stage],
-      value: ladderCounts.get(stage)!,
+      value: ladderAmounts.get(stage)!,
       color: stage === "A_VENCER" ? "#CBD5E1" : COLLECTION_STAGE_COLORS[stage],
     }),
   );

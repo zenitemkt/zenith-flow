@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Aba "Arquivos" (Portal do Cliente e Clientes internos) também aponta pro Google Drive**: além do upload próprio que já existia, agora mostra um cartão "Pasta completa no Google Drive" quando o cliente tem uma pasta vinculada — mesmo link já usado pela Biblioteca de conteúdo. No painel interno, aparece ao filtrar por um cliente específico; no Portal, aparece automaticamente pro cliente logado.
+
+### Removido
+
+- **Item "Relatórios" da sidebar** (`comingSoon`, nunca teve página): o Home ("Raio-X Zenite") já cobre financeiro, comercial, operação/produtividade, pessoas, conteúdo e saúde da carteira de clientes, com drill-down pro módulo de origem — mantê-lo como pendência era redundante.
+- **Item "Toolkit" da sidebar** (`comingSoon`, nunca teve página): a agência avaliou que os utilitários previstos (QR Code, UTM, link de WhatsApp, calculadoras) não trariam valor suficiente pra justificar o esforço.
+
+### Corrigido
+
+- **Gráfico "Contas a receber por estágio da régua" (Home) mostrava valor errado**: contava a quantidade de títulos, mas formatava como dinheiro (ex.: 3 títulos virava "R$ 0,03"). Agora soma o valor real em R$ por estágio da régua.
+
 ### Alterado
 
 - **Quadro de Operação**: o card abre com clique em qualquer lugar (menos botões, data de publicação e link de aprovação); arrastar não abre mais o card por engano.
