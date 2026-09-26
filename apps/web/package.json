@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run migrate:deploy --workspace=packages/db",
+    "prebuild": "prisma migrate deploy --schema ../../packages/db/prisma/schema.prisma",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
