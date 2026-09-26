@@ -897,3 +897,10 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: a agência ganhou `siteLeadIntegrationEnabled` (padrão ativo). O endpoint público consulta esse estado antes de aceitar o formulário. `/integracoes` exibe um cartão operacional baseado na configuração real da infraestrutura e nos Leads com origem `Site Zenite Hub`; administradores podem desconectar ou reconectar por uma rota autenticada, com RBAC, escopo de agência e `AuditLog`. “Desconectar” é a exclusão operacional segura: preserva histórico e leads, mas bloqueia novos recebimentos. O segredo não é armazenado nem revelado no banco/UI; continua na Vercel.
 
 **Consequência**: remover fisicamente código ou credenciais continua sendo uma operação de infraestrutura, mas a gestão cotidiana não depende mais disso. Se a configuração da Vercel não corresponder à agência ativa, a interface mostra “Não configurada” e não permite uma reconexão enganosa.
+## 2026-09-26 — Lead novo sempre nasce como oportunidade na primeira etapa
+
+**Contexto**: Leads e Pipeline eram superfícies separadas; cadastrar um Lead não criava card no funil. O detalhe também mostrava os dados do formulário como uma nota corrida, sem navegação de retorno nem exclusão.
+
+**Decisão**: `createInitialOpportunityForLead()` é o único caminho compartilhado por criação manual, formulário server-to-server e identificação do tracking. Lead, histórico, oportunidade inicial e histórico da oportunidade são gravados na mesma transação; a criação derivada é auditada. O detalhe reconhece a nota estruturada da integração e mostra somente os campos efetivamente enviados, retirando essa nota técnica da timeline. Administradores podem excluir o Lead; oportunidades vinculadas são removidas junto para não deixar cards órfãos, enquanto propostas usam suas relações `SetNull` e permanecem preservadas.
+
+**Consequência**: novos caminhos de criação de Lead devem obrigatoriamente usar o helper. Excluir é destrutivo e exige confirmação; não foi criado soft delete porque a solicitação foi de remoção explícita e os registros dependentes operacionais já têm comportamento definido.

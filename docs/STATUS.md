@@ -427,3 +427,6 @@ Novo endpoint server-to-server `POST /api/v1/integrations/site-leads`, protegido
 ## 2026-09-26 — Integração do site visível e administrável
 
 A página `/integracoes` agora mostra o cartão **Zenite Hub — Formulário de orçamento** com estado real (ativa, desconectada ou não configurada), total de leads recebidos, último recebimento e origem registrada. Administradores podem desconectar/reconectar pela própria tela; a ação é auditada, respeita a agência ativa e interrompe novos cadastros sem apagar leads existentes. A credencial permanece somente nas variáveis protegidas da Vercel.
+## 2026-09-26 — Leads entram automaticamente na Pipeline e detalhe ganha gestão completa
+
+Todo Lead novo, seja manual, formulário do Zenite Hub ou identificação por tracking, agora cria na mesma transação uma oportunidade vinculada na primeira etapa do funil (e cria “Novo contato” caso uma agência antiga esteja sem etapa). O detalhe ganhou “Voltar para Leads”, exclusão restrita a administradores com confirmação/auditoria e apresentação estruturada dos campos do formulário. Excluir remove as oportunidades vinculadas, preserva propostas e volta para a lista.

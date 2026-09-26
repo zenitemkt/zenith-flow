@@ -220,3 +220,6 @@
 ## 2026-09-26 — Cartão administrável da integração Zenite Hub
 
 - A aba Integrações passa a mostrar a conexão do formulário de orçamento com o CRM, incluindo status, métricas reais e último recebimento. Administradores podem desconectar/reconectar sem apagar leads; a ação é protegida por RBAC, auditada e aplicada pelo endpoint de entrada.
+## 2026-09-26 — Fluxo completo de Lead até Pipeline
+
+- Leads manuais, do site e do tracking passam a entrar automaticamente na primeira etapa do Pipeline. Detalhe do Lead ganha retorno para a lista, dados do formulário organizados e exclusão administrativa com confirmação, auditoria e limpeza das oportunidades vinculadas.

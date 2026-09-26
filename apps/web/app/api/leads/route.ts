@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
+import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
 import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
@@ -48,6 +49,12 @@ export async function POST(request: Request) {
     });
     await tx.leadStatusHistory.create({
       data: { leadId: created.id, toStatus: "NOVO", actorUserId: session.user.id },
+    });
+    await createInitialOpportunityForLead(tx, {
+      agencyId: membership.agencyId,
+      leadId: created.id,
+      leadName: created.name,
+      actorUserId: session.user.id,
     });
     await tx.auditLog.create({
       data: {

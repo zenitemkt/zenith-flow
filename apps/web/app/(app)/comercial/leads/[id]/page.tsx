@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS } from "@/lib/leads";
+import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS, parseSiteLeadDetails } from "@/lib/leads";
 import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
+import { canManageTeam } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
 import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
 import { AddLeadNoteForm } from "./AddLeadNoteForm";
+import { DeleteLeadButton } from "./DeleteLeadButton";
 
 interface PageProps {
   params: { id: string };
@@ -31,6 +33,24 @@ export default async function LeadDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  let siteDetails: ReturnType<typeof parseSiteLeadDetails> = null;
+  let siteDetailsNoteId: string | null = null;
+  if (lead.source === "Site Zenite Hub") {
+    for (const note of lead.notes) {
+      const parsed = parseSiteLeadDetails(note.body);
+      if (parsed) {
+        siteDetails = parsed;
+        siteDetailsNoteId = note.id;
+        break;
+      }
+    }
+  }
+  const interestLabels: Record<string, string> = {
+    servico: "Serviço específico",
+    plano: "Plano completo de marketing",
+    consultoria: "Consultoria de marketing",
+  };
+
   type TimelineEntry = { id: string; kind: "status" | "note"; createdAt: Date; label: string };
 
   const timeline: TimelineEntry[] = [
@@ -42,7 +62,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
         ? `Status mudou de ${LEAD_STATUS_LABELS[entry.fromStatus]} para ${LEAD_STATUS_LABELS[entry.toStatus]}${entry.reason ? ` — ${entry.reason}` : ""}`
         : `Lead criado como ${LEAD_STATUS_LABELS[entry.toStatus]}`,
     })),
-    ...lead.notes.map((note) => ({ id: note.id, kind: "note" as const, createdAt: note.createdAt, label: note.body })),
+    ...lead.notes.filter((note) => note.id !== siteDetailsNoteId).map((note) => ({ id: note.id, kind: "note" as const, createdAt: note.createdAt, label: note.body })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   const touchpoints = await getLeadJourney(membership.agencyId, lead.id);
@@ -50,6 +70,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/comercial/leads" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
+        ← Voltar para Leads
+      </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">
@@ -76,6 +99,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
         <div className="flex flex-col items-end gap-2">
           <LeadStatusActions leadId={lead.id} options={LEAD_STATUS_TRANSITIONS[lead.status]} />
           {lead.status === "QUALIFICADO" && <ConvertLeadButton leadId={lead.id} />}
+          {canManageTeam(membership.role) && <DeleteLeadButton leadId={lead.id} leadName={lead.name} />}
         </div>
       </div>
 
@@ -110,6 +134,23 @@ export default async function LeadDetailPage({ params }: PageProps) {
               </div>
             )}
           </dl>
+
+          {siteDetails && (
+            <div className="mt-5 border-t border-[#EEF0F3] pt-4">
+              <h2 className="mb-3 text-sm font-semibold text-[#101828]">Informações do formulário</h2>
+              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                {Object.entries(siteDetails).map(([label, rawValue]) => {
+                  const value = label === "Interesse" ? interestLabels[rawValue] ?? rawValue : rawValue;
+                  return (
+                    <div key={label} className={label === "Resumo" ? "sm:col-span-2" : ""}>
+                      <dt className="text-xs text-[#667085]">{label}</dt>
+                      <dd className="mt-0.5 font-medium text-[#101828]">{value}</dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

@@ -1,6 +1,7 @@
 import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zenite-mkt/db";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
+import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
 import {
   isTrackingEventName,
   isConsentSatisfied,
@@ -77,6 +78,7 @@ async function identifyVisitor(
       const phone = typeof properties.phone === "string" ? properties.phone : null;
       lead = await tx.lead.create({ data: { agencyId, name, email, phone, source: "tracking" } });
       await tx.leadStatusHistory.create({ data: { leadId: lead.id, toStatus: "NOVO" } });
+      await createInitialOpportunityForLead(tx, { agencyId, leadId: lead.id, leadName: lead.name });
       createdNewLead = true;
     }
     await tx.trackingVisitor.update({ where: { id: visitorId }, data: { leadId: lead.id } });

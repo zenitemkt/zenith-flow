@@ -35,3 +35,14 @@ export function normalizeEmail(email: string | null | undefined): string | null 
   const trimmed = email.trim().toLowerCase();
   return trimmed ? trimmed : null;
 }
+const SITE_DETAIL_LABELS = ["Cidade", "Interesse", "Serviço", "Funcionários", "Investimento mensal", "Resumo"] as const;
+export type SiteLeadDetailLabel = (typeof SITE_DETAIL_LABELS)[number];
+
+export function parseSiteLeadDetails(body: string): Partial<Record<SiteLeadDetailLabel, string>> | null {
+  const details: Partial<Record<SiteLeadDetailLabel, string>> = {};
+  for (const line of body.split("\n")) {
+    const label = SITE_DETAIL_LABELS.find((candidate) => line.startsWith(`${candidate}: `));
+    if (label) details[label] = line.slice(label.length + 2).trim();
+  }
+  return Object.keys(details).length > 0 ? details : null;
+}

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@zenite-mkt/db";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
+import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
 
 const SOURCE = "Site Zenite Hub";
 
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     const lead = await prisma.$transaction(async (tx) => {
       const created = await tx.lead.create({ data: { agencyId, name, email, phone, company, source: SOURCE } });
       await tx.leadStatusHistory.create({ data: { leadId: created.id, toStatus: "NOVO" } });
+      await createInitialOpportunityForLead(tx, { agencyId, leadId: created.id, leadName: created.name });
       if (details.length) await tx.leadNote.create({ data: { leadId: created.id, body: details.map(([label, value]) => `${label}: ${value}`).join("\n") } });
       await tx.auditLog.create({ data: { agencyId, actorType: "integration", action: "lead.created", resourceType: "lead", resourceId: created.id, metadata: { source: SOURCE, correlationId } } });
       return created;
