@@ -127,46 +127,49 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces             Workspace[]
-  memberships            Membership[]
-  auditLogs              AuditLog[]
-  clients                Client[]
-  onboardingTemplates    OnboardingTemplate[]
-  projects               Project[]
-  recurringTaskTemplates RecurringTaskTemplate[]
-  vendors                Vendor[]
-  contentItems           ContentItem[]
-  commentThreads         CommentThread[]
-  employees              Employee[]
-  positions              Position[]
-  jobs                   Job[]
-  candidates             Candidate[]
-  leaveRequests          LeaveRequest[]
-  timesheets             Timesheet[]
-  timeEntries            TimeEntry[]
-  financeCategories      FinanceCategory[]
-  financeEntries         FinanceEntry[]
-  mediaAssets            MediaAsset[]
-  healthScoreSnapshots   HealthScoreSnapshot[]
-  churnRiskSnapshots     ChurnRiskSnapshot[]
-  retentionPlans         RetentionPlan[]
-  surveyCampaigns        SurveyCampaign[]
-  npsSnapshots           NpsSnapshot[]
-  enpsCampaigns          EnpsCampaign[]
-  enpsSnapshots          EnpsSnapshot[]
-  leads                  Lead[]
-  pipelineStages         PipelineStage[]
-  opportunities          Opportunity[]
-  proposals              Proposal[]
+  workspaces                 Workspace[]
+  memberships                Membership[]
+  auditLogs                  AuditLog[]
+  clients                    Client[]
+  onboardingTemplates        OnboardingTemplate[]
+  projects                   Project[]
+  recurringTaskTemplates     RecurringTaskTemplate[]
+  vendors                    Vendor[]
+  contentItems               ContentItem[]
+  commentThreads             CommentThread[]
+  employees                  Employee[]
+  positions                  Position[]
+  jobs                       Job[]
+  candidates                 Candidate[]
+  leaveRequests              LeaveRequest[]
+  timesheets                 Timesheet[]
+  timeEntries                TimeEntry[]
+  financeCategories          FinanceCategory[]
+  financeEntries             FinanceEntry[]
+  mediaAssets                MediaAsset[]
+  healthScoreSnapshots       HealthScoreSnapshot[]
+  churnRiskSnapshots         ChurnRiskSnapshot[]
+  retentionPlans             RetentionPlan[]
+  surveyCampaigns            SurveyCampaign[]
+  npsSnapshots               NpsSnapshot[]
+  enpsCampaigns              EnpsCampaign[]
+  enpsSnapshots              EnpsSnapshot[]
+  leads                      Lead[]
+  pipelineStages             PipelineStage[]
+  opportunities              Opportunity[]
+  proposals                  Proposal[]
   /// Chave pública (não-secreta) do coletor de tracking — ver seção "Tracking"
   /// abaixo. Gerada sob demanda na primeira visita a `/integracoes`.
-  trackingWriteKey       String?                 @unique
-  trackingVisitors       TrackingVisitor[]
-  trackingEvents         TrackingEvent[]
-  trackingConsents       TrackingConsent[]
-  campaigns              Campaign[]
-  workflows              Workflow[]
-  operationStages        OperationStage[]
+  trackingWriteKey           String?                 @unique
+  /// Liga/desliga a entrada server-to-server do formulário público do Zenite Hub.
+  /// A credencial continua exclusivamente nas variáveis protegidas da Vercel.
+  siteLeadIntegrationEnabled Boolean                 @default(true)
+  trackingVisitors           TrackingVisitor[]
+  trackingEvents             TrackingEvent[]
+  trackingConsents           TrackingConsent[]
+  campaigns                  Campaign[]
+  workflows                  Workflow[]
+  operationStages            OperationStage[]
 
   @@map("agency")
 }
@@ -462,26 +465,26 @@ model Project {
 /// um grafo arbitrário. `assigneeUserId` é sempre "quem está na vez agora"
 /// (cache denormalizado mantido em sincronia pela fila `TaskAssignee`).
 model Task {
-  id               String          @id @default(cuid())
-  projectId        String
-  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title            String
-  description      String?
-  status           WorkItemStatus  @default(BACKLOG)
-  blockedByTaskId  String?
-  blockedBy        Task?           @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
-  blocks           Task[]          @relation("TaskBlocks")
-  assigneeUserId   String?
+  id                  String          @id @default(cuid())
+  projectId           String
+  project             Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title               String
+  description         String?
+  status              WorkItemStatus  @default(BACKLOG)
+  blockedByTaskId     String?
+  blockedBy           Task?           @relation("TaskBlocks", fields: [blockedByTaskId], references: [id], onDelete: SetNull)
+  blocks              Task[]          @relation("TaskBlocks")
+  assigneeUserId      String?
   /// Só preenchido enquanto `status = EM_ANDAMENTO` — coluna customizável
   /// dentro do balde "Fazendo" (ver `OperationStage`). Nunca decide sozinho
   /// se a tarefa está concluída; isso é sempre `status`.
-  stageId          String?
-  stage            OperationStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  stageId             String?
+  stage               OperationStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
   /// Usado pra comparar estimado x realizado com o somatório de
   /// TimeEntry.minutes. Opcional: nem toda tarefa tem estimativa.
-  estimatedMinutes Int?
-  dueDate          DateTime?
-  completedAt      DateTime?
+  estimatedMinutes    Int?
+  dueDate             DateTime?
+  completedAt         DateTime?
   /// Início do trecho de trabalho em andamento (cronômetro real ligado a
   /// Iniciar/Pausar/Concluir). Null quando ninguém está trabalhando agora
   /// (A Fazer, concluída ou cancelada). Ao pausar ou concluir, o trecho vira
@@ -496,10 +499,10 @@ model Task {
   /// comentado (hoje: outra Task ou um ContentItem), mesmo padrão de
   /// entityType/entityId livre já usado por `CommentThread`. Null quando a
   /// tarefa nasceu direto pelo board.
-  originEntityType String?
-  originEntityId   String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  originEntityType    String?
+  originEntityId      String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
   statusHistory       TaskStatusHistory[]
   assignees           TaskAssignee[]
@@ -746,26 +749,26 @@ enum ApprovalStatus {
 }
 
 model ContentItem {
-  id            String         @id @default(cuid())
-  agencyId      String
-  agency        Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  clientId      String
-  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  title         String
-  description   String?
-  channel       ContentChannel
-  format        String?
-  campaign      String?
-  caption       String?
-  scheduledDate DateTime?
-  status        ContentStatus  @default(IDEIA)
+  id              String         @id @default(cuid())
+  agencyId        String
+  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  channel         ContentChannel
+  format          String?
+  campaign        String?
+  caption         String?
+  scheduledDate   DateTime?
+  status          ContentStatus  @default(IDEIA)
   /// Ordem importa: o primeiro da lista decide em qual coluna de responsável
   /// o card cai no Kanban de Operação enquanto ainda está em "A Fazer"
   /// (Ideia/Pauta) — vazio cai na coluna "Backend" (pedido do usuário,
   /// 2026-09-15).
-  assigneeUserIds String[]     @default([])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  assigneeUserIds String[]       @default([])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   versions       ContentVersion[]
   statusHistory  ContentStatusHistory[]
@@ -1895,24 +1898,24 @@ enum ProposalStatus {
 /// ContentApproval (/aprovar/[token]) e SurveyRecipient (/pesquisa/[token]) —
 /// TTL de 14 dias idêntico ao de ContentApproval.
 model Proposal {
-  id              String         @id @default(cuid())
-  agencyId        String
-  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name            String
-  clientId        String?
-  client          Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  leadId          String?
-  lead            Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  opportunityId   String?
-  opportunity     Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
-  content         String
-  valueCents      Int?
+  id                String         @id @default(cuid())
+  agencyId          String
+  agency            Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name              String
+  clientId          String?
+  client            Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  leadId            String?
+  lead              Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  opportunityId     String?
+  opportunity       Opportunity?   @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  content           String
+  valueCents        Int?
   /// Forma de pagamento em texto livre (ex.: "50% na assinatura, 50% na entrega final").
-  paymentTerms    String?
+  paymentTerms      String?
   /// Prazos e Etapas (seção "linha do tempo" da proposta pública) — array de
   /// `{ label: string; days: number }`. Opcional: a seção some da página
   /// pública se não houver etapas cadastradas.
-  timelineSteps   Json?
+  timelineSteps     Json?
   /// Snapshot do que foi realmente usado no último envio (independente do
   /// e-mail/telefone cadastrado no Client/Lead vinculado, que pode mudar depois).
   recipientEmail    String?
@@ -1921,16 +1924,16 @@ model Proposal {
   recipientWhatsapp String?
   emailSentAt       DateTime?
   whatsappSentAt    DateTime?
-  status          ProposalStatus @default(RASCUNHO)
-  token           String         @unique
-  sentAt          DateTime?
-  viewedAt        DateTime?
-  respondedAt     DateTime?
-  expiresAt       DateTime?
-  rejectedReason  String?
-  createdByUserId String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  status            ProposalStatus @default(RASCUNHO)
+  token             String         @unique
+  sentAt            DateTime?
+  viewedAt          DateTime?
+  respondedAt       DateTime?
+  expiresAt         DateTime?
+  rejectedReason    String?
+  createdByUserId   String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   statusHistory ProposalStatusHistory[]
 
@@ -2201,22 +2204,22 @@ model CampaignGeoTarget {
 /// que as duas podem divergir e precisam de rótulo claro, nunca fingir
 /// equivalência.
 model CampaignDailyMetric {
-  id          String   @id @default(cuid())
-  campaignId  String
-  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  date        DateTime
-  spendCents  Int      @default(0)
-  impressions Int      @default(0)
-  reach       Int?
-  clicks      Int      @default(0)
-  results     Int?
+  id               String   @id @default(cuid())
+  campaignId       String
+  campaign         Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  date             DateTime
+  spendCents       Int      @default(0)
+  impressions      Int      @default(0)
+  reach            Int?
+  clicks           Int      @default(0)
+  results          Int?
   /// "Valores reportados" (seção 36, ao lado de `results`) — valor em R$
   /// gerado no dia, pra calcular ROI/ROAS no "Tráfego - Raio X" (2026-09-25).
   /// Opcional: quem só quer ver gasto/cliques/frequência não precisa
   /// preencher isso.
   resultValueCents Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([campaignId, date])
   @@index([campaignId])

@@ -27,6 +27,14 @@ export async function POST(request: Request) {
   const agencyId = process.env.SITE_LEADS_AGENCY_ID;
   if (!agencyId) return NextResponse.json({ code: "not_configured", message: "Integração não configurada.", correlationId }, { status: 503 });
 
+  const integration = await prisma.agency.findUnique({
+    where: { id: agencyId },
+    select: { siteLeadIntegrationEnabled: true },
+  });
+  if (!integration?.siteLeadIntegrationEnabled) {
+    return NextResponse.json({ code: "integration_disabled", message: "Integração desativada.", correlationId }, { status: 503 });
+  }
+
   const body = await request.json().catch(() => null);
   const name = text(body?.name, 160);
   const email = normalizeEmail(text(body?.email, 320));

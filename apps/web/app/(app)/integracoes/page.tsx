@@ -5,6 +5,9 @@ import { generateTrackingWriteKey } from "@/lib/tracking-server";
 import { prisma } from "@zenite-mkt/db";
 import { RotateWriteKeyButton } from "./RotateWriteKeyButton";
 import { SendTestEventButton } from "./SendTestEventButton";
+import { SiteLeadIntegrationActions } from "./SiteLeadIntegrationActions";
+
+const SITE_LEAD_SOURCE = "Site Zenite Hub";
 
 export default async function IntegracoesPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -19,7 +22,7 @@ export default async function IntegracoesPage() {
   }
 
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const [totalEvents, eventsLast24h, totalVisitors, identifiedVisitors, lastEvents] = await Promise.all([
+  const [totalEvents, eventsLast24h, totalVisitors, identifiedVisitors, lastEvents, siteLeadCount, lastSiteLead] = await Promise.all([
     prisma.trackingEvent.count({ where: { agencyId: membership.agencyId } }),
     prisma.trackingEvent.count({ where: { agencyId: membership.agencyId, receivedAt: { gte: oneDayAgo } } }),
     prisma.trackingVisitor.count({ where: { agencyId: membership.agencyId } }),
@@ -30,7 +33,18 @@ export default async function IntegracoesPage() {
       take: 10,
       select: { id: true, eventName: true, url: true, occurredAt: true, receivedAt: true },
     }),
+    prisma.lead.count({ where: { agencyId: membership.agencyId, source: SITE_LEAD_SOURCE } }),
+    prisma.lead.findFirst({
+      where: { agencyId: membership.agencyId, source: SITE_LEAD_SOURCE },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
   ]);
+
+  const siteLeadConfigured =
+    Boolean(process.env.SITE_LEADS_SECRET) && process.env.SITE_LEADS_AGENCY_ID === membership.agencyId;
+  const siteLeadEnabled = siteLeadConfigured && membership.agency.siteLeadIntegrationEnabled;
+  const canManage = canManageIntegrations(membership.role);
 
   const snippetExample = `fetch("https://SEU_DOMINIO_ZENITE_FLOW/api/collect/v1/events", {
   method: "POST",
@@ -63,6 +77,50 @@ export default async function IntegracoesPage() {
         </p>
       </div>
 
+      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+        <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold text-[#101828]">Zenite Hub — Formulário de orçamento</h2>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
+                  siteLeadEnabled ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${siteLeadEnabled ? "bg-[#12B76A]" : "bg-[#98A2B3]"}`} />
+                {siteLeadEnabled ? "Ativa" : siteLeadConfigured ? "Desconectada" : "Não configurada"}
+              </span>
+            </div>
+            <p className="max-w-2xl text-sm text-[#667085]">
+              Recebe os dados enviados em <span className="font-medium text-[#344054]">hubzenite.com.br/orcamento</span> e
+              cria o contato automaticamente em <span className="font-medium text-[#344054]">Comercial → Leads</span>.
+            </p>
+          </div>
+          <SiteLeadIntegrationActions enabled={siteLeadEnabled} configured={siteLeadConfigured} canManage={canManage} />
+        </div>
+
+        <div className="grid gap-px bg-[#EEF0F3] sm:grid-cols-3">
+          <div className="bg-white p-4">
+            <p className="text-xs text-[#667085]">Leads recebidos</p>
+            <p className="mt-1 text-xl font-semibold text-[#101828]">{siteLeadCount}</p>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-xs text-[#667085]">Último recebimento</p>
+            <p className="mt-1 text-sm font-semibold text-[#101828]">
+              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR") : "Nenhum lead recebido"}
+            </p>
+          </div>
+          <div className="bg-white p-4">
+            <p className="text-xs text-[#667085]">Origem registrada</p>
+            <p className="mt-1 text-sm font-semibold text-[#101828]">{SITE_LEAD_SOURCE}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F9FAFB] px-4 py-3 text-xs text-[#667085]">
+          <span>A credencial fica protegida na Vercel e nunca é exibida nesta tela.</span>
+          <span>Desconectar não apaga leads já recebidos.</span>
+        </div>
+      </section>
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[#101828]">Chave do coletor</h2>

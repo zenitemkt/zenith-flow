@@ -423,3 +423,7 @@ Variáveis necessárias (ver `.env.example`): `DATABASE_URL` (Neon), `BETTER_AUT
 ## 2026-09-26 — Integração do formulário do Zenite Hub com o CRM
 
 Novo endpoint server-to-server `POST /api/v1/integrations/site-leads`, protegido por bearer secret e fixado à agência configurada por `SITE_LEADS_AGENCY_ID`. Cria `Lead` com origem `Site Zenite Hub`, histórico inicial, nota com detalhes do orçamento, audit log e gatilho `lead.created`. Reenvio do mesmo e-mail é idempotente pela chave operacional `agencyId+email`; concorrência `P2002` também retorna o lead existente. Limite defensivo de 30 novos leads/minuto por agência. O site usa sua própria função `/api/leads`, mantendo o segredo fora do navegador, validando payload/honeypot e encaminhando ao Flow antes de abrir o WhatsApp.
+
+## 2026-09-26 — Integração do site visível e administrável
+
+A página `/integracoes` agora mostra o cartão **Zenite Hub — Formulário de orçamento** com estado real (ativa, desconectada ou não configurada), total de leads recebidos, último recebimento e origem registrada. Administradores podem desconectar/reconectar pela própria tela; a ação é auditada, respeita a agência ativa e interrompe novos cadastros sem apagar leads existentes. A credencial permanece somente nas variáveis protegidas da Vercel.

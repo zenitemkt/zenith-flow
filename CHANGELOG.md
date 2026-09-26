@@ -216,3 +216,7 @@
 ## 2026-09-26
 
 - Integração server-to-server do formulário de orçamento do Zenite Hub com o CRM de Leads, com segredo fora do navegador, tenant fixo, deduplicação por e-mail, rate limit, auditoria e preservação do fluxo de WhatsApp.
+
+## 2026-09-26 — Cartão administrável da integração Zenite Hub
+
+- A aba Integrações passa a mostrar a conexão do formulário de orçamento com o CRM, incluindo status, métricas reais e último recebimento. Administradores podem desconectar/reconectar sem apagar leads; a ação é protegida por RBAC, auditada e aplicada pelo endpoint de entrada.

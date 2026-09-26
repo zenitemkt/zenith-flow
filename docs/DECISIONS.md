@@ -889,3 +889,11 @@ npx prisma generate
 ## 2026-09-26 — Formulário do site entra no CRM por integração server-to-server
 
 O `zenitehub` é estático, então não pode carregar no navegador a credencial do Zenith Flow. Foi adotado um proxy serverless no próprio site (`/api/leads`) que recebe o formulário same-origin e encaminha para `/api/v1/integrations/site-leads` com bearer secret guardado apenas na Vercel. O endpoint do Flow não aceita `agencyId` do chamador: o tenant vem exclusivamente de `SITE_LEADS_AGENCY_ID`, evitando gravação em outra agência. O e-mail normalizado continua sendo a chave operacional de deduplicação; campos adicionais do orçamento ficam em `LeadNote`, sem migration nova. O WhatsApp permanece como etapa humana e só abre depois de o CRM confirmar o recebimento.
+
+## 2026-09-26 — Integração server-to-server também precisa de representação administrativa
+
+**Contexto**: a conexão do formulário de orçamento do Zenite Hub com Leads estava funcional em produção, mas existia apenas no código e nas variáveis da Vercel. Isso fazia a aba Integrações parecer incompleta e obrigava manutenção técnica para interromper o fluxo.
+
+**Decisão**: a agência ganhou `siteLeadIntegrationEnabled` (padrão ativo). O endpoint público consulta esse estado antes de aceitar o formulário. `/integracoes` exibe um cartão operacional baseado na configuração real da infraestrutura e nos Leads com origem `Site Zenite Hub`; administradores podem desconectar ou reconectar por uma rota autenticada, com RBAC, escopo de agência e `AuditLog`. “Desconectar” é a exclusão operacional segura: preserva histórico e leads, mas bloqueia novos recebimentos. O segredo não é armazenado nem revelado no banco/UI; continua na Vercel.
+
+**Consequência**: remover fisicamente código ou credenciais continua sendo uma operação de infraestrutura, mas a gestão cotidiana não depende mais disso. Se a configuração da Vercel não corresponder à agência ativa, a interface mostra “Não configurada” e não permite uma reconexão enganosa.

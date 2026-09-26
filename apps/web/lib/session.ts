@@ -18,7 +18,7 @@ export const CURRENT_AGENCY_COOKIE = "zf-agency-id";
 
 /**
  * `select` explícito em vez de `include: { agency: true, workspace: true }`:
- * só `agency.name` e `agency.trackingWriteKey` são usados em todo o código
+ * só os campos de agência usados pelo shell e por Integrações são carregados
  * (`membership.workspace` nunca é lido) — evita trazer a linha inteira de
  * `Agency`/`Workspace` em ~50 pontos de chamada por request.
  */
@@ -35,7 +35,7 @@ const MEMBERSHIP_SELECT = {
   inviteExpiresAt: true,
   createdAt: true,
   updatedAt: true,
-  agency: { select: { name: true, trackingWriteKey: true } },
+  agency: { select: { name: true, trackingWriteKey: true, siteLeadIntegrationEnabled: true } },
 } as const;
 
 /**
