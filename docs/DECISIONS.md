@@ -909,3 +909,9 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: expor a mesma exclusão administrativa do detalhe como uma ação de ícone na última coluna da tabela. O botão tem nome acessível, título, foco visível e confirmação; a autorização continua duplicada corretamente na UI e na API. Após sucesso, a rota é atualizada no lugar, sem navegação desnecessária.
 
 **Consequência**: a conveniência da ação em linha não reduz as proteções existentes nem torna a exclusão visível a papéis sem permissão administrativa.
+
+## 2026-09-26 — Confirmações destrutivas não usam diálogos nativos do navegador
+
+**Decisão**: a exclusão de Lead passa por um componente compartilhado baseado no Modal do design system, usado tanto na tabela quanto no detalhe. O modal mantém foco contido, fecha por Esc ou backdrop quando ocioso, impede fechamento durante a requisição e mostra erros sem recorrer a window.alert.
+
+**Consequência**: novas superfícies de exclusão de Lead devem reutilizar LeadDeleteDialog; a confirmação visual e a autorização de servidor continuam responsabilidades separadas.

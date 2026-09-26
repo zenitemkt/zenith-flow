@@ -433,3 +433,7 @@ Todo Lead novo, seja manual, formulário do Zenite Hub ou identificação por tr
 ## 2026-09-26 — Exclusão de Lead pela listagem
 
 A lista de Leads agora exibe uma lixeira acessível por linha somente para administradores. A ação reutiliza a exclusão auditada já existente, confirma a remoção e atualiza a tabela e a contagem sem sair da página.
+
+## 2026-09-26 — Modal personalizado para excluir Lead
+
+A exclusão na lista e no detalhe agora usa uma janela visual integrada ao tema do sistema. O modal informa que o Lead e as oportunidades vinculadas serão removidos, oferece cancelamento explícito, bloqueia ações durante o processamento e apresenta erros no próprio contexto.
