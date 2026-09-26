@@ -7,6 +7,8 @@ import { HEALTH_BAND_BADGE_CLASS, bandForScore } from "@/lib/health-score";
 import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
 import { prisma } from "@zenite-mkt/db";
 import { NewClientForm } from "./NewClientForm";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   PROSPECT: "bg-[#EEF2FF] text-[#3730A3]",
@@ -37,6 +39,7 @@ export default async function CarteiraPage({ searchParams }: { searchParams: { p
     }),
   ]);
   const pageCount = pageCountFor(total);
+  const canDelete = canManageTeam(membership.role);
 
   const healthSnapshots = await prisma.healthScoreSnapshot.findMany({
     where: { agencyId: membership.agencyId, clientId: { in: clients.map((c) => c.id) } },
@@ -78,6 +81,7 @@ export default async function CarteiraPage({ searchParams }: { searchParams: { p
                 <th className="px-4 py-3">Contato principal</th>
                 <th className="px-4 py-3">Health</th>
                 <th className="px-4 py-3">Status</th>
+                {canDelete && <th className="w-14 px-4 py-3"><span className="sr-only">Ações</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -117,6 +121,7 @@ export default async function CarteiraPage({ searchParams }: { searchParams: { p
                         {CLIENT_STATUS_LABELS[client.status]}
                       </span>
                     </td>
+                    {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." /></td>}
                   </tr>
                 );
               })}

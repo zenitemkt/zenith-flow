@@ -5,6 +5,8 @@ import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS } from "@/lib/campa
 import { formatCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
 import { NewCampaignModal } from "./NewCampaignModal";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 export default async function CampaignsPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -24,6 +26,8 @@ export default async function CampaignsPage() {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const canDelete = canManageTeam(membership.role);
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +57,7 @@ export default async function CampaignsPage() {
                 <th className="px-4 py-3">Período</th>
                 <th className="px-4 py-3">Orçamento</th>
                 <th className="px-4 py-3">Status</th>
+                {canDelete && <th className="w-14 px-4 py-3"><span className="sr-only">Ações</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -85,6 +90,7 @@ export default async function CampaignsPage() {
                       {CAMPAIGN_STATUS_LABELS[campaign.status]}
                     </span>
                   </td>
+                  {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Campanha" warning="Métricas, conjuntos de anúncios, anúncios e segmentações vinculadas também serão removidos." /></td>}
                 </tr>
               ))}
             </tbody>

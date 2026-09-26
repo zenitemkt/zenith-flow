@@ -4,6 +4,9 @@
 
 ### Adicionado
 
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
+
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
@@ -34,6 +37,9 @@
 
 ### Adicionado
 
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
+
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
@@ -51,6 +57,9 @@
 - **`portal.hubzenite.com.br` deixou de ser restrito só ao Portal do Cliente**: agora serve o app inteiro, igual ao domínio principal — equipe e cliente logam pelo mesmo domínio e caem direto no lugar certo (roteamento por papel, não mais por host). Reverte a decisão de 23/09 que redirecionava equipe interna pro domínio `.vercel.app` (exigia logar de novo lá, já que o cookie é por host) — pedido explícito do Kevin.
 
 ### Adicionado
+
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
 
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
@@ -76,6 +85,9 @@
 - **Favicon do app**: era o logo completo ("Z" + "marketing hub" em fundo escuro); agora é um círculo laranja sólido com "Z" branco, igual ao badge do login/menu lateral (`app/icon.svg`, vale pra todo o app incluindo o Portal do Cliente).
 
 ### Adicionado
+
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
 
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
@@ -117,6 +129,9 @@
 
 ### Adicionado
 
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
+
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
@@ -141,6 +156,9 @@
 - Lentidão no board de Operação: a aplicação estava conectando no host direto do Postgres (Neon) em vez do host pooled recomendado — corrigido em `apps/web/.env.local`/`packages/db/.env` (`DATABASE_URL` agora pooled, `DIRECT_URL` novo só pra migrações). Auto-suspend do plano free do Neon continua existindo (a primeira ação depois de um tempo parado ainda pode demorar um pouco).
 
 ### Adicionado
+
+- **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
+- **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
 
 - **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
 - **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.

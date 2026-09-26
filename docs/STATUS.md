@@ -449,3 +449,7 @@ As ações do Lead agora avançam a oportunidade correspondente pelos estágios 
 ## 2026-09-26 — Ciclos comerciais independentes e histórico permanente do cliente
 
 Um novo preenchimento nunca encerra uma negociação aberta. O mesmo contato pode manter várias oportunidades simultâneas, e somente a equipe decide quando uma delas é ganha ou frustrada. Leads que já compraram recebem a identificação “Já é cliente”. Uma proposta criada diretamente para um cliente abre uma nova oportunidade em “Recebeu proposta”, registra as etapas intermediárias e preserva todas as propostas e negociações anteriores no card do cliente.
+
+## 2026-09-26 — Exclusão administrativa em Propostas, Campanhas e Clientes
+
+Administradores agora podem excluir registros pela listagem ou pelo card usando o mesmo modal personalizado de confirmação. Excluir proposta preserva a negociação e recalcula seu valor; excluir campanha remove métricas e estruturas de anúncios vinculadas; excluir cliente remove cadastro, portal e dados dependentes, mas preserva e desvincula o histórico comercial. O card do cliente ganhou retorno explícito para a Carteira de clientes.

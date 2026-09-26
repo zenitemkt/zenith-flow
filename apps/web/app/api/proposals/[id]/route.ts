@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
-import { isClientRole } from "@/lib/rbac";
+import { canManageTeam, isClientRole } from "@/lib/rbac";
 import { parseTimelineSteps } from "@/lib/proposals";
 import { prisma, Prisma } from "@zenite-mkt/db";
 
@@ -66,5 +66,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     },
   });
 
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(_request: Request, { params }: RouteParams) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const membership = await getCurrentMembership(session.user.id);
+  if (!membership) return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  if (!canManageTeam(membership.role)) return NextResponse.json({ error: "Apenas administradores podem excluir propostas." }, { status: 403 });
+  const proposal = await prisma.proposal.findUnique({ where: { id: params.id } });
+  if (!proposal || proposal.agencyId !== membership.agencyId) return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.proposal.delete({ where: { id: proposal.id } });
+    if (proposal.opportunityId) {
+      const latest = await tx.proposal.findFirst({ where: { opportunityId: proposal.opportunityId }, orderBy: { createdAt: "desc" }, select: { valueCents: true } });
+      await tx.opportunity.updateMany({ where: { id: proposal.opportunityId, agencyId: membership.agencyId, status: "OPEN" }, data: { valueCents: latest?.valueCents ?? null } });
+    }
+    await tx.auditLog.create({ data: { agencyId: membership.agencyId, actorUserId: session.user.id, actorType: "user", action: "proposal.deleted", resourceType: "proposal", resourceId: proposal.id, metadata: { name: proposal.name, opportunityId: proposal.opportunityId } } });
+  });
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,8 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue } from "@/lib/proposals";
 import { prisma } from "@zenite-mkt/db";
 import { NewProposalModal } from "./NewProposalModal";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 export default async function ProposalsPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -24,6 +26,8 @@ export default async function ProposalsPage() {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const canDelete = canManageTeam(membership.role);
 
   return (
     <div className="flex flex-col gap-6">
@@ -51,6 +55,7 @@ export default async function ProposalsPage() {
                 <th className="px-4 py-3">Vínculo</th>
                 <th className="px-4 py-3">Valor</th>
                 <th className="px-4 py-3">Status</th>
+                {canDelete && <th className="w-14 px-4 py-3"><span className="sr-only">Ações</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -68,6 +73,7 @@ export default async function ProposalsPage() {
                       {PROPOSAL_STATUS_LABELS[proposal.status]}
                     </span>
                   </td>
+                  {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/proposals/${proposal.id}`} recordName={proposal.name} entityLabel="Proposta" warning="A negociação continuará registrada e o valor será recalculado pelas propostas restantes." /></td>}
                 </tr>
               ))}
             </tbody>

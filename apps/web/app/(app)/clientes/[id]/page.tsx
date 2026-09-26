@@ -21,6 +21,8 @@ import { CHURN_BAND_LABELS, CHURN_BAND_BADGE_CLASS, type ChurnRiskSignals } from
 import { NewRetentionPlanModal } from "./NewRetentionPlanModal";
 import { RetentionPlanActions } from "./RetentionPlanActions";
 import { getAgencyMembers } from "@/lib/team";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 interface PageProps {
   params: { id: string };
@@ -124,6 +126,9 @@ export default async function ClientProfilePage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/clientes/carteira" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
+        ← Voltar para Clientes
+      </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">
@@ -173,6 +178,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
               whatsapp: client.whatsapp ?? "",
             }}
           />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." redirectTo="/clientes/carteira" variant="button" />}
         </div>
       </div>
 

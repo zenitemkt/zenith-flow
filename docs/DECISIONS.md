@@ -939,3 +939,9 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: cada preenchimento que representa interesse comercial cria uma Opportunity independente e aberta. Nenhum evento de formulário encerra outra Opportunity; somente uma ação explícita da equipe pode marcá-la como ganha ou perdida. Propostas diretas para Client criam uma nova Opportunity já avançada, com histórico, até `PROPOSAL_RECEIVED`. O card do cliente agrega oportunidades vinculadas diretamente ou por seu Lead convertido, inclusive propostas antigas ainda sem Opportunity.
 
 **Consequência**: o mesmo contato pode aparecer em mais de uma coluna ou em vários cards abertos. Isso é intencional e representa negociações simultâneas; métricas contam cada ciclo separadamente.
+
+## 2026-09-26 — Exclusões comerciais preservam o que ainda tem valor histórico
+
+**Decisão**: exclusões de Proposta, Campanha e Cliente são permanentes, exclusivas de administradores, confirmadas por modal e auditadas. Proposta não leva a Opportunity junto; seu valor aberto é recalculado. Campanha leva apenas sua árvore própria de métricas, conjuntos, anúncios e segmentação. Cliente leva portal e entidades com dependência forte, enquanto Lead convertido, Opportunity, Proposal e Campaign usam `SetNull` e permanecem como histórico sem vínculo.
+
+**Consequência**: excluir um cliente não apaga o histórico comercial nem altera artificialmente conversões passadas, mas remove dados operacionais e financeiros dependentes conforme informado na confirmação.

@@ -7,6 +7,8 @@ import { ATTRIBUTION_MODELS, ATTRIBUTION_MODEL_LABELS, computeCampaignAttributio
 import { prisma } from "@zenite-mkt/db";
 import { CampaignStatusActions } from "./CampaignStatusActions";
 import { AddDailyMetricForm } from "./AddDailyMetricForm";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 interface PageProps {
   params: { id: string };
@@ -81,7 +83,10 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
             </p>
           )}
         </div>
-        <CampaignStatusActions campaignId={campaign.id} options={CAMPAIGN_STATUS_TRANSITIONS[campaign.status]} />
+        <div className="flex flex-col items-end gap-2">
+          <CampaignStatusActions campaignId={campaign.id} options={CAMPAIGN_STATUS_TRANSITIONS[campaign.status]} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Campanha" warning="Métricas, conjuntos de anúncios, anúncios e segmentações vinculadas também serão removidos." redirectTo="/comercial/campanhas" variant="button" />}
+        </div>
       </div>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

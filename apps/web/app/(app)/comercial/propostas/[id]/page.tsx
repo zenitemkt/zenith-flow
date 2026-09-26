@@ -6,6 +6,8 @@ import { prisma } from "@zenite-mkt/db";
 import { ProposalActions } from "./ProposalActions";
 import { EditProposalForm } from "./EditProposalForm";
 import { CopyProposalLinkButton } from "./CopyProposalLinkButton";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
+import { canManageTeam } from "@/lib/rbac";
 
 interface PageProps {
   params: { id: string };
@@ -62,13 +64,16 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
             </div>
           )}
         </div>
-        <ProposalActions
+        <div className="flex flex-col items-end gap-2">
+          <ProposalActions
           proposalId={proposal.id}
           status={proposal.status}
           autoOpenSend={searchParams.send === "1"}
           defaultEmail={defaultEmail}
           defaultWhatsapp={defaultWhatsapp}
-        />
+          />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/proposals/${proposal.id}`} recordName={proposal.name} entityLabel="Proposta" warning="A negociação continuará registrada e o valor será recalculado pelas propostas restantes." redirectTo="/comercial/propostas" variant="button" />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
