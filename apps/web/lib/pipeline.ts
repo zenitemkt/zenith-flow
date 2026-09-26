@@ -1,7 +1,14 @@
-import type { OpportunityStatus } from "@zenite-mkt/db";
+import type { OpportunityStatus, PipelineStageKind } from "@zenite-mkt/db";
 
-/** Seção 39: "custom pipeline" — 4 estágios padrão semeados no signup, mesmo padrão do onboarding de clientes. Agência edita livremente depois. */
-export const DEFAULT_PIPELINE_STAGE_NAMES = ["Novo contato", "Qualificação", "Proposta enviada", "Negociação"];
+/** Etapas semânticas do fluxo comercial; o nome visível pode mudar sem quebrar automações. */
+export const DEFAULT_PIPELINE_STAGES: { name: string; kind: PipelineStageKind }[] = [
+  { name: "Novo contato", kind: "NEW_CONTACT" },
+  { name: "Em andamento", kind: "IN_PROGRESS" },
+  { name: "Qualificado", kind: "QUALIFIED" },
+  { name: "Recebeu proposta", kind: "PROPOSAL_RECEIVED" },
+];
+
+export const DEFAULT_PIPELINE_STAGE_NAMES = DEFAULT_PIPELINE_STAGES.map((stage) => stage.name);
 
 export const OPPORTUNITY_STATUS_LABELS: Record<OpportunityStatus, string> = {
   OPEN: "Aberta",

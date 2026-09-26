@@ -4,6 +4,9 @@
 
 ### Adicionado
 
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
+
 - **Cartão de membro em Configurações > Equipe e permissões**: clique numa linha da tabela pra ver os dados, trocar o papel, inativar/reativar o acesso, excluir o cadastro (ou cancelar convite pendente) e reenviar o convite por e-mail e/ou WhatsApp — nunca sobre a própria conta, nunca removendo o último admin ativo da agência.
 - **Nova aba "Tráfego - Raio X"** (grupo Gestão): espelho manual das campanhas de mídia paga (Meta, Google e outros canais), sem precisar abrir o painel de cada plataforma — drill-down Campanha → Conjunto de anúncios → Anúncio, métricas (gasto/dia, cliques, frequência, ROI, ROAS) e um Mapa do Tráfego (Leaflet/OpenStreetMap, sem chave de API) com pino por cidade ou círculo por raio de segmentação. Dados digitados à mão nesta fatia — sem conector real com Meta/Google Ads ainda (fica pra quando as credenciais estiverem prontas).
 - **Aba "Arquivos" (Portal do Cliente e Clientes internos) também aponta pro Google Drive**: além do upload próprio que já existia, agora mostra um cartão "Pasta completa no Google Drive" quando o cliente tem uma pasta vinculada — mesmo link já usado pela Biblioteca de conteúdo. No painel interno, aparece ao filtrar por um cliente específico; no Portal, aparece automaticamente pro cliente logado.
@@ -28,6 +31,9 @@
 
 ### Adicionado
 
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
+
 - **Portal do Cliente — aba "Peças gráficas"**: cliente solicita cotação de impressão (cartão de visitas, panfletos, placas, banners, lonas, adesivos ou outro) direto pelo Portal. Sem tabela nova — reaproveita o mesmo pipeline de "Solicitações" (vira uma tarefa sem responsável em "Não atribuída" no Operação).
 
 ### Corrigido
@@ -39,6 +45,9 @@
 - **`portal.hubzenite.com.br` deixou de ser restrito só ao Portal do Cliente**: agora serve o app inteiro, igual ao domínio principal — equipe e cliente logam pelo mesmo domínio e caem direto no lugar certo (roteamento por papel, não mais por host). Reverte a decisão de 23/09 que redirecionava equipe interna pro domínio `.vercel.app` (exigia logar de novo lá, já que o cookie é por host) — pedido explícito do Kevin.
 
 ### Adicionado
+
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
 - **Indicador de carregamento no login**: ícone girando + campos desabilitados durante o envio (`LoginForm.tsx`) — a lentidão relatada no login pelo Portal é provavelmente o Neon "acordando" depois de ficar ocioso (scale-to-zero, configurável no painel do Neon, não no código).
 
@@ -58,6 +67,9 @@
 - **Favicon do app**: era o logo completo ("Z" + "marketing hub" em fundo escuro); agora é um círculo laranja sólido com "Z" branco, igual ao badge do login/menu lateral (`app/icon.svg`, vale pra todo o app incluindo o Portal do Cliente).
 
 ### Adicionado
+
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
 - **"Esqueci minha senha"** (`/esqueci-senha`, `/redefinir-senha`): fluxo real via Better Auth (`emailAndPassword.sendResetPassword`), sem migration nova (reaproveita a tabela `Verification` já existente). Vale pra equipe interna e pro Portal do Cliente, mesmo login único. Link expira em 1h e redefinir a senha revoga todas as sessões ativas da conta (`revokeSessionsOnPasswordReset: true`). Mensagem de sucesso é sempre a mesma, exista ou não o e-mail informado, pra não expor quais contas existem no sistema.
 - **Identidade visual escura para login/criar agência**, inspirada na tela de login da Proton Mail (pedido do Kevin, referência visual): halo de luz laranja atrás do card escuro, logo fixo no canto superior esquerdo, sem seletor de idioma/termos/política (nenhum tem lógica real por trás). Escopo restrito às telas de `(auth)` — o resto do produto continua na base clara do `visualcodex.txt`. Novo componente `AuthField` (variante escura de `FormField`, só pra essas telas).
@@ -93,6 +105,9 @@
 
 ### Adicionado
 
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
+
 - **Convite de equipe e campanhas de NPS/eNPS passam a pedir confirmação antes de enviar de verdade**: o convite de equipe não dispara mais o e-mail sozinho ao criar — cria o convite, mostra o link, e só manda e-mail/WhatsApp quando a pessoa clica explicitamente ("Enviar e-mail"/"Abrir WhatsApp"), duas rotas novas (`POST /api/memberships/:id/send-invite-email`/`.../send-invite-whatsapp`). O botão "Enviar" de campanhas NPS/eNPS agora pede confirmação (`window.confirm`) antes de mandar e-mail de verdade pros destinatários pendentes, avisando quantos e se o Resend está configurado.
 - **Envio real por e-mail/WhatsApp estendido de Propostas pra NPS, eNPS, convite de equipe e aprovação de conteúdo**: até aqui só Propostas mandava e-mail de verdade (Resend) e link `wa.me`. `lib/email.ts` ganhou um núcleo genérico (`sendEmail`) reaproveitado por 4 novos templates (`sendNpsInviteEmail`, `sendEnpsInviteEmail`, `sendTeamInviteEmail`, `sendContentApprovalEmail`); `lib/whatsapp.ts` (novo) reúne os helpers de link `wa.me` que antes viviam presos em `lib/proposals-server.ts`.
   - **NPS e eNPS**: o botão "Enviar" da campanha agora dispara e-mail de verdade pra cada destinatário/convidado pendente quando o Resend está configurado (sem provedor configurado, mantém o comportamento antigo — marca tudo enviado em lote, sem mandar nada). Cada linha da lista ganhou um botão de WhatsApp manual (não rastreado), condicionado a existir telefone — do contato do cliente (NPS) ou da pessoa (eNPS, novo campo `Employee.phone`, opcional).
@@ -111,6 +126,9 @@
 - Lentidão no board de Operação: a aplicação estava conectando no host direto do Postgres (Neon) em vez do host pooled recomendado — corrigido em `apps/web/.env.local`/`packages/db/.env` (`DATABASE_URL` agora pooled, `DIRECT_URL` novo só pra migrações). Auto-suspend do plano free do Neon continua existindo (a primeira ação depois de um tempo parado ainda pode demorar um pouco).
 
 ### Adicionado
+
+- **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
+- **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
 - Tema escuro (infraestrutura real): `/configuracoes/aparencia` — preferência salva na conta do usuário (`User.themePreference`), sem flash de tela clara ao carregar (lido no layout raiz, server-side). Por enquanto só o shell (sidebar, topbar, fundo, abas de seção) escurece; conteúdo de cada tela é um trabalho maior, ainda pendente.
 - Operação: botão redondo de atualizar (ícone refresh) ao lado de "Novo Card" — recarrega o quadro inteiro (equivalente ao F5, via `router.refresh()`, sem o flash de reload de página).

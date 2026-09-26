@@ -441,3 +441,7 @@ A exclusão na lista e no detalhe agora usa uma janela visual integrada ao tema 
 ## 2026-09-26 — Identidade contínua do Lead e recompras
 
 O CRM agora modela uma pessoa como um único Lead com vários e-mails e telefones. Nome/Sobrenome preservam a versão mais completa; cada novo preenchimento é salvo de forma estruturada no histórico do cartão e cria uma oportunidade independente na primeira etapa do Pipeline. Ganhar mais de uma oportunidade do mesmo contato conta como mais de uma conversão. A aba Integrações mede preenchimentos recebidos, não apenas contatos únicos.
+
+## 2026-09-26 — Pipeline comercial sincronizada com o ciclo do Lead
+
+As ações do Lead agora avançam a oportunidade correspondente pelos estágios semânticos Novo contato, Em andamento, Qualificado e Recebeu proposta. Criar uma proposta registra automaticamente etapas puladas e leva seu valor à oportunidade; Tornar cliente encerra a oportunidade como ganha e contabiliza o valor da proposta. A Pipeline ganhou indicadores filtráveis por todo o período, últimos 30/14/7 dias, ano, mês ou intervalo personalizado. Os detalhes de Propostas e Campanhas agora têm navegação de retorno.

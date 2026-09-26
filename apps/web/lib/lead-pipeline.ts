@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { DEFAULT_PIPELINE_STAGES } from "./pipeline";
 
 interface InitialOpportunityInput {
   agencyId: string;
@@ -8,20 +9,29 @@ interface InitialOpportunityInput {
   submissionId?: string | null;
 }
 
-export async function createInitialOpportunityForLead(
-  tx: Prisma.TransactionClient,
-  input: InitialOpportunityInput,
-) {
+export async function createInitialOpportunityForLead(tx: Prisma.TransactionClient, input: InitialOpportunityInput) {
   let firstStage = await tx.pipelineStage.findFirst({
-    where: { agencyId: input.agencyId },
-    orderBy: { order: "asc" },
+    where: { agencyId: input.agencyId, kind: "NEW_CONTACT" },
   });
 
   if (!firstStage) {
-    firstStage = await tx.pipelineStage.create({
-      data: { agencyId: input.agencyId, name: "Novo contato", order: 0 },
-    });
+    const anyStage = await tx.pipelineStage.findFirst({ where: { agencyId: input.agencyId } });
+    if (!anyStage) {
+      await tx.pipelineStage.createMany({
+        data: DEFAULT_PIPELINE_STAGES.map((stage, order) => ({ agencyId: input.agencyId, ...stage, order })),
+      });
+      firstStage = await tx.pipelineStage.findFirst({
+        where: { agencyId: input.agencyId, kind: "NEW_CONTACT" },
+      });
+    } else {
+      firstStage = await tx.pipelineStage.findFirst({
+        where: { agencyId: input.agencyId },
+        orderBy: { order: "asc" },
+      });
+    }
   }
+
+  if (!firstStage) throw new Error("Não foi possível configurar o primeiro estágio da pipeline.");
 
   const opportunity = await tx.opportunity.create({
     data: {

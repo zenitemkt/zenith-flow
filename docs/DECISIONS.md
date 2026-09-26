@@ -923,3 +923,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: LeadEmail e LeadPhone guardam identidades normalizadas e únicas por agência; LeadSubmission preserva cada conjunto de dados recebido e pode originar uma Opportunity. A resolução aceita correspondência por qualquer e-mail ou telefone conhecido. O nome principal só muda quando a nova versão é mais completa; dados menores nunca apagam os anteriores. Cada envio manual ou do site cria uma nova oportunidade na primeira etapa, mesmo para Lead convertido. Tracking reutiliza a identidade, mas só abre oportunidade quando cria um Lead novo. Se e-mail e telefone apontarem para Leads diferentes, a operação retorna conflito em vez de unir pessoas silenciosamente. A taxa de conversão passa a ser oportunidades ganhas / oportunidades totais.
 
 **Consequência**: um contato pode acumular vários e-mails, telefones, interesses, oportunidades ganhas e recompras sem duplicar sua identidade. Dois envios sem nenhum identificador compartilhado continuam indistinguíveis e podem gerar contatos diferentes; não há deduplicação probabilística por nome.
+
+## 2026-09-26 — Estágios semânticos mantêm Lead e Pipeline consistentes
+
+**Contexto**: os nomes visuais dos estágios não ofereciam uma referência estável para ações automáticas, e Lead, Proposta e Opportunity podiam representar momentos diferentes da mesma venda.
+
+**Decisão**: os quatro estágios operacionais recebem `PipelineStageKind` estável (`NEW_CONTACT`, `IN_PROGRESS`, `QUALIFIED`, `PROPOSAL_RECEIVED`). Mudanças originadas no Lead e na criação de proposta percorrem e registram cada etapa intermediária, mesmo quando o usuário pula ações. Tornar cliente ganha a oportunidade aberta mais recente e copia o valor da proposta mais recente. Recompras reutilizam o Client já convertido, mas encerram uma Opportunity nova.
+
+**Consequência**: renomear visualmente um estágio não quebra automações. O filtro temporal usa a data de criação da oportunidade para formar coortes comparáveis; ele altera indicadores e histórico fechado, mas não esconde oportunidades abertas do quadro operacional.

@@ -94,6 +94,8 @@ export async function upsertLeadSubmission(tx: Prisma.TransactionClient, input: 
       data: { leadId: lead.id, toStatus: "NOVO", actorUserId: input.actorUserId ?? null },
     });
   } else {
+    const previousStatus = lead.status;
+    const restartCommercialCycle = input.createOpportunity !== "new-only" && previousStatus !== "NOVO";
     const richerName = mostCompleteName(lead.name, input.name);
     const parsed = splitContactName(richerName);
     lead = await tx.lead.update({
@@ -105,8 +107,21 @@ export async function upsertLeadSubmission(tx: Prisma.TransactionClient, input: 
         email: lead.email ?? email,
         phone: lead.phone ?? input.phone?.trim() ?? null,
         company: lead.company ?? input.company?.trim() ?? null,
+        status: restartCommercialCycle ? "NOVO" : undefined,
+        disqualifiedReason: restartCommercialCycle ? null : undefined,
       },
     });
+    if (restartCommercialCycle) {
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          fromStatus: previousStatus,
+          toStatus: "NOVO",
+          actorUserId: input.actorUserId ?? null,
+          reason: "Novo interesse recebido",
+        },
+      });
+    }
   }
 
   if (email) {

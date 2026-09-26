@@ -1873,17 +1873,26 @@ model LeadNote {
 /// agência, semeadas com um padrão de 4 no signup (mesmo padrão do
 /// OnboardingTemplate). Só existem estágios "abertos"; Ganho/Perdido é
 /// `Opportunity.status`, não uma coluna do board.
+enum PipelineStageKind {
+  NEW_CONTACT
+  IN_PROGRESS
+  QUALIFIED
+  PROPOSAL_RECEIVED
+}
+
 model PipelineStage {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency    Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name      String
   order     Int
-  createdAt DateTime @default(now())
+  kind      PipelineStageKind?
+  createdAt DateTime           @default(now())
 
   opportunities Opportunity[]
 
   @@unique([agencyId, order])
+  @@unique([agencyId, kind])
   @@index([agencyId])
   @@map("pipeline_stage")
 }

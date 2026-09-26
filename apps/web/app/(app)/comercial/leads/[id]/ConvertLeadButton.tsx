@@ -31,7 +31,7 @@ export function ConvertLeadButton({ leadId }: { leadId: string }) {
         className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white disabled:opacity-60"
         style={{ backgroundColor: "#16A36A" }}
       >
-        {loading ? "Convertendo..." : "Converter em cliente"}
+        {loading ? "Convertendo..." : "Tornar cliente"}
       </button>
       {error && <p className="text-xs font-medium text-[#D94343]">{error}</p>}
     </div>

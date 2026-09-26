@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_BADGE_CLASS, formatProposalValue, type TimelineStep } from "@/lib/proposals";
@@ -40,6 +41,9 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/comercial/propostas" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
+        ← Voltar para Propostas
+      </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">

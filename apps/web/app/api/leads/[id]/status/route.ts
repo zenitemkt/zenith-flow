@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionLead } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
+import { advanceLeadCommercialFlow } from "@/lib/commercial-flow";
 import { prisma, type LeadStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
@@ -43,9 +44,20 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   await prisma.$transaction(async (tx) => {
+    if (toStatus === "EM_ANDAMENTO" || toStatus === "QUALIFICADO") {
+      await advanceLeadCommercialFlow(tx, {
+        agencyId: membership.agencyId,
+        leadId: lead.id,
+        targetStatus: toStatus,
+        targetStage: toStatus === "EM_ANDAMENTO" ? "IN_PROGRESS" : "QUALIFIED",
+        actorUserId: session.user.id,
+        reason: `Lead marcado como ${toStatus === "EM_ANDAMENTO" ? "Em andamento" : "Qualificado"}`,
+      });
+      return;
+    }
     await tx.lead.update({
       where: { id: lead.id },
-      data: { status: toStatus, disqualifiedReason: toStatus === "DESQUALIFICADO" ? reason : lead.disqualifiedReason },
+      data: { status: toStatus, disqualifiedReason: reason },
     });
     await tx.leadStatusHistory.create({
       data: { leadId: lead.id, fromStatus: lead.status, toStatus, reason, actorUserId: session.user.id },
