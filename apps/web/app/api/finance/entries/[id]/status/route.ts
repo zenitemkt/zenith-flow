@@ -4,6 +4,8 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionFinanceEntry } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
+import { settleCommercialReceivable } from "@/lib/commercial-settlement";
+import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { endOfDayUTC } from "@/lib/dates";
 import { prisma, type FinanceEntryStatus } from "@zenite-mkt/db";
 
@@ -61,7 +63,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     settledDate = raw;
   }
 
-  await prisma.$transaction(async (tx) => {
+  const settledOpportunity = await prisma.$transaction(async (tx) => {
     await tx.financeEntry.update({
       where: { id: entry.id },
       data: { status: toStatus, settledDate },
@@ -75,7 +77,20 @@ export async function POST(request: Request, { params }: RouteParams) {
         actorUserId: session.user.id,
       },
     });
+    return toStatus === "LIQUIDADO"
+      ? settleCommercialReceivable(tx, entry, session.user.id)
+      : null;
   });
+
+  if (settledOpportunity) {
+    await fireWorkflowTrigger(membership.agencyId, "opportunity.won", "opportunity", settledOpportunity.id, {
+      opportunityId: settledOpportunity.id,
+      name: settledOpportunity.name,
+      valueCents: settledOpportunity.valueCents,
+      leadId: settledOpportunity.leadId,
+      clientId: settledOpportunity.clientId,
+    });
+  }
 
   revalidateTag(financeEntriesCacheTag(membership.agencyId));
   return NextResponse.json({ ok: true });

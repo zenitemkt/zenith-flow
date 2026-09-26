@@ -4,7 +4,8 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS, parseSiteLeadDetails } from "@/lib/leads";
 import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
 import { canManageTeam } from "@/lib/rbac";
-import { OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
+import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
+import { PROPOSAL_STATUS_LABELS } from "@/lib/proposals";
 import { prisma } from "@zenite-mkt/db";
 import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
@@ -40,6 +41,36 @@ export default async function LeadDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const [opportunities, proposals, pipelineStages] = await Promise.all([
+    prisma.opportunity.findMany({
+      where: { agencyId: membership.agencyId, leadId: lead.id },
+      include: { statusHistory: { orderBy: { createdAt: "asc" } } },
+    }),
+    prisma.proposal.findMany({
+      where: { agencyId: membership.agencyId, leadId: lead.id },
+      include: { statusHistory: { orderBy: { createdAt: "asc" } } },
+    }),
+    prisma.pipelineStage.findMany({
+      where: { agencyId: membership.agencyId },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const opportunityIds = opportunities.map((opportunity) => opportunity.id);
+  const proposalIds = proposals.map((proposal) => proposal.id);
+  const financeEntries = opportunityIds.length > 0 || proposalIds.length > 0
+    ? await prisma.financeEntry.findMany({
+        where: {
+          agencyId: membership.agencyId,
+          OR: [
+            ...(opportunityIds.length > 0 ? [{ opportunityId: { in: opportunityIds } }] : []),
+            ...(proposalIds.length > 0 ? [{ proposalId: { in: proposalIds } }] : []),
+          ],
+        },
+        include: { statusHistory: { orderBy: { createdAt: "asc" } } },
+      })
+    : [];
+  const stageNameById = new Map(pipelineStages.map((stage) => [stage.id, stage.name]));
+
   let siteDetails: ReturnType<typeof parseSiteLeadDetails> = null;
   let siteDetailsNoteId: string | null = null;
   if (lead.source === "Site Zenite Hub") {
@@ -58,20 +89,59 @@ export default async function LeadDetailPage({ params }: PageProps) {
     consultoria: "Consultoria de marketing",
   };
 
-  type TimelineEntry = { id: string; kind: "status" | "note"; createdAt: Date; label: string };
+  type TimelineEntry = { id: string; kind: "status" | "note" | "commercial" | "finance"; createdAt: Date; label: string };
+  const proposalEventLabel = (status: keyof typeof PROPOSAL_STATUS_LABELS, name: string) => {
+    if (status === "RASCUNHO") return `Proposta criada — ${name}`;
+    if (status === "ENVIADA") return `Proposta enviada — ${name}`;
+    if (status === "VISUALIZADA") return `Proposta visualizada — ${name}`;
+    if (status === "ACEITA") return `Proposta aceita — ${name}`;
+    if (status === "REJEITADA") return `Proposta rejeitada — ${name}`;
+    return `Proposta expirada — ${name}`;
+  };
 
   const timeline: TimelineEntry[] = [
     ...lead.statusHistory.map((entry) => ({
-      id: entry.id,
+      id: `lead-${entry.id}`,
       kind: "status" as const,
       createdAt: entry.createdAt,
       label: entry.fromStatus
         ? `Status mudou de ${LEAD_STATUS_LABELS[entry.fromStatus]} para ${LEAD_STATUS_LABELS[entry.toStatus]}${entry.reason ? ` — ${entry.reason}` : ""}`
         : `Lead criado como ${LEAD_STATUS_LABELS[entry.toStatus]}`,
     })),
-    ...lead.notes.filter((note) => note.id !== siteDetailsNoteId).map((note) => ({ id: note.id, kind: "note" as const, createdAt: note.createdAt, label: note.body })),
+    ...lead.notes.filter((note) => note.id !== siteDetailsNoteId).map((note) => ({
+      id: `note-${note.id}`,
+      kind: "note" as const,
+      createdAt: note.createdAt,
+      label: note.body,
+    })),
+    ...opportunities.flatMap((opportunity) => opportunity.statusHistory.map((entry) => {
+      const stageName = entry.toStageId ? stageNameById.get(entry.toStageId) : null;
+      const label = entry.toStatus === "WON"
+        ? `Negociação ganha${entry.reason ? ` — ${entry.reason}` : ""}`
+        : entry.toStatus === "LOST"
+          ? `Negociação perdida${entry.reason ? ` — ${entry.reason}` : ""}`
+          : stageName
+            ? `Negociação avançou para ${stageName}${entry.reason ? ` — ${entry.reason}` : ""}`
+            : `Negociação atualizada${entry.reason ? ` — ${entry.reason}` : ""}`;
+      return { id: `opportunity-${entry.id}`, kind: "commercial" as const, createdAt: entry.createdAt, label };
+    })),
+    ...proposals.flatMap((proposal) => proposal.statusHistory.map((entry) => ({
+      id: `proposal-${entry.id}`,
+      kind: "commercial" as const,
+      createdAt: entry.createdAt,
+      label: `${proposalEventLabel(entry.toStatus, proposal.name)}${entry.reason ? ` — ${entry.reason}` : ""}`,
+    }))),
+    ...financeEntries.flatMap((financeEntry) => financeEntry.statusHistory
+      .filter((entry) => entry.toStatus === "PENDENTE" || entry.toStatus === "LIQUIDADO")
+      .map((entry) => ({
+        id: `finance-${entry.id}`,
+        kind: "finance" as const,
+        createdAt: entry.createdAt,
+        label: entry.toStatus === "LIQUIDADO"
+          ? `Pagamento realizado — ${formatOpportunityValue(financeEntry.amountCents)}`
+          : `Pagamento pendente gerado — ${formatOpportunityValue(financeEntry.amountCents)}`,
+      }))),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
   const touchpoints = await getLeadJourney(membership.agencyId, lead.id);
   const credited = applyAttributionModel(touchpoints, "last_non_direct");
 

@@ -31,18 +31,57 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Conte pra gente o motivo da recusa." }, { status: 400 });
   }
 
+  const respondedAt = new Date();
   await prisma.$transaction(async (tx) => {
     await tx.proposal.update({
       where: { id: proposal.id },
       data: {
         status: decision,
-        respondedAt: new Date(),
+        respondedAt,
         rejectedReason: decision === "REJEITADA" ? reason : null,
       },
     });
     await tx.proposalStatusHistory.create({
       data: { proposalId: proposal.id, fromStatus: proposal.status, toStatus: decision, reason },
     });
+
+    if (decision === "ACEITA" && proposal.valueCents !== null && proposal.valueCents > 0) {
+      const existingReceivable = await tx.financeEntry.findFirst({ where: { proposalId: proposal.id } });
+      if (!existingReceivable) {
+        const receivable = await tx.financeEntry.create({
+          data: {
+            agencyId: proposal.agencyId,
+            type: "RECEITA",
+            status: "PENDENTE",
+            description: `Proposta aceita: ${proposal.name}`,
+            amountCents: proposal.valueCents,
+            clientId: proposal.clientId,
+            opportunityId: proposal.opportunityId,
+            proposalId: proposal.id,
+            competencyDate: respondedAt,
+            dueDate: respondedAt,
+            createdByUserId: proposal.createdByUserId,
+          },
+        });
+        await tx.financeEntryStatusHistory.create({
+          data: {
+            financeEntryId: receivable.id,
+            toStatus: "PENDENTE",
+            reason: "Recebível criado a partir de proposta aceita",
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            agencyId: proposal.agencyId,
+            actorType: "system",
+            action: "finance.receivable_created_from_proposal",
+            resourceType: "finance_entry",
+            resourceId: receivable.id,
+            metadata: { proposalId: proposal.id, opportunityId: proposal.opportunityId },
+          },
+        });
+      }
+    }
 
     // Aceite avança a Oportunidade vinculada pra próxima etapa do Pipeline
     // da agência — só faz sentido enquanto ela ainda está aberta.

@@ -1339,6 +1339,10 @@ model FinanceEntry {
   client           Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
   projectId        String?
   project          Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  opportunityId    String?
+  opportunity      Opportunity?       @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  proposalId       String?
+  proposal         Proposal?          @relation(fields: [proposalId], references: [id], onDelete: SetNull)
   /// "Separar competência, vencimento e liquidação" (seção 22) — três datas
   /// com significado diferente, nunca uma só reaproveitada pras três coisas.
   competencyDate   DateTime
@@ -1371,6 +1375,8 @@ model FinanceEntry {
   @@index([agencyId, status, dueDate])
   @@index([clientId])
   @@index([projectId])
+  @@index([opportunityId])
+  @@index([proposalId])
   @@map("finance_entry")
 }
 
@@ -1930,6 +1936,7 @@ model Opportunity {
 
   statusHistory OpportunityStatusHistory[]
   proposals     Proposal[]
+  financeEntries FinanceEntry[]
 
   @@index([agencyId])
   @@index([agencyId, status])
@@ -2013,6 +2020,7 @@ model Proposal {
   updatedAt         DateTime       @updatedAt
 
   statusHistory ProposalStatusHistory[]
+  financeEntries FinanceEntry[]
 
   @@index([agencyId])
   @@index([clientId])
