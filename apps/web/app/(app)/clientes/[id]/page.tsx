@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CLIENT_STATUS_LABELS, CLIENT_STATUS_TRANSITIONS } from "@/lib/clients";
+import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
+import { formatProposalValue, PROPOSAL_STATUS_BADGE_CLASS, PROPOSAL_STATUS_LABELS } from "@/lib/proposals";
 import { prisma } from "@zenite-mkt/db";
 import { StatusActions } from "./StatusActions";
 import { OnboardingChecklist } from "./OnboardingChecklist";
@@ -63,6 +65,28 @@ export default async function ClientProfilePage({ params }: PageProps) {
         })
       : Promise.resolve(null),
   ]);
+  const [negotiations, pipelineStages, unlinkedProposals] = await Promise.all([
+    prisma.opportunity.findMany({
+      where: { agencyId: membership.agencyId, OR: [{ clientId: client.id }, { lead: { convertedClientId: client.id } }] },
+      include: {
+        stage: { select: { name: true } },
+        submission: { select: { interest: true, service: true, summary: true, source: true } },
+        proposals: { orderBy: { createdAt: "desc" } },
+        statusHistory: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, select: { id: true, name: true } }),
+    prisma.proposal.findMany({
+      where: {
+        agencyId: membership.agencyId,
+        opportunityId: null,
+        OR: [{ clientId: client.id }, { lead: { convertedClientId: client.id } }],
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+  const pipelineStageName = new Map(pipelineStages.map((stage) => [stage.id, stage.name]));
   const healthBreakdown = latestHealthScore?.breakdown as unknown as HealthScoreBreakdown | undefined;
   const churnSignals = latestChurnRisk?.signals as unknown as ChurnRiskSignals | undefined;
   const teamMemberById = new Map(teamMembersRaw.map((m) => [m.userId, m.name]));
@@ -197,6 +221,22 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 </p>
               </div>
             )}
+            {unlinkedProposals.length > 0 && (
+              <div className="mt-3 border-t border-[#E4E7EC] pt-3">
+                <p className="mb-2 text-xs font-medium text-[#475467]">Propostas anteriores sem negociação vinculada</p>
+                <div className="flex flex-col gap-1.5">
+                  {unlinkedProposals.map((proposal) => (
+                    <Link key={proposal.id} href={`/comercial/propostas/${proposal.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F9FAFB] px-2.5 py-2 hover:bg-[#F2F4F7]">
+                      <span className="text-sm font-medium text-[#101828]">{proposal.name}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs text-[#475467]">{formatProposalValue(proposal.valueCents)}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PROPOSAL_STATUS_BADGE_CLASS[proposal.status]}`}>{PROPOSAL_STATUS_LABELS[proposal.status]}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
@@ -249,6 +289,22 @@ export default async function ClientProfilePage({ params }: PageProps) {
                 <p className="text-xs text-[#98A2B3]">
                   Sinais ainda sem dado real no sistema (não entram no cálculo): {churnSignals.pendente.join(", ")}.
                 </p>
+              </div>
+            )}
+            {unlinkedProposals.length > 0 && (
+              <div className="mt-3 border-t border-[#E4E7EC] pt-3">
+                <p className="mb-2 text-xs font-medium text-[#475467]">Propostas anteriores sem negociação vinculada</p>
+                <div className="flex flex-col gap-1.5">
+                  {unlinkedProposals.map((proposal) => (
+                    <Link key={proposal.id} href={`/comercial/propostas/${proposal.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F9FAFB] px-2.5 py-2 hover:bg-[#F2F4F7]">
+                      <span className="text-sm font-medium text-[#101828]">{proposal.name}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs text-[#475467]">{formatProposalValue(proposal.valueCents)}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PROPOSAL_STATUS_BADGE_CLASS[proposal.status]}`}>{PROPOSAL_STATUS_LABELS[proposal.status]}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </section>
@@ -348,23 +404,83 @@ export default async function ClientProfilePage({ params }: PageProps) {
           </section>
         </div>
 
-        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Timeline</h2>
-          <div className="mb-4">
-            <AddNoteForm clientId={client.id} />
-          </div>
-          <div className="flex flex-col gap-3">
-            {timeline.length === 0 && <p className="text-sm text-[#98A2B3]">Sem eventos ainda.</p>}
-            {timeline.map((entry) => (
-              <div key={entry.id} className="border-l-2 border-[#EEF0F3] pl-3">
-                <p className="text-sm text-[#101828]">{entry.label}</p>
-                <p className="text-xs text-[#98A2B3]">
-                  {entry.createdAt.toLocaleString("pt-BR")}
-                </p>
+        <div className="flex flex-col gap-6">
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-[#101828]">Histórico de negociações</h2>
+              <p className="mt-1 text-xs text-[#667085]">Negociações abertas, ganhas e frustradas permanecem registradas.</p>
+            </div>
+            {negotiations.length === 0 && unlinkedProposals.length === 0 ? (
+              <p className="text-sm text-[#98A2B3]">Nenhuma negociação registrada para este cliente.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {negotiations.map((negotiation) => (
+                  <article key={negotiation.id} className="rounded-lg border border-[#E4E7EC] p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[#101828]">{negotiation.name}</p>
+                        <p className="text-xs text-[#98A2B3]">Iniciada em {negotiation.createdAt.toLocaleString("pt-BR")}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        {negotiation.status === "OPEN" && <span className="rounded-full bg-[#FFF1EC] px-2 py-0.5 text-xs font-medium text-[#C4320A]">{negotiation.stage.name}</span>}
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${OPPORTUNITY_STATUS_BADGE_CLASS[negotiation.status]}`}>
+                          {negotiation.status === "LOST" ? "Frustrada" : OPPORTUNITY_STATUS_LABELS[negotiation.status]}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#667085]">
+                      <span>Valor: <strong className="text-[#101828]">{formatOpportunityValue(negotiation.valueCents)}</strong></span>
+                      {negotiation.submission?.source && <span>Origem: {negotiation.submission.source}</span>}
+                      {(negotiation.submission?.service || negotiation.submission?.interest) && <span>Interesse: {negotiation.submission.service ?? negotiation.submission.interest}</span>}
+                    </div>
+                    {negotiation.proposals.length > 0 && (
+                      <div className="mt-3 border-t border-[#EEF0F3] pt-3">
+                        <p className="mb-2 text-xs font-medium text-[#475467]">Propostas</p>
+                        <div className="flex flex-col gap-1.5">
+                          {negotiation.proposals.map((proposal) => (
+                            <Link key={proposal.id} href={`/comercial/propostas/${proposal.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#F9FAFB] px-2.5 py-2 hover:bg-[#F2F4F7]">
+                              <span className="text-sm font-medium text-[#101828]">{proposal.name}</span>
+                              <span className="flex items-center gap-2">
+                                <span className="text-xs text-[#475467]">{formatProposalValue(proposal.valueCents)}</span>
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PROPOSAL_STATUS_BADGE_CLASS[proposal.status]}`}>{PROPOSAL_STATUS_LABELS[proposal.status]}</span>
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {negotiation.statusHistory.length > 0 && (
+                      <details className="mt-3 border-t border-[#EEF0F3] pt-2">
+                        <summary className="cursor-pointer text-xs font-medium text-[#667085]">Ver etapas percorridas</summary>
+                        <ol className="mt-2 flex flex-col gap-1 border-l border-[#D0D5DD] pl-3">
+                          {negotiation.statusHistory.map((event) => (
+                            <li key={event.id} className="text-xs text-[#667085]">
+                              <span className="font-medium text-[#344054]">{event.toStatus === "WON" ? "Ganha" : event.toStatus === "LOST" ? "Frustrada" : event.toStageId ? pipelineStageName.get(event.toStageId) ?? "Etapa atualizada" : "Negociação atualizada"}</span>{" "}· {event.createdAt.toLocaleString("pt-BR")}{event.reason ? ` · ${event.reason}` : ""}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
+                  </article>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            )}
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Timeline</h2>
+            <div className="mb-4"><AddNoteForm clientId={client.id} /></div>
+            <div className="flex flex-col gap-3">
+              {timeline.length === 0 && <p className="text-sm text-[#98A2B3]">Sem eventos ainda.</p>}
+              {timeline.map((entry) => (
+                <div key={entry.id} className="border-l-2 border-[#EEF0F3] pl-3">
+                  <p className="text-sm text-[#101828]">{entry.label}</p>
+                  <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

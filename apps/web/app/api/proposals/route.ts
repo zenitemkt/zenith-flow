@@ -3,8 +3,8 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { generateProposalToken } from "@/lib/proposals-server";
 import { parseTimelineSteps } from "@/lib/proposals";
-import { advanceLeadCommercialFlow, latestOpenOpportunity } from "@/lib/commercial-flow";
-import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
+import { advanceLeadCommercialFlow, advanceOpportunityToStage, latestOpenOpportunity } from "@/lib/commercial-flow";
+import { createInitialOpportunityForClient, createInitialOpportunityForLead } from "@/lib/lead-pipeline";
 import { prisma, Prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
   const name = optionalString(body?.name);
   const content = optionalString(body?.content);
   const clientId = optionalString(body?.clientId);
+  let linkedClientLeadId: string | null = null;
   let leadId = optionalString(body?.leadId);
   let opportunityId = optionalString(body?.opportunityId);
   const valueRaw = body?.value;
@@ -32,15 +33,27 @@ export async function POST(request: Request) {
   const timelineSteps = parseTimelineSteps(body?.timelineSteps);
 
   if (!name || !content) return NextResponse.json({ error: "Dê um nome e um conteúdo à proposta." }, { status: 400 });
-  if (valueCents !== null && (!Number.isFinite(valueCents) || valueCents < 0)) return NextResponse.json({ error: "Informe um valor válido." }, { status: 400 });
+  if (clientId && leadId) return NextResponse.json({ error: "Escolha um cliente ou um Lead, não os dois." }, { status: 400 });
+  if (valueCents !== null && (!Number.isFinite(valueCents) || valueCents < 0)) {
+    return NextResponse.json({ error: "Informe um valor válido." }, { status: 400 });
+  }
 
   if (clientId) {
     const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
+    if (!client || client.agencyId !== membership.agencyId) {
+      return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
+    }
+    linkedClientLeadId = (await prisma.lead.findFirst({
+      where: { agencyId: membership.agencyId, convertedClientId: clientId },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    }))?.id ?? null;
   }
   if (leadId) {
     const lead = await prisma.lead.findUnique({ where: { id: leadId } });
-    if (!lead || lead.agencyId !== membership.agencyId) return NextResponse.json({ error: "Lead inválido." }, { status: 400 });
+    if (!lead || lead.agencyId !== membership.agencyId) {
+      return NextResponse.json({ error: "Lead inválido." }, { status: 400 });
+    }
   }
   if (opportunityId) {
     const opportunity = await prisma.opportunity.findUnique({ where: { id: opportunityId } });
@@ -51,6 +64,28 @@ export async function POST(request: Request) {
   }
 
   const proposal = await prisma.$transaction(async (tx) => {
+    if (clientId && !leadId && !opportunityId) {
+      const client = await tx.client.findUniqueOrThrow({ where: { id: clientId } });
+      const opportunity = await createInitialOpportunityForClient(tx, {
+        agencyId: membership.agencyId,
+        clientId,
+        clientName: client.name,
+        leadId: linkedClientLeadId,
+        valueCents,
+        actorUserId: session.user.id,
+      });
+      opportunityId = opportunity.id;
+      leadId = linkedClientLeadId;
+      await advanceOpportunityToStage(
+        tx,
+        opportunity.id,
+        membership.agencyId,
+        "PROPOSAL_RECEIVED",
+        session.user.id,
+        "Proposta criada para cliente",
+      );
+    }
+
     if (leadId && !opportunityId) {
       let opportunity = await latestOpenOpportunity(tx, membership.agencyId, leadId);
       if (!opportunity) {
@@ -65,7 +100,7 @@ export async function POST(request: Request) {
       opportunityId = opportunity.id;
     }
 
-    if (leadId && opportunityId) {
+    if (leadId && opportunityId && !clientId) {
       await advanceLeadCommercialFlow(tx, {
         agencyId: membership.agencyId,
         leadId,
@@ -75,9 +110,7 @@ export async function POST(request: Request) {
         actorUserId: session.user.id,
         reason: "Proposta criada",
       });
-      if (valueCents !== null) {
-        await tx.opportunity.update({ where: { id: opportunityId }, data: { valueCents } });
-      }
+      if (valueCents !== null) await tx.opportunity.update({ where: { id: opportunityId }, data: { valueCents } });
     }
 
     const created = await tx.proposal.create({
@@ -104,7 +137,7 @@ export async function POST(request: Request) {
         action: "proposal.created",
         resourceType: "proposal",
         resourceId: created.id,
-        metadata: { leadId, opportunityId, valueCents },
+        metadata: { leadId, clientId, opportunityId, valueCents },
       },
     });
     return created;

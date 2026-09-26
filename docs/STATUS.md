@@ -445,3 +445,7 @@ O CRM agora modela uma pessoa como um único Lead com vários e-mails e telefone
 ## 2026-09-26 — Pipeline comercial sincronizada com o ciclo do Lead
 
 As ações do Lead agora avançam a oportunidade correspondente pelos estágios semânticos Novo contato, Em andamento, Qualificado e Recebeu proposta. Criar uma proposta registra automaticamente etapas puladas e leva seu valor à oportunidade; Tornar cliente encerra a oportunidade como ganha e contabiliza o valor da proposta. A Pipeline ganhou indicadores filtráveis por todo o período, últimos 30/14/7 dias, ano, mês ou intervalo personalizado. Os detalhes de Propostas e Campanhas agora têm navegação de retorno.
+
+## 2026-09-26 — Ciclos comerciais independentes e histórico permanente do cliente
+
+Um novo preenchimento nunca encerra uma negociação aberta. O mesmo contato pode manter várias oportunidades simultâneas, e somente a equipe decide quando uma delas é ganha ou frustrada. Leads que já compraram recebem a identificação “Já é cliente”. Uma proposta criada diretamente para um cliente abre uma nova oportunidade em “Recebeu proposta”, registra as etapas intermediárias e preserva todas as propostas e negociações anteriores no card do cliente.

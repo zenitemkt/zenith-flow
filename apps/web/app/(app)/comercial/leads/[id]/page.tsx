@@ -87,6 +87,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${LEAD_STATUS_BADGE_CLASS[lead.status]}`}>
               {LEAD_STATUS_LABELS[lead.status]}
             </span>
+            {lead.convertedClient && (
+              <span className="rounded-full bg-[#FFF1EC] px-2 py-0.5 text-xs font-semibold text-[#C4320A]">Já é cliente</span>
+            )}
           </h1>
           <p className="text-sm text-[#667085]">
             {lead.company ?? "Sem empresa"} · {lead.source ?? "Origem não informada"}

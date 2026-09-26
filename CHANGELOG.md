@@ -4,6 +4,9 @@
 
 ### Adicionado
 
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
+
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
@@ -31,6 +34,9 @@
 
 ### Adicionado
 
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
+
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
@@ -45,6 +51,9 @@
 - **`portal.hubzenite.com.br` deixou de ser restrito só ao Portal do Cliente**: agora serve o app inteiro, igual ao domínio principal — equipe e cliente logam pelo mesmo domínio e caem direto no lugar certo (roteamento por papel, não mais por host). Reverte a decisão de 23/09 que redirecionava equipe interna pro domínio `.vercel.app` (exigia logar de novo lá, já que o cookie é por host) — pedido explícito do Kevin.
 
 ### Adicionado
+
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
@@ -67,6 +76,9 @@
 - **Favicon do app**: era o logo completo ("Z" + "marketing hub" em fundo escuro); agora é um círculo laranja sólido com "Z" branco, igual ao badge do login/menu lateral (`app/icon.svg`, vale pra todo o app incluindo o Portal do Cliente).
 
 ### Adicionado
+
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
@@ -105,6 +117,9 @@
 
 ### Adicionado
 
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
+
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.
 
@@ -126,6 +141,9 @@
 - Lentidão no board de Operação: a aplicação estava conectando no host direto do Postgres (Neon) em vez do host pooled recomendado — corrigido em `apps/web/.env.local`/`packages/db/.env` (`DATABASE_URL` agora pooled, `DIRECT_URL` novo só pra migrações). Auto-suspend do plano free do Neon continua existindo (a primeira ação depois de um tempo parado ainda pode demorar um pouco).
 
 ### Adicionado
+
+- **Histórico comercial permanente do cliente**: o card do cliente reúne negociações abertas, ganhas e frustradas, etapas percorridas e todas as propostas, inclusive registros antigos sem oportunidade vinculada.
+- **Recompras e negociações simultâneas**: novos formulários não encerram negócios anteriores; clientes identificados recebem a tag "Já é cliente", e uma proposta direta abre outro ciclo em Recebeu proposta.
 
 - **Pipeline comercial sincronizada**: status do Lead, criação de proposta e conversão em cliente avançam automaticamente os estágios, registram etapas puladas, contabilizam o valor ganho e oferecem filtros de período nos indicadores.
 - **Navegação nos detalhes comerciais**: Propostas e Campanhas agora exibem um botão de retorno para suas listas.

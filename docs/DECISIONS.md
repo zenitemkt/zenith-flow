@@ -931,3 +931,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: os quatro estágios operacionais recebem `PipelineStageKind` estável (`NEW_CONTACT`, `IN_PROGRESS`, `QUALIFIED`, `PROPOSAL_RECEIVED`). Mudanças originadas no Lead e na criação de proposta percorrem e registram cada etapa intermediária, mesmo quando o usuário pula ações. Tornar cliente ganha a oportunidade aberta mais recente e copia o valor da proposta mais recente. Recompras reutilizam o Client já convertido, mas encerram uma Opportunity nova.
 
 **Consequência**: renomear visualmente um estágio não quebra automações. O filtro temporal usa a data de criação da oportunidade para formar coortes comparáveis; ele altera indicadores e histórico fechado, mas não esconde oportunidades abertas do quadro operacional.
+
+## 2026-09-26 — Novo interesse não encerra negociação existente
+
+**Contexto**: um cliente ou Lead pode demonstrar interesse em mais de um serviço ao mesmo tempo. Interpretar um novo formulário como abandono da negociação anterior criaria perdas falsas e distorceria a Pipeline.
+
+**Decisão**: cada preenchimento que representa interesse comercial cria uma Opportunity independente e aberta. Nenhum evento de formulário encerra outra Opportunity; somente uma ação explícita da equipe pode marcá-la como ganha ou perdida. Propostas diretas para Client criam uma nova Opportunity já avançada, com histórico, até `PROPOSAL_RECEIVED`. O card do cliente agrega oportunidades vinculadas diretamente ou por seu Lead convertido, inclusive propostas antigas ainda sem Opportunity.
+
+**Consequência**: o mesmo contato pode aparecer em mais de uma coluna ou em vários cards abertos. Isso é intencional e representa negociações simultâneas; métricas contam cada ciclo separadamente.

@@ -75,6 +75,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${LEAD_STATUS_BADGE_CLASS[lead.status]}`}>
                       {LEAD_STATUS_LABELS[lead.status]}
                     </span>
+                    {lead.convertedClientId && (
+                      <span className="ml-2 rounded-full bg-[#FFF1EC] px-2 py-0.5 text-xs font-semibold text-[#C4320A]">Já é cliente</span>
+                    )}
                   </td>
                   {canDeleteLeads && (
                     <td className="px-4 py-3 text-right">
