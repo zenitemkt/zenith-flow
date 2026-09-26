@@ -568,7 +568,10 @@ export function FunnelChart({
   const first = data[0];
   if (!first) return null;
 
-  const max = first.value;
+  // Nunca use apenas a primeira etapa como denominador: um conjunto legado
+  // ou filtrado pode ter 0 na primeira posição e valores nas seguintes.
+  // O piso 1 também impede NaN/Infinity quando todas as etapas estão vazias.
+  const max = Math.max(1, ...data.map((stage) => stage.value));
   const n = data.length;
   const norms = data.map((d) => d.value / max);
   const horiz = orientation === "horizontal";

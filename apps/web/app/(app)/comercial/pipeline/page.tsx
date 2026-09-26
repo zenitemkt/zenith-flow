@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
@@ -50,10 +50,17 @@ export default async function PipelinePage({ searchParams }: PageProps) {
   const wonOpportunities = periodOpportunities.filter((opportunity) => opportunity.status === "WON");
   const wonValueCents = wonOpportunities.reduce((sum, opportunity) => sum + (opportunity.valueCents ?? 0), 0);
   const conversionRate = periodOpportunities.length > 0 ? (wonOpportunities.length / periodOpportunities.length) * 100 : 0;
+  const stageOrderById = new Map(stages.map((stage) => [stage.id, stage.order]));
   const funnelData: FunnelStage[] = [
     ...stages.map((stage) => ({
       label: stage.name,
-      value: periodOpportunities.filter((opportunity) => opportunity.status === "OPEN" && opportunity.stageId === stage.id).length,
+      // O funil é cumulativo: quem chegou a "Em andamento" também passou por
+      // "Novo contato"; quem ganhou percorreu todas as etapas anteriores.
+      value: periodOpportunities.filter((opportunity) => {
+        if (opportunity.status === "WON") return true;
+        const currentOrder = stageOrderById.get(opportunity.stageId);
+        return currentOrder !== undefined && currentOrder >= stage.order;
+      }).length,
     })),
     { label: "Ganhas", value: wonOpportunities.length },
   ];
