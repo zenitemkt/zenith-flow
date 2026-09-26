@@ -430,3 +430,6 @@ A página `/integracoes` agora mostra o cartão **Zenite Hub — Formulário de 
 ## 2026-09-26 — Leads entram automaticamente na Pipeline e detalhe ganha gestão completa
 
 Todo Lead novo, seja manual, formulário do Zenite Hub ou identificação por tracking, agora cria na mesma transação uma oportunidade vinculada na primeira etapa do funil (e cria “Novo contato” caso uma agência antiga esteja sem etapa). O detalhe ganhou “Voltar para Leads”, exclusão restrita a administradores com confirmação/auditoria e apresentação estruturada dos campos do formulário. Excluir remove as oportunidades vinculadas, preserva propostas e volta para a lista.
+## 2026-09-26 — Exclusão de Lead pela listagem
+
+A lista de Leads agora exibe uma lixeira acessível por linha somente para administradores. A ação reutiliza a exclusão auditada já existente, confirma a remoção e atualiza a tabela e a contagem sem sair da página.

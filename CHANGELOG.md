@@ -223,3 +223,4 @@
 ## 2026-09-26 — Fluxo completo de Lead até Pipeline
 
 - Leads manuais, do site e do tracking passam a entrar automaticamente na primeira etapa do Pipeline. Detalhe do Lead ganha retorno para a lista, dados do formulário organizados e exclusão administrativa com confirmação, auditoria e limpeza das oportunidades vinculadas.
+- **Exclusão de Lead diretamente na lista (2026-09-26)**: administradores agora têm uma ação compacta de lixeira em cada linha de /comercial/leads, com confirmação, feedback de erro e atualização imediata da tabela após a remoção.

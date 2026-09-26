@@ -6,6 +6,8 @@ import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS } from "@/lib/leads";
 import { DEFAULT_PAGE_SIZE, pageCountFor, parsePage } from "@/lib/pagination";
 import { prisma } from "@zenite-mkt/db";
 import { NewLeadModal } from "./NewLeadModal";
+import { DeleteLeadRowButton } from "./DeleteLeadRowButton";
+import { canManageTeam } from "@/lib/rbac";
 
 export default async function LeadsPage({ searchParams }: { searchParams: { page?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -24,6 +26,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
     }),
   ]);
   const pageCount = pageCountFor(total);
+  const canDeleteLeads = canManageTeam(membership.role);
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,6 +53,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
                 <th className="px-4 py-3">Empresa</th>
                 <th className="px-4 py-3">Origem</th>
                 <th className="px-4 py-3">Status</th>
+                {canDeleteLeads && (
+                  <th className="w-14 px-4 py-3 text-right">
+                    <span className="sr-only">Ações</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -68,6 +76,11 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
                       {LEAD_STATUS_LABELS[lead.status]}
                     </span>
                   </td>
+                  {canDeleteLeads && (
+                    <td className="px-4 py-3 text-right">
+                      <DeleteLeadRowButton leadId={lead.id} leadName={lead.name} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

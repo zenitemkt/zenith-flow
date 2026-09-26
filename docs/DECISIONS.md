@@ -904,3 +904,8 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: `createInitialOpportunityForLead()` é o único caminho compartilhado por criação manual, formulário server-to-server e identificação do tracking. Lead, histórico, oportunidade inicial e histórico da oportunidade são gravados na mesma transação; a criação derivada é auditada. O detalhe reconhece a nota estruturada da integração e mostra somente os campos efetivamente enviados, retirando essa nota técnica da timeline. Administradores podem excluir o Lead; oportunidades vinculadas são removidas junto para não deixar cards órfãos, enquanto propostas usam suas relações `SetNull` e permanecem preservadas.
 
 **Consequência**: novos caminhos de criação de Lead devem obrigatoriamente usar o helper. Excluir é destrutivo e exige confirmação; não foi criado soft delete porque a solicitação foi de remoção explícita e os registros dependentes operacionais já têm comportamento definido.
+## 2026-09-26 — A exclusão de Lead também fica disponível na listagem
+
+**Decisão**: expor a mesma exclusão administrativa do detalhe como uma ação de ícone na última coluna da tabela. O botão tem nome acessível, título, foco visível e confirmação; a autorização continua duplicada corretamente na UI e na API. Após sucesso, a rota é atualizada no lugar, sem navegação desnecessária.
+
+**Consequência**: a conveniência da ação em linha não reduz as proteções existentes nem torna a exclusão visível a papéis sem permissão administrativa.
