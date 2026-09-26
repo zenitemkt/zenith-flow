@@ -4,6 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS, parseSiteLeadDetails } from "@/lib/leads";
 import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
 import { canManageTeam } from "@/lib/rbac";
+import { OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
 import { prisma } from "@zenite-mkt/db";
 import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
@@ -26,6 +27,12 @@ export default async function LeadDetailPage({ params }: PageProps) {
       statusHistory: { orderBy: { createdAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" } },
       convertedClient: { select: { id: true, name: true } },
+      emails: { orderBy: { firstSeenAt: "asc" } },
+      phones: { orderBy: { firstSeenAt: "asc" } },
+      submissions: {
+        orderBy: { createdAt: "desc" },
+        include: { opportunity: { select: { id: true, status: true } } },
+      },
     },
   });
 
@@ -107,18 +114,32 @@ export default async function LeadDetailPage({ params }: PageProps) {
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-[#101828]">Dados</h2>
           <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
               <dt className="text-[#667085]">Nome</dt>
-              <dd className="text-[#101828]">{lead.name}</dd>
+              <dd className="text-right text-[#101828]">{lead.firstName ?? lead.name.split(" ")[0]}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-[#667085]">E-mail</dt>
-              <dd className="text-[#101828]">{lead.email ?? "—"}</dd>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[#667085]">Sobrenome</dt>
+              <dd className="text-right text-[#101828]">{lead.lastName ?? "—"}</dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-[#667085]">Telefone</dt>
-              <dd className="text-[#101828]">{lead.phone ?? "—"}</dd>
-            </div>
+            {(lead.emails.length > 0 ? lead.emails : lead.email ? [{ id: "primary-email", value: lead.email }] : []).map((email, index) => (
+              <div key={email.id} className="flex justify-between gap-4">
+                <dt className="text-[#667085]">E-mail {index + 1}</dt>
+                <dd className="break-all text-right text-[#101828]">{email.value}</dd>
+              </div>
+            ))}
+            {(lead.phones.length > 0 ? lead.phones : lead.phone ? [{ id: "primary-phone", value: lead.phone }] : []).map((phone, index) => (
+              <div key={phone.id} className="flex justify-between gap-4">
+                <dt className="text-[#667085]">Telefone {index + 1}</dt>
+                <dd className="text-right text-[#101828]">{phone.value}</dd>
+              </div>
+            ))}
+            {lead.emails.length === 0 && !lead.email && lead.phones.length === 0 && !lead.phone && (
+              <div className="flex justify-between">
+                <dt className="text-[#667085]">Contato</dt>
+                <dd className="text-[#101828]">—</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt className="text-[#667085]">Empresa</dt>
               <dd className="text-[#101828]">{lead.company ?? "—"}</dd>
@@ -169,6 +190,56 @@ export default async function LeadDetailPage({ params }: PageProps) {
           </div>
         </section>
       </div>
+
+      {lead.submissions.length > 0 && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-[#101828]">Histórico de interesses</h2>
+            <p className="mt-1 text-xs text-[#667085]">Cada preenchimento permanece salvo e gera uma oportunidade própria no funil.</p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {lead.submissions.map((submission, index) => {
+              const fields = [
+                ["Interesse", submission.interest ? interestLabels[submission.interest] ?? submission.interest : null],
+                ["Serviço", submission.service],
+                ["Empresa", submission.company],
+                ["Cidade", submission.city],
+                ["Funcionários", submission.employees],
+                ["Investimento mensal", submission.investment],
+              ].filter((entry): entry is [string, string] => Boolean(entry[1]));
+              return (
+                <article key={submission.id} className="rounded-xl border border-[#EEF0F3] p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[#101828]">Interesse #{lead.submissions.length - index}</p>
+                      <p className="text-xs text-[#98A2B3]">{submission.createdAt.toLocaleString("pt-BR")} · {submission.source ?? "Origem não informada"}</p>
+                    </div>
+                    {submission.opportunity && (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${OPPORTUNITY_STATUS_BADGE_CLASS[submission.opportunity.status]}`}>
+                        {OPPORTUNITY_STATUS_LABELS[submission.opportunity.status]}
+                      </span>
+                    )}
+                  </div>
+                  {fields.length > 0 && (
+                    <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      {fields.map(([label, value]) => (
+                        <div key={label}>
+                          <dt className="text-xs text-[#667085]">{label}</dt>
+                          <dd className="mt-0.5 font-medium text-[#101828]">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                  {submission.summary && <p className="mt-3 border-t border-[#EEF0F3] pt-3 text-sm text-[#475467]">{submission.summary}</p>}
+                  {(submission.email || submission.phone) && (
+                    <p className="mt-3 text-xs text-[#98A2B3]">{[submission.email, submission.phone].filter(Boolean).join(" · ")}</p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {touchpoints.length > 0 && (
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

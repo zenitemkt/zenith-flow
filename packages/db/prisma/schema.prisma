@@ -155,6 +155,9 @@ model Agency {
   enpsCampaigns              EnpsCampaign[]
   enpsSnapshots              EnpsSnapshot[]
   leads                      Lead[]
+  leadEmails                 LeadEmail[]
+  leadPhones                 LeadPhone[]
+  leadSubmissions            LeadSubmission[]
   pipelineStages             PipelineStage[]
   opportunities              Opportunity[]
   proposals                  Proposal[]
@@ -1744,6 +1747,8 @@ model Lead {
   agencyId           String
   agency             Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name               String
+  firstName          String?
+  lastName           String?
   /// Seção 39.1: "e-mail normalizado é chave primária operacional" — sempre
   /// salvo em minúsculas; `@@unique([agencyId, email])` abaixo é a garantia
   /// real de duplicidade (Postgres permite múltiplos NULL, então lead sem
@@ -1766,10 +1771,71 @@ model Lead {
   opportunities    Opportunity[]
   proposals        Proposal[]
   trackingVisitors TrackingVisitor[]
+  emails           LeadEmail[]
+  phones           LeadPhone[]
+  submissions      LeadSubmission[]
 
   @@unique([agencyId, email])
   @@index([agencyId])
   @@map("lead")
+}
+
+model LeadEmail {
+  id              String   @id @default(cuid())
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  value           String
+  normalizedValue String
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+
+  @@unique([agencyId, normalizedValue])
+  @@index([leadId])
+  @@map("lead_email")
+}
+
+model LeadPhone {
+  id              String   @id @default(cuid())
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  value           String
+  normalizedValue String
+  firstSeenAt     DateTime @default(now())
+  lastSeenAt      DateTime @default(now())
+
+  @@unique([agencyId, normalizedValue])
+  @@index([leadId])
+  @@map("lead_phone")
+}
+
+/// Cada entrada representa um novo preenchimento/interesse, sem duplicar a pessoa.
+model LeadSubmission {
+  id          String       @id @default(cuid())
+  agencyId    String
+  agency      Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  source      String?
+  name        String?
+  email       String?
+  phone       String?
+  company     String?
+  city        String?
+  interest    String?
+  service     String?
+  employees   String?
+  investment  String?
+  summary     String?
+  createdAt   DateTime     @default(now())
+  opportunity Opportunity?
+
+  @@index([agencyId, createdAt])
+  @@index([leadId, createdAt])
+  @@map("lead_submission")
 }
 
 /// Append-only, mesmo padrão das demais *StatusHistory.
@@ -1840,6 +1906,8 @@ model Opportunity {
   client            Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
   leadId            String?
   lead              Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  submissionId      String?           @unique
+  submission        LeadSubmission?   @relation(fields: [submissionId], references: [id], onDelete: SetNull)
   valueCents        Int?
   stageId           String
   stage             PipelineStage     @relation(fields: [stageId], references: [id])

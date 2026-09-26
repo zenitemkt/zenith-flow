@@ -1,7 +1,7 @@
 import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zenite-mkt/db";
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
+import { upsertLeadSubmission } from "@/lib/lead-contact";
 import {
   isTrackingEventName,
   isConsentSatisfied,
@@ -65,36 +65,34 @@ async function identifyVisitor(
   properties: Record<string, string | number | boolean | null>,
 ): Promise<void> {
   const email = typeof properties.email === "string" ? normalizeEmail(properties.email) : null;
-  if (!email) return;
+  const phone = typeof properties.phone === "string" ? properties.phone : null;
+  if (!email && !phone) return;
 
   const visitor = await prisma.trackingVisitor.findUnique({ where: { id: visitorId } });
   if (!visitor || visitor.leadId) return;
 
-  const { lead, createdNewLead } = await prisma.$transaction(async (tx) => {
-    let lead = await tx.lead.findUnique({ where: { agencyId_email: { agencyId, email } } });
-    let createdNewLead = false;
-    if (!lead) {
-      const name = typeof properties.name === "string" && properties.name.trim() ? properties.name.trim() : email;
-      const phone = typeof properties.phone === "string" ? properties.phone : null;
-      lead = await tx.lead.create({ data: { agencyId, name, email, phone, source: "tracking" } });
-      await tx.leadStatusHistory.create({ data: { leadId: lead.id, toStatus: "NOVO" } });
-      await createInitialOpportunityForLead(tx, { agencyId, leadId: lead.id, leadName: lead.name });
-      createdNewLead = true;
-    }
-    await tx.trackingVisitor.update({ where: { id: visitorId }, data: { leadId: lead.id } });
-    return { lead, createdNewLead };
+  const result = await prisma.$transaction(async (tx) => {
+    const contact = await upsertLeadSubmission(tx, {
+      agencyId,
+      name: typeof properties.name === "string" && properties.name.trim() ? properties.name.trim() : email ?? phone!,
+      email,
+      phone,
+      source: "tracking",
+      createOpportunity: "new-only",
+    });
+    await tx.trackingVisitor.update({ where: { id: visitorId }, data: { leadId: contact.lead.id } });
+    return contact;
   });
 
-  if (createdNewLead) {
-    await fireWorkflowTrigger(agencyId, "lead.created", "lead", lead.id, {
-      leadId: lead.id,
-      name: lead.name,
-      email: lead.email,
-      source: lead.source,
+  if (result.createdNewLead) {
+    await fireWorkflowTrigger(agencyId, "lead.created", "lead", result.lead.id, {
+      leadId: result.lead.id,
+      name: result.lead.name,
+      email: result.lead.email,
+      source: result.lead.source,
     });
   }
 }
-
 export async function processTrackingEvent(
   agencyId: string,
   visitorId: string,

@@ -915,3 +915,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: a exclusão de Lead passa por um componente compartilhado baseado no Modal do design system, usado tanto na tabela quanto no detalhe. O modal mantém foco contido, fecha por Esc ou backdrop quando ocioso, impede fechamento durante a requisição e mostra erros sem recorrer a window.alert.
 
 **Consequência**: novas superfícies de exclusão de Lead devem reutilizar LeadDeleteDialog; a confirmação visual e a autorização de servidor continuam responsabilidades separadas.
+
+## 2026-09-26 — Lead é a pessoa; preenchimento e oportunidade são eventos recorrentes
+
+**Contexto**: o mesmo contato pode voltar com outro e-mail, telefone ou interesse e comprar novamente. Criar um Lead por envio fragmentava o histórico; deduplicar apenas pelo e-mail descartava novos dados e novas oportunidades.
+
+**Decisão**: LeadEmail e LeadPhone guardam identidades normalizadas e únicas por agência; LeadSubmission preserva cada conjunto de dados recebido e pode originar uma Opportunity. A resolução aceita correspondência por qualquer e-mail ou telefone conhecido. O nome principal só muda quando a nova versão é mais completa; dados menores nunca apagam os anteriores. Cada envio manual ou do site cria uma nova oportunidade na primeira etapa, mesmo para Lead convertido. Tracking reutiliza a identidade, mas só abre oportunidade quando cria um Lead novo. Se e-mail e telefone apontarem para Leads diferentes, a operação retorna conflito em vez de unir pessoas silenciosamente. A taxa de conversão passa a ser oportunidades ganhas / oportunidades totais.
+
+**Consequência**: um contato pode acumular vários e-mails, telefones, interesses, oportunidades ganhas e recompras sem duplicar sua identidade. Dois envios sem nenhum identificador compartilhado continuam indistinguíveis e podem gerar contatos diferentes; não há deduplicação probabilística por nome.

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
+import { LeadIdentityConflictError, upsertLeadSubmission } from "@/lib/lead-contact";
 import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
@@ -14,67 +14,54 @@ function optionalString(value: unknown): string | null {
 
 export async function POST(request: Request) {
   const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const membership = await getCurrentMembership(session.user.id);
-  if (!membership) {
-    return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
-  }
-  if (isClientRole(membership.role)) {
-    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
-  }
+  if (!membership) return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
+  if (isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
 
   const body = await request.json().catch(() => null);
   const name = optionalString(body?.name);
-  const email = normalizeEmail(body?.email);
-  const phone = optionalString(body?.phone);
-  const company = optionalString(body?.company);
-  const source = optionalString(body?.source);
+  if (!name) return NextResponse.json({ error: "Informe o nome do lead." }, { status: 400 });
 
-  if (!name) {
-    return NextResponse.json({ error: "Informe o nome do lead." }, { status: 400 });
+  const input = {
+    agencyId: membership.agencyId,
+    name,
+    email: optionalString(body?.email),
+    phone: optionalString(body?.phone),
+    company: optionalString(body?.company),
+    source: optionalString(body?.source) ?? "Cadastro manual",
+    actorUserId: session.user.id,
+    createOpportunity: "always" as const,
+  };
+
+  async function ingest() {
+    return prisma.$transaction((tx) => upsertLeadSubmission(tx, input));
   }
 
-  if (email) {
-    const existing = await prisma.lead.findUnique({ where: { agencyId_email: { agencyId: membership.agencyId, email } } });
-    if (existing) {
-      return NextResponse.json({ error: "Já existe um lead com este e-mail." }, { status: 409 });
+  try {
+    let result;
+    try {
+      result = await ingest();
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+      result = await ingest();
     }
+
+    if (result.createdNewLead) {
+      await fireWorkflowTrigger(membership.agencyId, "lead.created", "lead", result.lead.id, {
+        leadId: result.lead.id,
+        name: result.lead.name,
+        email: result.lead.email,
+        source: result.lead.source,
+      });
+    }
+
+    return NextResponse.json(
+      { id: result.lead.id, submissionId: result.submission.id, opportunityId: result.opportunity?.id, deduplicated: !result.createdNewLead },
+      { status: result.createdNewLead ? 201 : 200 },
+    );
+  } catch (error) {
+    if (error instanceof LeadIdentityConflictError) return NextResponse.json({ error: error.message }, { status: 409 });
+    throw error;
   }
-
-  const lead = await prisma.$transaction(async (tx) => {
-    const created = await tx.lead.create({
-      data: { agencyId: membership.agencyId, name, email, phone, company, source, createdByUserId: session.user.id },
-    });
-    await tx.leadStatusHistory.create({
-      data: { leadId: created.id, toStatus: "NOVO", actorUserId: session.user.id },
-    });
-    await createInitialOpportunityForLead(tx, {
-      agencyId: membership.agencyId,
-      leadId: created.id,
-      leadName: created.name,
-      actorUserId: session.user.id,
-    });
-    await tx.auditLog.create({
-      data: {
-        agencyId: membership.agencyId,
-        actorUserId: session.user.id,
-        actorType: "user",
-        action: "lead.created",
-        resourceType: "lead",
-        resourceId: created.id,
-      },
-    });
-    return created;
-  });
-
-  await fireWorkflowTrigger(membership.agencyId, "lead.created", "lead", lead.id, {
-    leadId: lead.id,
-    name: lead.name,
-    email: lead.email,
-    source: lead.source,
-  });
-
-  return NextResponse.json({ id: lead.id }, { status: 201 });
 }

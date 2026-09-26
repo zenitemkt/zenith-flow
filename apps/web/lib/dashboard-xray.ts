@@ -11,7 +11,7 @@ import { computeDSO, computeLogoChurnRate, INDICATOR_WINDOW_DAYS } from "./finan
 import { statusAsOf } from "./cohort";
 import { startOfWeekUTC } from "./timesheets";
 import { getAgencyMembers } from "./team";
-import type { ClientStatus, LeadStatus, ProposalStatus, ContentStatus, WorkItemStatus, EmployeeStatus } from "@zenite-mkt/db";
+import type { ClientStatus, ProposalStatus, ContentStatus, WorkItemStatus, EmployeeStatus } from "@zenite-mkt/db";
 
 /**
  * X-RAY da agência (Home): consolida, por tema, os indicadores que o dono
@@ -83,6 +83,7 @@ export async function getXrayDashboard(agencyId: string) {
     latestEnps,
     pipelineStages,
     openOpportunities,
+    opportunitiesByStatus,
     proposalsByStatus,
     leads,
     openTasks,
@@ -123,6 +124,7 @@ export async function getXrayDashboard(agencyId: string) {
       where: { agencyId, status: "OPEN" },
       select: { stageId: true, valueCents: true },
     }),
+    prisma.opportunity.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
     prisma.proposal.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
     prisma.lead.findMany({ where: { agencyId }, select: { status: true, createdAt: true } }),
     prisma.task.findMany({
@@ -298,16 +300,10 @@ export async function getXrayDashboard(agencyId: string) {
     const index = 5 - monthsAgo;
     if (index >= 0 && index < leadsByMonth.length) leadsByMonth[index]!.leads += 1;
   }
-  const leadStatusCounts: Record<LeadStatus, number> = {
-    NOVO: 0,
-    EM_ANDAMENTO: 0,
-    QUALIFICADO: 0,
-    DESQUALIFICADO: 0,
-    CONVERTIDO: 0,
-  };
-  for (const lead of leads) leadStatusCounts[lead.status] += 1;
   const totalLeads = leads.length;
-  const conversionRate = totalLeads > 0 ? Math.round((leadStatusCounts.CONVERTIDO / totalLeads) * 100) : null;
+  const totalOpportunities = opportunitiesByStatus.reduce((sum, entry) => sum + entry._count, 0);
+  const wonOpportunities = opportunitiesByStatus.find((entry) => entry.status === "WON")?._count ?? 0;
+  const conversionRate = totalOpportunities > 0 ? Math.round((wonOpportunities / totalOpportunities) * 100) : null;
 
   // --- Operação -----------------------------------------------------------
   const taskStatusCounts = new Map<WorkItemStatus, number>();

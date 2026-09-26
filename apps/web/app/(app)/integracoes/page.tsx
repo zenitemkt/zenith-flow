@@ -33,8 +33,8 @@ export default async function IntegracoesPage() {
       take: 10,
       select: { id: true, eventName: true, url: true, occurredAt: true, receivedAt: true },
     }),
-    prisma.lead.count({ where: { agencyId: membership.agencyId, source: SITE_LEAD_SOURCE } }),
-    prisma.lead.findFirst({
+    prisma.leadSubmission.count({ where: { agencyId: membership.agencyId, source: SITE_LEAD_SOURCE } }),
+    prisma.leadSubmission.findFirst({
       where: { agencyId: membership.agencyId, source: SITE_LEAD_SOURCE },
       orderBy: { createdAt: "desc" },
       select: { createdAt: true },
@@ -101,13 +101,13 @@ export default async function IntegracoesPage() {
 
         <div className="grid gap-px bg-[#EEF0F3] sm:grid-cols-3">
           <div className="bg-white p-4">
-            <p className="text-xs text-[#667085]">Leads recebidos</p>
+            <p className="text-xs text-[#667085]">Preenchimentos recebidos</p>
             <p className="mt-1 text-xl font-semibold text-[#101828]">{siteLeadCount}</p>
           </div>
           <div className="bg-white p-4">
             <p className="text-xs text-[#667085]">Último recebimento</p>
             <p className="mt-1 text-sm font-semibold text-[#101828]">
-              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR") : "Nenhum lead recebido"}
+              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR") : "Nenhum preenchimento recebido"}
             </p>
           </div>
           <div className="bg-white p-4">

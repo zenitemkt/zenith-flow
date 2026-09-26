@@ -5,6 +5,7 @@ interface InitialOpportunityInput {
   leadId: string;
   leadName: string;
   actorUserId?: string | null;
+  submissionId?: string | null;
 }
 
 export async function createInitialOpportunityForLead(
@@ -29,6 +30,7 @@ export async function createInitialOpportunityForLead(
       name: input.leadName,
       stageId: firstStage.id,
       createdByUserId: input.actorUserId ?? null,
+      submissionId: input.submissionId ?? null,
     },
   });
 
@@ -48,7 +50,7 @@ export async function createInitialOpportunityForLead(
       action: "opportunity.created",
       resourceType: "opportunity",
       resourceId: opportunity.id,
-      metadata: { leadId: input.leadId, automatic: true },
+      metadata: { leadId: input.leadId, submissionId: input.submissionId ?? null, automatic: true },
     },
   });
 

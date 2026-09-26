@@ -437,3 +437,7 @@ A lista de Leads agora exibe uma lixeira acessível por linha somente para admin
 ## 2026-09-26 — Modal personalizado para excluir Lead
 
 A exclusão na lista e no detalhe agora usa uma janela visual integrada ao tema do sistema. O modal informa que o Lead e as oportunidades vinculadas serão removidos, oferece cancelamento explícito, bloqueia ações durante o processamento e apresenta erros no próprio contexto.
+
+## 2026-09-26 — Identidade contínua do Lead e recompras
+
+O CRM agora modela uma pessoa como um único Lead com vários e-mails e telefones. Nome/Sobrenome preservam a versão mais completa; cada novo preenchimento é salvo de forma estruturada no histórico do cartão e cria uma oportunidade independente na primeira etapa do Pipeline. Ganhar mais de uma oportunidade do mesmo contato conta como mais de uma conversão. A aba Integrações mede preenchimentos recebidos, não apenas contatos únicos.
