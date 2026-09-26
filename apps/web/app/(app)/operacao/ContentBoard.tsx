@@ -24,6 +24,7 @@ import {
   type ContentBoardColumnId,
 } from "@/lib/content";
 import { NewVersionModal } from "@/app/(app)/conteudo/[id]/NewVersionModal";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 
 export interface PersonOption {
   userId: string;
@@ -268,16 +269,18 @@ function ContentCard({
         <ScheduleDateField item={item} onSaved={onRefresh} />
       </div>
 
-      <Link
-        href={`/conteudo/${item.id}`}
-        onPointerDown={(e) => e.stopPropagation()}
-        aria-label="Abrir peça completa"
-        title="Abrir peça completa"
-        className="mt-2 flex h-7 w-7 ml-auto items-center justify-center rounded-full text-white transition-opacity hover:opacity-90"
-        style={{ backgroundColor: "#FF2B00" }}
-      >
-        <ArrowRight size={14} aria-hidden />
-      </Link>
+      <div data-card-control className="mt-2 flex items-center justify-end gap-1" onPointerDown={(e) => e.stopPropagation()}>
+        {canDrag && <DeleteRecordButton endpoint={`/api/content/${item.id}`} recordName={item.title} entityLabel="Conteúdo" warning="Versões, aprovações, checklist, comentários e histórico vinculados também serão removidos." />}
+        <Link
+          href={`/conteudo/${item.id}`}
+          aria-label={`Abrir conteúdo ${item.title}`}
+          title="Abrir conteúdo completo"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2"
+          style={{ backgroundColor: "#FF2B00" }}
+        >
+          <ArrowRight size={14} aria-hidden />
+        </Link>
+      </div>
     </div>
   );
 }

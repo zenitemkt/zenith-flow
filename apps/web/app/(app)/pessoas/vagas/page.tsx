@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { JOB_STATUS_LABELS, JOB_STATUS_BADGE_CLASS } from "@/lib/hr-jobs";
 import { prisma } from "@zenite-mkt/db";
 import { NewJobModal } from "./NewJobModal";
@@ -20,6 +22,8 @@ export default async function JobsPage() {
     prisma.position.findMany({ where: { agencyId: membership.agencyId }, orderBy: { title: "asc" } }),
   ]);
 
+  const canDelete = canManageTeam(membership.role);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -37,13 +41,11 @@ export default async function JobsPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {jobs.map((job) => (
-            <Link
-              key={job.id}
-              href={`/pessoas/vagas/${job.id}`}
-              className="flex items-center justify-between rounded-lg border border-[#EEF0F3] bg-white px-4 py-3 hover:border-[#FF2B00]"
-            >
-              <div>
-                <p className="text-sm font-medium text-[#101828]">{job.title}</p>
+            <div key={job.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#EEF0F3] bg-white px-4 py-3 hover:border-[#FF2B00]">
+              <div className="min-w-0 flex-1">
+                <Link href={`/pessoas/vagas/${job.id}`} className="text-sm font-medium text-[#101828] hover:text-[#FF2B00]">
+                  {job.title}
+                </Link>
                 <p className="text-xs text-[#98A2B3]">
                   {job.position ? `${job.position.title} · ` : ""}
                   {job.candidates.length} candidato{job.candidates.length === 1 ? "" : "s"} em andamento
@@ -52,7 +54,8 @@ export default async function JobsPage() {
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${JOB_STATUS_BADGE_CLASS[job.status]}`}>
                 {JOB_STATUS_LABELS[job.status]}
               </span>
-            </Link>
+              {canDelete && <DeleteRecordButton endpoint={`/api/jobs/${job.id}`} recordName={job.title} entityLabel="Vaga" warning="Etapas, candidatos e todo o histórico deste processo seletivo também serão removidos." />}
+            </div>
           ))}
         </div>
       )}

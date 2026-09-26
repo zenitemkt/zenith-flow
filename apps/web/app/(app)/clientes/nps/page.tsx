@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { SURVEY_STATUS_LABELS, SURVEY_STATUS_BADGE_CLASS } from "@/lib/nps";
 import { prisma } from "@zenite-mkt/db";
 import { NewSurveyModal } from "./NewSurveyModal";
@@ -11,6 +13,7 @@ export default async function NpsPage() {
     redirect("/login");
   }
 
+  const canDelete = canManageTeam(membership.role);
   const [campaigns, clients] = await Promise.all([
     prisma.surveyCampaign.findMany({
       where: { agencyId: membership.agencyId },
@@ -58,6 +61,7 @@ export default async function NpsPage() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Destinatários</th>
                 <th className="px-4 py-3">NPS</th>
+                {canDelete && <th className="w-14 px-4 py-3 text-right">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -79,6 +83,7 @@ export default async function NpsPage() {
                   <td className="px-4 py-3 text-[#475467]">
                     {campaign.npsSnapshots[0] ? campaign.npsSnapshots[0].score : "—"}
                   </td>
+                  {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/nps/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Pesquisa de NPS" warning="Destinatários, respostas e resultados históricos também serão removidos." /></td>}
                 </tr>
               ))}
             </tbody>

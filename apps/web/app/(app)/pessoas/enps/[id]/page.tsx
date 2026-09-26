@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { canViewEnps } from "@/lib/rbac";
+import { canManageTeam, canViewEnps } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { ENPS_STATUS_LABELS, ENPS_STATUS_BADGE_CLASS } from "@/lib/enps";
 import { isEmailConfigured } from "@/lib/email";
 import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
@@ -46,6 +48,7 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/pessoas/enps" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para eNPS</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -58,16 +61,15 @@ export default async function EnpsCampaignDetailPage({ params }: PageProps) {
             {respondedCount} de {campaign.invites.length} responderam
           </p>
         </div>
-        <CampaignActions
-          campaignId={campaign.id}
-          status={campaign.status}
-          pendingCount={campaign.invites.filter((i) => i.status === "PENDENTE").length}
-          emailConfigured={isEmailConfigured()}
-        />
+        <div className="flex flex-col items-end gap-2">
+          <CampaignActions campaignId={campaign.id} status={campaign.status} pendingCount={campaign.invites.filter((i) => i.status === "PENDENTE").length} emailConfigured={isEmailConfigured()} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/enps/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Pesquisa de eNPS" warning="Convites, respostas anônimas e resultados históricos também serão removidos." redirectTo="/pessoas/enps" variant="button" />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
+      <Link href="/pessoas/enps" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para eNPS</Link>
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-[#101828]">Personalização</h2>
             {campaign.status === "RASCUNHO" ? (

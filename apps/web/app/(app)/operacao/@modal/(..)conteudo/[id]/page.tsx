@@ -8,7 +8,7 @@ interface PageProps {
 export default async function ContentModalPage({ params }: PageProps) {
   return (
     <ModalOverlay>
-      <ContentDetailView id={params.id} />
+      <ContentDetailView id={params.id} showBack={false} />
     </ModalOverlay>
   );
 }

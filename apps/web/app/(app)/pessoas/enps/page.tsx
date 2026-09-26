@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { canViewEnps } from "@/lib/rbac";
+import { canManageTeam, canViewEnps } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { ENPS_STATUS_LABELS, ENPS_STATUS_BADGE_CLASS } from "@/lib/enps";
 import { prisma } from "@zenite-mkt/db";
 import { NewEnpsCampaignModal } from "./NewEnpsCampaignModal";
@@ -15,6 +16,7 @@ export default async function EnpsPage() {
     redirect("/pessoas/equipe");
   }
 
+  const canDelete = canManageTeam(membership.role);
   const [campaigns, employees] = await Promise.all([
     prisma.enpsCampaign.findMany({
       where: { agencyId: membership.agencyId },
@@ -62,6 +64,7 @@ export default async function EnpsPage() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Convidados</th>
                 <th className="px-4 py-3">eNPS</th>
+                {canDelete && <th className="w-14 px-4 py-3 text-right">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -83,6 +86,7 @@ export default async function EnpsPage() {
                   <td className="px-4 py-3 text-[#475467]">
                     {campaign.snapshots[0] ? campaign.snapshots[0].score : "—"}
                   </td>
+                  {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/enps/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Pesquisa de eNPS" warning="Convites, respostas anônimas e resultados históricos também serão removidos." /></td>}
                 </tr>
               ))}
             </tbody>

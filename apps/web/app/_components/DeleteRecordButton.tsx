@@ -55,11 +55,11 @@ export function DeleteRecordButton({ endpoint, recordName, entityLabel, warning,
             <p className="mt-2 text-sm leading-6 text-[#667085]">{warning} Esta ação não pode ser desfeita.</p>
           </div>
         </div>
-        {error && <p role="alert" className="mt-4 rounded-lg bg-[#FEF3F2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}
+        <div aria-live="polite">{error && <p role="alert" className="mt-4 rounded-lg bg-[#FEF3F2] px-3 py-2 text-sm font-medium text-[#B42318]">{error}</p>}</div>
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" onClick={() => setOpen(false)} disabled={loading} className="h-10 rounded-lg border border-[#D0D5DD] px-4 text-sm font-semibold text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-50">Cancelar</button>
           <button type="button" onClick={() => void confirmDelete()} disabled={loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#D92D20] px-4 text-sm font-semibold text-white hover:bg-[#B42318] disabled:opacity-60">
-            {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}{loading ? "Excluindo..." : `Excluir ${entityLabel.toLowerCase()}`}
+            {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}{loading ? "Excluindo…" : `Excluir ${entityLabel.toLowerCase()}`}
           </button>
         </div>
       </Modal>

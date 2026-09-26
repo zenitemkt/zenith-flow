@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
 import { getAgencyMembers } from "@/lib/team";
 import {
   CONTENT_STATUS_LABELS,
@@ -16,10 +17,10 @@ import { NewVersionModal } from "./NewVersionModal";
 import { SubmitForApprovalButton } from "./SubmitForApprovalButton";
 import { EditVersionLinkButton } from "./EditVersionLinkButton";
 import { EditContentDetailsButton } from "./EditContentDetailsButton";
-import { DeleteContentButton } from "./DeleteContentButton";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { ChecklistPanel } from "./ChecklistPanel";
 
-export async function ContentDetailView({ id }: { id: string }) {
+export async function ContentDetailView({ id, showBack = true }: { id: string; showBack?: boolean }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
@@ -58,6 +59,11 @@ export async function ContentDetailView({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {showBack && (
+        <Link href="/operacao" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">
+          ← Voltar para Operação
+        </Link>
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">{item.title}</h1>
@@ -94,12 +100,17 @@ export async function ContentDetailView({ id }: { id: string }) {
               defaultWhatsapp={primaryContact?.phone ?? null}
             />
           )}
-          <DeleteContentButton contentId={item.id} title={item.title} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/content/${item.id}`} recordName={item.title} entityLabel="Conteúdo" warning="Versões, aprovações, checklist, comentários e histórico vinculados também serão removidos." redirectTo="/operacao" variant="button" />}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
+      {showBack && (
+        <Link href="/operacao" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">
+          ← Voltar para Operação
+        </Link>
+      )}
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-[#101828]">Versões</h2>

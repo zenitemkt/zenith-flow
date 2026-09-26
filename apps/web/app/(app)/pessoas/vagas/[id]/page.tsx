@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import {
   JOB_STATUS_LABELS,
   JOB_STATUS_BADGE_CLASS,
@@ -47,6 +49,7 @@ export default async function JobDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/pessoas/vagas" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para Vagas</Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">{job.title}</h1>
@@ -63,6 +66,7 @@ export default async function JobDetailPage({ params }: PageProps) {
           </span>
           <JobStatusActions jobId={job.id} options={JOB_STATUS_TRANSITIONS[job.status]} />
           <NewCandidateModal jobId={job.id} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/jobs/${job.id}`} recordName={job.title} entityLabel="Vaga" warning="Etapas, candidatos e todo o histórico deste processo seletivo também serão removidos." redirectTo="/pessoas/vagas" variant="button" />}
         </div>
       </div>
 

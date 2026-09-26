@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { getAgencyMembers } from "@/lib/team";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { EMPLOYEE_STATUS_LABELS } from "@/lib/employees";
 import { prisma } from "@zenite-mkt/db";
 import { NewEmployeeModal } from "./NewEmployeeModal";
@@ -19,6 +21,7 @@ export default async function EquipePage() {
     redirect("/login");
   }
 
+  const canDelete = canManageTeam(membership.role);
   const now = new Date();
   const [employees, agencyMembers, positions] = await Promise.all([
     prisma.employee.findMany({
@@ -73,6 +76,7 @@ export default async function EquipePage() {
                 <th className="px-4 py-3">Pessoa</th>
                 <th className="px-4 py-3">Cargo</th>
                 <th className="px-4 py-3">Status</th>
+                {canDelete && <th className="w-14 px-4 py-3 text-right">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -102,6 +106,7 @@ export default async function EquipePage() {
                         </span>
                       )}
                     </td>
+                    {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/employees/${employee.id}`} recordName={employee.name} entityLabel="Colaborador" warning="Férias, histórico funcional e convites de eNPS serão removidos. Se houver acesso ao sistema, ele será revogado; a conta e a auditoria serão preservadas." /></td>}
                   </tr>
                 );
               })}

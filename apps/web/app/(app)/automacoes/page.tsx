@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { WORKFLOW_STATUS_LABELS, WORKFLOW_STATUS_BADGE_CLASS, findTriggerEvent } from "@/lib/workflows";
 import { prisma } from "@zenite-mkt/db";
 import { NewWorkflowModal } from "./NewWorkflowModal";
@@ -12,6 +14,7 @@ export default async function AutomationsPage() {
     redirect("/login");
   }
 
+  const canDelete = canManageTeam(membership.role);
   const workflows = await prisma.workflow.findMany({
     where: { agencyId: membership.agencyId },
     orderBy: { createdAt: "desc" },
@@ -45,6 +48,7 @@ export default async function AutomationsPage() {
                 <th className="px-4 py-3">Automação</th>
                 <th className="px-4 py-3">Gatilho</th>
                 <th className="px-4 py-3">Status</th>
+                {canDelete && <th className="w-14 px-4 py-3 text-right">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -61,6 +65,7 @@ export default async function AutomationsPage() {
                       {WORKFLOW_STATUS_LABELS[workflow.status]}
                     </span>
                   </td>
+                  {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/workflows/${workflow.id}`} recordName={workflow.name} entityLabel="Automação" warning="Versões publicadas, execuções e logs vinculados também serão removidos." /></td>}
                 </tr>
               ))}
             </tbody>

@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { SURVEY_STATUS_LABELS, SURVEY_STATUS_BADGE_CLASS } from "@/lib/nps";
 import { isEmailConfigured } from "@/lib/email";
 import { WhatsappLinkButton } from "@/app/_components/WhatsappLinkButton";
@@ -45,6 +48,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/clientes/nps" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para NPS</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -57,16 +61,15 @@ export default async function CampaignDetailPage({ params }: PageProps) {
           </div>
           <p className="text-sm text-[#667085]">{campaign.recipients.length} destinatário(s)</p>
         </div>
-        <CampaignActions
-          campaignId={campaign.id}
-          status={campaign.status}
-          pendingCount={campaign.recipients.filter((r) => r.status === "PENDENTE").length}
-          emailConfigured={isEmailConfigured()}
-        />
+        <div className="flex flex-col items-end gap-2">
+          <CampaignActions campaignId={campaign.id} status={campaign.status} pendingCount={campaign.recipients.filter((r) => r.status === "PENDENTE").length} emailConfigured={isEmailConfigured()} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/nps/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Pesquisa de NPS" warning="Destinatários, respostas e resultados históricos também serão removidos." redirectTo="/clientes/nps" variant="button" />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
+      <Link href="/clientes/nps" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para NPS</Link>
           <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
             <h2 className="mb-3 text-sm font-semibold text-[#101828]">Personalização</h2>
             {campaign.status === "RASCUNHO" ? (

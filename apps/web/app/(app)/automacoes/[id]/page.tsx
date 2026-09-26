@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageTeam } from "@/lib/rbac";
+import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import {
   WORKFLOW_STATUS_LABELS,
   WORKFLOW_STATUS_BADGE_CLASS,
@@ -54,6 +57,7 @@ export default async function WorkflowDetailPage({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <Link href="/automacoes" className="mb-1 inline-flex w-fit items-center text-sm font-medium text-[#667085] hover:text-[#FF2B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF2B00] focus-visible:ring-offset-2">← Voltar para Automações</Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">
@@ -67,6 +71,7 @@ export default async function WorkflowDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-2">
           {workflow.status === "RASCUNHO" && <PublishButton workflowId={workflow.id} />}
           <WorkflowStatusActions workflowId={workflow.id} options={WORKFLOW_STATUS_TRANSITIONS[workflow.status]} />
+          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/workflows/${workflow.id}`} recordName={workflow.name} entityLabel="Automação" warning="Versões publicadas, execuções e logs vinculados também serão removidos." redirectTo="/automacoes" variant="button" />}
         </div>
       </div>
 

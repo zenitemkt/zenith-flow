@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
-import { isClientRole } from "@/lib/rbac";
+import { canManageTeam } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
@@ -17,8 +17,8 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!membership) {
     return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
   }
-  if (isClientRole(membership.role)) {
-    return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
+  if (!canManageTeam(membership.role)) {
+    return NextResponse.json({ error: "Apenas administradores podem excluir conteúdos." }, { status: 403 });
   }
 
   const item = await prisma.contentItem.findUnique({ where: { id: params.id } });
