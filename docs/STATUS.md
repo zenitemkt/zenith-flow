@@ -416,3 +416,7 @@ Com as seções 19 (Comunicação) e 20 (RH) fechadas por completo, Fase 2 fecha
 ## Ambiente local
 
 Variáveis necessárias (ver `.env.example`): `DATABASE_URL` (Neon), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`. Depois de `npm install`: `npm run migrate:dev --workspace=packages/db` para aplicar migrations. **Nunca** rodar `npm run build` com `npm run dev` ativo (ver `docs/DECISIONS.md`).
+
+## 2026-09-26 — Integração do formulário do Zenite Hub com o CRM
+
+Novo endpoint server-to-server `POST /api/v1/integrations/site-leads`, protegido por bearer secret e fixado à agência configurada por `SITE_LEADS_AGENCY_ID`. Cria `Lead` com origem `Site Zenite Hub`, histórico inicial, nota com detalhes do orçamento, audit log e gatilho `lead.created`. Reenvio do mesmo e-mail é idempotente pela chave operacional `agencyId+email`; concorrência `P2002` também retorna o lead existente. Limite defensivo de 30 novos leads/minuto por agência. O site usa sua própria função `/api/leads`, mantendo o segredo fora do navegador, validando payload/honeypot e encaminhando ao Flow antes de abrir o WhatsApp.
