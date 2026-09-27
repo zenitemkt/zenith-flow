@@ -14,7 +14,21 @@ interface PageProps {
   searchParams: { send?: string };
 }
 
-const LOCKED_STATUSES = ["ACEITA", "REJEITADA", "EXPIRADA"] as const;
+/** Rótulo de cada campo que pode aparecer no diff gravado em `AuditLog` (rota PATCH). */
+const CHANGED_FIELD_LABELS: Record<string, string> = {
+  name: "Nome",
+  content: "Escopo do projeto",
+  valueCents: "Investimento",
+  paymentTerms: "Forma de pagamento",
+  timelineSteps: "Prazos e etapas",
+};
+
+function formatChangedValue(field: string, value: unknown): string {
+  if (value === "alterado") return "alterado";
+  if (field === "valueCents") return formatProposalValue((value as number | null) ?? null);
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
 
 export default async function ProposalDetailPage({ params, searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
@@ -36,8 +50,18 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
     notFound();
   }
 
-  const editable = !LOCKED_STATUSES.includes(proposal.status as (typeof LOCKED_STATUSES)[number]);
+  const editable = proposal.status !== "ACEITA";
   const timelineSteps = (proposal.timelineSteps as TimelineStep[] | null) ?? [];
+
+  const changeLogs = await prisma.auditLog.findMany({
+    where: { resourceType: "proposal", resourceId: proposal.id, action: "proposal.updated" },
+    orderBy: { createdAt: "desc" },
+  });
+  const actorIds = [...new Set(changeLogs.map((log) => log.actorUserId).filter((id): id is string => !!id))];
+  const actors = actorIds.length
+    ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } })
+    : [];
+  const actorNameById = new Map(actors.map((actor) => [actor.id, actor.name]));
   const defaultEmail = proposal.recipientEmail ?? proposal.client?.email ?? proposal.lead?.email ?? null;
   const defaultWhatsapp = proposal.recipientWhatsapp ?? proposal.client?.whatsapp ?? proposal.client?.phone ?? proposal.lead?.phone ?? null;
 
@@ -138,6 +162,35 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
             ))}
           </div>
         </section>
+
+        {changeLogs.length > 0 && (
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4 lg:col-span-2">
+            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Alterações</h2>
+            <div className="flex flex-col gap-3">
+              {changeLogs.map((log) => {
+                const metadata = log.metadata as { fields?: string[]; from?: Record<string, unknown>; to?: Record<string, unknown> } | null;
+                const fields = metadata?.fields ?? [];
+                return (
+                  <div key={log.id} className="border-l-2 border-[#EEF0F3] pl-3">
+                    <p className="text-sm text-[#101828]">
+                      <span className="font-medium">{log.actorUserId ? (actorNameById.get(log.actorUserId) ?? "Alguém da equipe") : "Alguém da equipe"}</span>{" "}
+                      alterou{" "}
+                      {fields
+                        .map((field) => {
+                          const label = CHANGED_FIELD_LABELS[field] ?? field;
+                          const from = formatChangedValue(field, metadata?.from?.[field]);
+                          const to = formatChangedValue(field, metadata?.to?.[field]);
+                          return `${label} (${from} → ${to})`;
+                        })
+                        .join(", ")}
+                    </p>
+                    <p className="text-xs text-[#98A2B3]">{log.createdAt.toLocaleString("pt-BR")}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

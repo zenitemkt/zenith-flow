@@ -116,6 +116,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "clients-nps", label: "NPS", href: "/clientes/nps", comingSoon: false },
           { id: "clients-cohort", label: "Cohort", href: "/clientes/cohort", comingSoon: false },
           { id: "clients-reactivation", label: "Reativações", href: "/clientes/reativacoes", comingSoon: false },
+          { id: "clients-marketing", label: "Marketing", href: "/clientes/marketing", comingSoon: false },
         ],
       },
     ],

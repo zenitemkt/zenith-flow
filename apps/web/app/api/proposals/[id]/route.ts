@@ -4,9 +4,6 @@ import { canManageTeam, isClientRole } from "@/lib/rbac";
 import { parseTimelineSteps } from "@/lib/proposals";
 import { prisma, Prisma } from "@zenite-mkt/db";
 
-/** Estados finais — a proposta já foi decidida pelo cliente, não editamos mais. */
-const LOCKED_STATUSES = ["ACEITA", "REJEITADA", "EXPIRADA"] as const;
-
 interface RouteParams {
   params: { id: string };
 }
@@ -18,9 +15,13 @@ function optionalString(value: unknown): string | null {
 }
 
 /**
- * Editável em qualquer status, exceto os finais (ACEITA/REJEITADA/EXPIRADA) —
- * o time pode ajustar valor/escopo/etapas mesmo depois de enviada, mas não
- * depois que o cliente já decidiu.
+ * Editável em qualquer status, exceto ACEITA — a proposta aceita já virou
+ * negócio fechado (gera recebível no Financeiro, avança o Pipeline), então
+ * não reabrimos. Recusada/Expirada continuam editáveis de propósito (pedido
+ * do usuário, 2026-09-27): cliente recusa, a equipe renegocia por fora e
+ * ajusta a proposta antes de reenviar (ver `ensureProposalSent`). Toda
+ * edição grava quem mudou e o que mudou em `AuditLog` — nunca lido antes
+ * nesta rota, mesmo formato de `membership.updated`.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
@@ -39,8 +40,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!proposal || proposal.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
   }
-  if (LOCKED_STATUSES.includes(proposal.status as (typeof LOCKED_STATUSES)[number])) {
-    return NextResponse.json({ error: "Esta proposta já foi decidida pelo cliente e não pode mais ser editada." }, { status: 400 });
+  if (proposal.status === "ACEITA") {
+    return NextResponse.json({ error: "Esta proposta já foi aceita pelo cliente e não pode mais ser editada." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);
@@ -55,15 +56,47 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const paymentTerms = optionalString(body?.paymentTerms);
   const timelineSteps = parseTimelineSteps(body?.timelineSteps);
 
-  await prisma.proposal.update({
-    where: { id: proposal.id },
-    data: {
-      name,
-      content,
-      valueCents,
-      paymentTerms,
-      timelineSteps: (timelineSteps as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-    },
+  // Diff campo a campo pro log de auditoria — só entra quem realmente mudou.
+  // Escopo e prazos podem ser longos, então viram só "alterado" no log (o
+  // texto/lista inteiros não são gravados), diferente de nome/valor/forma de
+  // pagamento, curtos o bastante pra valer registrar o antes e o depois.
+  const changed: Record<string, { from: unknown; to: unknown }> = {};
+  if (proposal.name !== name) changed.name = { from: proposal.name, to: name };
+  if (proposal.content !== content) changed.content = { from: "alterado", to: "alterado" };
+  if (proposal.valueCents !== valueCents) changed.valueCents = { from: proposal.valueCents, to: valueCents };
+  if (proposal.paymentTerms !== paymentTerms) changed.paymentTerms = { from: proposal.paymentTerms, to: paymentTerms };
+  if (JSON.stringify(proposal.timelineSteps ?? null) !== JSON.stringify(timelineSteps ?? null)) {
+    changed.timelineSteps = { from: "alterado", to: "alterado" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        name,
+        content,
+        valueCents,
+        paymentTerms,
+        timelineSteps: (timelineSteps as unknown as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+      },
+    });
+    if (Object.keys(changed).length > 0) {
+      await tx.auditLog.create({
+        data: {
+          agencyId: membership.agencyId,
+          actorUserId: session.user.id,
+          actorType: "user",
+          action: "proposal.updated",
+          resourceType: "proposal",
+          resourceId: proposal.id,
+          metadata: {
+            fields: Object.keys(changed),
+            from: Object.fromEntries(Object.entries(changed).map(([k, v]) => [k, v.from])),
+            to: Object.fromEntries(Object.entries(changed).map(([k, v]) => [k, v.to])),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
   });
 
   return NextResponse.json({ ok: true });

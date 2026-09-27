@@ -10,7 +10,7 @@ interface RouteParams {
   params: { id: string };
 }
 
-/** Dispara o e-mail via Resend e garante a transição RASCUNHO -> ENVIADA (idempotente com o WhatsApp). */
+/** Dispara o e-mail via Resend e garante a transição pra ENVIADA (idempotente com o WhatsApp) — de RASCUNHO (primeiro envio) ou de REJEITADA/EXPIRADA (reenvio após renegociar). */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
   if (!session) {
@@ -28,8 +28,8 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!proposal || proposal.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
   }
-  if (proposal.status === "ACEITA" || proposal.status === "REJEITADA" || proposal.status === "EXPIRADA") {
-    return NextResponse.json({ error: "Esta proposta já foi decidida pelo cliente." }, { status: 400 });
+  if (proposal.status === "ACEITA") {
+    return NextResponse.json({ error: "Esta proposta já foi aceita pelo cliente." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);

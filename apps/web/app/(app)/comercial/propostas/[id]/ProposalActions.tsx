@@ -42,7 +42,8 @@ export function ProposalActions({ proposalId, status, autoOpenSend, defaultEmail
     router.refresh();
   }
 
-  const canSend = status === "RASCUNHO" || status === "ENVIADA" || status === "VISUALIZADA";
+  const canSend = status !== "ACEITA";
+  const isResend = status === "REJEITADA" || status === "EXPIRADA";
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -54,7 +55,7 @@ export function ProposalActions({ proposalId, status, autoOpenSend, defaultEmail
             className="flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white"
             style={{ backgroundColor: "#FF2B00" }}
           >
-            Enviar proposta
+            {isResend ? "Reenviar proposta" : "Enviar proposta"}
           </button>
         )}
         {(status === "ENVIADA" || status === "VISUALIZADA") && (

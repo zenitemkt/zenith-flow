@@ -4,6 +4,8 @@
 
 ### Adicionado
 
+- **Clientes > Marketing**: nova aba pra reunir clientes, ex-clientes e leads num só lugar, filtrar por status (e opcionalmente por etapa do pipeline) e exportar em CSV (Nome, Empresa, Telefone/WhatsApp, E-mail) — pra disparar e-mail marketing, mala direta ou WhatsApp por outra ferramenta. Contatos com opt-out de marketing nunca aparecem.
+- **Propostas — editar e reenviar depois de recusada ou expirada**: só uma proposta aceita continua travada; recusar e depois renegociar já não bloqueia mais ajustar e mandar de novo. Toda edição fica registrada (quem mudou e o que mudou) numa nova seção "Alterações" na tela da proposta.
 - **Pipeline comercial — clicar numa etapa do funil mostra o detalhe**: cada barra do gráfico (inclusive "Ganhas") abre uma janela com as oportunidades atualmente naquela etapa — cliente/lead, contato, valor, data prevista de fechamento e há quantos dias está parada ali.
 - **Calendário (Operação) — cor e ícone por status**: peças aguardando aprovação (interna ou do cliente) ficam em amarelo com um relógio; aprovadas e na coluna "Agendar" ficam em verde clarinho com um ícone de calendário; concluídas (Agendado/Publicado) ficam em verde escuro com um check. A Fazer/Fazendo continuam sem cor.
 - **Propostas — "Ver como cliente ↗"**: botão na lista e na tela de detalhe abre o link público (o mesmo que o cliente recebeu) em nova aba, sem sair da edição interna.
