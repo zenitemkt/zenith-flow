@@ -86,6 +86,7 @@ export interface FunnelChartProps {
   showLabels?: boolean;
   hoveredIndex?: number | null;
   onHoverChange?: (index: number | null) => void;
+  onStageClick?: (index: number) => void;
   formatPercentage?: (pct: number) => string;
   formatValue?: (value: number) => string;
   staggerDelay?: number;
@@ -522,6 +523,7 @@ export function FunnelChart({
   showLabels = true,
   hoveredIndex: hoveredIndexProp,
   onHoverChange,
+  onStageClick,
   formatPercentage = fmtPct,
   formatValue = fmtVal,
   staggerDelay = 0.12,
@@ -702,6 +704,19 @@ export function FunnelChart({
                 key={`lbl-${stage.label}`}
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
+                onClick={() => onStageClick?.(i)}
+                role={onStageClick ? "button" : undefined}
+                tabIndex={onStageClick ? 0 : undefined}
+                onKeyDown={
+                  onStageClick
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onStageClick(i);
+                        }
+                      }
+                    : undefined
+                }
                 style={{ ...posStyle, zIndex: 20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 24 }}
               >

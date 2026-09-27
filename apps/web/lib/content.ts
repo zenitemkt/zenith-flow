@@ -89,24 +89,28 @@ export function contentBoardColumnForStatus(status: ContentStatus): ContentBoard
 }
 
 /**
- * Cor do card no Calendário (pedido do usuário, 2026-09-15): cinza = ainda
- * não começou a ser produzido, laranja = em andamento em qualquer etapa até
- * "Agendar", verde = já concluído (Agendado/Publicado). Independe da data —
- * a presença no calendário já é filtrada por scheduledDate em outro lugar.
+ * Cor + ícone do card no Calendário (pedido do usuário, 2026-09-27, substitui
+ * o esquema de 3 baldes de 2026-09-15): sem cor enquanto não chegou a
+ * aprovação (A Fazer/Fazendo), amarelo com relógio aguardando aprovação
+ * (interna ou do cliente), verde clarinho com calendário quando aprovado e
+ * na coluna "Agendar", verde escuro com check quando já concluído
+ * (Agendado/Publicado) — mesmo agrupamento de `CONTENT_BOARD_COLUMNS`.
+ * Independe da data — a presença no calendário já é filtrada por
+ * scheduledDate em outro lugar.
  */
-export type ContentCalendarBucket = "todo" | "doing" | "done";
+export type ContentCalendarBucket = "neutral" | "aguardando_aprovacao" | "agenda" | "concluido";
 
 const CALENDAR_BUCKET_BY_STATUS: Record<ContentStatus, ContentCalendarBucket> = {
-  IDEIA: "todo",
-  PAUTA: "todo",
-  PRODUCAO: "doing",
-  REVISAO_INTERNA: "doing",
-  AGUARDANDO_CLIENTE: "doing",
-  AJUSTES: "doing",
-  APROVADO: "doing",
-  AGENDADO: "done",
-  PUBLICADO: "done",
-  ARQUIVADO: "todo",
+  IDEIA: "neutral",
+  PAUTA: "neutral",
+  PRODUCAO: "neutral",
+  AJUSTES: "neutral",
+  REVISAO_INTERNA: "aguardando_aprovacao",
+  AGUARDANDO_CLIENTE: "aguardando_aprovacao",
+  APROVADO: "agenda",
+  AGENDADO: "concluido",
+  PUBLICADO: "concluido",
+  ARQUIVADO: "neutral",
 };
 
 export function contentCalendarBucket(status: ContentStatus): ContentCalendarBucket {
@@ -114,7 +118,8 @@ export function contentCalendarBucket(status: ContentStatus): ContentCalendarBuc
 }
 
 export const CONTENT_CALENDAR_BUCKET_CLASS: Record<ContentCalendarBucket, string> = {
-  todo: "bg-[#F2F4F7] text-[#475467]",
-  doing: "bg-[#FFEDD5] text-[#9A3412]",
-  done: "bg-[#DCFCE7] text-[#166534]",
+  neutral: "bg-[#F2F4F7] text-[#475467]",
+  aguardando_aprovacao: "bg-[#FEF3C7] text-[#92600A]",
+  agenda: "bg-[#DCFCE7] text-[#166534]",
+  concluido: "bg-[#166534] text-white",
 };

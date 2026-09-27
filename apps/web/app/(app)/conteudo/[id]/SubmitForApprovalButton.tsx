@@ -33,6 +33,14 @@ export function SubmitForApprovalButton({
 
     setApprovalUrl(new URL(body.approvalUrl, window.location.origin).toString());
     setModalOpen(true);
+  }
+
+  function handleModalClose() {
+    setModalOpen(false);
+    // Só atualiza a página ao fechar: um refresh imediato faz o status virar
+    // "Aguardando cliente" e este botão (que só existe pra REVISAO_INTERNA/
+    // AJUSTES) desmontar na hora, levando a janela junto antes do usuário
+    // conseguir ver o link/enviar e-mail/WhatsApp.
     router.refresh();
   }
 
@@ -52,7 +60,7 @@ export function SubmitForApprovalButton({
         <SendApprovalModal
           contentId={contentId}
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={handleModalClose}
           approvalUrl={approvalUrl}
           defaultEmail={defaultEmail}
           defaultWhatsapp={defaultWhatsapp}

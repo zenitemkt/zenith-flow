@@ -9,8 +9,8 @@ import { PipelinePeriodFilter } from "./PipelinePeriodFilter";
 import { NewOpportunityModal } from "./NewOpportunityModal";
 import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
 
-const FunnelChart = dynamic(() =>
-  import("@/app/_components/charts/FunnelChart").then((module) => module.FunnelChart),
+const PipelineFunnelSection = dynamic(() =>
+  import("./PipelineFunnelSection").then((module) => module.PipelineFunnelSection),
 );
 
 interface PageProps {
@@ -75,6 +75,14 @@ export default async function PipelinePage({ searchParams }: PageProps) {
     expectedCloseDate: opportunity.expectedCloseDate?.toISOString() ?? null,
   }));
   const openValueCents = openOpportunities.reduce((sum, opportunity) => sum + (opportunity.valueCents ?? 0), 0);
+  const funnelStageIds = [...stages.map((stage) => stage.id), "WON"];
+  const periodQueryParams = new URLSearchParams();
+  if (searchParams.period) periodQueryParams.set("period", searchParams.period);
+  if (searchParams.year) periodQueryParams.set("year", searchParams.year);
+  if (searchParams.month) periodQueryParams.set("month", searchParams.month);
+  if (searchParams.from) periodQueryParams.set("from", searchParams.from);
+  if (searchParams.to) periodQueryParams.set("to", searchParams.to);
+  const periodQuery = periodQueryParams.toString();
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,7 +119,7 @@ export default async function PipelinePage({ searchParams }: PageProps) {
         </div>
         <h3 className="mb-2 text-sm font-semibold text-[#101828]">Funil de oportunidades</h3>
         {hasFunnelData ? (
-          <div className="mx-auto w-full max-w-md"><FunnelChart data={funnelData} orientation="vertical" color="#FF2B00" layers={3} /></div>
+          <PipelineFunnelSection funnelData={funnelData} stageIds={funnelStageIds} periodQuery={periodQuery} />
         ) : (
           <p className="py-6 text-center text-sm text-[#667085]">Nenhuma oportunidade encontrada neste período.</p>
         )}

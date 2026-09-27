@@ -59,8 +59,16 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
             {formatProposalValue(proposal.valueCents)}
           </p>
           {proposal.status !== "RASCUNHO" && (
-            <div className="mt-2">
+            <div className="mt-2 flex items-center gap-2">
               <CopyProposalLinkButton token={proposal.token} />
+              <a
+                href={`/proposta/${proposal.token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-8 items-center justify-center rounded-md border border-[#D0D5DD] px-3 text-xs font-medium text-[#344054] hover:bg-[#F6F7FB]"
+              >
+                Ver como cliente ↗
+              </a>
             </div>
           )}
         </div>

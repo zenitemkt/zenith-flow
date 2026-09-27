@@ -29,6 +29,16 @@ export default async function AprovarPage({ params }: PageProps) {
           </>
         ) : (
           <>
+            <div className="mb-4 flex items-center gap-2">
+              <span
+                aria-hidden
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-white"
+                style={{ backgroundColor: "#FF2B00" }}
+              >
+                Z
+              </span>
+              <span className="text-sm font-semibold tracking-wide text-[#344054]">ZENITE MKT</span>
+            </div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
               {approval.contentVersion.contentItem.client.name} ·{" "}
               {CONTENT_CHANNEL_LABELS[approval.contentVersion.contentItem.channel]}

@@ -55,6 +55,7 @@ export default async function ProposalsPage() {
                 <th className="px-4 py-3">Vínculo</th>
                 <th className="px-4 py-3">Valor</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="w-8 px-4 py-3"><span className="sr-only">Ver como cliente</span></th>
                 {canDelete && <th className="w-14 px-4 py-3"><span className="sr-only">Ações</span></th>}
               </tr>
             </thead>
@@ -72,6 +73,20 @@ export default async function ProposalsPage() {
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PROPOSAL_STATUS_BADGE_CLASS[proposal.status]}`}>
                       {PROPOSAL_STATUS_LABELS[proposal.status]}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {proposal.status !== "RASCUNHO" && (
+                      <a
+                        href={`/proposta/${proposal.token}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ver como o cliente viu"
+                        className="text-xs font-medium text-[#667085] hover:text-[#FF2B00] hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Ver como cliente ↗
+                      </a>
+                    )}
                   </td>
                   {canDelete && <td className="px-4 py-3 text-right"><DeleteRecordButton endpoint={`/api/proposals/${proposal.id}`} recordName={proposal.name} entityLabel="Proposta" warning="A negociação continuará registrada e o valor será recalculado pelas propostas restantes." /></td>}
                 </tr>

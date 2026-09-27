@@ -4,6 +4,10 @@
 
 ### Adicionado
 
+- **Pipeline comercial — clicar numa etapa do funil mostra o detalhe**: cada barra do gráfico (inclusive "Ganhas") abre uma janela com as oportunidades atualmente naquela etapa — cliente/lead, contato, valor, data prevista de fechamento e há quantos dias está parada ali.
+- **Calendário (Operação) — cor e ícone por status**: peças aguardando aprovação (interna ou do cliente) ficam em amarelo com um relógio; aprovadas e na coluna "Agendar" ficam em verde clarinho com um ícone de calendário; concluídas (Agendado/Publicado) ficam em verde escuro com um check. A Fazer/Fazendo continuam sem cor.
+- **Propostas — "Ver como cliente ↗"**: botão na lista e na tela de detalhe abre o link público (o mesmo que o cliente recebeu) em nova aba, sem sair da edição interna.
+- **Link de aprovação do cliente (`/aprovar/[token]`) ganhou a marca "ZENITE MKT"** no topo esquerdo — única página pública que ainda não tinha nenhuma identidade visual.
 - **Exclusão administrativa em Propostas, Campanhas e Clientes**: lixeiras nas listagens e botões nos cards usam confirmação personalizada, auditoria e regras explícitas de preservação dos registros comerciais.
 - **Retorno no card do cliente**: o perfil agora oferece “Voltar para Clientes”, retornando à Carteira de clientes.
 
@@ -25,6 +29,7 @@
 
 ### Corrigido
 
+- **Janela de "Enviar para aprovação do cliente" abria e fechava sozinha na hora**: o `router.refresh()` disparado logo depois de abrir a janela mudava o status da peça, o que desmontava o próprio botão (e a janela dentro dele) antes do usuário conseguir usá-la. Agora só atualiza a página quando a janela é fechada de propósito.
 - **Gráfico "Contas a receber por estágio da régua" (Home) mostrava valor errado**: contava a quantidade de títulos, mas formatava como dinheiro (ex.: 3 títulos virava "R$ 0,03"). Agora soma o valor real em R$ por estágio da régua.
 
 ### Alterado

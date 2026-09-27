@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, ListChecks, Check } from "lucide-react";
+import { LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2 } from "lucide-react";
 import { WEEKDAY_LABELS, buildMonthCells } from "@/lib/content-calendar";
 import {
   CONTENT_CALENDAR_BUCKET_CLASS,
@@ -12,8 +12,16 @@ import {
   CONTENT_STATUS_BADGE_CLASS,
   CONTENT_STATUS_LABELS,
   contentCalendarBucket,
+  type ContentCalendarBucket,
 } from "@/lib/content";
 import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
+
+const CALENDAR_BUCKET_ICON: Record<ContentCalendarBucket, typeof Clock | null> = {
+  neutral: null,
+  aguardando_aprovacao: Clock,
+  agenda: CalendarDays,
+  concluido: CheckCircle2,
+};
 
 export interface CalendarContentItem {
   id: string;
@@ -175,16 +183,21 @@ export function InteractiveContentCalendar({
                             {day}
                           </p>
                           <div className="flex flex-col gap-1">
-                            {dayItems.map((item) => (
-                              <Link
-                                key={item.id}
-                                href={`/conteudo/${item.id}`}
-                                className={`block truncate rounded px-1.5 py-1 text-xs font-medium ${CONTENT_CALENDAR_BUCKET_CLASS[contentCalendarBucket(item.status)]}`}
-                                title={`${item.title} · ${item.client.name} · ${CONTENT_CHANNEL_LABELS[item.channel]} · ${CONTENT_STATUS_LABELS[item.status]}`}
-                              >
-                                {item.title}
-                              </Link>
-                            ))}
+                            {dayItems.map((item) => {
+                              const bucket = contentCalendarBucket(item.status);
+                              const BucketIcon = CALENDAR_BUCKET_ICON[bucket];
+                              return (
+                                <Link
+                                  key={item.id}
+                                  href={`/conteudo/${item.id}`}
+                                  className={`flex items-center gap-1 truncate rounded px-1.5 py-1 text-xs font-medium ${CONTENT_CALENDAR_BUCKET_CLASS[bucket]}`}
+                                  title={`${item.title} · ${item.client.name} · ${CONTENT_CHANNEL_LABELS[item.channel]} · ${CONTENT_STATUS_LABELS[item.status]}`}
+                                >
+                                  {BucketIcon && <BucketIcon className="h-3 w-3 shrink-0" aria-hidden />}
+                                  <span className="truncate">{item.title}</span>
+                                </Link>
+                              );
+                            })}
                           </div>
                           {pendingCount > 0 && (
                             <span className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#344054] text-[10px] font-bold text-white">
