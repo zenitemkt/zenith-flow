@@ -82,7 +82,6 @@ export default async function ProposalsPage() {
                         rel="noopener noreferrer"
                         title="Ver como o cliente viu"
                         className="text-xs font-medium text-[#667085] hover:text-[#FF2B00] hover:underline"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         Ver como cliente ↗
                       </a>
