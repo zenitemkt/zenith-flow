@@ -37,10 +37,11 @@ model User {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  sessions    Session[]
-  accounts    Account[]
-  memberships Membership[]
-  employee    Employee?
+  sessions             Session[]
+  accounts             Account[]
+  memberships          Membership[]
+  employee             Employee?
+  adAccountConnections AdAccountConnection[]
 
   @@map("user")
 }
@@ -171,6 +172,7 @@ model Agency {
   trackingEvents             TrackingEvent[]
   trackingConsents           TrackingConsent[]
   campaigns                  Campaign[]
+  adAccountConnections       AdAccountConnection[]
   workflows                  Workflow[]
   operationStages            OperationStage[]
 
@@ -2309,6 +2311,65 @@ model CampaignDailyMetric {
   @@unique([campaignId, date])
   @@index([campaignId])
   @@map("campaign_daily_metric")
+}
+
+// ---------------------------------------------------------------------------
+// Conexões de conta de anúncio — Fase 3, seções 37/38 do manual (GTM/GA4 e
+// Meta Ads/Pixel/Conversions API). Primeira fatia: só o fluxo OAuth "Ads
+// Insights" da Meta (seção 38, conectar conta) — sem ainda ler campanhas
+// automaticamente nem mandar eventos pela Conversions API (próximas fatias).
+// `platform` já nasce como enum (não só Meta) porque o Google Ads (seção 37,
+// mesmo tipo de fluxo) reaproveita 100% este modelo, sem migration nova.
+// ---------------------------------------------------------------------------
+
+enum AdPlatform {
+  META
+  GOOGLE
+}
+
+enum AdConnectionStatus {
+  /// Token válido, última checagem sem erro.
+  ACTIVE
+  /// `tokenExpiresAt` no passado — precisa reconectar.
+  EXPIRED
+  /// Usuário removeu o acesso do lado da plataforma (detectado num 401/403 da API).
+  REVOKED
+  /// Erro inesperado na última chamada (rede, resposta não reconhecida) — não sabemos se o token ainda é válido.
+  ERROR
+}
+
+/// Token sempre criptografado (`lib/crypto-secrets.ts`, AES-256-GCM com
+/// `INTEGRATIONS_ENCRYPTION_KEY`) — nunca gravado nem lido em texto puro fora
+/// dessa lib, nunca exposto ao navegador (seção 37: "nunca expor secrets do
+/// server container no browser" — mesmo princípio vale pro token de OAuth).
+/// `@@unique([agencyId, platform])` é a simplificação desta fatia: uma
+/// agência conecta uma conta de anúncio por plataforma (a conta principal
+/// dela), não várias — reconectar substitui a conexão anterior. Se aparecer
+/// caso real de agência com mais de uma conta de anúncio Meta, vira fatia
+/// própria (ver docs/DECISIONS.md).
+model AdAccountConnection {
+  id                  String              @id @default(cuid())
+  agencyId            String
+  agency              Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  platform            AdPlatform
+  /// ID da conta de anúncio na plataforma (ex.: "act_123456789" na Meta).
+  externalAccountId   String
+  /// Nome de exibição da conta, só pra UI — não é a fonte de verdade do ID.
+  externalAccountName String?
+  accessTokenEnc      String
+  tokenExpiresAt      DateTime?
+  scopes              String[]
+  status              AdConnectionStatus  @default(ACTIVE)
+  lastError           String?
+  lastValidatedAt     DateTime?
+  connectedByUserId   String?
+  connectedByUser     User?               @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([agencyId, platform])
+  @@index([agencyId])
+  @@map("ad_account_connection")
 }
 
 // ---------------------------------------------------------------------------

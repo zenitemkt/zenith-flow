@@ -6,6 +6,7 @@ import {
   Wallet,
   Radar,
   Zap,
+  Target,
   Sparkles,
   MessageSquare,
   Globe,
@@ -126,6 +127,17 @@ export const navigationGroups: NavigationGroup[] = [
     label: "Inteligência e automação",
     items: [
       { id: "automations", label: "Automações", icon: Zap, href: "/automacoes", comingSoon: false },
+      {
+        id: "tracking",
+        label: "Traqueamento",
+        icon: Target,
+        href: "/traqueamento",
+        comingSoon: false,
+        children: [
+          { id: "tracking-overview", label: "Visão geral", href: "/traqueamento", comingSoon: false },
+          { id: "tracking-connections", label: "Conexões", href: "/traqueamento/conexoes", comingSoon: false },
+        ],
+      },
       { id: "zenite-ai", label: "Zenite AI", icon: Sparkles, href: "/zenite-ai", comingSoon: true },
     ],
   },
