@@ -1,3 +1,17 @@
+## 2026-09-30 — Plano de 5 etapas pra fechar o escopo real de Traqueamento
+
+**Contexto**: Gabriel testou a conexão Meta Ads recém-publicada e reportou que "a extensão oficial da Meta não está registrando eventos" e que a aba estava "muito aquém" do que foi combinado. Antes de responder, verifiquei: a extensão (Meta Pixel Helper) procura o script `fbq` da Meta — que nunca foi construído (só a conexão OAuth/Ads Insights foi). Gabriel então pediu confirmação exata do escopo aprovado.
+
+**Decisão — recuperar o texto literal da conversa de planejamento, não reconstruir de memória**: a decisão de arquitetura (6 seções: Visão geral, Cidade/aparelho, Campanhas antes/depois, Conexões, Qualidade do envio, Diagnóstico) tinha acontecido numa parte da conversa já resumida pelo sistema — em vez de arriscar uma reconstrução aproximada, li o `.jsonl` da transcrição completa (`~/.claude/projects/.../*.jsonl`) e extraí o texto exato que o Gabriel aprovou. Isso revelou que só 1,5 de 6 seções tinham sido entregues de verdade — uma auditoria honesta, não uma estimativa.
+
+**Decisão — plano em 5 etapas independentes, cada uma publicável sozinha**: em vez de tentar entregar tudo de uma vez (Pixel+CAPI+GA4+diagnóstico+campanhas automáticas seria uma fatia enorme e arriscada), quebrei em: (1) geo/aparelho + completar Visão Geral — zero dependência externa; (2) Meta Pixel+CAPI — depende de Pixel ID do usuário; (3) GA4 — depende de Measurement ID; (4) Qualidade do envio/Diagnóstico — depende de 2 e 3 existirem pra ter o que mostrar; (5) Campanhas antes/depois automático — independente das demais, só depende da conexão Meta já existente. Usado `EnterPlanMode`/`ExitPlanMode` pra alinhar isso formalmente com o Gabriel antes de codar, dado o tamanho.
+
+**Decisão confirmada com o usuário — Meta: Pixel (navegador) + Conversions API (servidor) juntos**, não CAPI sozinha — é a recomendação oficial da Meta (dedup por `event_id` entre os dois), e é o que faz a extensão do navegador reconhecer o evento de verdade.
+
+**Decisão confirmada com o usuário — GA4: tag no navegador (`gtag.js`)**, não Measurement Protocol — aparece no DebugView em tempo real, mais fácil de confirmar que funciona; custa a consistência "tudo server-side" do resto do sistema, mas o ganho de verificabilidade venceu.
+
+**Decisão — geo/aparelho sem nenhum serviço externo novo**: a Vercel já injeta `x-vercel-ip-country`/`x-vercel-ip-country-region`/`x-vercel-ip-city` em toda requisição que chega no coletor — zero custo, zero dependência, zero chave de API nova pra gerenciar. Device/browser: parse de `User-Agent` com regex simples (`parseDeviceInfo()`), mesmo padrão já usado em `looksLikeBot()` — não precisa de biblioteca de parsing de UA só pra saber "celular ou computador".
+
 ## 2026-09-30 — Eventos de tracking do site: delegação genérica, não marcar botão por botão
 
 **Contexto**: Gabriel pediu, explicitamente: `page_view` em todas as páginas (já existia), um evento pra quem visualiza `/orcamento/`, um evento quando o formulário é enviado, e no CRM poder ver por lead quantas vezes acessou, quais botões clicou, quais páginas viu e quanto tempo ficou.
