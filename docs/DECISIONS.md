@@ -1,3 +1,19 @@
+## 2026-09-30 — Eventos de tracking do site: delegação genérica, não marcar botão por botão
+
+**Contexto**: Gabriel pediu, explicitamente: `page_view` em todas as páginas (já existia), um evento pra quem visualiza `/orcamento/`, um evento quando o formulário é enviado, e no CRM poder ver por lead quantas vezes acessou, quais botões clicou, quais páginas viu e quanto tempo ficou.
+
+**Decisão 1 — reaproveitar `pricing_view` pra página de orçamento, não criar evento novo**: o site não tem página de preço pública de verdade (serviço é sob consulta) — mas `pricing_view` já existe no allowlist do backend (`TRACKING_EVENT_NAMES`) com exatamente essa semântica ("visualizou algo relacionado a fechar negócio"). Reaproveitar evita mexer no backend (allowlist, `TRACKING_EVENT_CONSENT_REQUIREMENT`) pra um evento que, no fundo, cumpre o mesmo papel.
+
+**Decisão 2 — `cta_click` via delegação num único listener, não marcando cada botão nas 144+ páginas**: em vez de adicionar `data-track` em cada template/gerador, um listener no `document` (capture phase) identifica cliques em links pro WhatsApp (`wa.me`) ou em elementos com as classes já usadas pros CTAs principais (`nav-cta`, `button-primary`, `button-dark`) — cobre o site inteiro sem tocar em nenhum HTML gerado, e novos botões futuros com essas mesmas classes já saem rastreados de graça.
+
+**Decisão 3 — `window.ZFTrack.track()` como API pública do `tracking.js`**: o formulário de orçamento (`budget-form.leads-v2.js`) precisa disparar `form_submit`/`identify` logo depois que o lead é criado — em vez de duplicar a lógica de consentimento/visitorId/sessionId nesse segundo arquivo, o `tracking.js` expõe essa função global. Primeira vez que o coletor ganha uma API pensada pra outros scripts do site chamarem, não só pra uso interno do próprio arquivo.
+
+**Decisão 4 — não deduplicar a segunda `LeadSubmission` gerada pelo `identify`**: o formulário já cria o Lead via `/api/leads` (fonte "Site Zenite Hub"); o evento `identify` que o `tracking.js` dispara em seguida encontra esse MESMO Lead pelo e-mail normalizado (não duplica o Lead), mas gera uma segunda linha de `LeadSubmission` (fonte "tracking"). Aceito como está — `LeadSubmission` já era documentada como "cada entrada é um preenchimento, não deduplica" (seção 39), e ter as duas fontes registradas (uma prova que o site-leads funcionou, outra que a visita ficou de fato associada à jornada de tracking) é mais informação, não menos.
+
+**Decisão 5 — "Atividade no site" é uma seção nova, não substitui "Jornada de aquisição"**: a seção existente (`getLeadJourney`, `lib/attribution.ts`) já mostrava sessões com canal + crédito de atribuição — mas não mostrava páginas, botões nem duração. Em vez de sobrecarregar essa função com um segundo propósito, `getLeadSiteActivity()` (`lib/tracking-activity.ts`) é uma consulta separada, só de leitura bruta (sem modelo de atribuição), lendo as mesmas tabelas. As duas seções convivem na tela do lead, cada uma respondendo uma pergunta diferente.
+
+**Testado**: `tsc --noEmit`, `lint`, `build` de `apps/web` limpos; `vitest run` de `packages/ui` sem regressão. **Sem teste de integração dedicado** pra `getLeadSiteActivity` e **sem verificação manual em navegador** nesta sessão — falta aceitar o banner, clicar num CTA e enviar o formulário de orçamento de teste pra confirmar que tudo aparece certo na tela do lead.
+
 ## 2026-09-30 — Meta Ads: deixar o usuário escolher a conta, não pegar a primeira de `/me/adaccounts`
 
 **Contexto**: primeiro teste ao vivo da conexão Meta Ads (depois da migration aplicada com sucesso via escape hatch, ver decisão de 2026-09-29 abaixo). Gabriel conectou selecionando explicitamente só "BM - Zenite Hub" na tela de autorização da Meta, mas a conta que ficou salva foi de um CLIENTE da agência ("Lilian Cunha - Nutri") — reportado imediatamente como bug, não como comportamento esperado.

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS, parseSiteLeadDetails } from "@/lib/leads";
 import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
+import { getLeadSiteActivity, formatSiteDuration } from "@/lib/tracking-activity";
 import { canManageTeam } from "@/lib/rbac";
 import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
 import { PROPOSAL_STATUS_LABELS } from "@/lib/proposals";
@@ -144,6 +145,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const touchpoints = await getLeadJourney(membership.agencyId, lead.id);
   const credited = applyAttributionModel(touchpoints, "last_non_direct");
+  const siteActivity = await getLeadSiteActivity(membership.agencyId, lead.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -339,6 +341,59 @@ export default async function LeadDetailPage({ params }: PageProps) {
                   )}
                 </span>
               </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {siteActivity.visitsCount > 0 && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Atividade no site</h2>
+          <p className="mb-3 text-xs text-[#98A2B3]">
+            {siteActivity.visitsCount} visita{siteActivity.visitsCount === 1 ? "" : "s"} registrada
+            {siteActivity.visitsCount === 1 ? "" : "s"} · {formatSiteDuration(siteActivity.totalDurationSeconds)} no
+            total navegando no site.
+          </p>
+          <div className="flex flex-col gap-2">
+            {siteActivity.visits.map((visit) => (
+              <details key={visit.sessionId} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
+                <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-[#101828]">{visit.startedAt.toLocaleString("pt-BR")}</span>
+                  <span className="text-xs text-[#98A2B3]">
+                    {formatSiteDuration(visit.durationSeconds)} · {visit.pageViews.length} página
+                    {visit.pageViews.length === 1 ? "" : "s"} · {visit.ctaClicks.length} clique
+                    {visit.ctaClicks.length === 1 ? "" : "s"}
+                  </span>
+                </summary>
+                <div className="mt-3 flex flex-col gap-3 border-t border-[#EEF0F3] pt-3">
+                  {visit.pageViews.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Páginas visitadas</p>
+                      <ul className="flex flex-col gap-1">
+                        {visit.pageViews.map((pageView, index) => (
+                          <li key={index} className="flex items-center justify-between gap-2 text-xs text-[#475467]">
+                            <span className="truncate">{pageView.url ?? "—"}</span>
+                            <span className="shrink-0 text-[#98A2B3]">{pageView.occurredAt.toLocaleTimeString("pt-BR")}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {visit.ctaClicks.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Botões clicados</p>
+                      <ul className="flex flex-col gap-1">
+                        {visit.ctaClicks.map((click, index) => (
+                          <li key={index} className="flex items-center justify-between gap-2 text-xs text-[#475467]">
+                            <span className="truncate">{click.label || click.href || "—"}</span>
+                            <span className="shrink-0 text-[#98A2B3]">{click.occurredAt.toLocaleTimeString("pt-BR")}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </details>
             ))}
           </div>
         </section>
