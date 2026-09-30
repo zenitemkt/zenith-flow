@@ -23,6 +23,11 @@ export function MetaOAuthResultToast() {
     const result = searchParams.get("meta");
     if (!result) return;
 
+    // "choose_account" não é um resultado final — a própria página ainda precisa do
+    // parâmetro pra saber que deve mostrar o seletor de conta (ChooseMetaAccountForm),
+    // então não limpa a URL nem mostra toast aqui.
+    if (result === "choose_account") return;
+
     if (result === "connected") {
       toast.success("Conta da Meta conectada.");
     } else if (result === "error") {

@@ -3,6 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { encryptSecret } from "@/lib/crypto-secrets";
 import { exchangeMetaCodeForShortLivedToken, exchangeMetaTokenForLongLived, fetchMetaAdAccounts, META_OAUTH_SCOPES } from "@/lib/meta-ads";
 import { verifyOAuthState } from "@/lib/oauth-state";
+import { META_OAUTH_PENDING_COOKIE, META_OAUTH_PENDING_TTL_SECONDS, encodeMetaOAuthPending } from "@/lib/meta-oauth-pending";
 
 function redirectToTracking(request: Request, params: Record<string, string>) {
   const url = new URL("/traqueamento/conexoes", request.url);
@@ -52,11 +53,37 @@ export async function GET(request: Request) {
     if (adAccounts.length === 0) {
       return redirectToTracking(request, { meta: "error", reason: "no_ad_account" });
     }
-    // Simplificação desta fatia: uma conexão por agência (ver schema.prisma) — usa a primeira conta
-    // retornada. Escolher entre várias fica pra quando aparecer caso real de agência com mais de uma.
-    const account = adAccounts[0]!;
 
     const tokenExpiresAt = longLived.expires_in ? new Date(Date.now() + longLived.expires_in * 1000) : null;
+
+    /**
+     * `/me/adaccounts` lista TODAS as contas que o usuário administra — pra
+     * uma agência, isso inclui contas de cliente geridas pela mesma conta
+     * pessoal, não só a conta da própria Zenite. Com mais de uma, nunca
+     * adivinhamos: guardamos o token (ainda não persistido) num cookie
+     * cifrado de curta duração e deixamos o usuário escolher explicitamente
+     * em `/traqueamento/conexoes`.
+     */
+    if (adAccounts.length > 1) {
+      const pendingCookie = encodeMetaOAuthPending({
+        agencyId: verified.agencyId,
+        connectedByUserId: membership.userId,
+        accessToken: longLived.access_token,
+        tokenExpiresAt: tokenExpiresAt ? tokenExpiresAt.toISOString() : null,
+        candidates: adAccounts,
+      });
+      const response = redirectToTracking(request, { meta: "choose_account" });
+      response.cookies.set(META_OAUTH_PENDING_COOKIE, pendingCookie, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: META_OAUTH_PENDING_TTL_SECONDS,
+      });
+      return response;
+    }
+
+    const account = adAccounts[0]!;
 
     await prisma.$transaction([
       prisma.adAccountConnection.upsert({

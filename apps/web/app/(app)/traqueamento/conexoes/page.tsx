@@ -1,11 +1,15 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
+import { META_OAUTH_PENDING_COOKIE, decodeMetaOAuthPending } from "@/lib/meta-oauth-pending";
+import type { MetaAdAccount } from "@/lib/meta-ads";
 import { ConnectMetaButton } from "./ConnectMetaButton";
 import { DisconnectMetaButton } from "./DisconnectMetaButton";
 import { MetaOAuthResultToast } from "./MetaOAuthResultToast";
+import { ChooseMetaAccountForm } from "./ChooseMetaAccountForm";
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Ativa",
@@ -28,7 +32,11 @@ const STATUS_DOT: Record<string, string> = {
   ERROR: "bg-[#F04438]",
 };
 
-export default async function TraqueamentoPage() {
+interface PageProps {
+  searchParams: { meta?: string };
+}
+
+export default async function TraqueamentoPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
@@ -39,11 +47,23 @@ export default async function TraqueamentoPage() {
     where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
   });
 
+  let pendingCandidates: MetaAdAccount[] = [];
+  if (searchParams.meta === "choose_account") {
+    const cookieStore = await cookies();
+    const cookieValue = cookieStore.get(META_OAUTH_PENDING_COOKIE)?.value;
+    const pending = cookieValue ? decodeMetaOAuthPending(cookieValue) : null;
+    if (pending && pending.agencyId === membership.agencyId) {
+      pendingCandidates = pending.candidates;
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Suspense>
         <MetaOAuthResultToast />
       </Suspense>
+
+      {canManage && pendingCandidates.length > 0 && <ChooseMetaAccountForm candidates={pendingCandidates} />}
 
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Conexões</h1>
