@@ -2,6 +2,8 @@ import { Prisma, prisma, type TrackingVisitor, type TrackingSession } from "@zen
 import { normalizeEmail } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { upsertLeadSubmission } from "@/lib/lead-contact";
+import { decryptSecret } from "@/lib/crypto-secrets";
+import { sendMetaCapiEvent, META_EVENT_NAME_MAP } from "@/lib/meta-capi";
 import {
   isTrackingEventName,
   isConsentSatisfied,
@@ -98,6 +100,56 @@ async function identifyVisitor(
     });
   }
 }
+
+/**
+ * Meta Conversions API (seção 38.1, Etapa 2 do plano de Traqueamento) — manda
+ * o evento recém-gravado pra Meta, sob o mesmo `eventId` que o Pixel do
+ * navegador usa, pra deduplicar. Silencioso quando a agência não conectou a
+ * Meta ou não configurou um Pixel ID ainda (nada a mandar). Sempre grava o
+ * resultado em `EventDelivery` (mesmo quando falha) — é a base da seção 5
+ * "Qualidade do envio". Nunca lança: uma falha na Meta não pode derrubar o
+ * coletor nem aparecer como erro pro visitante do site.
+ */
+async function dispatchMetaCapiEvent(
+  agencyId: string,
+  trackingEventId: string,
+  eventName: string,
+  eventId: string,
+  occurredAt: Date,
+  url: string | null,
+  properties: Record<string, string | number | boolean | null>,
+): Promise<void> {
+  const metaEventName = META_EVENT_NAME_MAP[eventName];
+  if (!metaEventName) return;
+
+  const connection = await prisma.adAccountConnection.findUnique({
+    where: { agencyId_platform: { agencyId, platform: "META" } },
+  });
+  if (!connection || !connection.metaPixelId || connection.status !== "ACTIVE") return;
+
+  let status: "SENT" | "FAILED" = "SENT";
+  let error: string | null = null;
+  try {
+    const accessToken = decryptSecret(connection.accessTokenEnc);
+    await sendMetaCapiEvent(connection.metaPixelId, accessToken, {
+      eventName: metaEventName,
+      eventId,
+      occurredAt,
+      url,
+      email: typeof properties.email === "string" ? properties.email : null,
+      phone: typeof properties.phone === "string" ? properties.phone : null,
+    });
+  } catch (err) {
+    status = "FAILED";
+    error = err instanceof Error ? err.message : "Erro desconhecido.";
+  }
+
+  await prisma.eventDelivery
+    .create({ data: { agencyId, trackingEventId, destination: "META", status, error } })
+    .catch(() => {
+      /* Falha ao gravar o log de auditoria não pode mascarar nem agravar o problema original. */
+    });
+}
 export async function processTrackingEvent(
   agencyId: string,
   visitorId: string,
@@ -131,8 +183,9 @@ export async function processTrackingEvent(
   const normalizedUrl = normalizeTrackingUrl(body?.url);
   const referrer = normalizeReferrer(body?.referrer);
 
+  let created: { id: string };
   try {
-    await prisma.trackingEvent.create({
+    created = await prisma.trackingEvent.create({
       data: {
         agencyId,
         visitorId,
@@ -161,6 +214,8 @@ export async function processTrackingEvent(
   if (eventName === "identify") {
     await identifyVisitor(agencyId, visitorId, properties);
   }
+
+  await dispatchMetaCapiEvent(agencyId, created.id, eventName, eventId, occurredAtRaw, normalizedUrl.url, properties);
 
   return { eventId, status: "stored" };
 }

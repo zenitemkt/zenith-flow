@@ -10,6 +10,7 @@ import { ConnectMetaButton } from "./ConnectMetaButton";
 import { DisconnectMetaButton } from "./DisconnectMetaButton";
 import { MetaOAuthResultToast } from "./MetaOAuthResultToast";
 import { ChooseMetaAccountForm } from "./ChooseMetaAccountForm";
+import { MetaPixelIdForm } from "./MetaPixelIdForm";
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Ativa",
@@ -68,9 +69,9 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Conexões</h1>
         <p className="text-sm text-[#667085]">
-          Conexões com as plataformas de anúncio de {membership.agency.name} (seções 37/38 do manual) — primeira
-          fatia: ler estrutura e métricas de campanha. Enviar eventos de conversão automaticamente vem numa próxima
-          fatia.
+          Conexões com as plataformas de anúncio de {membership.agency.name} (seções 37/38 do manual). Com o Pixel ID
+          configurado, eventos de página/formulário já são enviados pra Meta pela Conversions API, deduplicados com o
+          Pixel do navegador. Ler campanhas/métricas automaticamente ainda é uma próxima fatia.
         </p>
       </div>
 
@@ -119,6 +120,7 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
           <span>O token de acesso fica criptografado e nunca é exibido nesta tela.</span>
           <span>Desconectar não apaga campanhas ou métricas já lidas.</span>
         </div>
+        {metaConnection && canManage && <MetaPixelIdForm initialPixelId={metaConnection.metaPixelId} />}
       </section>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

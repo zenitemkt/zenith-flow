@@ -173,6 +173,7 @@ model Agency {
   trackingConsents           TrackingConsent[]
   campaigns                  Campaign[]
   adAccountConnections       AdAccountConnection[]
+  eventDeliveries            EventDelivery[]
   workflows                  Workflow[]
   operationStages            OperationStage[]
 
@@ -2142,6 +2143,8 @@ model TrackingEvent {
   occurredAt  DateTime
   receivedAt  DateTime         @default(now())
 
+  deliveries  EventDelivery[]
+
   @@unique([agencyId, eventId])
   @@index([agencyId, occurredAt])
   @@index([visitorId])
@@ -2375,12 +2378,48 @@ model AdAccountConnection {
   lastValidatedAt     DateTime?
   connectedByUserId   String?
   connectedByUser     User?               @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  /// Pixel ID da Meta (seção 38.1, Etapa 2 do plano de Traqueamento,
+  /// 2026-09-30) — dado público (vai embutido no `fbq` do navegador), mas
+  /// fica junto da conexão porque é usado ao lado do `accessTokenEnc` pra
+  /// mandar eventos pela Conversions API. Só existe/faz sentido quando
+  /// `platform = META`.
+  metaPixelId         String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
   @@unique([agencyId, platform])
   @@index([agencyId])
   @@map("ad_account_connection")
+}
+
+enum EventDeliveryDestination {
+  META
+  GA4
+}
+
+enum EventDeliveryStatus {
+  SENT
+  FAILED
+}
+
+/// "Qualidade do envio" (seção 5 do plano de Traqueamento) — uma linha por
+/// tentativa de mandar um `TrackingEvent` pra uma plataforma de anúncio.
+/// Nunca bloqueia o coletor: é gravado depois da resposta ao navegador já ter
+/// saído (fire-and-forget, mesmo padrão de `fireWorkflowTrigger`).
+model EventDelivery {
+  id              String                    @id @default(cuid())
+  agencyId        String
+  agency          Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  trackingEventId String
+  trackingEvent   TrackingEvent             @relation(fields: [trackingEventId], references: [id], onDelete: Cascade)
+  destination     EventDeliveryDestination
+  status          EventDeliveryStatus
+  error           String?
+  attemptedAt     DateTime                  @default(now())
+
+  @@index([agencyId, attemptedAt])
+  @@index([trackingEventId])
+  @@map("event_delivery")
 }
 
 // ---------------------------------------------------------------------------
