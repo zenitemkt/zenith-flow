@@ -36,6 +36,11 @@ interface SessionSeed {
   utmCampaign: string | null;
   utmContent: string | null;
   utmTerm: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  deviceType: string | null;
+  browser: string | null;
 }
 
 export async function resolveSession(

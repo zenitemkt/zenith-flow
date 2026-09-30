@@ -2094,6 +2094,17 @@ model TrackingSession {
   utmCampaign String?
   utmContent  String?
   utmTerm     String?
+  /// Geo/aparelho (seção 2 do plano de Traqueamento, 2026-09-30) — resolvidos
+  /// no primeiro evento da sessão, nunca recalculados depois (mesmo espírito
+  /// do UTM: "first-touch da sessão"). `country`/`region`/`city` vêm dos
+  /// headers `x-vercel-ip-*` que a própria Vercel já injeta em toda
+  /// requisição — zero serviço externo, zero custo. `deviceType`/`browser`
+  /// vêm de um parse simples do `User-Agent` (`lib/tracking.ts`).
+  country     String?
+  region      String?
+  city        String?
+  deviceType  String?
+  browser     String?
 
   events TrackingEvent[]
 

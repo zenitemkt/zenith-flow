@@ -159,3 +159,36 @@ export function looksLikeBot(userAgent: string | null): boolean {
   if (!userAgent || !userAgent.trim()) return true;
   return BOT_USER_AGENT_PATTERN.test(userAgent);
 }
+
+export interface DeviceInfo {
+  deviceType: "mobile" | "tablet" | "desktop" | null;
+  browser: string | null;
+}
+
+/**
+ * Parse simples de `User-Agent` (seção 2 do plano de Traqueamento,
+ * 2026-09-30) — sem biblioteca nova, mesmo espírito de `looksLikeBot()`
+ * acima: um regex por categoria cobre o que interessa pro painel (não
+ * precisamos de versão exata de OS/navegador, só a categoria).
+ */
+export function parseDeviceInfo(userAgent: string | null): DeviceInfo {
+  if (!userAgent) return { deviceType: null, browser: null };
+
+  let deviceType: DeviceInfo["deviceType"] = "desktop";
+  if (/tablet|ipad/i.test(userAgent)) {
+    deviceType = "tablet";
+  } else if (/mobi|android|iphone/i.test(userAgent)) {
+    deviceType = "mobile";
+  }
+
+  let browser: string | null = null;
+  if (/edg\//i.test(userAgent)) browser = "Edge";
+  else if (/opr\/|opera/i.test(userAgent)) browser = "Opera";
+  else if (/chrome\//i.test(userAgent) && !/chromium/i.test(userAgent)) browser = "Chrome";
+  else if (/crios\//i.test(userAgent)) browser = "Chrome";
+  else if (/fxios\//i.test(userAgent)) browser = "Firefox";
+  else if (/firefox\//i.test(userAgent)) browser = "Firefox";
+  else if (/safari\//i.test(userAgent) && /version\//i.test(userAgent)) browser = "Safari";
+
+  return { deviceType, browser };
+}

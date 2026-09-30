@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
-import { looksLikeBot, normalizeReferrer, normalizeTrackingUrl, TRACKING_MAX_EVENTS_PER_REQUEST } from "@/lib/tracking";
+import { looksLikeBot, normalizeReferrer, normalizeTrackingUrl, parseDeviceInfo, TRACKING_MAX_EVENTS_PER_REQUEST } from "@/lib/tracking";
 import { processTrackingEvent, resolveSession, resolveVisitor } from "@/lib/tracking-ingest";
 
 const CORS_HEADERS = {
@@ -11,6 +11,15 @@ const CORS_HEADERS = {
 
 function json(body: unknown, status: number) {
   return NextResponse.json(body, { status, headers: CORS_HEADERS });
+}
+
+function decodeHeaderValue(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export async function OPTIONS() {
@@ -59,6 +68,7 @@ export async function POST(request: Request) {
 
   const firstEvent = rawEvents[0] as Record<string, unknown> | undefined;
   const firstUrl = normalizeTrackingUrl(firstEvent?.url);
+  const device = parseDeviceInfo(request.headers.get("user-agent"));
   const session = await resolveSession(visitor.id, body?.sessionId, {
     landingUrl: firstUrl.url,
     referrer: normalizeReferrer(firstEvent?.referrer),
@@ -67,6 +77,12 @@ export async function POST(request: Request) {
     utmCampaign: firstUrl.utmCampaign,
     utmContent: firstUrl.utmContent,
     utmTerm: firstUrl.utmTerm,
+    country: request.headers.get("x-vercel-ip-country"),
+    region: request.headers.get("x-vercel-ip-country-region"),
+    // A Vercel manda esse header URL-encoded (ex.: "S%C3%A3o%20Paulo").
+    city: decodeHeaderValue(request.headers.get("x-vercel-ip-city")),
+    deviceType: device.deviceType,
+    browser: device.browser,
   });
 
   const results = [];

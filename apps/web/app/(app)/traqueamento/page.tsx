@@ -23,7 +23,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const range = selectedPeriod.createdAt;
   const agencyId = membership.agencyId;
 
-  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount] =
+  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews] =
     await Promise.all([
       prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
       prisma.trackingSession.findMany({
@@ -34,6 +34,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       prisma.proposal.count({ where: { agencyId, sentAt: range ? range : { not: null } } }),
       prisma.opportunity.count({ where: { agencyId, status: "WON", ...(range ? { updatedAt: range } : {}) } }),
       prisma.trackingEvent.count({ where: { agencyId, ...(range ? { occurredAt: range } : {}) } }),
+      prisma.trackingEvent.findMany({
+        where: { agencyId, eventName: "page_view", ...(range ? { occurredAt: range } : {}) },
+        select: { url: true },
+      }),
     ]);
 
   const channelCounts = new Map<string, number>();
@@ -45,6 +49,43 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
   const maxChannelCount = topChannels.length > 0 ? Math.max(...topChannels.map(([, count]) => count)) : 0;
+
+  const pageCounts = new Map<string, number>();
+  for (const pageView of pageViews) {
+    const path = pageView.url ? new URL(pageView.url).pathname : "(sem URL)";
+    pageCounts.set(path, (pageCounts.get(path) ?? 0) + 1);
+  }
+  const topPages = Array.from(pageCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const sessionsByVisitor = new Map<string, number>();
+  for (const trackingSession of sessions) {
+    sessionsByVisitor.set(trackingSession.visitorId, (sessionsByVisitor.get(trackingSession.visitorId) ?? 0) + 1);
+  }
+  const returningVisitorsCount = Array.from(sessionsByVisitor.values()).filter((count) => count > 1).length;
+
+  const cityCounts = new Map<string, number>();
+  const deviceCounts = new Map<string, number>();
+  for (const trackingSession of sessions) {
+    const cityLabel = trackingSession.city
+      ? `${trackingSession.city}${trackingSession.region ? ` (${trackingSession.region})` : ""}`
+      : null;
+    if (cityLabel) cityCounts.set(cityLabel, (cityCounts.get(cityLabel) ?? 0) + 1);
+    const deviceLabel = trackingSession.deviceType ?? "desconhecido";
+    deviceCounts.set(deviceLabel, (deviceCounts.get(deviceLabel) ?? 0) + 1);
+  }
+  const topCities = Array.from(cityCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const deviceTotal = sessions.length;
+  const deviceBreakdown = Array.from(deviceCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const DEVICE_LABELS: Record<string, string> = {
+    desktop: "Computador",
+    mobile: "Celular",
+    tablet: "Tablet",
+    desconhecido: "Desconhecido",
+  };
 
   const funnelData: FunnelStage[] = [
     { label: "Visitantes", value: visitorsCount },
@@ -78,10 +119,14 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           <h2 className="text-sm font-semibold text-[#101828]">Visão geral de acessos</h2>
           <p className="text-xs text-[#667085]">{selectedPeriod.label}.</p>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <div className="rounded-lg border border-[#EEF0F3] p-3">
             <p className="text-xl font-semibold text-[#101828]">{visitorsCount}</p>
             <p className="text-xs text-[#667085]">visitantes únicos</p>
+          </div>
+          <div className="rounded-lg border border-[#EEF0F3] p-3">
+            <p className="text-xl font-semibold text-[#101828]">{returningVisitorsCount}</p>
+            <p className="text-xs text-[#667085]">visitantes recorrentes</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
             <p className="text-xl font-semibold text-[#101828]">{sessions.length}</p>
@@ -95,6 +140,49 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
             <p className="text-xl font-semibold text-[#101828]">{leadsCount}</p>
             <p className="text-xs text-[#667085]">leads no período</p>
           </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Páginas mais vistas</h2>
+          {topPages.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[#667085]">Nenhuma página vista neste período.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {topPages.map(([path, count]) => (
+                <div key={path} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-[#344054]" title={path}>{path}</span>
+                  <span className="shrink-0 font-semibold text-[#101828]">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Por cidade e aparelho</h2>
+          {topCities.length === 0 ? (
+            <p className="py-2 text-sm text-[#667085]">Nenhuma cidade identificada neste período.</p>
+          ) : (
+            <div className="mb-4 flex flex-col gap-1.5">
+              {topCities.map(([city, count]) => (
+                <div key={city} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-[#344054]">{city}</span>
+                  <span className="shrink-0 font-semibold text-[#101828]">{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {deviceBreakdown.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
+              {deviceBreakdown.map(([device, count]) => (
+                <span key={device} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
+                  {DEVICE_LABELS[device] ?? device}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
