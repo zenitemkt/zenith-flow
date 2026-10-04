@@ -48,6 +48,15 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
     where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
   });
 
+  const recentDeliveries = metaConnection
+    ? await prisma.eventDelivery.findMany({
+        where: { agencyId: membership.agencyId },
+        orderBy: { attemptedAt: "desc" },
+        take: 5,
+        include: { trackingEvent: { select: { eventName: true } } },
+      })
+    : [];
+
   let pendingCandidates: MetaAdAccount[] = [];
   if (searchParams.meta === "choose_account") {
     const cookieStore = await cookies();
@@ -121,6 +130,35 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
           <span>Desconectar não apaga campanhas ou métricas já lidas.</span>
         </div>
         {metaConnection && canManage && <MetaPixelIdForm initialPixelId={metaConnection.metaPixelId} />}
+        {metaConnection && (
+          <div className="border-t border-[#EEF0F3] p-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
+              Últimos envios pra Meta (diagnóstico — versão provisória da Etapa 4)
+            </h3>
+            {recentDeliveries.length === 0 ? (
+              <p className="text-sm text-[#98A2B3]">Nenhuma tentativa de envio registrada ainda.</p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {recentDeliveries.map((delivery) => (
+                  <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <span className="font-medium text-[#101828]">{delivery.trackingEvent.eventName}</span>
+                      <span
+                        className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
+                        }`}
+                      >
+                        {delivery.status === "SENT" ? "Enviado" : "Falhou"}
+                      </span>
+                      {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
+                    </div>
+                    <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR")}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
