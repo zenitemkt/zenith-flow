@@ -138,6 +138,8 @@ async function dispatchMetaCapiEvent(
       url,
       email: typeof properties.email === "string" ? properties.email : null,
       phone: typeof properties.phone === "string" ? properties.phone : null,
+      // Só pra verificação manual no Gerenciador de Eventos — var só deve existir na Vercel durante o teste, nunca em uso real.
+      testEventCode: process.env.META_CAPI_TEST_EVENT_CODE || null,
     });
   } catch (err) {
     status = "FAILED";
