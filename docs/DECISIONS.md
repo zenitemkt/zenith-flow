@@ -1,3 +1,17 @@
+## 2026-10-04 — Depurar o Pixel/CAPI com evidência, não suposição
+
+**Contexto**: Gabriel reportou "o Pixel não está disparando" depois do deploy da Etapa 2. Minhas duas primeiras hipóteses (extensão bloqueando, cache do navegador) foram corretas em parte, mas Gabriel pediu explicitamente pra eu parar de "colocar culpa em terceiros" e revisar o código de verdade.
+
+**Decisão — nunca mais concluir "é externo" sem prova, só com stack trace/evidência concreta**: refiz a investigação em duas frentes, cada uma com prova, não suposição:
+1. **Busca exaustiva por duplicação no nosso código** (`grep` recursivo em todo `dist/` por `fbq`/`facebook.net`) — confirmou zero duplicação nossa.
+2. **Stack trace completo do erro** (pedido ao Gabriel: clicar na seta pra expandir) — provou que a cadeia de chamada é única e contínua (`init → sendPageView → track → mirrorToMetaPixel → loadMetaPixel → fbevents.js`), sem ramificação — ou seja, nosso código chama o Pixel exatamente uma vez. Só DEPOIS dessa prova concreta é que recomendei o teste em perfil limpo (que confirmou: era mesmo extensão do navegador do Gabriel, Tag Assistant + Pixel Helper brigando).
+
+**Bug real encontrado nessa mesma rodada (esse sim, 100% nosso)**: ao testar o lado servidor com `test_event_code`, a seção de diagnóstico (ver abaixo) mostrou `page_view`/`pricing_view` falhando com "Invalid parameter", enquanto `form_submit` funcionava. Causa: a Meta exige ao menos um identificador em `user_data` pra `action_source: "website"` — eventos sem e-mail/telefone mandavam `user_data: {}` vazio. **Correção**: `client_ip_address`/`client_user_agent` (de `x-forwarded-for`/`user-agent` da própria requisição) passam a ir em todo evento — nunca persistidos no banco (seção 34 continua sem guardar IP bruto), só repassados nessa única chamada pra Meta.
+
+**Decisão — adiantar uma versão mínima da seção "Qualidade do envio" (Etapa 4) antes da hora**: pra achar o bug acima, precisava ver o `error` de cada tentativa de envio — e não existia nenhuma tela pra isso ainda (só ia existir na Etapa 4). Em vez de inventar uma rota de diagnóstico temporária, adiantei um pedaço pequeno e permanente da feature real (lista "Últimos envios pra Meta" em `/traqueamento/conexoes`, 5 mais recentes com status/erro) — é código de produção de verdade, não uma ferramenta descartável, e vai crescer pra virar a seção completa quando a Etapa 4 chegar.
+
+**Confirmado ao vivo**: `PageView`, `Ver conteúdo` (ViewContent) e `Lead` aparecem no Gerenciador de Eventos da Meta com o MESMO `event_id` vindo de "Navegador" e "Servidor" — condição exata pra deduplicação funcionar. Etapa 2 fechada.
+
 ## 2026-09-30 — Plano de 5 etapas pra fechar o escopo real de Traqueamento
 
 **Contexto**: Gabriel testou a conexão Meta Ads recém-publicada e reportou que "a extensão oficial da Meta não está registrando eventos" e que a aba estava "muito aquém" do que foi combinado. Antes de responder, verifiquei: a extensão (Meta Pixel Helper) procura o script `fbq` da Meta — que nunca foi construído (só a conexão OAuth/Ads Insights foi). Gabriel então pediu confirmação exata do escopo aprovado.

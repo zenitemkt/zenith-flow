@@ -1,8 +1,17 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-09-30.
+Última atualização: 2026-10-04.
 
 ## Implementado
+
+- **Traqueamento Etapa 2/5 — Meta Pixel + Conversions API, confirmado funcionando de ponta a ponta (plano `glimmering-shimmying-chipmunk`, 2026-10-04)**: `page_view`/`pricing_view`/`form_submit` agora chegam na Meta por dois caminhos (Pixel no navegador + Conversions API no servidor), com o mesmo `event_id`, deduplicados.
+  - **Dois bugs reais encontrados e corrigidos no primeiro teste ao vivo** (não eram suposição — cada um foi confirmado por evidência antes de mexer no código):
+    1. **"Invalid parameter" em `page_view`/`pricing_view`**: a Meta exige pelo menos um identificador em `user_data` quando `action_source: "website"` — eventos sem e-mail/telefone (a maioria) mandavam `user_data: {}` vazio e eram rejeitados. Corrigido passando `client_ip_address`/`client_user_agent` (de `x-forwarded-for`/`user-agent` da própria requisição do coletor — nunca persistidos no banco, só repassados nessa chamada pra Meta).
+    2. **Pixel do navegador "travava"** com o erro `[Meta Pixel] - Multiple pixels with conflicting versions` + `TypeError` dentro do próprio `fbevents.js` — confirmado por stack trace completo que nosso código chama o Pixel exatamente uma vez (sem duplicação); o travamento era causado por extensões do Chrome do usuário (Tag Assistant + Meta Pixel Helper brigando pra instrumentar a página) — confirmado funcionando num perfil limpo do Chrome, sem extensões.
+  - **Diagnóstico provisório adiantado da Etapa 4**: seção "Últimos envios pra Meta" em `/traqueamento/conexoes` (status Enviado/Falhou + erro de cada tentativa) — foi essencial pra achar o bug #1 acima; vai virar a seção completa "Qualidade do envio" quando a Etapa 4 for feita de verdade.
+  - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web` limpos. Migration `20260930150000_meta_pixel_and_event_delivery` aplicada em produção (mesmo escape hatch temporário, criado e removido de novo). **Confirmado ao vivo no Gerenciador de Eventos da Meta**: `PageView`, `Ver conteúdo` e `Lead` chegando com o mesmo `event_id` por "Navegador" e "Servidor".
+  - **Pendência de organização** (mesma de sempre): rodar `npx prisma migrate resolve --applied 20260930120000_tracking_session_geo_device` e `...20260930150000_meta_pixel_and_event_delivery` assim que houver acesso via CLI ao Neon.
+  - **Próximas etapas**: Etapa 3 (GA4 via gtag.js, aguardando Measurement ID do usuário), Etapa 4 (completar "Qualidade do envio"/Diagnóstico — já tem o pontapé inicial), Etapa 5 (Campanhas antes/depois automático via Meta Ads Insights).
 
 - **Traqueamento Etapa 1/5 — geo/aparelho + Visão Geral completa (plano `glimmering-shimmying-chipmunk`, 2026-09-30)**: depois de auditar o escopo original de 6 seções aprovado (recuperado do texto literal da conversa de planejamento), ficou claro que faltavam 4 de 6 seções inteiras e metade da Visão Geral — essa é a primeira de 5 etapas pra fechar o gap.
   - **Geo/aparelho sem serviço externo**: `TrackingSession` ganhou `country`/`region`/`city` (lidos dos headers `x-vercel-ip-*` que a própria Vercel injeta em toda requisição — zero custo, zero dependência nova) e `deviceType`/`browser` (`parseDeviceInfo()`, `lib/tracking.ts` — parse simples de `User-Agent`, mesmo espírito do `looksLikeBot()` já existente). Migration `20260930120000_tracking_session_geo_device`, puramente aditiva (5 colunas nullable) — aplicada em produção via a mesma rota temporária de escape hatch de 2026-09-29 (recriada e removida de novo logo em seguida).
