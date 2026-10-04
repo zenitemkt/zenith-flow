@@ -165,6 +165,11 @@ model Agency {
   /// Chave pública (não-secreta) do coletor de tracking — ver seção "Tracking"
   /// abaixo. Gerada sob demanda na primeira visita a `/integracoes`.
   trackingWriteKey           String?                 @unique
+  /// Measurement ID do GA4 (seção 37, Etapa 3 do plano de Traqueamento,
+  /// 2026-10-04) — formato `G-XXXXXXXXXX`, dado público (vai embutido no
+  /// `gtag.js` do site). Não é uma conexão OAuth como `AdAccountConnection`
+  /// — GA4 por tag no navegador só precisa desse ID pra funcionar.
+  ga4MeasurementId           String?
   /// Liga/desliga a entrada server-to-server do formulário público do Zenite Hub.
   /// A credencial continua exclusivamente nas variáveis protegidas da Vercel.
   siteLeadIntegrationEnabled Boolean                 @default(true)

@@ -11,6 +11,7 @@ import { DisconnectMetaButton } from "./DisconnectMetaButton";
 import { MetaOAuthResultToast } from "./MetaOAuthResultToast";
 import { ChooseMetaAccountForm } from "./ChooseMetaAccountForm";
 import { MetaPixelIdForm } from "./MetaPixelIdForm";
+import { Ga4MeasurementIdForm } from "./Ga4MeasurementIdForm";
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Ativa",
@@ -46,6 +47,11 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
   const canManage = canManageIntegrations(membership.role);
   const metaConnection = await prisma.adAccountConnection.findUnique({
     where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
+  });
+
+  const agencyGa4 = await prisma.agency.findUnique({
+    where: { id: membership.agencyId },
+    select: { ga4MeasurementId: true },
   });
 
   const recentDeliveries = metaConnection
@@ -161,8 +167,34 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
         )}
       </section>
 
+      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+        <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold text-[#101828]">Google Analytics 4</h2>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
+                  agencyGa4?.ga4MeasurementId ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    agencyGa4?.ga4MeasurementId ? "bg-[#12B76A]" : "bg-[#98A2B3]"
+                  }`}
+                />
+                {agencyGa4?.ga4MeasurementId ? "Configurado" : "Não configurado"}
+              </span>
+            </div>
+            <p className="max-w-2xl text-sm text-[#667085]">
+              Tag no navegador (`gtag.js`) — não é conexão OAuth, só precisa do Measurement ID da propriedade GA4.
+            </p>
+          </div>
+        </div>
+        {canManage && <Ga4MeasurementIdForm initialMeasurementId={agencyGa4?.ga4MeasurementId ?? null} />}
+      </section>
+
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-[#101828]">Google Ads / GA4</h2>
+        <h2 className="mb-2 text-sm font-semibold text-[#101828]">Google Ads</h2>
         <p className="text-sm text-[#98A2B3]">Ainda não conectado — próxima fatia.</p>
       </section>
     </div>
