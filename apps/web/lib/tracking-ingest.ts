@@ -118,6 +118,8 @@ async function dispatchMetaCapiEvent(
   occurredAt: Date,
   url: string | null,
   properties: Record<string, string | number | boolean | null>,
+  clientIp: string | null,
+  clientUserAgent: string | null,
 ): Promise<void> {
   const metaEventName = META_EVENT_NAME_MAP[eventName];
   if (!metaEventName) return;
@@ -138,6 +140,8 @@ async function dispatchMetaCapiEvent(
       url,
       email: typeof properties.email === "string" ? properties.email : null,
       phone: typeof properties.phone === "string" ? properties.phone : null,
+      clientIp,
+      clientUserAgent,
       // Só pra verificação manual no Gerenciador de Eventos — var só deve existir na Vercel durante o teste, nunca em uso real.
       testEventCode: process.env.META_CAPI_TEST_EVENT_CODE || null,
     });
@@ -157,6 +161,7 @@ export async function processTrackingEvent(
   visitorId: string,
   sessionId: string,
   raw: unknown,
+  requestContext: { clientIp: string | null; clientUserAgent: string | null },
 ): Promise<EventResult> {
   const body = raw as Record<string, unknown> | null;
   const eventId = typeof body?.eventId === "string" && body.eventId ? body.eventId : null;
@@ -217,7 +222,17 @@ export async function processTrackingEvent(
     await identifyVisitor(agencyId, visitorId, properties);
   }
 
-  await dispatchMetaCapiEvent(agencyId, created.id, eventName, eventId, occurredAtRaw, normalizedUrl.url, properties);
+  await dispatchMetaCapiEvent(
+    agencyId,
+    created.id,
+    eventName,
+    eventId,
+    occurredAtRaw,
+    normalizedUrl.url,
+    properties,
+    requestContext.clientIp,
+    requestContext.clientUserAgent,
+  );
 
   return { eventId, status: "stored" };
 }

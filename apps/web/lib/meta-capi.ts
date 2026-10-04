@@ -32,6 +32,15 @@ export interface MetaCapiEventInput {
   /** E-mail em texto puro — só existe o suficiente pra ser hasheado aqui dentro, nunca sai da função sem hash. */
   email?: string | null;
   phone?: string | null;
+  /**
+   * IP e User-Agent do visitante, só repassados nesta mesma chamada (nunca
+   * persistidos em lugar nenhum do nosso banco — seção 34 do manual
+   * deliberadamente não guarda IP bruto). Para `action_source: "website"`, a
+   * Meta exige pelo menos um identificador em `user_data` — sem e-mail/telefone
+   * (ex.: `page_view`), isso é obrigatório, não só "melhora o match".
+   */
+  clientIp?: string | null;
+  clientUserAgent?: string | null;
   /** `test_event_code` do Gerenciador de Eventos (Eventos de teste) — só pra verificação manual, nunca em produção de verdade. */
   testEventCode?: string | null;
 }
@@ -47,10 +56,13 @@ export class MetaCapiError extends Error {
 }
 
 export async function sendMetaCapiEvent(pixelId: string, accessToken: string, event: MetaCapiEventInput): Promise<void> {
-  const userData: Record<string, string[]> = {};
+  const userData: Record<string, string | string[]> = {};
   if (event.email) userData.em = [hashForMeta(event.email)];
   const normalizedPhone = event.phone?.replace(/\D/g, "");
   if (normalizedPhone) userData.ph = [hashForMeta(normalizedPhone)];
+  // Não hasheados — client_ip_address/client_user_agent vão em texto puro, formato exigido pela Meta (seção 38.1).
+  if (event.clientIp) userData.client_ip_address = event.clientIp;
+  if (event.clientUserAgent) userData.client_user_agent = event.clientUserAgent;
 
   const payload = {
     data: [

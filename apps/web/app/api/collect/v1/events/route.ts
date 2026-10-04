@@ -85,9 +85,14 @@ export async function POST(request: Request) {
     browser: device.browser,
   });
 
+  const requestContext = {
+    // `x-forwarded-for` pode ter uma cadeia de IPs (proxy) — o primeiro é o do visitante.
+    clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+    clientUserAgent: request.headers.get("user-agent"),
+  };
   const results = [];
   for (const raw of rawEvents) {
-    results.push(await processTrackingEvent(agency.id, visitor.id, session.id, raw));
+    results.push(await processTrackingEvent(agency.id, visitor.id, session.id, raw, requestContext));
   }
 
   await prisma.trackingVisitor.update({ where: { id: visitor.id }, data: { lastSeenAt: new Date() } });
