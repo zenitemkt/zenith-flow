@@ -1,3 +1,17 @@
+## 2026-10-05 — Banco migrado para o Neon da conta Zenite, recriado do zero
+
+**Contexto**: o banco tinha sido criado na conta Neon pessoal do Kevin. Ele criou uma conta com o e-mail da Zenite e pediu para mover o projeto pra lá.
+
+**Decisão 1 — recriar do zero, sem copiar dados**: a base antiga só tinha dados de teste (confirmado pelo Kevin). Ficou: novo projeto em `sa-east-1` → `prisma migrate deploy` (50 migrations) → cadastro do admin e da agência pelo fluxo normal (`/signup` → `POST /api/agencies`). Evita `pg_dump`/`pg_restore` e o risco de carregar lixo de teste. O banco antigo não foi apagado; pode ser descartado depois de alguns dias de uso.
+
+**Decisão 2 — integrações**: pixel/tracking e leads do site dependem do app e de variáveis de ambiente. `SITE_LEADS_AGENCY_ID` (ID da agência antiga) foi trocado pelo da agência nova, senão os leads do site deixariam de entrar. `BETTER_AUTH_SECRET`, `SITE_LEADS_SECRET` e `INTEGRATIONS_ENCRYPTION_KEY` não mudaram. **Atenção**: a conexão Meta Ads (OAuth) e o que já foi coletado ficam gravados no banco (cofre criptografado) — com o banco novo, vazio, a conexão Meta precisa ser refeita em Conexões. (Registrado depois de descobrir, no `git fetch`, que o `origin/main` tinha as etapas de Traqueamento/Meta/GA4 que o checkout local não tinha.)
+
+**Decisão 3 — deploy local x GitHub**: o deploy de produção de 2026-10-05 saiu de um checkout desatualizado em relação ao `origin/main` (sem as migrations de tracking/Meta/GA4). Antes de qualquer `vercel deploy --prod` manual, rodar `git fetch` e integrar o `origin/main`.
+
+**Armadilha registrada — `vercel deploy` só vale a partir da raiz do repositório**: rodar de `apps/web` fez a Vercel criar um projeto novo (`web`) e ligar ao GitHub; o build falhou (`@zenite-mkt/db` não resolve fora do monorepo). O projeto foi removido. O vínculo certo é `.vercel/project.json` na raiz.
+
+**Pendências conhecidas**: variáveis de **Preview** (`DATABASE_URL`/`DIRECT_URL`) ficaram sem valor na Vercel (o CLI exige a branch e deu erro) — só afeta deploys de preview. `packages/db` tem script `seed` apontando para `prisma/seed.ts`, que não existe. A senha do banco e a do admin foram digitadas no chat e devem ser trocadas.
+
 ## 2026-10-04 — Depurar o Pixel/CAPI com evidência, não suposição
 
 **Contexto**: Gabriel reportou "o Pixel não está disparando" depois do deploy da Etapa 2. Minhas duas primeiras hipóteses (extensão bloqueando, cache do navegador) foram corretas em parte, mas Gabriel pediu explicitamente pra eu parar de "colocar culpa em terceiros" e revisar o código de verdade.

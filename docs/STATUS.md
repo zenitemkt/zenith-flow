@@ -1,9 +1,12 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-04.
+Última atualização: 2026-10-05.
 
 ## Implementado
 
+- **Migração do banco para o Neon da conta Zenite + correção do "Nova tarefa" (2026-10-05)**: banco recriado do zero em `sa-east-1` (50 migrations aplicadas, agência "Zenite Mkt" e admin criados pelo fluxo de cadastro), variáveis de produção atualizadas na Vercel (`DATABASE_URL`, `DIRECT_URL`, `SITE_LEADS_AGENCY_ID`) e deploy de produção feito a partir da raiz. Corrigido bug do `NewContentModal` (`apps/web/app/(app)/operacao/NewContentModal.tsx`): enviava `clientId` vazio quando o primeiro cliente era cadastrado depois da montagem do componente. Detalhes e armadilhas em `docs/DECISIONS.md`.
+  - Testado: `tsc --noEmit` de `apps/web` limpo; build de produção da Vercel concluído e URLs de login/portal respondendo 200. **Não verificado por mim**: login em produção e criação do cartão pós-correção (feitos pelo Kevin); integração de leads do site com o ID de agência novo.
+  - Limitações: variáveis de Preview na Vercel sem banco; `npm run seed` de `packages/db` aponta para arquivo inexistente.
 - **Traqueamento Etapa 3/5 — GA4 via gtag.js, confirmado funcionando (plano `glimmering-shimmying-chipmunk`, 2026-10-04)**: `Agency.ga4MeasurementId` guarda o Measurement ID (público, sem OAuth — diferente de `AdAccountConnection`/Meta). Card novo em `/traqueamento/conexoes` pra configurar. Site carrega `gtag.js` só depois do consentimento de **analytics** (categoria diferente da do Pixel da Meta, que usa "marketing") — `page_view` não manda evento manual (o `gtag('config', ...)` já dispara o `page_view`/`first_visit`/`session_start` automáticos do próprio GA4); `pricing_view` e `form_submit` (mapeado pro evento recomendado `generate_lead`) mandam `gtag('event', ...)` explícito.
   - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web` limpos. Migration `20261004200000_agency_ga4_measurement_id` aplicada em produção (escape hatch, criado e removido de novo). **Confirmado ao vivo** no relatório "Tempo real" do GA4: 1 usuário ativo, eventos `first_visit`/`page_view`/`session_start` chegando.
   - **Bug encontrado e corrigido no mesmo teste**: `cta_click` nunca tinha entrado no `GA4_EVENT_NAME_MAP` (só Meta tinha esse mapeamento) — cliques em botão/CTA não apareciam no GA4. Corrigido; **confirmado ao vivo** depois do fix: `cta_click` e `generate_lead` (envio do formulário de orçamento) chegando certinho no GA4, junto com a Conversions API da Meta.

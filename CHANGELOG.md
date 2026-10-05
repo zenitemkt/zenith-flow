@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Corrigido
+
+- **"Nova tarefa" (Operação) dava "Escolha o cliente." com um cliente aparecendo selecionado**: o formulário só lia a lista de clientes na primeira renderização; quando o primeiro cliente era cadastrado depois (banco novo), o `<select>` mostrava o cliente mas o estado enviado à API ia vazio. Agora, sem escolha válida, vale o primeiro cliente da lista.
+
+### Alterado
+
+- **Banco de dados migrado para o projeto Neon da conta Zenite** (região `sa-east-1`, mesma de antes): as 50 migrations foram aplicadas do zero e o banco começou limpo (a base anterior só tinha dados de teste). `DATABASE_URL`/`DIRECT_URL` e `SITE_LEADS_AGENCY_ID` de produção foram atualizados na Vercel.
+
 ### Adicionado
 
 - **Nova aba "Traqueamento" (grupo Inteligência e automação) — Visão geral + Conexões**: a aba virou duas subabas. "Visão geral" mostra visitantes/visitantes recorrentes/sessões/eventos/leads do período, páginas mais vistas, por cidade e aparelho, fontes de tráfego por canal (UTM, referrer ou direto) e um funil aproximado Visitantes → Leads → Propostas enviadas → Vendas. "Conexões" traz o card "Meta Ads" (status da conexão, nome e ID da conta, validade do token, Conectar/Desconectar via OAuth oficial da Meta — escopos `ads_read` + `business_management`, token guardado criptografado) e um card "Google Ads / GA4" reservado pra próxima fatia. Quando a conta da Meta administra mais de uma conta de anúncios (comum pra uma agência, que também gerencia contas de cliente), uma tela nova deixa escolher explicitamente qual conectar, em vez de assumir a primeira da lista.
