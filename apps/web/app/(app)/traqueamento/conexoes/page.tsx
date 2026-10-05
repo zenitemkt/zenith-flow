@@ -12,6 +12,10 @@ import { MetaOAuthResultToast } from "./MetaOAuthResultToast";
 import { ChooseMetaAccountForm } from "./ChooseMetaAccountForm";
 import { MetaPixelIdForm } from "./MetaPixelIdForm";
 import { Ga4MeasurementIdForm } from "./Ga4MeasurementIdForm";
+import { SendTestMetaEventButton } from "./SendTestMetaEventButton";
+import { getDeliveryQualityStats } from "@/lib/tracking-quality";
+
+const DELIVERY_DESTINATION_LABELS: Record<string, string> = { META: "Meta", GA4: "GA4" };
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Ativa",
@@ -54,14 +58,18 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
     select: { ga4MeasurementId: true },
   });
 
-  const recentDeliveries = metaConnection
-    ? await prisma.eventDelivery.findMany({
-        where: { agencyId: membership.agencyId },
-        orderBy: { attemptedAt: "desc" },
-        take: 5,
-        include: { trackingEvent: { select: { eventName: true } } },
-      })
-    : [];
+  const last30Days = { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lt: new Date() };
+  const [recentDeliveries, qualityStats] = await Promise.all([
+    metaConnection
+      ? prisma.eventDelivery.findMany({
+          where: { agencyId: membership.agencyId },
+          orderBy: { attemptedAt: "desc" },
+          take: 10,
+          include: { trackingEvent: { select: { eventName: true } } },
+        })
+      : Promise.resolve([]),
+    getDeliveryQualityStats(membership.agencyId, last30Days),
+  ]);
 
   let pendingCandidates: MetaAdAccount[] = [];
   if (searchParams.meta === "choose_account") {
@@ -136,35 +144,6 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
           <span>Desconectar não apaga campanhas ou métricas já lidas.</span>
         </div>
         {metaConnection && canManage && <MetaPixelIdForm initialPixelId={metaConnection.metaPixelId} />}
-        {metaConnection && (
-          <div className="border-t border-[#EEF0F3] p-4">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
-              Últimos envios pra Meta (diagnóstico — versão provisória da Etapa 4)
-            </h3>
-            {recentDeliveries.length === 0 ? (
-              <p className="text-sm text-[#98A2B3]">Nenhuma tentativa de envio registrada ainda.</p>
-            ) : (
-              <div className="flex flex-col gap-1.5">
-                {recentDeliveries.map((delivery) => (
-                  <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <span className="font-medium text-[#101828]">{delivery.trackingEvent.eventName}</span>
-                      <span
-                        className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
-                        }`}
-                      >
-                        {delivery.status === "SENT" ? "Enviado" : "Falhou"}
-                      </span>
-                      {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
-                    </div>
-                    <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR")}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </section>
 
       <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
@@ -192,6 +171,79 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
         </div>
         {canManage && <Ga4MeasurementIdForm initialMeasurementId={agencyGa4?.ga4MeasurementId ?? null} />}
       </section>
+
+      {metaConnection && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-[#101828]">Qualidade do envio</h2>
+            {canManage && metaConnection.metaPixelId && <SendTestMetaEventButton />}
+          </div>
+          <p className="mb-4 text-xs text-[#98A2B3]">Últimos 30 dias (seções 5/6 do manual) — diagnóstico de entrega e consentimento.</p>
+
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-[#EEF0F3] p-3">
+              <p className="text-xl font-semibold text-[#101828]">{qualityStats.matchQuality.pct}%</p>
+              <p className="text-xs text-[#667085]">
+                dos eventos de lead com e-mail/telefone pra &quot;Advanced Matching&quot; ({qualityStats.matchQuality.withIdentifier}/
+                {qualityStats.matchQuality.total})
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#EEF0F3] p-3">
+              <p className="text-xl font-semibold text-[#101828]">{qualityStats.consentAcceptance.pct}%</p>
+              <p className="text-xs text-[#667085]">
+                dos visitantes aceitaram analytics ({qualityStats.consentAcceptance.accepted}/{qualityStats.consentAcceptance.total})
+                {qualityStats.consentAcceptance.total > 0 && qualityStats.consentAcceptance.pct < 50 && (
+                  <span className="mt-1 block font-medium text-[#B54708]">
+                    Mais da metade está recusando — boa parte dos eventos de página/clique está sendo descartada antes de
+                    chegar na Meta/GA4.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {qualityStats.byDestinationStatus.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {qualityStats.byDestinationStatus.map((group) => (
+                <span
+                  key={`${group.destination}-${group.status}`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    group.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
+                  }`}
+                >
+                  {DELIVERY_DESTINATION_LABELS[group.destination] ?? group.destination} ·{" "}
+                  {group.status === "SENT" ? "Enviados" : "Falharam"}: {group.count}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos envios</h3>
+          {recentDeliveries.length === 0 ? (
+            <p className="text-sm text-[#98A2B3]">Nenhuma tentativa de envio registrada ainda.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {recentDeliveries.map((delivery) => (
+                <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium text-[#101828]">{delivery.trackingEvent.eventName}</span>
+                    <span className="ml-2 text-xs text-[#98A2B3]">{DELIVERY_DESTINATION_LABELS[delivery.destination] ?? delivery.destination}</span>
+                    <span
+                      className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
+                      }`}
+                    >
+                      {delivery.status === "SENT" ? "Enviado" : "Falhou"}
+                    </span>
+                    {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
+                  </div>
+                  <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <h2 className="mb-2 text-sm font-semibold text-[#101828]">Google Ads</h2>

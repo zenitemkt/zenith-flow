@@ -5,8 +5,9 @@ import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS } from "@/lib/campa
 import { formatCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
 import { NewCampaignModal } from "./NewCampaignModal";
+import { SyncMetaCampaignsButton } from "./SyncMetaCampaignsButton";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
-import { canManageTeam } from "@/lib/rbac";
+import { canManageTeam, canManageIntegrations } from "@/lib/rbac";
 
 export default async function CampaignsPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -14,7 +15,7 @@ export default async function CampaignsPage() {
     redirect("/login");
   }
 
-  const [campaigns, clients] = await Promise.all([
+  const [campaigns, clients, metaConnection] = await Promise.all([
     prisma.campaign.findMany({
       where: { agencyId: membership.agencyId },
       include: { client: { select: { id: true, name: true } } },
@@ -25,9 +26,14 @@ export default async function CampaignsPage() {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.adAccountConnection.findUnique({
+      where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
+      select: { status: true },
+    }),
   ]);
 
   const canDelete = canManageTeam(membership.role);
+  const canSyncMeta = canManageIntegrations(membership.role) && metaConnection?.status === "ACTIVE";
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,10 +42,15 @@ export default async function CampaignsPage() {
           <h1 className="text-lg font-semibold text-[#101828]">Campanhas</h1>
           <p className="text-sm text-[#667085]">
             {campaigns.length} campanha{campaigns.length === 1 ? "" : "s"} em {membership.agency.name} (seção 36 do
-            manual) — sem conector externo ainda, cadastro e métricas são manuais.
+            manual){canSyncMeta
+              ? " — campanhas da Meta já sincronizam automaticamente; outros canais continuam manuais."
+              : " — cadastro e métricas manuais (conecte a Meta em Traqueamento → Conexões pra sincronizar automaticamente)."}
           </p>
         </div>
-        <NewCampaignModal clients={clients} />
+        <div className="flex items-center gap-2">
+          {canSyncMeta && <SyncMetaCampaignsButton />}
+          <NewCampaignModal clients={clients} />
+        </div>
       </div>
 
       {campaigns.length === 0 ? (

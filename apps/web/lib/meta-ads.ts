@@ -114,3 +114,78 @@ export async function fetchMetaAdAccounts(accessToken: string): Promise<MetaAdAc
   });
   return result.data;
 }
+
+export interface MetaCampaignInsightRow {
+  campaignId: string;
+  campaignName: string;
+  /** `YYYY-MM-DD` — vem direto da Meta, já na granularidade diária (`time_increment=1`). */
+  date: string;
+  spendCents: number;
+  impressions: number;
+  clicks: number;
+  reach: number;
+  /** Soma de ações tipo "lead" do dia — aproximação do que o manual chama de "results" (seção 36), nunca a contagem completa de todas as ações. */
+  results: number;
+  resultValueCents: number;
+}
+
+interface RawMetaAction {
+  action_type: string;
+  value: string;
+}
+
+interface RawMetaInsightRow {
+  campaign_id: string;
+  campaign_name: string;
+  spend?: string;
+  impressions?: string;
+  clicks?: string;
+  reach?: string;
+  actions?: RawMetaAction[];
+  action_values?: RawMetaAction[];
+  date_start: string;
+}
+
+/**
+ * A Meta não tem um único "tipo de resultado" universal — cada ação em
+ * `actions` é um tipo diferente (clique em link, visualização de página,
+ * lead etc.). Pra "results" (seção 36) ter um número com sentido pro painel,
+ * somamos só as ações que representam um lead/formulário preenchido — é uma
+ * aproximação deliberada, documentada, não a contagem de tudo que a conta fez.
+ */
+const LEAD_ACTION_TYPES = ["lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead"];
+
+function sumActionValues(actions: RawMetaAction[] | undefined): number {
+  if (!actions) return 0;
+  return actions
+    .filter((action) => LEAD_ACTION_TYPES.includes(action.action_type))
+    .reduce((sum, action) => sum + Number(action.value || 0), 0);
+}
+
+/** Métricas diárias por campanha (seção 36/38) — `time_increment: "1"` já devolve uma linha por campanha por dia, sem precisar agregar manualmente. */
+export async function fetchMetaCampaignInsights(
+  accessToken: string,
+  adAccountId: string,
+  since: string,
+  until: string,
+): Promise<MetaCampaignInsightRow[]> {
+  const result = await graphGet<{ data: RawMetaInsightRow[] }>(`/${adAccountId}/insights`, {
+    access_token: accessToken,
+    level: "campaign",
+    fields: "campaign_id,campaign_name,spend,impressions,clicks,reach,actions,action_values",
+    time_range: JSON.stringify({ since, until }),
+    time_increment: "1",
+    limit: "500",
+  });
+  return result.data.map((row) => ({
+    campaignId: row.campaign_id,
+    campaignName: row.campaign_name,
+    date: row.date_start,
+    spendCents: Math.round(Number(row.spend || 0) * 100),
+    impressions: Number(row.impressions || 0),
+    clicks: Number(row.clicks || 0),
+    reach: Number(row.reach || 0),
+    results: sumActionValues(row.actions),
+    resultValueCents: Math.round(sumActionValues(row.action_values) * 100),
+  }));
+}

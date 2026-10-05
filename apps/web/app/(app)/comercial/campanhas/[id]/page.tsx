@@ -94,7 +94,9 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           <h2 className="text-sm font-semibold text-[#101828]">Métricas reportadas</h2>
         </div>
         <p className="mb-3 text-xs text-[#98A2B3]">
-          Digitadas à mão nesta fatia (sem conector com plataforma de anúncios ainda — seção 38).
+          {campaign.externalId
+            ? "Sincronizadas automaticamente da Meta (seção 38) — pode editar um dia manualmente se precisar, mas a próxima sincronização sobrescreve com o dado real da plataforma."
+            : "Digitadas à mão (sem conector com esta campanha ainda — seção 38)."}
         </p>
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg border border-[#EEF0F3] p-3">
