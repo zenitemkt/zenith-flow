@@ -25,7 +25,14 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [selectedClientId, setClientId] = useState("");
+  // Sem escolha explícita (ou se a lista de clientes só chegou depois do primeiro
+  // render, ex.: primeiro cliente recém-cadastrado), vale o primeiro da lista —
+  // é o que o <select> já mostra. Antes o estado ficava "" e a API respondia
+  // "Escolha o cliente." mesmo com um cliente aparecendo selecionado.
+  const clientId = clients.some((client) => client.id === selectedClientId)
+    ? selectedClientId
+    : (clients[0]?.id ?? "");
   const [channels, setChannels] = useState<string[]>(["INSTAGRAM"]);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [format, setFormat] = useState("");
