@@ -1,8 +1,13 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-04.
+Última atualização: 2026-10-07.
 
 ## Implementado
+
+- **Incidente: troca do banco Neon derrubou o Traqueamento (2026-10-07)**: o sócio trocou o banco de dados Neon da agência sem avisar, invalidando todas as conexões salvas (Meta Ads, GA4) e a `writeKey` do coletor gravada no site. Usuário reconectou Meta/GA4 manualmente pela própria tela de Integrações/Conexões; a `writeKey` antiga passou a ser rejeitada pelo coletor (`writeKey inválido`) porque é vinculada ao registro de `Agency` do banco antigo.
+  - **Corrigido**: `dist/tracking.js` (zenitehub) atualizado com a nova `writeKey` gerada no banco atual, implantado em produção e confirmado servindo a chave nova.
+  - **Confirmado por teste direto (curl) contra a API em produção**: a chave nova grava evento com sucesso (`status: "stored"`), o que também confirma que as tabelas/colunas de tracking (incluindo geo/aparelho da Etapa 1 e `EventDelivery`/`metaPixelId` da Etapa 2) existem no banco novo — ou seja, o histórico de migrations da sessão anterior foi preservado na troca.
+  - **Ainda não confirmado**: se `/traqueamento` e `/traqueamento/conexoes` carregam sem erro para o usuário logado no banco novo, e se o Pixel ID da Meta (`1648887130161734`) e o Measurement ID do GA4 (`G-04ZTHTPT2J`) hardcoded em `dist/tracking.js` ainda batem com as contas que o usuário reconectou (provável que sim, já que são IDs de contas externas Meta/Google, independentes do banco, mas não verificado).
 
 - **Traqueamento Etapa 3/5 — GA4 via gtag.js, confirmado funcionando (plano `glimmering-shimmying-chipmunk`, 2026-10-04)**: `Agency.ga4MeasurementId` guarda o Measurement ID (público, sem OAuth — diferente de `AdAccountConnection`/Meta). Card novo em `/traqueamento/conexoes` pra configurar. Site carrega `gtag.js` só depois do consentimento de **analytics** (categoria diferente da do Pixel da Meta, que usa "marketing") — `page_view` não manda evento manual (o `gtag('config', ...)` já dispara o `page_view`/`first_visit`/`session_start` automáticos do próprio GA4); `pricing_view` e `form_submit` (mapeado pro evento recomendado `generate_lead`) mandam `gtag('event', ...)` explícito.
   - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web` limpos. Migration `20261004200000_agency_ga4_measurement_id` aplicada em produção (escape hatch, criado e removido de novo). **Confirmado ao vivo** no relatório "Tempo real" do GA4: 1 usuário ativo, eventos `first_visit`/`page_view`/`session_start` chegando.

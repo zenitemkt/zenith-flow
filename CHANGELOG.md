@@ -280,6 +280,10 @@
 - **Kanban de Operação — colunas customizáveis + mover restrito a quem está na vez (pedido do usuário, 2026-09-07)**: `OperationStage` (posicional, dentro do balde "Fazendo" — nunca decide se a tarefa terminou, isso continua sendo só `Task.status`) com botão "+ Nova coluna" e reordenar por setas. `canActOnTask()` bloqueia mover/iniciar/concluir/cancelar pra quem não é o responsável atual nem admin — tarefa sem responsável continua livre pra qualquer um; visualização e checklist/comentários não mudaram. Bug real corrigido: "Operação" no menu lateral não tinha mais nenhum jeito de chegar no board depois da limpeza de submenu da fatia anterior. Novo teste de isolamento em `packages/db` (3 testes). Ver `docs/DECISIONS.md` de 2026-09-07.
 - **Sidebar reordenada por frequência de uso (pedido do usuário, 2026-09-07)**: `nav-config.ts` reagrupado — `Visão geral` (só Home) → `Produção` (Operação, Conteúdo e agora também Comercial, trabalho recorrente do dia a dia) → `Gestão` (Financeiro, Pessoas, Relatórios) → `Clientes` (novo grupo próprio, movido pra depois de Gestão — cadastro/carteira é bem menos frequente que operar) → Inteligência e automação → Comunicação e recursos → Sistema. Sem mudança de schema, rota ou lógica — só reordenação de itens já existentes. Ver `docs/DECISIONS.md` de 2026-09-07.
 
+## 2026-10-07 — Restauração do Traqueamento após troca do banco Neon
+
+- O sócio trocou o banco Neon da agência, invalidando a `writeKey` do coletor gravada no site e as conexões salvas. Atualizada a `writeKey` em `dist/tracking.js` (zenitehub) para o valor válido no banco atual, implantada e confirmada via teste direto contra a API de produção.
+
 ## 2026-09-26
 
 - Integração server-to-server do formulário de orçamento do Zenite Hub com o CRM de Leads, com segredo fora do navegador, tenant fixo, deduplicação por e-mail, rate limit, auditoria e preservação do fluxo de WhatsApp.
