@@ -194,7 +194,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[#98A2B3]">
-                  Calculado em {latestHealthScore.createdAt.toLocaleString("pt-BR")} ·{" "}
+                  Calculado em {latestHealthScore.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} ·{" "}
                   {latestHealthScore.modelVersion}
                 </p>
                 {(
@@ -255,7 +255,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
             ) : (
               <div className="flex flex-col gap-2">
                 <p className="text-xs text-[#98A2B3]">
-                  Calculado em {latestChurnRisk.createdAt.toLocaleString("pt-BR")} · Score {latestChurnRisk.score} ·{" "}
+                  Calculado em {latestChurnRisk.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · Score {latestChurnRisk.score} ·{" "}
                   {latestChurnRisk.modelVersion}
                 </p>
                 {(
@@ -425,7 +425,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-[#101828]">{negotiation.name}</p>
-                        <p className="text-xs text-[#98A2B3]">Iniciada em {negotiation.createdAt.toLocaleString("pt-BR")}</p>
+                        <p className="text-xs text-[#98A2B3]">Iniciada em {negotiation.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
                       </div>
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
                         {negotiation.status === "OPEN" && <span className="rounded-full bg-[#FFF1EC] px-2 py-0.5 text-xs font-medium text-[#C4320A]">{negotiation.stage.name}</span>}
@@ -461,7 +461,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
                         <ol className="mt-2 flex flex-col gap-1 border-l border-[#D0D5DD] pl-3">
                           {negotiation.statusHistory.map((event) => (
                             <li key={event.id} className="text-xs text-[#667085]">
-                              <span className="font-medium text-[#344054]">{event.toStatus === "WON" ? "Ganha" : event.toStatus === "LOST" ? "Frustrada" : event.toStageId ? pipelineStageName.get(event.toStageId) ?? "Etapa atualizada" : "Negociação atualizada"}</span>{" "}· {event.createdAt.toLocaleString("pt-BR")}{event.reason ? ` · ${event.reason}` : ""}
+                              <span className="font-medium text-[#344054]">{event.toStatus === "WON" ? "Ganha" : event.toStatus === "LOST" ? "Frustrada" : event.toStageId ? pipelineStageName.get(event.toStageId) ?? "Etapa atualizada" : "Negociação atualizada"}</span>{" "}· {event.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}{event.reason ? ` · ${event.reason}` : ""}
                             </li>
                           ))}
                         </ol>
@@ -481,7 +481,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
               {timeline.map((entry) => (
                 <div key={entry.id} className="border-l-2 border-[#EEF0F3] pl-3">
                   <p className="text-sm text-[#101828]">{entry.label}</p>
-                  <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                  <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
                 </div>
               ))}
             </div>

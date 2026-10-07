@@ -125,7 +125,7 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
                     {" "}
                     — acesso válido até{" "}
                     <span className="font-medium text-[#344054]">
-                      {metaConnection.tokenExpiresAt.toLocaleDateString("pt-BR")}
+                      {metaConnection.tokenExpiresAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </span>
                   </>
                 )}
@@ -237,7 +237,7 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
                     </span>
                     {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
                   </div>
-                  <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR")}</span>
+                  <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                 </div>
               ))}
             </div>

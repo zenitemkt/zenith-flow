@@ -259,7 +259,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
             {timeline.map((entry) => (
               <div key={entry.id} className="border-l-2 border-[#EEF0F3] pl-3">
                 <p className="text-sm text-[#101828]">{entry.label}</p>
-                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
               </div>
             ))}
           </div>
@@ -287,7 +287,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-[#101828]">Interesse #{lead.submissions.length - index}</p>
-                      <p className="text-xs text-[#98A2B3]">{submission.createdAt.toLocaleString("pt-BR")} · {submission.source ?? "Origem não informada"}</p>
+                      <p className="text-xs text-[#98A2B3]">{submission.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · {submission.source ?? "Origem não informada"}</p>
                     </div>
                     {submission.opportunity && (
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${OPPORTUNITY_STATUS_BADGE_CLASS[submission.opportunity.status]}`}>
@@ -333,7 +333,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
               >
                 <span className="text-[#101828]">{tp.channel}</span>
                 <span className="flex items-center gap-2 text-xs text-[#98A2B3]">
-                  {tp.occurredAt.toLocaleString("pt-BR")}
+                  {tp.occurredAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                   {tp.weight > 0 && (
                     <span className="rounded-full bg-[#FF2B00] px-2 py-0.5 text-[10px] font-semibold text-white">
                       crédito
@@ -358,7 +358,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
             {siteActivity.visits.map((visit) => (
               <details key={visit.sessionId} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
                 <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="text-[#101828]">{visit.startedAt.toLocaleString("pt-BR")}</span>
+                  <span className="text-[#101828]">{visit.startedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                   <span className="text-xs text-[#98A2B3]">
                     {formatSiteDuration(visit.durationSeconds)} · {visit.pageViews.length} página
                     {visit.pageViews.length === 1 ? "" : "s"} · {visit.ctaClicks.length} clique
@@ -373,7 +373,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                         {visit.pageViews.map((pageView, index) => (
                           <li key={index} className="flex items-center justify-between gap-2 text-xs text-[#475467]">
                             <span className="truncate">{pageView.url ?? "—"}</span>
-                            <span className="shrink-0 text-[#98A2B3]">{pageView.occurredAt.toLocaleTimeString("pt-BR")}</span>
+                            <span className="shrink-0 text-[#98A2B3]">{pageView.occurredAt.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                           </li>
                         ))}
                       </ul>
@@ -386,7 +386,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                         {visit.ctaClicks.map((click, index) => (
                           <li key={index} className="flex items-center justify-between gap-2 text-xs text-[#475467]">
                             <span className="truncate">{click.label || click.href || "—"}</span>
-                            <span className="shrink-0 text-[#98A2B3]">{click.occurredAt.toLocaleTimeString("pt-BR")}</span>
+                            <span className="shrink-0 text-[#98A2B3]">{click.occurredAt.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                           </li>
                         ))}
                       </ul>

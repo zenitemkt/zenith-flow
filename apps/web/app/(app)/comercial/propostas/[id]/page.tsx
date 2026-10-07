@@ -157,7 +157,7 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
                     : `Criada como ${PROPOSAL_STATUS_LABELS[entry.toStatus]}`}
                   {entry.reason ? ` — ${entry.reason}` : ""}
                 </p>
-                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
               </div>
             ))}
           </div>
@@ -184,7 +184,7 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
                         })
                         .join(", ")}
                     </p>
-                    <p className="text-xs text-[#98A2B3]">{log.createdAt.toLocaleString("pt-BR")}</p>
+                    <p className="text-xs text-[#98A2B3]">{log.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
                   </div>
                 );
               })}

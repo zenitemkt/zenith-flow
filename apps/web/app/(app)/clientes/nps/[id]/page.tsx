@@ -98,7 +98,7 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               <h2 className="mb-3 text-sm font-semibold text-[#101828]">Resultado (NPS = % promotores − % detratores)</h2>
               <p className="text-3xl font-semibold text-[#101828]">{latestSnapshot.score}</p>
               <p className="mt-1 text-xs text-[#98A2B3]">
-                Calculado em {latestSnapshot.computedAt.toLocaleString("pt-BR")} · {latestSnapshot.totalResponses} resposta(s)
+                Calculado em {latestSnapshot.computedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · {latestSnapshot.totalResponses} resposta(s)
               </p>
               <div className="mt-3 flex gap-4 text-xs text-[#667085]">
                 <span>Promotores: {latestSnapshot.promoters}</span>

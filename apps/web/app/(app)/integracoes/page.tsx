@@ -107,7 +107,7 @@ export default async function IntegracoesPage() {
           <div className="bg-white p-4">
             <p className="text-xs text-[#667085]">Último recebimento</p>
             <p className="mt-1 text-sm font-semibold text-[#101828]">
-              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR") : "Nenhum preenchimento recebido"}
+              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "Nenhum preenchimento recebido"}
             </p>
           </div>
           <div className="bg-white p-4">
@@ -180,7 +180,7 @@ export default async function IntegracoesPage() {
                   {event.url && <span className="ml-2 truncate text-xs text-[#98A2B3]">{event.url}</span>}
                 </div>
                 <span className="whitespace-nowrap text-xs text-[#98A2B3]">
-                  {event.receivedAt.toLocaleString("pt-BR")}
+                  {event.receivedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                 </span>
               </div>
             ))}

@@ -111,7 +111,7 @@ export default async function WorkflowDetailPage({ params }: PageProps) {
                     {run.subjectType} · passo {run.currentStepIndex + 1}
                   </span>
                   <span className="flex items-center gap-2 text-xs text-[#98A2B3]">
-                    {run.startedAt.toLocaleString("pt-BR")}
+                    {run.startedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${WORKFLOW_RUN_STATUS_BADGE_CLASS[run.status]}`}>
                       {WORKFLOW_RUN_STATUS_LABELS[run.status]}
                     </span>

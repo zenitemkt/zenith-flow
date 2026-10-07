@@ -85,7 +85,7 @@ export default async function ChurnRiskPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-[#98A2B3]">
-                    {snapshot ? snapshot.createdAt.toLocaleString("pt-BR") : "—"}
+                    {snapshot ? snapshot.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}
                   </td>
                   <td className="px-4 py-3">
                     {activePlanClientIds.has(client.id) ? (

@@ -191,7 +191,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                     ? `Status mudou de ${CONTENT_STATUS_LABELS[entry.fromStatus]} para ${CONTENT_STATUS_LABELS[entry.toStatus]}${entry.reason ? ` — ${entry.reason}` : ""}`
                     : `Peça criada como ${CONTENT_STATUS_LABELS[entry.toStatus]}`}
                 </p>
-                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
               </div>
             ))}
           </div>

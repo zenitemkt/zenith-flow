@@ -116,7 +116,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     ? `Status mudou de ${EMPLOYEE_STATUS_LABELS[entry.fromStatus]} para ${EMPLOYEE_STATUS_LABELS[entry.toStatus]}${entry.reason ? ` — ${entry.reason}` : ""}`
                     : `Pessoa cadastrada como ${EMPLOYEE_STATUS_LABELS[entry.toStatus]}`}
                 </p>
-                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
               </div>
             ))}
           </div>

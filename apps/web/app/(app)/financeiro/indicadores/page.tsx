@@ -45,7 +45,7 @@ export default async function IndicadoresPage() {
   }).length;
   const logoChurn = computeLogoChurnRate(clientsAtStart, churnedInPeriod);
 
-  const lastUpdated = now.toLocaleString("pt-BR");
+  const lastUpdated = now.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
   return (
     <div className="flex flex-col gap-6">
