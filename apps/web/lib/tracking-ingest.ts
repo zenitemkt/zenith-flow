@@ -13,6 +13,7 @@ import {
   validateProperties,
   TRACKING_EVENT_CONSENT_REQUIREMENT,
   TRACKING_SESSION_TIMEOUT_MS,
+  type ConsentSnapshot,
   type TrackingEventName,
 } from "@/lib/tracking";
 
@@ -120,9 +121,10 @@ async function dispatchMetaCapiEvent(
   properties: Record<string, string | number | boolean | null>,
   clientIp: string | null,
   clientUserAgent: string | null,
+  consent: ConsentSnapshot,
 ): Promise<void> {
   const metaEventName = META_EVENT_NAME_MAP[eventName];
-  if (!metaEventName) return;
+  if (!metaEventName || !consent.marketing) return;
 
   const connection = await prisma.adAccountConnection.findUnique({
     where: { agencyId_platform: { agencyId, platform: "META" } },
@@ -232,6 +234,7 @@ export async function processTrackingEvent(
     properties,
     requestContext.clientIp,
     requestContext.clientUserAgent,
+    consent,
   );
 
   return { eventId, status: "stored" };

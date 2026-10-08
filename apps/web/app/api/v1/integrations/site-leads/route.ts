@@ -31,6 +31,8 @@ export async function POST(request: Request) {
   if (!integration?.siteLeadIntegrationEnabled) return NextResponse.json({ code: "integration_disabled", message: "Integração desativada.", correlationId }, { status: 503 });
 
   const body = await request.json().catch(() => null);
+  const trackingVisitorId = text(body?.trackingVisitorId, 100);
+  const trackingSessionId = text(body?.trackingSessionId, 100);
   const input = {
     agencyId,
     name: text(body?.name, 160),
@@ -54,7 +56,23 @@ export async function POST(request: Request) {
   if (recentCount >= 30) return NextResponse.json({ code: "rate_limited", message: "Muitas solicitações. Tente novamente.", correlationId }, { status: 429 });
 
   async function ingest() {
-    return prisma.$transaction((tx) => upsertLeadSubmission(tx, input as typeof input & { name: string }));
+    return prisma.$transaction(async (tx) => {
+      const result = await upsertLeadSubmission(tx, input as typeof input & { name: string });
+      if (trackingVisitorId) {
+        const visitor = await tx.trackingVisitor.findFirst({
+          where: {
+            id: trackingVisitorId,
+            agencyId,
+            ...(trackingSessionId ? { sessions: { some: { id: trackingSessionId } } } : {}),
+          },
+          select: { id: true, leadId: true },
+        });
+        if (visitor && (!visitor.leadId || visitor.leadId === result.lead.id)) {
+          await tx.trackingVisitor.update({ where: { id: visitor.id }, data: { leadId: result.lead.id } });
+        }
+      }
+      return result;
+    });
   }
 
   try {
