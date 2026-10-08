@@ -354,6 +354,20 @@ export default async function LeadDetailPage({ params }: PageProps) {
             {siteActivity.visitsCount === 1 ? "" : "s"} · {formatSiteDuration(siteActivity.totalDurationSeconds)} no
             total navegando no site.
           </p>
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[
+              ["Páginas", siteActivity.pageViewsCount],
+              ["Serviços", siteActivity.serviceViewsCount],
+              ["WhatsApp", siteActivity.whatsappClicksCount],
+              ["Inícios", siteActivity.formStartsCount],
+              ["Envios", siteActivity.formSubmitsCount],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-[#EEF0F3] p-2 text-center">
+                <p className="text-lg font-semibold text-[#101828]">{value}</p>
+                <p className="text-[11px] text-[#667085]">{label}</p>
+              </div>
+            ))}
+          </div>
           <div className="flex flex-col gap-2">
             {siteActivity.visits.map((visit) => (
               <details key={visit.sessionId} className="rounded-lg border border-[#EEF0F3] px-3 py-2">
@@ -361,8 +375,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
                   <span className="text-[#101828]">{visit.startedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                   <span className="text-xs text-[#98A2B3]">
                     {formatSiteDuration(visit.durationSeconds)} · {visit.pageViews.length} página
-                    {visit.pageViews.length === 1 ? "" : "s"} · {visit.ctaClicks.length} clique
-                    {visit.ctaClicks.length === 1 ? "" : "s"}
+                    {visit.pageViews.length === 1 ? "" : "s"} · {visit.interactions.length} interação
+                    {visit.interactions.length === 1 ? "" : "ões"}
                   </span>
                 </summary>
                 <div className="mt-3 flex flex-col gap-3 border-t border-[#EEF0F3] pt-3">
@@ -379,14 +393,14 @@ export default async function LeadDetailPage({ params }: PageProps) {
                       </ul>
                     </div>
                   )}
-                  {visit.ctaClicks.length > 0 && (
+                  {visit.interactions.length > 0 && (
                     <div>
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Botões clicados</p>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Interações</p>
                       <ul className="flex flex-col gap-1">
-                        {visit.ctaClicks.map((click, index) => (
+                        {visit.interactions.map((interaction, index) => (
                           <li key={index} className="flex items-center justify-between gap-2 text-xs text-[#475467]">
-                            <span className="truncate">{click.label || click.href || "—"}</span>
-                            <span className="shrink-0 text-[#98A2B3]">{click.occurredAt.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
+                            <span className="truncate" title={interaction.href ?? undefined}>{interaction.label}</span>
+                            <span className="shrink-0 text-[#98A2B3]">{interaction.occurredAt.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
                           </li>
                         ))}
                       </ul>

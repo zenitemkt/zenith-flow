@@ -15,6 +15,7 @@ export interface LeadSubmissionInput {
   employees?: string | null;
   investment?: string | null;
   summary?: string | null;
+  trackingContext?: Prisma.InputJsonValue;
   actorUserId?: string | null;
   createOpportunity?: "always" | "new-only";
 }
@@ -154,6 +155,7 @@ export async function upsertLeadSubmission(tx: Prisma.TransactionClient, input: 
       employees: input.employees?.trim() || null,
       investment: input.investment?.trim() || null,
       summary: input.summary?.trim() || null,
+      trackingContext: input.trackingContext,
     },
   });
 

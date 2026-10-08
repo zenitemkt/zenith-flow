@@ -23,7 +23,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const range = selectedPeriod.createdAt;
   const agencyId = membership.agencyId;
 
-  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews] =
+  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews, eventGroups] =
     await Promise.all([
       prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
       prisma.trackingSession.findMany({
@@ -38,7 +38,24 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         where: { agencyId, eventName: "page_view", ...(range ? { occurredAt: range } : {}) },
         select: { url: true },
       }),
+      prisma.trackingEvent.groupBy({
+        by: ["eventName"],
+        where: { agencyId, ...(range ? { occurredAt: range } : {}) },
+        _count: { _all: true },
+      }),
     ]);
+
+  const eventCounts = new Map(eventGroups.map((group) => [group.eventName, group._count._all]));
+  const countEvent = (name: string) => eventCounts.get(name) ?? 0;
+  const engagedSessions = countEvent("engaged_session");
+  const serviceViews = countEvent("service_view");
+  const whatsappClicks = countEvent("whatsapp_click");
+  const formViews = countEvent("form_view");
+  const formStarts = countEvent("form_start");
+  const formSubmits = countEvent("form_submit");
+  const formAbandons = countEvent("form_abandon");
+  const engagementRate = sessions.length > 0 ? Math.round((engagedSessions / sessions.length) * 100) : 0;
+  const formCompletionRate = formStarts > 0 ? Math.round((formSubmits / formStarts) * 100) : 0;
 
   const channelCounts = new Map<string, number>();
   for (const trackingSession of sessions) {
@@ -140,6 +157,31 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
             <p className="text-xl font-semibold text-[#101828]">{leadsCount}</p>
             <p className="text-xs text-[#667085]">leads no período</p>
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-[#101828]">Comportamento e formulários</h2>
+          <p className="text-xs text-[#667085]">Sinais de interesse e avanço dos visitantes no site durante {selectedPeriod.label.toLowerCase()}.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {[
+            [engagedSessions, "sessões engajadas", engagementRate + "% das sessões"],
+            [serviceViews, "serviços visualizados", "interesse em oferta"],
+            [whatsappClicks, "cliques no WhatsApp", "contato direto"],
+            [formViews, "visualizações do formulário", "chegaram ao orçamento"],
+            [formStarts, "formulários iniciados", "começaram a preencher"],
+            [formSubmits, "formulários enviados", formCompletionRate + "% de conclusão"],
+            [formAbandons, "formulários abandonados", "iniciaram e não enviaram"],
+            [countEvent("form_error"), "erros de formulário", "campos inválidos"],
+          ].map(([value, label, detail]) => (
+            <div key={String(label)} className="rounded-lg border border-[#EEF0F3] p-3">
+              <p className="text-xl font-semibold text-[#101828]">{value}</p>
+              <p className="text-xs font-medium text-[#344054]">{label}</p>
+              <p className="mt-0.5 text-[11px] text-[#98A2B3]">{detail}</p>
+            </div>
+          ))}
         </div>
       </section>
 

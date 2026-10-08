@@ -1844,6 +1844,7 @@ model LeadSubmission {
   employees   String?
   investment  String?
   summary     String?
+  trackingContext Json?
   createdAt   DateTime     @default(now())
   opportunity Opportunity?
 

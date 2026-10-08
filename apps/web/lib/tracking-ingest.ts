@@ -177,6 +177,10 @@ export async function processTrackingEvent(
   if (!occurredAtRaw || Number.isNaN(occurredAtRaw.getTime())) {
     return { eventId, status: "invalid", error: "occurredAt inválido." };
   }
+  const clockSkewMs = occurredAtRaw.getTime() - Date.now();
+  if (clockSkewMs > 5 * 60 * 1000 || clockSkewMs < -30 * 24 * 60 * 60 * 1000) {
+    return { eventId, status: "invalid", error: "occurredAt fora da janela permitida." };
+  }
 
   const consent = parseConsentSnapshot(body?.consent);
   if (!consent) return { eventId, status: "invalid", error: "consent inválido." };

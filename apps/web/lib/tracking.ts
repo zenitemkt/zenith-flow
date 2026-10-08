@@ -20,10 +20,22 @@ export const TRACKING_CONSENT_CATEGORY_LABELS: Record<TrackingConsentCategory, s
  * mesmo padrão já usado em `CommentEntityType`.
  */
 export const TRACKING_EVENT_NAMES = [
+  "session_start",
   "page_view",
+  "service_view",
   "cta_click",
+  "whatsapp_click",
+  "phone_click",
+  "email_click",
   "pricing_view",
+  "form_view",
+  "form_start",
+  "form_error",
+  "form_abandon",
   "form_submit",
+  "download",
+  "scroll_depth",
+  "engaged_session",
   "purchase",
   "identify",
 ] as const;
@@ -42,10 +54,22 @@ export function isTrackingEventName(value: unknown): value is TrackingEventName 
  * marketing). O resto depende de consentimento explícito de Analytics.
  */
 export const TRACKING_EVENT_CONSENT_REQUIREMENT: Record<TrackingEventName, TrackingConsentCategory> = {
+  session_start: "ANALYTICS",
   page_view: "ANALYTICS",
+  service_view: "ANALYTICS",
   cta_click: "ANALYTICS",
+  whatsapp_click: "ANALYTICS",
+  phone_click: "ANALYTICS",
+  email_click: "ANALYTICS",
   pricing_view: "ANALYTICS",
+  form_view: "ANALYTICS",
+  form_start: "ANALYTICS",
+  form_error: "ANALYTICS",
+  form_abandon: "ANALYTICS",
   form_submit: "ESSENCIAL",
+  download: "ANALYTICS",
+  scroll_depth: "ANALYTICS",
+  engaged_session: "ANALYTICS",
   purchase: "ESSENCIAL",
   identify: "ESSENCIAL",
 };

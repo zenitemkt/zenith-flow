@@ -33,6 +33,19 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const trackingVisitorId = text(body?.trackingVisitorId, 100);
   const trackingSessionId = text(body?.trackingSessionId, 100);
+  const trackingContext = {
+    visitorId: trackingVisitorId,
+    sessionId: trackingSessionId,
+    consentStatus: text(body?.trackingConsentStatus, 20),
+    analyticsConsent: body?.trackingAnalyticsConsent === true,
+    marketingConsent: body?.trackingMarketingConsent === true,
+    landingUrl: text(body?.trackingLandingUrl, 1_000),
+    referrer: text(body?.trackingReferrer, 1_000),
+    fbclid: text(body?.trackingFbclid, 500),
+    gclid: text(body?.trackingGclid, 500),
+    fbp: text(body?.trackingFbp, 500),
+    fbc: text(body?.trackingFbc, 500),
+  };
   const input = {
     agencyId,
     name: text(body?.name, 160),
@@ -46,6 +59,7 @@ export async function POST(request: Request) {
     employees: text(body?.employees, 120),
     investment: text(body?.investment, 120),
     summary: text(body?.summary, 2_000),
+    trackingContext,
     createOpportunity: "always" as const,
   };
   if (!input.name || !input.email || !input.phone || !input.company || !input.email.includes("@")) {

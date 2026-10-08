@@ -58,7 +58,7 @@ export async function POST(request: Request) {
 
   const oneMinuteAgo = new Date(Date.now() - 60_000);
   const recentCount = await prisma.trackingEvent.count({
-    where: { agencyId: agency.id, occurredAt: { gte: oneMinuteAgo } },
+    where: { agencyId: agency.id, receivedAt: { gte: oneMinuteAgo } },
   });
   if (recentCount > 1000) {
     return json({ error: "Limite de eventos por minuto excedido para esta chave." }, 429);
