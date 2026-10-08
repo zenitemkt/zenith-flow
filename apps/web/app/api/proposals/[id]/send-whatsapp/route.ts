@@ -4,6 +4,7 @@ import { isClientRole } from "@/lib/rbac";
 import { ensureProposalSent, buildProposalWhatsappMessage } from "@/lib/proposals-server";
 import { normalizeWhatsappNumber, buildWhatsappLink } from "@/lib/whatsapp";
 import { prisma } from "@zenite-mkt/db";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 
 interface RouteParams {
   params: { id: string };
@@ -48,6 +49,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       data: { recipientWhatsapp: phone, whatsappSentAt: now },
     });
   });
+
+  await dispatchCommercialMetaEvent({ agencyId: membership.agencyId, eventName: "ProposalSent", eventKey: `proposal-sent:${proposal.id}`, resourceType: "proposal", resourceId: proposal.id, leadId: proposal.leadId, clientId: proposal.clientId, valueCents: proposal.valueCents, occurredAt: now });
 
   return NextResponse.json({ ok: true, waLink: buildWhatsappLink(phone, buildProposalWhatsappMessage(publicUrl)) });
 }

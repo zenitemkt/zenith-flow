@@ -5,6 +5,7 @@ import { splitEmailList } from "@/lib/proposals";
 import { ensureProposalSent } from "@/lib/proposals-server";
 import { sendProposalEmail, EmailNotConfiguredError } from "@/lib/email";
 import { prisma } from "@zenite-mkt/db";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 
 interface RouteParams {
   params: { id: string };
@@ -64,6 +65,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     });
   });
+
+  await dispatchCommercialMetaEvent({ agencyId: membership.agencyId, eventName: "ProposalSent", eventKey: `proposal-sent:${proposal.id}`, resourceType: "proposal", resourceId: proposal.id, leadId: proposal.leadId, clientId: proposal.clientId, valueCents: proposal.valueCents, occurredAt: now });
 
   return NextResponse.json({ ok: true });
 }

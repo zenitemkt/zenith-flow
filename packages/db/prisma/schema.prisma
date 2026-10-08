@@ -180,6 +180,7 @@ model Agency {
   campaigns                  Campaign[]
   adAccountConnections       AdAccountConnection[]
   eventDeliveries            EventDelivery[]
+  commercialMetaEvents       CommercialMetaEvent[]
   workflows                  Workflow[]
   operationStages            OperationStage[]
 
@@ -2466,6 +2467,26 @@ model EventDelivery {
   @@index([agencyId, attemptedAt])
   @@index([trackingEventId])
   @@map("event_delivery")
+}
+
+model CommercialMetaEvent {
+  id           String              @id @default(cuid())
+  agencyId     String
+  agency       Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  eventKey     String
+  eventName    String
+  resourceType String
+  resourceId   String
+  leadId       String?
+  clientId     String?
+  valueCents   Int?
+  status       EventDeliveryStatus
+  error        String?
+  attemptedAt  DateTime            @default(now())
+
+  @@unique([agencyId, eventKey])
+  @@index([agencyId, attemptedAt])
+  @@map("commercial_meta_event")
 }
 
 // ---------------------------------------------------------------------------

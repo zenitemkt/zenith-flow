@@ -59,7 +59,7 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
   });
 
   const last30Days = { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lt: new Date() };
-  const [recentDeliveries, qualityStats] = await Promise.all([
+  const [recentDeliveries, qualityStats, commercialDeliveries] = await Promise.all([
     metaConnection
       ? prisma.eventDelivery.findMany({
           where: { agencyId: membership.agencyId },
@@ -69,6 +69,7 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
         })
       : Promise.resolve([]),
     getDeliveryQualityStats(membership.agencyId, last30Days),
+    prisma.commercialMetaEvent.findMany({ where: { agencyId: membership.agencyId }, orderBy: { attemptedAt: "desc" }, take: 12 }),
   ]);
 
   let pendingCandidates: MetaAdAccount[] = [];
@@ -174,6 +175,13 @@ export default async function TraqueamentoPage({ searchParams }: PageProps) {
 
       {metaConnection && (
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <div className="mb-5 border-b border-[#EEF0F3] pb-5">
+            <div className="mb-3"><h2 className="text-sm font-semibold text-[#101828]">Eventos do funil comercial</h2><p className="mt-1 text-xs text-[#667085]">Enviados pelo servidor quando o CRM avança, com deduplicação por negociação.</p></div>
+            <div className="mb-4 grid gap-2 sm:grid-cols-4">{[["Lead", "Formulário enviado"], ["QualifiedLead", "Lead qualificado"], ["ProposalSent", "Proposta enviada"], ["Purchase", "Pagamento recebido"]].map(([event, trigger]) => <div key={event} className="rounded-lg border border-[#EEF0F3] p-3"><p className="text-sm font-semibold text-[#101828]">{event}</p><p className="mt-1 text-xs text-[#667085]">{trigger}</p><span className="mt-2 inline-flex rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[11px] font-semibold text-[#027A48]">Ativo</span></div>)}</div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos eventos comerciais</h3>
+            {commercialDeliveries.length === 0 ? <p className="text-sm text-[#98A2B3]">Nenhum evento comercial enviado ainda.</p> : <div className="flex flex-col gap-1.5">{commercialDeliveries.map((delivery) => <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm"><div><span className="font-medium text-[#101828]">{delivery.eventName}</span><span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>{delivery.status === "SENT" ? "Enviado" : "Falhou"}</span>{delivery.valueCents !== null && <span className="ml-2 text-xs text-[#667085]">R$ {(delivery.valueCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}{delivery.error && <p className="mt-1 text-xs text-[#B42318]">{delivery.error}</p>}</div><span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span></div>)}</div>}
+          </div>
+
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-[#101828]">Qualidade do envio</h2>
             {canManage && metaConnection.metaPixelId && <SendTestMetaEventButton />}

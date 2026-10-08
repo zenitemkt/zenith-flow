@@ -7,6 +7,7 @@ import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { settleCommercialReceivable } from "@/lib/commercial-settlement";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { endOfDayUTC } from "@/lib/dates";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 import { prisma, type FinanceEntryStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
@@ -83,6 +84,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   });
 
   if (settledOpportunity) {
+    await dispatchCommercialMetaEvent({ agencyId: membership.agencyId, eventName: "Purchase", eventKey: `purchase:${settledOpportunity.id}`, resourceType: "finance_entry", resourceId: entry.id, leadId: settledOpportunity.leadId, clientId: settledOpportunity.clientId, valueCents: settledOpportunity.valueCents ?? entry.amountCents, occurredAt: settledDate ?? new Date() });
     await fireWorkflowTrigger(membership.agencyId, "opportunity.won", "opportunity", settledOpportunity.id, {
       opportunityId: settledOpportunity.id,
       name: settledOpportunity.name,

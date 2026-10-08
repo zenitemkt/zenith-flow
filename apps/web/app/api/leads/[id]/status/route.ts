@@ -4,6 +4,7 @@ import { isClientRole } from "@/lib/rbac";
 import { canTransitionLead } from "@/lib/leads";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { advanceLeadCommercialFlow } from "@/lib/commercial-flow";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 import { prisma, type LeadStatus } from "@zenite-mkt/db";
 
 interface RouteParams {
@@ -43,9 +44,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Informe o motivo da desqualificação." }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
+  const flowResult = await prisma.$transaction(async (tx) => {
     if (toStatus === "EM_ANDAMENTO" || toStatus === "QUALIFICADO") {
-      await advanceLeadCommercialFlow(tx, {
+      return advanceLeadCommercialFlow(tx, {
         agencyId: membership.agencyId,
         leadId: lead.id,
         targetStatus: toStatus,

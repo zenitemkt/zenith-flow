@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 
 interface RouteParams {
   params: { id: string };
@@ -48,6 +49,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     });
   });
+
+  if (stage.kind === "QUALIFIED") {
+    await dispatchCommercialMetaEvent({ agencyId: membership.agencyId, eventName: "QualifiedLead", eventKey: `qualified:${opportunity.id}`, resourceType: "opportunity", resourceId: opportunity.id, leadId: opportunity.leadId });
+  }
 
   return NextResponse.json({ ok: true });
 }

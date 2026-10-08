@@ -5,6 +5,7 @@ import { generateProposalToken } from "@/lib/proposals-server";
 import { parseTimelineSteps } from "@/lib/proposals";
 import { advanceLeadCommercialFlow, advanceOpportunityToStage, latestOpenOpportunity } from "@/lib/commercial-flow";
 import { createInitialOpportunityForClient, createInitialOpportunityForLead } from "@/lib/lead-pipeline";
+import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 import { prisma, Prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
@@ -142,6 +143,10 @@ export async function POST(request: Request) {
     });
     return created;
   });
+
+  if (proposal.opportunityId && proposal.leadId) {
+    await dispatchCommercialMetaEvent({ agencyId: membership.agencyId, eventName: "QualifiedLead", eventKey: `qualified:${proposal.opportunityId}`, resourceType: "opportunity", resourceId: proposal.opportunityId, leadId: proposal.leadId });
+  }
 
   return NextResponse.json({ id: proposal.id }, { status: 201 });
 }

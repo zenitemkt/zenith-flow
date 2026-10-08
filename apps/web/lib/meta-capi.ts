@@ -50,6 +50,10 @@ export interface MetaCapiEventInput {
    */
   clientIp?: string | null;
   clientUserAgent?: string | null;
+  fbp?: string | null;
+  fbc?: string | null;
+  actionSource?: "website" | "system_generated";
+  customData?: { value?: number; currency?: string };
   /** `test_event_code` do Gerenciador de Eventos (Eventos de teste) — só pra verificação manual, nunca em produção de verdade. */
   testEventCode?: string | null;
 }
@@ -72,6 +76,8 @@ export async function sendMetaCapiEvent(pixelId: string, accessToken: string, ev
   // Não hasheados — client_ip_address/client_user_agent vão em texto puro, formato exigido pela Meta (seção 38.1).
   if (event.clientIp) userData.client_ip_address = event.clientIp;
   if (event.clientUserAgent) userData.client_user_agent = event.clientUserAgent;
+  if (event.fbp) userData.fbp = event.fbp;
+  if (event.fbc) userData.fbc = event.fbc;
 
   const payload = {
     data: [
@@ -80,8 +86,9 @@ export async function sendMetaCapiEvent(pixelId: string, accessToken: string, ev
         event_time: Math.floor(event.occurredAt.getTime() / 1000),
         event_id: event.eventId,
         event_source_url: event.url ?? undefined,
-        action_source: "website",
+        action_source: event.actionSource ?? "website",
         user_data: userData,
+        custom_data: event.customData,
       },
     ],
     test_event_code: event.testEventCode ?? undefined,
