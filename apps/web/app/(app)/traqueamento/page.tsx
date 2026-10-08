@@ -1,3 +1,4 @@
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
@@ -115,7 +116,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Traqueamento</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-lg font-semibold text-[#101828]">Traqueamento</h1><Link href="/comercial/relatorios" className="text-sm font-semibold text-[#FF2B00] hover:underline">Ver conversões comerciais →</Link></div>
         <p className="text-sm text-[#667085]">
           Acessos ao site e o que eles viraram no comercial de {membership.agency.name} (seções 34/36/39 do manual).
           Saúde do coletor e eventos brutos ficam em <span className="font-medium">Sistema → Integrações</span>;

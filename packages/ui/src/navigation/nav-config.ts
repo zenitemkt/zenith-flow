@@ -70,6 +70,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "commercial-alerts", label: "Alertas", href: "/comercial/alertas", comingSoon: false },
           { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
           { id: "commercial-campaigns", label: "Campanhas", href: "/comercial/campanhas", comingSoon: false },
+          { id: "commercial-reports", label: "Relatórios", href: "/comercial/relatorios", comingSoon: false },
           { id: "commercial-products", label: "Produtos", href: "/comercial/produtos", comingSoon: true },
           { id: "commercial-goals", label: "Metas", href: "/comercial/metas", comingSoon: true },
         ],

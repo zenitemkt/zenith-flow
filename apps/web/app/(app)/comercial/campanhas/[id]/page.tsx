@@ -84,6 +84,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
           )}
         </div>
         <div className="flex flex-col items-end gap-2">
+          <Link href={campaign.utmCampaign ? `/comercial/relatorios?campaign=${encodeURIComponent(campaign.utmCampaign)}` : "/comercial/relatorios"} className="text-sm font-semibold text-[#FF2B00] hover:underline">Ver relatório desta campanha</Link>
           <CampaignStatusActions campaignId={campaign.id} options={CAMPAIGN_STATUS_TRANSITIONS[campaign.status]} />
           {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/campaigns/${campaign.id}`} recordName={campaign.name} entityLabel="Campanha" warning="Métricas, conjuntos de anúncios, anúncios e segmentações vinculadas também serão removidos." redirectTo="/comercial/campanhas" variant="button" />}
         </div>
