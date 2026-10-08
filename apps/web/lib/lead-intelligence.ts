@@ -15,6 +15,32 @@ export interface LeadIntelligence {
   signals: LeadSignal[];
 }
 
+export interface EngagementSignals {
+  visitsCount: number;
+  formStartsCount: number;
+  formSubmitsCount: number;
+  serviceViewsCount: number;
+  whatsappClicksCount: number;
+}
+
+/**
+ * Fórmula única de pontuação de interesse — usada tanto pelo card do lead
+ * (`calculateLeadIntelligence`, sinais completos) quanto pela listagem/pipeline
+ * e pelos alertas comerciais (`lib/commercial-intelligence.ts`, que só precisa
+ * do score/temperatura). Mantida num só lugar pra não divergir entre os dois.
+ */
+export function computeEngagementScore(signals: EngagementSignals): { score: number; temperature: LeadTemperature } {
+  const score = Math.min(
+    100,
+    Math.min(signals.formSubmitsCount, 1) * 35 +
+      Math.min(signals.whatsappClicksCount, 1) * 20 +
+      Math.min(signals.formStartsCount, 1) * 10 +
+      Math.min(signals.serviceViewsCount, 3) * 8 +
+      Math.min(Math.max(signals.visitsCount - 1, 0), 3) * 5,
+  );
+  return { score, temperature: score >= 60 ? "ALTO" : score >= 30 ? "MEDIO" : "BAIXO" };
+}
+
 interface IntelligenceContext {
   activity: LeadSiteActivity;
   isClient: boolean;
@@ -24,14 +50,7 @@ interface IntelligenceContext {
 
 export function calculateLeadIntelligence(context: IntelligenceContext): LeadIntelligence {
   const { activity } = context;
-  const score = Math.min(
-    100,
-    Math.min(activity.formSubmitsCount, 1) * 35 +
-      Math.min(activity.whatsappClicksCount, 1) * 20 +
-      Math.min(activity.formStartsCount, 1) * 10 +
-      Math.min(activity.serviceViewsCount, 3) * 8 +
-      Math.min(Math.max(activity.visitsCount - 1, 0), 3) * 5,
-  );
+  const { score, temperature } = computeEngagementScore(activity);
   const signals: LeadSignal[] = [];
 
   if (activity.formStartsCount > activity.formSubmitsCount) {
@@ -75,9 +94,5 @@ export function calculateLeadIntelligence(context: IntelligenceContext): LeadInt
     });
   }
 
-  return {
-    score,
-    temperature: score >= 60 ? "ALTO" : score >= 30 ? "MEDIO" : "BAIXO",
-    signals,
-  };
+  return { score, temperature, signals };
 }

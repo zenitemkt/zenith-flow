@@ -17,7 +17,20 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
   }
 
   const page = parsePage(searchParams.page);
-  const allLeads = await prisma.lead.findMany({ where: { agencyId: membership.agencyId }, orderBy: { createdAt: "desc" } });
+  /**
+   * Filtro/ordenação por sinal (score, última atividade) depende de dado
+   * calculado, não de uma coluna — por isso não dá pra paginar no SQL e
+   * precisamos trazer os leads pra aplicar o filtro em memória. Um teto aqui
+   * evita que isso cresça sem limite junto com a base de leads da agência;
+   * acima dele, os leads mais antigos ficam de fora desta visão filtrada
+   * (mas continuam acessíveis por busca direta/pipeline).
+   */
+  const LEADS_INTELLIGENCE_LIMIT = 2000;
+  const allLeads = await prisma.lead.findMany({
+    where: { agencyId: membership.agencyId },
+    orderBy: { createdAt: "desc" },
+    take: LEADS_INTELLIGENCE_LIMIT,
+  });
   const snapshots = await getLeadCommercialSnapshots(membership.agencyId, allLeads.map((lead) => lead.id));
   const sources = Array.from(new Set(allLeads.map((lead) => lead.source).filter((value): value is string => Boolean(value)))).sort();
   const filtered = allLeads.map((lead) => ({ lead, snapshot: snapshots.get(lead.id) })).filter(({ lead, snapshot }) => {
