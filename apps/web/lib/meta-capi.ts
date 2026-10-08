@@ -6,17 +6,26 @@ import { META_GRAPH_API_VERSION } from "@/lib/meta-ads";
  * 2026-09-30). Sempre usado JUNTO com o Pixel do navegador (`tracking.js`),
  * nunca sozinho — os dois mandam o mesmo `event_id` e a Meta deduplica.
  *
- * Mapeamento de evento (precisa bater EXATAMENTE com o que o Pixel manda no
- * navegador, senão a dedup por `event_name`+`event_id` não funciona):
- *   page_view    -> PageView
- *   pricing_view -> ViewContent
- *   form_submit  -> Lead
- * Outros eventos nossos (`cta_click`, `identify`, `purchase`) não têm
- * equivalente padrão útil pra mandar agora — ficam de fora.
+ * Mapeamento de evento (precisa bater EXATAMENTE com `META_EVENT_NAME_MAP`
+ * de `dist/tracking.js` no site, senão a dedup por `event_name`+`event_id`
+ * não funciona):
+ *   page_view     -> PageView
+ *   service_view  -> ViewContent
+ *   pricing_view  -> ViewContent
+ *   whatsapp_click -> Contact
+ *   phone_click   -> Contact
+ *   email_click   -> Contact
+ *   form_submit   -> Lead
+ * Outros eventos nossos (`cta_click`, `download`, `scroll_depth`, etc.) não
+ * têm equivalente padrão útil pra mandar agora — ficam de fora.
  */
 export const META_EVENT_NAME_MAP: Record<string, string> = {
   page_view: "PageView",
+  service_view: "ViewContent",
   pricing_view: "ViewContent",
+  whatsapp_click: "Contact",
+  phone_click: "Contact",
+  email_click: "Contact",
   form_submit: "Lead",
 };
 
