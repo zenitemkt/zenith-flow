@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { prisma } from "@zenite-mkt/db";
+import { prisma, type CommercialAlertType } from "@zenite-mkt/db";
+import { syncCommercialAlerts } from "./commercial-intelligence";
 
 export type CommercialPendingPriority = "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW";
 export type CommercialPendingKind =
@@ -9,7 +10,8 @@ export type CommercialPendingKind =
   | "PROPOSAL_NOT_VIEWED"
   | "PROPOSAL_WITHOUT_RESPONSE"
   | "PROPOSAL_EXPIRED"
-  | "PAYMENT_PENDING";
+  | "PAYMENT_PENDING"
+  | CommercialAlertType;
 
 export interface CommercialPendingItem {
   id: string;
@@ -19,6 +21,8 @@ export interface CommercialPendingItem {
   detail: string;
   href: string;
   occurredAt: string;
+  /** Só presente pra itens vindos de `CommercialAlert` — são os únicos com resolver/ignorar manual (os demais se resolvem sozinhos quando o dado muda). */
+  alertId?: string;
 }
 
 export interface CommercialPendingSummary {
@@ -26,8 +30,22 @@ export interface CommercialPendingSummary {
   unattendedLeads: number;
   proposalsAwaiting: number;
   pendingPayments: number;
+  behaviorSignals: number;
   total: number;
 }
+
+/**
+ * `HOT_LEAD`/`CLIENT_RETURNED`/`RETURNED_AFTER_PROPOSAL` pedem ação logo (a
+ * janela de interesse é curta); `RETURNING_LEAD`/`FORM_ABANDONED` são sinais
+ * mais brandos de acompanhamento.
+ */
+const ALERT_PRIORITY: Record<CommercialAlertType, CommercialPendingPriority> = {
+  HOT_LEAD: "TODAY",
+  CLIENT_RETURNED: "TODAY",
+  RETURNED_AFTER_PROPOSAL: "TODAY",
+  RETURNING_LEAD: "FOLLOW_UP",
+  FORM_ABANDONED: "FOLLOW_UP",
+};
 
 export interface CommercialPendencies {
   items: CommercialPendingItem[];
@@ -49,9 +67,25 @@ function ageLabel(date: Date, now: Date) {
   return `há ${days} dia${days === 1 ? "" : "s"}`;
 }
 
-export const getCommercialPendencies = cache(async (agencyId: string): Promise<CommercialPendencies> => {
+/**
+ * Recalcula e persiste os alertas de comportamento (`CommercialAlert`) antes
+ * de ler — varre sessão/evento de tracking da agência inteira, então só roda
+ * na página dedicada de Pendências, nunca em `getCommercialPendencies` puro
+ * (chamado em TODA página pelo layout, pro sino de notificação).
+ */
+export async function refreshCommercialAlerts(agencyId: string): Promise<void> {
+  await syncCommercialAlerts(agencyId);
+}
+
+/**
+ * Versão sem cache — usada pela página de Pendências logo após
+ * `refreshCommercialAlerts`, pra garantir leitura fresca mesmo que o layout
+ * já tenha chamado (e memoizado via `cache()`) a versão de baixo, de outra
+ * requisição concorrente da mesma renderização.
+ */
+export async function computeCommercialPendencies(agencyId: string): Promise<CommercialPendencies> {
   const now = new Date();
-  const [opportunities, proposals] = await Promise.all([
+  const [opportunities, proposals, alerts] = await Promise.all([
     prisma.opportunity.findMany({
       where: { agencyId, status: "OPEN" },
       select: {
@@ -78,6 +112,10 @@ export const getCommercialPendencies = cache(async (agencyId: string): Promise<C
         client: { select: { name: true } },
         financeEntries: { where: { type: "RECEITA", status: { notIn: ["LIQUIDADO", "CANCELADO"] } }, select: { id: true } },
       },
+    }),
+    prisma.commercialAlert.findMany({
+      where: { agencyId, status: "OPEN" },
+      select: { id: true, leadId: true, type: true, title: true, detail: true, detectedAt: true },
     }),
   ]);
 
@@ -125,13 +163,29 @@ export const getCommercialPendencies = cache(async (agencyId: string): Promise<C
     }
   }
 
+  for (const alert of alerts) {
+    items.push({
+      id: `alert:${alert.id}`,
+      alertId: alert.id,
+      kind: alert.type,
+      priority: ALERT_PRIORITY[alert.type],
+      title: alert.title,
+      detail: alert.detail,
+      href: `/comercial/leads/${alert.leadId}`,
+      occurredAt: alert.detectedAt.toISOString(),
+    });
+  }
+
   items.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || b.occurredAt.localeCompare(a.occurredAt));
   const summary = {
     newLeads: items.filter((item) => item.kind === "NEW_LEAD").length,
     unattendedLeads: items.filter((item) => item.kind === "UNATTENDED_LEAD").length,
     proposalsAwaiting: items.filter((item) => ["QUALIFIED_WITHOUT_PROPOSAL", "PROPOSAL_NOT_VIEWED", "PROPOSAL_WITHOUT_RESPONSE", "PROPOSAL_EXPIRED"].includes(item.kind)).length,
     pendingPayments: items.filter((item) => item.kind === "PAYMENT_PENDING").length,
+    behaviorSignals: items.filter((item) => item.alertId !== undefined).length,
     total: items.length,
   };
   return { items, summary };
-});
+}
+
+export const getCommercialPendencies = cache(computeCommercialPendencies);

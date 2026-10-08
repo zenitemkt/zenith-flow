@@ -64,7 +64,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
         <select name="source" defaultValue={searchParams.source ?? ""} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="">Todas as origens</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select>
         <select name="sort" defaultValue={searchParams.sort ?? "recent"} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="recent">Cadastro mais recente</option><option value="score">Maior interesse</option><option value="activity">Última atividade</option></select>
         <button className="h-10 rounded-lg bg-[#101828] px-4 text-sm font-semibold text-white">Aplicar</button>
-        <Link href="/comercial/alertas" className="flex h-10 items-center rounded-lg border border-[#FF2B00] px-4 text-sm font-semibold text-[#FF2B00]">Ver alertas</Link>
+        <Link href="/comercial/pendencias" className="flex h-10 items-center rounded-lg border border-[#FF2B00] px-4 text-sm font-semibold text-[#FF2B00]">Ver pendências</Link>
       </form>
 
       {rows.length === 0 ? (
