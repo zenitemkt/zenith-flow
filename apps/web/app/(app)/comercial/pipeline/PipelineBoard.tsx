@@ -19,6 +19,8 @@ export interface BoardOpportunity {
   clientName: string | null;
   leadName: string | null;
   expectedCloseDate: string | null;
+  leadScore: number | null;
+  lastActivityAt: string | null;
 }
 
 export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[]; opportunities: BoardOpportunity[] }) {
@@ -159,6 +161,12 @@ export function PipelineBoard({ stages, opportunities }: { stages: BoardStage[];
                   <div key={opp.id} className="rounded-lg border border-[#E4E7EC] bg-white p-3 shadow-sm">
                     <p className="text-sm font-medium text-[#101828]">{opp.name}</p>
                     <p className="text-xs text-[#98A2B3]">{opp.clientName ?? opp.leadName ?? "Sem vínculo"}</p>
+                    {opp.leadScore !== null && (
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${opp.leadScore >= 60 ? "bg-[#ECFDF3] text-[#027A48]" : opp.leadScore >= 30 ? "bg-[#FFFAEB] text-[#B54708]" : "bg-[#F2F4F7] text-[#475467]"}`}>Interesse {opp.leadScore}/100</span>
+                        {opp.lastActivityAt && <span className="text-[10px] text-[#98A2B3]">Ativo em {new Date(opp.lastActivityAt).toLocaleDateString("pt-BR")}</span>}
+                      </div>
+                    )}
                     <p className="mt-1 text-sm font-semibold text-[#166534]">{formatOpportunityValue(opp.valueCents)}</p>
                     {opp.expectedCloseDate && (
                       <p className="text-xs text-[#98A2B3]">

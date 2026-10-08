@@ -156,6 +156,7 @@ model Agency {
   enpsCampaigns              EnpsCampaign[]
   enpsSnapshots              EnpsSnapshot[]
   leads                      Lead[]
+  commercialAlerts           CommercialAlert[]
   leadEmails                 LeadEmail[]
   leadPhones                 LeadPhone[]
   leadSubmissions            LeadSubmission[]
@@ -1788,10 +1789,49 @@ model Lead {
   emails           LeadEmail[]
   phones           LeadPhone[]
   submissions      LeadSubmission[]
+  commercialAlerts CommercialAlert[]
 
   @@unique([agencyId, email])
   @@index([agencyId])
   @@map("lead")
+}
+
+enum CommercialAlertStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
+enum CommercialAlertType {
+  HOT_LEAD
+  RETURNING_LEAD
+  FORM_ABANDONED
+  CLIENT_RETURNED
+  RETURNED_AFTER_PROPOSAL
+}
+
+model CommercialAlert {
+  id          String                @id @default(cuid())
+  agencyId    String
+  agency      Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  eventKey    String
+  type        CommercialAlertType
+  status      CommercialAlertStatus @default(OPEN)
+  title       String
+  detail      String
+  score       Int?
+  detectedAt  DateTime              @default(now())
+  resolvedAt  DateTime?
+  ignoredAt   DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([agencyId, eventKey])
+  @@index([agencyId, status, detectedAt])
+  @@index([leadId])
+  @@map("commercial_alert")
 }
 
 model LeadEmail {

@@ -8,6 +8,7 @@ import { PipelineBoard } from "./PipelineBoard";
 import { PipelinePeriodFilter } from "./PipelinePeriodFilter";
 import { NewOpportunityModal } from "./NewOpportunityModal";
 import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
+import { getLeadCommercialSnapshots } from "@/lib/commercial-intelligence";
 
 const PipelineFunnelSection = dynamic(() =>
   import("./PipelineFunnelSection").then((module) => module.PipelineFunnelSection),
@@ -65,6 +66,8 @@ export default async function PipelinePage({ searchParams }: PageProps) {
     { label: "Ganhas", value: wonOpportunities.length },
   ];
   const hasFunnelData = funnelData.some((stage) => stage.value > 0);
+  const pipelineLeadIds = Array.from(new Set(openOpportunities.map((opportunity) => opportunity.leadId).filter((id): id is string => Boolean(id))));
+  const leadSnapshots = await getLeadCommercialSnapshots(membership.agencyId, pipelineLeadIds);
   const boardOpportunities = openOpportunities.map((opportunity) => ({
     id: opportunity.id,
     name: opportunity.name,
@@ -73,6 +76,8 @@ export default async function PipelinePage({ searchParams }: PageProps) {
     clientName: opportunity.client?.name ?? null,
     leadName: opportunity.lead?.name ?? null,
     expectedCloseDate: opportunity.expectedCloseDate?.toISOString() ?? null,
+    leadScore: opportunity.leadId ? leadSnapshots.get(opportunity.leadId)?.score ?? null : null,
+    lastActivityAt: opportunity.leadId ? leadSnapshots.get(opportunity.leadId)?.lastActivityAt?.toISOString() ?? null : null,
   }));
   const openValueCents = openOpportunities.reduce((sum, opportunity) => sum + (opportunity.valueCents ?? 0), 0);
   const funnelStageIds = [...stages.map((stage) => stage.id), "WON"];
