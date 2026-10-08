@@ -48,7 +48,17 @@ function emptyRow(label: string): Omit<ReportRow, "conversionRate"> {
   return { label, visitors: 0, leads: 0, qualified: 0, proposals: 0, sales: 0, revenueCents: 0, abandoned: 0 };
 }
 
+/** Campos de sessão usados por `resolveTouchpoint` — nada além disso entra na seleção enxuta abaixo. */
+const TOUCHPOINT_SESSION_SELECT = { id: true, startedAt: true, utmCampaign: true, utmSource: true, referrer: true } as const;
+
 export async function buildCommercialReport(agencyId: string, filters: CommercialReportFilters): Promise<CommercialReport> {
+  // Sessão expira depois de 30min sem evento (mesma regra de sempre) — por
+  // isso dá pra filtrar por `startedAt` no próprio banco sem quebrar o
+  // rastreio de "último serviço visto antes do abandono" (3º loop abaixo):
+  // os dois eventos nunca ficam longe o bastante pra cair em lados opostos
+  // do filtro de período.
+  const sessionRangeWhere = filters.range ? { startedAt: { gte: filters.range.gte, lt: filters.range.lt } } : {};
+
   const [leads, visitors, campaigns] = await Promise.all([
     prisma.lead.findMany({
       where: { agencyId },
@@ -57,12 +67,22 @@ export async function buildCommercialReport(agencyId: string, filters: Commercia
         statusHistory: true,
         proposals: true,
         opportunities: { include: { statusHistory: true, proposals: true } },
-        trackingVisitors: { include: { sessions: { include: { events: true } } } },
+        // Atribuição de primeira/última origem precisa do histórico INTEIRO
+        // do lead (o primeiro touch pode ser de muito antes do período
+        // filtrado) — mas não usa eventos, só metadado da própria sessão.
+        trackingVisitors: { select: { sessions: { select: TOUCHPOINT_SESSION_SELECT } } },
       },
     }),
     prisma.trackingVisitor.findMany({
       where: { agencyId },
-      include: { sessions: { include: { events: true } } },
+      select: {
+        id: true,
+        leadId: true,
+        sessions: {
+          where: sessionRangeWhere,
+          select: { ...TOUCHPOINT_SESSION_SELECT, events: { select: { eventName: true, occurredAt: true, properties: true } } },
+        },
+      },
     }),
     prisma.campaign.findMany({ where: { agencyId } }),
   ]);
@@ -99,8 +119,8 @@ export async function buildCommercialReport(agencyId: string, filters: Commercia
   }
 
   for (const visitor of visitors) {
-    const periodSessions = visitor.sessions.filter((session) => inRange(session.startedAt, filters.range));
-    for (const session of periodSessions) {
+    // `visitor.sessions` já vem filtrado por período direto da consulta (sessionRangeWhere).
+    for (const session of visitor.sessions) {
       const touchpoint = resolveTouchpoint(session, campaigns);
       if (filters.origin && touchpoint.channel !== filters.origin) continue;
       if (filters.campaign && session.utmCampaign !== filters.campaign) continue;

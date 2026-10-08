@@ -28,13 +28,16 @@ export interface CreditedTouchpoint extends Touchpoint {
   weight: number;
 }
 
+/** Campos de `TrackingSession` que `resolveTouchpoint` de fato usa — permite consultas com `select` enxuto. */
+export type TouchpointSessionInput = Pick<TrackingSession, "id" | "startedAt" | "utmCampaign" | "utmSource" | "referrer">;
+
 /**
  * Um touchpoint nunca é uma tabela própria — é `TrackingSession` (que já
  * guarda os UTMs) casada com uma `Campaign` por `utm_source`+`utm_campaign`.
  * Sem casamento: `utmSource` sozinho vira o canal ("google", "meta"); com
  * referrer de outra origem vira "Orgânico"; sem nenhum dos dois é "Direto".
  */
-export function resolveTouchpoint(session: TrackingSession, campaigns: Campaign[]): Touchpoint {
+export function resolveTouchpoint(session: TouchpointSessionInput, campaigns: Campaign[]): Touchpoint {
   const sessionCampaign = session.utmCampaign?.toLowerCase().trim();
   const sessionSource = session.utmSource?.toLowerCase().trim();
 
