@@ -15,6 +15,7 @@ import { TrendAreaChart } from "@/app/_components/charts/TrendAreaChart";
 import { KpiCard, AttentionList, MiniPanel, type AttentionItem, type Tone } from "@zenite-mkt/ui";
 import { AskAiButton } from "@/app/_components/AskAiButton";
 import { prisma } from "@zenite-mkt/db";
+import { getCommercialPendencies } from "@/lib/commercial-pendencies";
 
 const COCKPIT_BAR_COLORS = ["#FF2B00", "#168F9D", "#316FDC"];
 
@@ -91,6 +92,7 @@ export default async function HomePage() {
     recebidoMesAgg,
     pagoMesAgg,
     xray,
+    commercialPendencies,
   ] = await Promise.all([
     prisma.recurringTaskTemplate.findMany({
       where: { agencyId: membership.agencyId, status: "ATIVO" },
@@ -152,6 +154,7 @@ export default async function HomePage() {
       _sum: { amountCents: true },
     }),
     getXrayDashboard(membership.agencyId),
+    getCommercialPendencies(membership.agencyId),
   ]);
 
   const clientsAtRiskCount = xray.clientes.healthScoreData.find((d) => d.name === "Alto risco")?.value ?? 0;
@@ -165,6 +168,7 @@ export default async function HomePage() {
   const pendingRecurring = activeRecurring.filter(hasPendingGeneration);
 
   const attentionCards: { label: string; count: number; href: string; badge: string; tone: Tone }[] = [
+    { label: "pendência(s) comercial(is)", count: commercialPendencies.summary.total, href: "/comercial/pendencias", badge: "Comercial", tone: commercialPendencies.summary.unattendedLeads > 0 ? "danger" : "warn" },
     {
       label: "aprovação(ões) de conteúdo pendente(s)",
       count: pendingApprovalsCount,
@@ -266,6 +270,11 @@ export default async function HomePage() {
           </Link>
         </div>
       )}
+
+      <section className="rounded-[20px] border border-[#E4E7EC] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-[#101828]">Pendências comerciais</h2><p className="mt-1 text-xs text-[#667085]">Prioridades dos dois sócios para hoje.</p></div><Link href="/comercial/pendencias" className="text-xs font-semibold text-[#FF2B00] hover:underline">Ver todas →</Link></div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[[commercialPendencies.summary.unattendedLeads, "sem atendimento"], [commercialPendencies.summary.newLeads, "leads novos"], [commercialPendencies.summary.proposalsAwaiting, "acompanhamentos"], [commercialPendencies.summary.pendingPayments, "pagamentos pendentes"]].map(([value, label]) => <Link key={label} href="/comercial/pendencias" className="rounded-xl border border-[#EEF0F3] p-3 transition-colors hover:border-[#FF2B00]/40 hover:bg-[#FFF9F7]"><p className="text-xl font-semibold text-[#101828]">{value}</p><p className="text-xs text-[#667085]">{label}</p></Link>)}</div>
+      </section>
 
       <div>
         <div className="mb-3 flex items-center justify-between">

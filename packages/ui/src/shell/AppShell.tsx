@@ -25,6 +25,7 @@ export interface AppShellProps {
   agencies?: { id: string; name: string }[];
   currentAgencyId?: string;
   onSwitchAgency?: (agencyId: string) => void;
+  notifications?: { count: number; items: { id: string; title: string; detail: string; href: string; priority: "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW" }[] };
   children: ReactNode;
 }
 
@@ -38,12 +39,15 @@ export function AppShell({
   agencies,
   currentAgencyId,
   onSwitchAgency,
+  notifications,
   children,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(initialTheme);
   const [themeSaving, setThemeSaving] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const LinkComponent = linkComponent ?? "a";
   const tabbedItem = findTabbedItemForPath(groups, activePath);
 
   async function toggleTheme() {
@@ -131,13 +135,16 @@ export function AppShell({
         >
           Hoje
         </button>
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/25 dark:border-[#303343] dark:bg-[#171821] dark:text-[#CFD3DF] dark:hover:bg-[#232532]"
-          aria-label="Notificações"
-        >
-          <Bell size={17} aria-hidden />
-        </button>
+        <div className="relative">
+          <button type="button" onClick={() => setNotificationsOpen((open) => !open)} className="relative flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/25 dark:border-[#303343] dark:bg-[#171821] dark:text-[#CFD3DF] dark:hover:bg-[#232532]" aria-label={notifications?.count ? `Notificações: ${notifications.count} pendentes` : "Notificações"} aria-expanded={notificationsOpen}>
+            <Bell size={17} aria-hidden />
+            {(notifications?.count ?? 0) > 0 && <span className="absolute -right-1 -top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[#FF2B00] px-1 text-[10px] font-bold leading-none text-white">{notifications!.count > 99 ? "99+" : notifications!.count}</span>}
+          </button>
+          {notificationsOpen && <div className="absolute right-0 top-12 z-50 w-[380px] overflow-hidden rounded-xl border border-[#E4E7EC] bg-white shadow-xl dark:border-[#303343] dark:bg-[#171821]">
+            <div className="flex items-center justify-between border-b border-[#EEF0F3] px-4 py-3 dark:border-[#303343]"><div><p className="text-sm font-semibold text-[#101828] dark:text-white">Pendências comerciais</p><p className="text-xs text-[#667085] dark:text-[#AEB4C5]">{notifications?.count ?? 0} item(ns) precisam de atenção</p></div><LinkComponent href="/comercial/pendencias" onClick={() => setNotificationsOpen(false)} className="text-xs font-semibold text-[#FF2B00]">Ver todas</LinkComponent></div>
+            {(notifications?.items.length ?? 0) === 0 ? <p className="p-6 text-center text-sm text-[#667085] dark:text-[#AEB4C5]">Tudo em dia.</p> : <div className="max-h-[360px] overflow-y-auto">{notifications!.items.map((item) => <LinkComponent key={item.id} href={item.href} onClick={() => setNotificationsOpen(false)} className="block border-b border-[#EEF0F3] px-4 py-3 last:border-0 hover:bg-[#F9FAFB] dark:border-[#303343] dark:hover:bg-[#232532]"><div className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.priority === "URGENT" ? "bg-[#D92D20]" : item.priority === "TODAY" ? "bg-[#F79009]" : item.priority === "FOLLOW_UP" ? "bg-[#2E90FA]" : "bg-[#12B76A]"}`} /><div><p className="text-sm font-semibold text-[#101828] dark:text-white">{item.title}</p><p className="mt-0.5 text-xs text-[#667085] dark:text-[#AEB4C5]">{item.detail}</p></div></div></LinkComponent>)}</div>}
+          </div>}
+        </div>
         <button
           type="button"
           onClick={() => void toggleTheme()}

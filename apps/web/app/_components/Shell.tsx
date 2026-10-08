@@ -11,6 +11,7 @@ interface ShellProps {
   initialTheme?: ThemeMode;
   agencies: { id: string; name: string }[];
   currentAgencyId: string;
+  notifications?: { count: number; items: { id: string; title: string; detail: string; href: string; priority: "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW" }[] };
   children: ReactNode;
 }
 
@@ -19,6 +20,7 @@ export function Shell({
   initialTheme,
   agencies,
   currentAgencyId,
+  notifications,
   children,
 }: ShellProps) {
   const pathname = usePathname();
@@ -55,6 +57,7 @@ export function Shell({
       agencies={agencies}
       currentAgencyId={currentAgencyId}
       onSwitchAgency={handleSwitchAgency}
+      notifications={notifications}
     >
       {children}
     </AppShell>

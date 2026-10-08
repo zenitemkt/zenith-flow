@@ -67,7 +67,7 @@ export const navigationGroups: NavigationGroup[] = [
         children: [
           { id: "commercial-pipeline", label: "Pipeline", href: "/comercial/pipeline", comingSoon: false },
           { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
-          { id: "commercial-alerts", label: "Alertas", href: "/comercial/alertas", comingSoon: false },
+          { id: "commercial-pendencies", label: "Pendências", href: "/comercial/pendencias", comingSoon: false },
           { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
           { id: "commercial-campaigns", label: "Campanhas", href: "/comercial/campanhas", comingSoon: false },
           { id: "commercial-reports", label: "Relatórios", href: "/comercial/relatorios", comingSoon: false },
