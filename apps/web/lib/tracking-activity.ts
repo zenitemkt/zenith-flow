@@ -17,6 +17,11 @@ export interface SiteVisit {
   startedAt: Date;
   endedAt: Date;
   durationSeconds: number;
+  landingUrl: string | null;
+  referrer: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
   pageViews: SitePageView[];
   interactions: SiteInteraction[];
 }
@@ -29,6 +34,9 @@ export interface LeadSiteActivity {
   whatsappClicksCount: number;
   formStartsCount: number;
   formSubmitsCount: number;
+  formAbandonsCount: number;
+  engagedSessionsCount: number;
+  lastActivityAt: Date | null;
   visits: SiteVisit[];
 }
 
@@ -73,6 +81,9 @@ export async function getLeadSiteActivity(agencyId: string, leadId: string): Pro
   let whatsappClicksCount = 0;
   let formStartsCount = 0;
   let formSubmitsCount = 0;
+  let formAbandonsCount = 0;
+  let engagedSessionsCount = 0;
+  let lastActivityAt: Date | null = null;
 
   for (const visitor of visitors) {
     for (const session of visitor.sessions) {
@@ -87,6 +98,9 @@ export async function getLeadSiteActivity(agencyId: string, leadId: string): Pro
         if (event.eventName === "whatsapp_click") whatsappClicksCount += 1;
         if (event.eventName === "form_start") formStartsCount += 1;
         if (event.eventName === "form_submit") formSubmitsCount += 1;
+        if (event.eventName === "form_abandon") formAbandonsCount += 1;
+        if (event.eventName === "engaged_session") engagedSessionsCount += 1;
+        if (!lastActivityAt || event.occurredAt > lastActivityAt) lastActivityAt = event.occurredAt;
         const label = interactionLabel(event.eventName, event.properties);
         if (label) interactions.push({ eventName: event.eventName, label, href: readStringProperty(event.properties, "href"), occurredAt: event.occurredAt });
       }
@@ -95,6 +109,11 @@ export async function getLeadSiteActivity(agencyId: string, leadId: string): Pro
         startedAt: session.startedAt,
         endedAt: session.lastEventAt,
         durationSeconds: Math.max(0, (session.lastEventAt.getTime() - session.startedAt.getTime()) / 1000),
+        landingUrl: session.landingUrl,
+        referrer: session.referrer,
+        utmSource: session.utmSource,
+        utmMedium: session.utmMedium,
+        utmCampaign: session.utmCampaign,
         pageViews,
         interactions,
       });
@@ -110,6 +129,9 @@ export async function getLeadSiteActivity(agencyId: string, leadId: string): Pro
     whatsappClicksCount,
     formStartsCount,
     formSubmitsCount,
+    formAbandonsCount,
+    engagedSessionsCount,
+    lastActivityAt,
     visits,
   };
 }

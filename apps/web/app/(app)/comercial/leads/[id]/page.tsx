@@ -4,6 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE_CLASS, LEAD_STATUS_TRANSITIONS, parseSiteLeadDetails } from "@/lib/leads";
 import { getLeadJourney, applyAttributionModel, ATTRIBUTION_MODEL_LABELS } from "@/lib/attribution";
 import { getLeadSiteActivity, formatSiteDuration } from "@/lib/tracking-activity";
+import { calculateLeadIntelligence } from "@/lib/lead-intelligence";
 import { canManageTeam } from "@/lib/rbac";
 import { formatOpportunityValue, OPPORTUNITY_STATUS_BADGE_CLASS, OPPORTUNITY_STATUS_LABELS } from "@/lib/pipeline";
 import { PROPOSAL_STATUS_LABELS } from "@/lib/proposals";
@@ -12,6 +13,8 @@ import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
 import { AddLeadNoteForm } from "./AddLeadNoteForm";
 import { DeleteLeadButton } from "./DeleteLeadButton";
+import { LeadIntelligencePanel } from "./LeadIntelligencePanel";
+import { SubmissionAttribution } from "./SubmissionAttribution";
 
 interface PageProps {
   params: { id: string };
@@ -146,6 +149,44 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const touchpoints = await getLeadJourney(membership.agencyId, lead.id);
   const credited = applyAttributionModel(touchpoints, "last_non_direct");
   const siteActivity = await getLeadSiteActivity(membership.agencyId, lead.id);
+  const latestWonAt = opportunities
+    .flatMap((opportunity) => opportunity.statusHistory)
+    .filter((entry) => entry.toStatus === "WON")
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.createdAt ?? null;
+  const latestProposalAt = proposals
+    .flatMap((proposal) => proposal.statusHistory)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]?.createdAt ?? null;
+  const intelligence = calculateLeadIntelligence({
+    activity: siteActivity,
+    isClient: Boolean(lead.convertedClient),
+    latestWonAt,
+    latestProposalAt,
+  });
+  const firstTouch = touchpoints[0] ?? null;
+  const lastTouch = touchpoints[touchpoints.length - 1] ?? null;
+  const unifiedTimeline = [
+    ...timeline,
+    ...lead.submissions.map((submission) => ({
+      id: `submission-${submission.id}`,
+      kind: "site" as const,
+      createdAt: submission.createdAt,
+      label: `Novo interesse enviado${submission.service ? ` — ${submission.service}` : submission.interest ? ` — ${interestLabels[submission.interest] ?? submission.interest}` : ""}`,
+    })),
+    ...siteActivity.visits.flatMap((visit) => [
+      {
+        id: `visit-${visit.sessionId}`,
+        kind: "site" as const,
+        createdAt: visit.startedAt,
+        label: `Visitou o site${visit.landingUrl ? ` — ${visit.landingUrl}` : ""}`,
+      },
+      ...visit.interactions.map((interaction, index) => ({
+        id: `site-${visit.sessionId}-${index}`,
+        kind: "site" as const,
+        createdAt: interaction.occurredAt,
+        label: interaction.label,
+      })),
+    ]),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,6 +225,13 @@ export default async function LeadDetailPage({ params }: PageProps) {
           {canManageTeam(membership.role) && <DeleteLeadButton leadId={lead.id} leadName={lead.name} />}
         </div>
       </div>
+
+      <LeadIntelligencePanel
+        intelligence={intelligence}
+        firstTouch={firstTouch}
+        lastTouch={lastTouch}
+        fallbackSource={lead.source}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
@@ -250,13 +298,14 @@ export default async function LeadDetailPage({ params }: PageProps) {
         </section>
 
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Timeline</h2>
+          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Jornada completa</h2>
+          <p className="mb-3 text-xs text-[#98A2B3]">Site, formulários, movimentações comerciais, propostas, pagamentos e anotações em uma única ordem cronológica.</p>
           <div className="mb-4">
             <AddLeadNoteForm leadId={lead.id} />
           </div>
           <div className="flex flex-col gap-3">
-            {timeline.length === 0 && <p className="text-sm text-[#98A2B3]">Sem eventos ainda.</p>}
-            {timeline.map((entry) => (
+            {unifiedTimeline.length === 0 && <p className="text-sm text-[#98A2B3]">Sem eventos ainda.</p>}
+            {unifiedTimeline.map((entry) => (
               <div key={entry.id} className="border-l-2 border-[#EEF0F3] pl-3">
                 <p className="text-sm text-[#101828]">{entry.label}</p>
                 <p className="text-xs text-[#98A2B3]">{entry.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
@@ -306,6 +355,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                     </dl>
                   )}
                   {submission.summary && <p className="mt-3 border-t border-[#EEF0F3] pt-3 text-sm text-[#475467]">{submission.summary}</p>}
+                  <SubmissionAttribution context={submission.trackingContext} />
                   {(submission.email || submission.phone) && (
                     <p className="mt-3 text-xs text-[#98A2B3]">{[submission.email, submission.phone].filter(Boolean).join(" · ")}</p>
                   )}
