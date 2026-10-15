@@ -150,6 +150,16 @@ Região Metropolitana de Campinas (RMC).
 - Demonstre domínio técnico sem inventar experiência ou resultado que a Zenite não teve.
 - Nunca afirme que uma estrutura "garante" citação por IA generativa — é boa prática, não garantia.
 
+### 7.1 Interlinking entre artigos (obrigatório avaliar, nunca forçar)
+
+Antes de finalizar o rascunho, releia `/llms.txt`/`/llms-full.txt` com atenção ao tema de cada artigo já
+publicado, não só ao slug. Pra cada artigo existente que se conecte de verdade com o tema atual (mesma
+categoria, etapa anterior ou seguinte do funil, pergunta complementar que o leitor provavelmente também
+tem), insira um link interno no ponto do texto onde essa conexão faz sentido pra leitura. Não existe teto
+fixo de quantidade: se três ou quatro artigos têm conexão real, linke os três ou quatro; se nenhum tiver
+conexão genuína, não force nenhum. O critério é sempre a relação temática real, nunca a quantidade de
+links — um link encaixado onde não há relação de conteúdo piora a experiência de leitura e não ajuda SEO.
+
 ## 8. Referências e fontes consultadas (obrigatório, fim do artigo)
 
 Todo artigo termina com uma seção, usando exatamente este título:
@@ -188,8 +198,8 @@ num texto de venda.
 - Corpo em Markdown: `##`/`###`, listas `-`/`1.`, tabelas `|`, citação `>`, bloco `:::exemplo ... :::`
   (situação/números fictícios, só quando for claramente um exemplo ilustrativo, nunca como se fosse
   dado real da Zenite).
-- 1-2 links internos no formato `[texto](@slug-do-artigo)` — slug precisa existir de verdade (confira em
-  `/llms.txt`).
+- Links internos no formato `[texto](@slug-do-artigo)` — slug precisa existir de verdade (confira em
+  `/llms.txt`), quantidade definida pela seção 7.1, nunca por um número fixo.
 - `coverSearchTerm`: 2-4 palavras em inglês, concretas e visuais (ex.: "laptop analytics dashboard") —
   usado na busca da foto de capa real no Wikimedia Commons; não é salvo no rascunho, só é pedido na hora
   da aprovação humana.
