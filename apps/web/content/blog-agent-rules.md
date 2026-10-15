@@ -10,9 +10,73 @@ ranquear bem.
 
 ## 1. Identificação do tema
 
-Use `/llms.txt` e `/llms-full.txt` (índice do que já foi publicado) pra identificar a intenção de busca,
-o público-alvo e as oportunidades de conteúdo ainda não cobertas. Antes de criar um artigo novo, confirme
-que não existe já uma página respondendo à mesma intenção.
+Ordem de prioridade pra escolher o tema do dia:
+
+1. **Pesquisa real do Google Search Console dos últimos 7 dias** (quando a integração estiver
+   disponível — ainda não está em 2026-10-15; enquanto isso, pule pro passo 2). Prefira um termo com
+   volume de impressão relevante que ainda não tenha artigo respondendo a ele.
+2. **Lista de 50 temas prioritários** (seção 1.1, abaixo) — percorra em ordem de prioridade editorial
+   ("Muito alta" antes de "Alta"), pulando qualquer tema que já tenha artigo (ver passo 3).
+3. **Antes de escrever sobre qualquer tema** (vindo do Search Console ou da lista), confirme em
+   `/llms.txt` e `/llms-full.txt` que não existe já um artigo publicado que responda à mesma intenção de
+   busca — mesmo que com título ou palavra-chave um pouco diferente. **Nunca publique dois artigos sobre
+   o mesmo tema.** Se todos os 50 temas da lista já tiverem artigo, escolha um assunto correlato dentro
+   das 4 categorias que ainda não tenha sido coberto.
+
+### 1.1 Lista de 50 temas prioritários (fallback, sem Search Console)
+
+Formato: tema — palavra-chave foco — prioridade editorial.
+
+1. Como criar uma estratégia de marketing digital para sua empresa — marketing digital para empresas — Alta
+2. Quanto uma empresa deve investir em marketing por mês? — quanto investir em marketing — Muito alta
+3. Como montar um plano de marketing para pequenas e médias empresas — plano de marketing para empresas — Alta
+4. Por que sua empresa investe em marketing, mas não consegue vender mais? — marketing não gera vendas — Muito alta
+5. Agência de marketing ou equipe interna: qual vale mais a pena? — agência de marketing ou equipe interna — Muito alta
+6. Como escolher uma agência de marketing digital para sua empresa — como escolher agência de marketing — Muito alta
+7. Como saber se o marketing da sua empresa está dando resultado — como medir resultados de marketing — Alta
+8. Quais estratégias de marketing funcionam melhor para empresas B2B? — marketing B2B — Alta
+9. Marketing para empresas locais: como atrair mais clientes na sua região — marketing para empresas locais — Alta
+10. Como se diferenciar da concorrência e fortalecer sua marca — como se diferenciar da concorrência — Alta
+11. Google Ads ou Meta Ads: onde sua empresa deve investir primeiro? — Google Ads ou Meta Ads — Muito alta
+12. Quanto custa anunciar no Google Ads para uma empresa? — quanto custa Google Ads — Muito alta
+13. Como anunciar no Google e aparecer para clientes que procuram seus serviços — como anunciar no Google — Muito alta
+14. Tráfego pago funciona para pequenas empresas? — tráfego pago para pequenas empresas — Alta
+15. Por que seus anúncios recebem cliques, mas não geram clientes? — anúncios não geram vendas — Muito alta
+16. Como gerar leads qualificados usando anúncios online — como gerar leads qualificados — Muito alta
+17. Tráfego pago para indústrias: como conquistar clientes B2B — tráfego pago para indústrias — Muito alta
+18. Google Ads para prestadores de serviços: como conseguir mais orçamentos — Google Ads para serviços — Muito alta
+19. Como anunciar no Instagram e atrair clientes para sua empresa — anunciar no Instagram para empresas — Alta
+20. Como calcular o retorno sobre investimento em tráfego pago — ROI tráfego pago — Alta
+21. Como colocar sua empresa na primeira página do Google — como aparecer na primeira página do Google — Muito alta
+22. Google Meu Negócio: como atrair mais clientes da sua cidade — Google Meu Negócio — Muito alta
+23. SEO local: como aparecer nas buscas de clientes próximos à sua empresa — SEO local — Muito alta
+24. Como melhorar o posicionamento da sua empresa no Google Maps — como aparecer no Google Maps — Muito alta
+25. Vale a pena investir em SEO ou Google Ads? — SEO ou Google Ads — Muito alta
+26. Quanto custa fazer SEO para o site de uma empresa? — quanto custa SEO — Muito alta
+27. Como aparecer nas respostas do ChatGPT e nas buscas com inteligência artificial — como aparecer no ChatGPT — Muito alta
+28. Por que o site da sua empresa não aparece no Google? — site não aparece no Google — Alta
+29. Como conseguir mais avaliações no Google e fortalecer a reputação da empresa — como conseguir avaliações no Google — Alta
+30. Marketing digital em Americana: como destacar sua empresa na região — marketing digital em Americana — Muito alta
+31. Site ou landing page: o que sua empresa realmente precisa? — site ou landing page — Muito alta
+32. Quanto custa criar um site profissional para uma empresa? — quanto custa criar site profissional — Muito alta
+33. Por que seu site recebe visitas, mas não gera vendas? — site não gera vendas — Muito alta
+34. Como transformar visitantes do site em clientes — como converter visitantes em clientes — Alta
+35. Como melhorar a taxa de conversão do site da sua empresa — melhorar taxa de conversão — Alta
+36. Como criar uma página de vendas que gera mais contatos e orçamentos — landing page para gerar leads — Alta
+37. Como integrar marketing e equipe comercial para vender mais — integração marketing e vendas — Alta
+38. Como reduzir o custo de aquisição de clientes da sua empresa — reduzir custo de aquisição de clientes — Muito alta
+39. Como organizar os leads recebidos pelo WhatsApp e não perder vendas — organizar leads WhatsApp — Muito alta
+40. CRM para pequenas e médias empresas: quando vale a pena implementar? — CRM para pequenas empresas — Muito alta
+41. Como usar inteligência artificial no marketing da sua empresa — inteligência artificial no marketing — Alta
+42. Como automatizar o atendimento no WhatsApp sem perder oportunidades — automação WhatsApp empresas — Muito alta
+43. Automação de marketing: o que é e quando sua empresa precisa dela — automação de marketing para empresas — Alta
+44. Como usar um CRM para aumentar vendas e melhorar o atendimento — CRM para aumentar vendas — Alta
+45. Como criar um funil de vendas para sua empresa — funil de vendas para empresas — Alta
+46. Como recuperar clientes que pediram orçamento e não compraram — recuperar clientes que não compraram — Muito alta
+47. Como usar remarketing para recuperar oportunidades de venda — remarketing para empresas — Alta
+48. Como acompanhar os resultados de marketing com GA4 e dashboards — dashboard de marketing — Alta
+49. Como escalar a geração de clientes sem aumentar o desperdício em anúncios — escalar campanhas de tráfego pago — Muito alta
+50. Como escolher as melhores ferramentas de inteligência artificial para sua empresa — ferramentas de IA para empresas — Alta
 
 ## 2. Seleção de fontes
 
