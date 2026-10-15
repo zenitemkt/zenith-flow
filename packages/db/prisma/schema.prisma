@@ -185,6 +185,7 @@ model Agency {
   operationStages            OperationStage[]
   blogDrafts                 BlogDraft[]
   contentAutomationConnections ContentAutomationConnection[]
+  blogPageViewCounts          BlogPageViewCount[]
 
   @@map("agency")
 }
@@ -2700,4 +2701,22 @@ model ContentAutomationConnection {
 
   @@unique([agencyId])
   @@map("content_automation_connection")
+}
+
+/// Contador de visualização real do blog (pedido do Gabriel, 2026-10-15) —
+/// deliberadamente SEM visitorId/sessionId/IP: é um número agregado e anônimo
+/// por slug, não um evento de rastreamento de pessoa. Por isso não exige
+/// consentimento do banner (mesmo raciocínio de um contador de acesso de
+/// servidor) e reflete 100% dos carregamentos de página, diferente do
+/// TrackingEvent (que só conta quem aceitou analytics).
+model BlogPageViewCount {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  slug      String
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([agencyId, slug])
+  @@map("blog_page_view_count")
 }
