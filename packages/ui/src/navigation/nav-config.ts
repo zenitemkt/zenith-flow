@@ -179,6 +179,12 @@ export const navigationGroups: NavigationGroup[] = [
             comingSoon: false,
           },
           {
+            id: "settings-account",
+            label: "Minha conta",
+            href: "/configuracoes/conta",
+            comingSoon: false,
+          },
+          {
             id: "settings-appearance",
             label: "Aparência",
             href: "/configuracoes/aparencia",
