@@ -148,9 +148,7 @@ export function validateBlogDraft(input: BlogDraftValidationInput): ValidationIs
     .map((m) => m[1])
     .filter((value): value is string => Boolean(value));
   if (internalLinks.length === 0) {
-    push("content", "falta link interno no formato [texto](@slug) (1–2 por artigo)");
-  } else if (internalLinks.length > 2) {
-    push("content", `${internalLinks.length} links internos — esperado 1–2`);
+    push("content", "falta link interno no formato [texto](@slug) — linke todo artigo existente com conexão temática real (seção 7.1 das regras)");
   }
   for (const linkedSlug of internalLinks) {
     if (linkedSlug === slug) push("content", `link interno aponta pro próprio artigo (@${linkedSlug})`);
@@ -182,7 +180,11 @@ export function validateBlogDraft(input: BlogDraftValidationInput): ValidationIs
   // cargo do chamador (precisa do corpo dos últimos N artigos publicados,
   // que este módulo não busca sozinho).
 
-  const lines = input.content.split("\n");
+  // O rodapé de referências é excluído daqui: o formato exigido pela seção 8
+  // ("- [Título](URL) — Instituição, Ano") usa travessão de propósito, e essa
+  // seção já tem checagem própria logo acima.
+  const bodyWithoutReferences = referencesMatch ? input.content.slice(0, referencesMatch.index ?? input.content.length) : input.content;
+  const lines = bodyWithoutReferences.split("\n");
   const seenLines = new Set<string>();
   for (const rawLine of lines) {
     const line = rawLine.trim();
