@@ -183,6 +183,8 @@ model Agency {
   commercialMetaEvents       CommercialMetaEvent[]
   workflows                  Workflow[]
   operationStages            OperationStage[]
+  blogDrafts                 BlogDraft[]
+  contentAutomationConnections ContentAutomationConnection[]
 
   @@map("agency")
 }
@@ -2624,4 +2626,78 @@ model OperationStage {
   @@unique([agencyId, order])
   @@index([agencyId])
   @@map("operation_stage")
+}
+
+enum BlogDraftStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Automação de blog (Blueprint de Automações, 2026-10-15) — o agente externo
+/// (rotina agendada, fora deste código) escreve o artigo e chama as rotas de
+/// `blog-drafts`; aqui fica só o staging/auditoria do processo de aprovação.
+/// A fonte de verdade publicada continua sendo o arquivo `.mdx`/`.mjs`
+/// commitado no repositório do site do cliente (ver `ContentAutomationConnection`).
+/// Decisão revisada em 2026-10-15: nada publica sozinho por enquanto — todo
+/// rascunho fica PENDING até aprovação manual pela tela de Automações.
+model BlogDraft {
+  id           String          @id @default(cuid())
+  agencyId     String
+  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  slug         String
+  title        String
+  excerpt      String
+  content      String
+  origin       String          @default("manual") // 'manual' | 'search_console' | 'refresh'
+  status       BlogDraftStatus @default(PENDING)
+  reviewNote   String?
+  seoTitle     String?
+  focusKeyword String?
+  cover        String?
+  category     String?
+  createdAt    DateTime        @default(now())
+  reviewedAt   DateTime?
+
+  comments BlogDraftComment[]
+
+  @@unique([agencyId, slug])
+  @@index([agencyId, status])
+  @@map("blog_draft")
+}
+
+/// Pedido de ajuste num rascunho (antes ou depois de aprovado) — o agente lê
+/// os comentários `OPEN` na próxima rodada e reescreve, respondendo em `agentReply`.
+model BlogDraftComment {
+  id         String    @id @default(cuid())
+  draftId    String
+  draft      BlogDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  body       String
+  status     String    @default("open") // 'open' | 'done'
+  agentReply String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([draftId, status])
+  @@map("blog_draft_comment")
+}
+
+/// Credenciais pra automação de conteúdo publicar direto no repositório do
+/// site do cliente via GitHub Contents API. Token sempre criptografado (mesmo
+/// padrão de `AdAccountConnection.accessTokenEnc`), nunca em variável de
+/// ambiente global — cada agência tem o seu.
+model ContentAutomationConnection {
+  id                String   @id @default(cuid())
+  agencyId          String
+  agency            Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  githubOwner       String
+  githubRepo        String
+  githubBranch      String   @default("main")
+  githubTokenEnc    String
+  agentApiKeyEnc    String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([agencyId])
+  @@map("content_automation_connection")
 }
