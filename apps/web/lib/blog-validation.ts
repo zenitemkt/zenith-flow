@@ -161,6 +161,23 @@ export function validateBlogDraft(input: BlogDraftValidationInput): ValidationIs
     push("slug", "slug já existe — use o fluxo de revisão (origin: refresh) em vez de criar um novo rascunho");
   }
 
+  // Rodapé de referências (política de pesquisa, 2026-10-15) — checa só a
+  // presença mecânica da seção e um mínimo de links reais; não dá pra
+  // validar aqui se as fontes realmente existem/foram consultadas, isso é
+  // responsabilidade do agente (seção 4 do agent-rules).
+  const referencesMatch = input.content.match(/##\s*Referências e fontes consultadas\s*\n([\s\S]*)$/i);
+  if (!referencesMatch) {
+    push("content", 'falta a seção final "## Referências e fontes consultadas"');
+  } else {
+    const referenceLines = referencesMatch[1]!
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => /^-\s*\[.+\]\(https?:\/\/[^)]+\)/.test(l));
+    if (referenceLines.length < 3) {
+      push("content", `seção de referências com ${referenceLines.length} link(s) — esperado pelo menos 3, formato "- [Título](URL) — Instituição, Ano"`);
+    }
+  }
+
   // Abertura de parágrafo repetida em relação aos últimos artigos — fica a
   // cargo do chamador (precisa do corpo dos últimos N artigos publicados,
   // que este módulo não busca sozinho).
