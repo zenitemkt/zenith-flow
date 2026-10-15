@@ -122,7 +122,27 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
           <p className="text-xs font-semibold text-[#B54708]">
             Chave de agente gerada — copie agora, não aparece de novo: configure como <code>x-draft-agent-key</code> na rotina agendada.
           </p>
-          <code className="mt-1 block break-all text-xs text-[#101828]">{newAgentKey}</code>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              readOnly
+              value={newAgentKey}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{ background: "#ffffff", color: "#101828" }}
+              className="h-9 flex-1 rounded-lg border border-[#D0D5DD] px-3 font-mono text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(newAgentKey).then(
+                  () => toast.success("Chave copiada."),
+                  () => toast.error("Não foi possível copiar — selecione o texto manualmente."),
+                );
+              }}
+              className="h-9 shrink-0 rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#475467]"
+            >
+              Copiar
+            </button>
+          </div>
         </div>
       )}
     </section>
