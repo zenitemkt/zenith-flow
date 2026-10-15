@@ -186,6 +186,7 @@ model Agency {
   blogDrafts                 BlogDraft[]
   contentAutomationConnections ContentAutomationConnection[]
   blogPageViewCounts          BlogPageViewCount[]
+  searchConsoleConnection     SearchConsoleConnection?
 
   @@map("agency")
 }
@@ -2719,4 +2720,22 @@ model BlogPageViewCount {
 
   @@unique([agencyId, slug])
   @@map("blog_page_view_count")
+}
+
+/// Conexão OAuth com o Google Search Console (offline/refresh token, mesmo
+/// espírito do GBP descrito no blueprint) — usada só pra ler as pesquisas
+/// dos últimos 7 dias e priorizar o tema do blog automático.
+model SearchConsoleConnection {
+  id                String   @id @default(cuid())
+  agencyId          String   @unique
+  agency            Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  siteUrl           String
+  refreshTokenEnc   String
+  connectedByUserId String?
+  lastValidatedAt   DateTime?
+  lastError         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("search_console_connection")
 }

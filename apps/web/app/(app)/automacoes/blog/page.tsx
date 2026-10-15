@@ -2,14 +2,16 @@ import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { ContentAutomationConnectionForm } from "./ContentAutomationConnectionForm";
+import { SearchConsoleConnectionCard } from "./SearchConsoleConnectionCard";
 import { BlogDraftCard, type BlogDraftSummary } from "./BlogDraftCard";
 
 export default async function BlogAutomationPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
 
-  const [connection, drafts] = await Promise.all([
+  const [connection, searchConsole, drafts] = await Promise.all([
     prisma.contentAutomationConnection.findUnique({ where: { agencyId: membership.agencyId } }),
+    prisma.searchConsoleConnection.findUnique({ where: { agencyId: membership.agencyId } }),
     prisma.blogDraft.findMany({
       where: { agencyId: membership.agencyId },
       orderBy: { createdAt: "desc" },
@@ -51,6 +53,12 @@ export default async function BlogAutomationPage() {
         githubOwner={connection?.githubOwner ?? null}
         githubRepo={connection?.githubRepo ?? null}
         githubBranch={connection?.githubBranch ?? null}
+      />
+
+      <SearchConsoleConnectionCard
+        connected={Boolean(searchConsole)}
+        siteUrl={searchConsole?.siteUrl ?? null}
+        lastError={searchConsole?.lastError ?? null}
       />
 
       <section>

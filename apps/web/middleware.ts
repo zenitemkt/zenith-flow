@@ -25,6 +25,7 @@ const PUBLIC_PATH_PREFIXES = [
   // dupla da própria rota. Ver lib/content-automation-auth.ts.
   "/api/admin/agent-rules",
   "/api/admin/blog-drafts",
+  "/api/admin/search-console/queries",
 ];
 
 function isPublicPath(pathname: string): boolean {

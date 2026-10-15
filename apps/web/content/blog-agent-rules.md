@@ -12,9 +12,10 @@ ranquear bem.
 
 Ordem de prioridade pra escolher o tema do dia:
 
-1. **Pesquisa real do Google Search Console dos últimos 7 dias** (quando a integração estiver
-   disponível — ainda não está em 2026-10-15; enquanto isso, pule pro passo 2). Prefira um termo com
-   volume de impressão relevante que ainda não tenha artigo respondendo a ele.
+1. **Pesquisa real do Google Search Console dos últimos 7 dias**:
+   `GET /api/admin/search-console/queries` (header `x-draft-agent-key`). Se `connected: false`, pule pro
+   passo 2. Se vier lista de `queries`, prefira o termo com maior `impressions` que ainda não tenha
+   artigo respondendo a ele (confira o passo 3 antes de decidir).
 2. **Lista de 50 temas prioritários** (seção 1.1, abaixo) — percorra em ordem de prioridade editorial
    ("Muito alta" antes de "Alta"), pulando qualquer tema que já tenha artigo (ver passo 3).
 3. **Antes de escrever sobre qualquer tema** (vindo do Search Console ou da lista), confirme em
