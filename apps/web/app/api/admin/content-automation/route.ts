@@ -22,9 +22,12 @@ export async function GET() {
 }
 
 /**
- * Configura/atualiza o repositório de destino e o token do GitHub. Gera uma
- * chave de agente nova (devolvida só nesta resposta, nunca mais — mesmo
- * espírito do refresh_token do GBP no blueprint, "mostrado uma única vez").
+ * Configura/atualiza owner/repo/branch e (opcionalmente) o token do GitHub.
+ * Deixar o campo de token em branco numa atualização mantém o token já
+ * guardado — só precisa repetir o token quando for trocar de verdade (ex.:
+ * PAT vencido). Não mexe na chave de agente (ver /regenerate-agent-key, que
+ * tem o único botão que troca essa chave — gerar uma nova sem querer
+ * invalidaria uma rotina já configurada com a anterior).
  */
 export async function PUT(request: Request) {
   const { session, membership } = await requireSessionAndMembership();
@@ -38,29 +41,26 @@ export async function PUT(request: Request) {
   const githubRepo = typeof body?.githubRepo === "string" ? body.githubRepo.trim() : "";
   const githubBranch = typeof body?.githubBranch === "string" && body.githubBranch.trim() ? body.githubBranch.trim() : "main";
   const githubToken = typeof body?.githubToken === "string" ? body.githubToken.trim() : "";
-  if (!githubOwner || !githubRepo || !githubToken) {
-    return NextResponse.json({ error: "Preencha owner, repositório e token do GitHub." }, { status: 400 });
+  if (!githubOwner || !githubRepo) {
+    return NextResponse.json({ error: "Preencha owner e repositório do GitHub." }, { status: 400 });
   }
 
-  const agentApiKey = `blog_${randomBytes(24).toString("hex")}`;
-  await prisma.contentAutomationConnection.upsert({
-    where: { agencyId: membership.agencyId },
-    create: {
-      agencyId: membership.agencyId,
-      githubOwner,
-      githubRepo,
-      githubBranch,
-      githubTokenEnc: encryptSecret(githubToken),
-      agentApiKeyEnc: encryptSecret(agentApiKey),
-    },
-    update: {
-      githubOwner,
-      githubRepo,
-      githubBranch,
-      githubTokenEnc: encryptSecret(githubToken),
-      agentApiKeyEnc: encryptSecret(agentApiKey),
-    },
-  });
+  const existing = await prisma.contentAutomationConnection.findUnique({ where: { agencyId: membership.agencyId } });
+  if (!existing && !githubToken) {
+    return NextResponse.json({ error: "Primeira configuração precisa do token do GitHub." }, { status: 400 });
+  }
 
-  return NextResponse.json({ ok: true, agentApiKey });
+  if (!existing) {
+    const agentApiKey = `blog_${randomBytes(24).toString("hex")}`;
+    await prisma.contentAutomationConnection.create({
+      data: { agencyId: membership.agencyId, githubOwner, githubRepo, githubBranch, githubTokenEnc: encryptSecret(githubToken), agentApiKeyEnc: encryptSecret(agentApiKey) },
+    });
+    return NextResponse.json({ ok: true, agentApiKey });
+  }
+
+  await prisma.contentAutomationConnection.update({
+    where: { agencyId: membership.agencyId },
+    data: { githubOwner, githubRepo, githubBranch, ...(githubToken ? { githubTokenEnc: encryptSecret(githubToken) } : {}) },
+  });
+  return NextResponse.json({ ok: true });
 }

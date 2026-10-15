@@ -20,6 +20,7 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
   const [branch, setBranch] = useState(githubBranch ?? "main");
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [newAgentKey, setNewAgentKey] = useState<string | null>(null);
 
   async function save() {
@@ -35,7 +36,7 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
         toast.error(data?.error ?? "Não foi possível salvar.");
         return;
       }
-      setNewAgentKey(data.agentApiKey);
+      if (data.agentApiKey) setNewAgentKey(data.agentApiKey);
       setToken("");
       toast.success("Conexão salva.");
       router.refresh();
@@ -43,6 +44,24 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
       toast.error("Erro de rede — tente novamente.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function regenerateAgentKey() {
+    setRegenerating(true);
+    try {
+      const response = await fetch("/api/admin/content-automation/regenerate-agent-key", { method: "POST" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error(data?.error ?? "Não foi possível gerar a chave.");
+        return;
+      }
+      setNewAgentKey(data.agentApiKey);
+      toast.success("Nova chave gerada — rotinas com a chave antiga vão parar de funcionar.");
+    } catch {
+      toast.error("Erro de rede — tente novamente.");
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -78,14 +97,26 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
           className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
         />
       </label>
-      <button
-        type="button"
-        onClick={save}
-        disabled={saving || !owner.trim() || !repo.trim() || (!connected && !token.trim())}
-        className="mt-3 h-9 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {saving ? "Salvando…" : "Salvar conexão"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !owner.trim() || !repo.trim() || (!connected && !token.trim())}
+          className="h-9 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Salvando…" : "Salvar conexão"}
+        </button>
+        {connected && (
+          <button
+            type="button"
+            onClick={regenerateAgentKey}
+            disabled={regenerating}
+            className="h-9 rounded-lg border border-[#D0D5DD] px-4 text-sm font-semibold text-[#475467] disabled:opacity-50"
+          >
+            {regenerating ? "Gerando…" : "Gerar nova chave de agente"}
+          </button>
+        )}
+      </div>
       {newAgentKey && (
         <div className="mt-3 rounded-lg border border-[#FEC84B] bg-[#FFFCF5] p-3">
           <p className="text-xs font-semibold text-[#B54708]">
