@@ -124,6 +124,22 @@ export function BlogDraftCard({ draft }: { draft: BlogDraftSummary }) {
     }
   }
 
+  async function reconcile() {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/admin/blog-drafts/${draft.id}/reconcile`, { method: "POST" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error(data?.error ?? "Não foi possível reconciliar.");
+        return;
+      }
+      toast.success("Status corrigido — o artigo já estava publicado.");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendComment() {
     if (!commentText.trim()) return;
     setBusy(true);
@@ -206,6 +222,15 @@ export function BlogDraftCard({ draft }: { draft: BlogDraftSummary }) {
               </button>
               <button type="button" onClick={() => setApproving((v) => !v)} className="h-9 rounded-lg bg-[#16A36A] px-3 text-xs font-semibold text-white">
                 {approving ? "Fechar aprovação" : "Aprovar e publicar"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={reconcile}
+                title='Use só se a aprovação deu erro mas o artigo já apareceu no site (bug raro: publicou no GitHub, mas o status não atualizou)'
+                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#475467] disabled:opacity-50"
+              >
+                Já foi publicado, só corrigir status
               </button>
             </div>
           )}
