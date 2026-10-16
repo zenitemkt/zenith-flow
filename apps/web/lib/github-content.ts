@@ -60,26 +60,40 @@ export interface GithubFileWrite {
   content: string | Buffer;
 }
 
-/** Cria ou atualiza um arquivo (precisa do `sha` atual pra atualizar — busca sozinho se não vier). */
+/**
+ * Cria ou atualiza um arquivo (precisa do `sha` atual pra atualizar — busca sozinho se não vier).
+ * Faz uma segunda tentativa em caso de falha (hiccup transitório da API do GitHub ou sha
+ * desatualizado) — achado em produção: um publish de blog com ~7 commits sequenciais travou no
+ * penúltimo arquivo e deixou o rascunho "publicado pela metade" (html foi, SVG de capa não).
+ */
 export async function githubPutFile(ref: GithubRepoRef, write: GithubFileWrite, message: string, existingSha?: string | null): Promise<void> {
-  let sha = existingSha;
-  if (sha === undefined) {
-    const existing = await githubGetFile(ref, write.path);
-    sha = existing?.sha ?? null;
-  }
-  const base64Content = Buffer.isBuffer(write.content) ? write.content.toString("base64") : Buffer.from(write.content, "utf8").toString("base64");
-  const response = await githubFetch(ref, `/contents/${write.path}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      message,
-      content: base64Content,
-      branch: ref.branch,
-      ...(sha ? { sha } : {}),
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new GithubContentError(`Falha ao commitar ${write.path}: ${response.status} ${body}`, response.status);
+  const attempt = async (shaHint: string | null | undefined): Promise<void> => {
+    let sha = shaHint;
+    if (sha === undefined) {
+      const existing = await githubGetFile(ref, write.path);
+      sha = existing?.sha ?? null;
+    }
+    const base64Content = Buffer.isBuffer(write.content) ? write.content.toString("base64") : Buffer.from(write.content, "utf8").toString("base64");
+    const response = await githubFetch(ref, `/contents/${write.path}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message,
+        content: base64Content,
+        branch: ref.branch,
+        ...(sha ? { sha } : {}),
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new GithubContentError(`Falha ao commitar ${write.path}: ${response.status} ${body}`, response.status);
+    }
+  };
+
+  try {
+    await attempt(existingSha);
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await attempt(undefined); // busca o sha de novo — pode ter mudado entre as duas tentativas
   }
 }
 

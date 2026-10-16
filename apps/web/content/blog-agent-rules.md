@@ -116,8 +116,25 @@ fontes de verdade — nunca cite algo que você não confirmou que existe.
 
 ## 5. Tom e produção editorial
 
-- Português do Brasil, natural, técnico quando precisa, acessível sempre.
+**Leitor-alvo (alinhado com o Gabriel em 2026-10-16): dono ou gestor de empresa média/grande da região,
+não é especialista de marketing.** Ele pode nunca ter ouvido falar de inbound, CPL, funil, GEO ou nome de
+pesquisa nenhuma. Se o texto só faz sentido pra quem já trabalha com marketing, reescreva. O teste: dá pra
+ler em voz alta pra um dono de indústria ou de clínica e ele entende de primeira, sem precisar perguntar
+"o que é isso"?
+
+- Português do Brasil, natural, direto. Evite jargão de marketing sempre que der; quando o termo técnico
+  for necessário (CPL, inbound, remarketing, funil, GEO...), explique o que ele significa em palavras
+  simples na primeira vez que aparece, na mesma frase ou logo em seguida — nunca deixe o termo sozinho
+  esperando que o leitor já saiba.
 - Frases curtas, parágrafos de 2-4 frases. Números e exemplos concretos em vez de afirmação genérica.
+- Rigor de fonte (seção 3-4) é sobre a pesquisa ser real, não sobre o texto soar acadêmico. Traduza o
+  achado da pesquisa pro que ele muda na prática do leitor ("estudo X encontrou Y" vira "na prática, isso
+  significa que..."). Nome de instituição, metodologia e tamanho de amostra ficam em detalhe só na seção
+  de referências no fim — no corpo do texto, cite a fonte de passagem, sem transformar o parágrafo numa
+  descrição de estudo.
+- Tabela é apoio visual pra quem quer aprofundar, nunca a única explicação. Toda tabela com número/dado
+  técnico precisa de uma frase em português simples antes ou depois dizendo o que aquele número significa
+  pro negócio do leitor.
 - Nunca prometa resultado garantido. Nunca use superlativo vazio.
 - Inclua exemplo aplicável ao mercado brasileiro, deixando claro o que é adaptação prática e o que é
   resultado comprovado por fonte.
