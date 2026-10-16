@@ -50,10 +50,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json().catch(() => null);
-  const data: Record<string, string | null> = {};
+  const data: Record<string, unknown> = {};
   for (const field of ["title", "excerpt", "content", "seoTitle", "focusKeyword", "category", "cover"] as const) {
     const value = text(body?.[field], field === "content" ? 50_000 : 300);
     if (value !== null) data[field] = value;
+  }
+  const suggestedCoverSearchTerm = text(body?.coverSearchTerm, 200);
+  if (suggestedCoverSearchTerm !== null) data.suggestedCoverSearchTerm = suggestedCoverSearchTerm;
+  if (Array.isArray(body?.related)) {
+    data.suggestedRelated = body.related.filter((item: unknown): item is string => typeof item === "string").slice(0, 3);
+  }
+  if (Array.isArray(body?.faq)) {
+    data.suggestedFaq = (body.faq as unknown[])
+      .filter((item): item is { q: string; a: string } => typeof item === "object" && item !== null && typeof (item as any).q === "string" && typeof (item as any).a === "string")
+      .slice(0, 8);
   }
   if (Object.keys(data).length === 0) return NextResponse.json({ error: "Nada pra atualizar." }, { status: 400 });
 

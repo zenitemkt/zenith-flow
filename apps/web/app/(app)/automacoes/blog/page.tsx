@@ -37,6 +37,9 @@ export default async function BlogAutomationPage() {
     origin: draft.origin,
     createdAt: draft.createdAt.toISOString(),
     comments: draft.comments.map((c) => ({ id: c.id, body: c.body, status: c.status, agentReply: c.agentReply, createdAt: c.createdAt.toISOString() })),
+    suggestedRelated: Array.isArray(draft.suggestedRelated) ? (draft.suggestedRelated as string[]) : null,
+    suggestedFaq: Array.isArray(draft.suggestedFaq) ? (draft.suggestedFaq as Array<{ q: string; a: string }>) : null,
+    suggestedCoverSearchTerm: draft.suggestedCoverSearchTerm,
   });
 
   return (

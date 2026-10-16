@@ -2658,6 +2658,13 @@ model BlogDraft {
   focusKeyword String?
   cover        String?
   category     String?
+  /// Sugestões do próprio agente na hora de criar o rascunho — pré-preenchem
+  /// a tela de aprovação pra não exigir digitação manual toda vez. Formato:
+  /// string[] de slugs já existentes.
+  suggestedRelated         Json?
+  /// Formato: {q: string, a: string}[].
+  suggestedFaq             Json?
+  suggestedCoverSearchTerm String?
   createdAt    DateTime        @default(now())
   reviewedAt   DateTime?
 

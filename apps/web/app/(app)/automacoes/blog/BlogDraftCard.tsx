@@ -27,6 +27,9 @@ export interface BlogDraftSummary {
   origin: string;
   createdAt: string;
   comments: DraftComment[];
+  suggestedRelated: string[] | null;
+  suggestedFaq: Array<{ q: string; a: string }> | null;
+  suggestedCoverSearchTerm: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = { PENDING: "Pendente", APPROVED: "Publicado", REJECTED: "Rejeitado" };
@@ -52,9 +55,9 @@ export function BlogDraftCard({ draft }: { draft: BlogDraftSummary }) {
   const [cover, setCover] = useState(draft.cover ?? "");
   const [focusKeyword, setFocusKeyword] = useState(draft.focusKeyword ?? "");
 
-  const [relatedCsv, setRelatedCsv] = useState("");
-  const [coverSearchTerm, setCoverSearchTerm] = useState(draft.focusKeyword ?? "");
-  const [faqText, setFaqText] = useState("");
+  const [relatedCsv, setRelatedCsv] = useState((draft.suggestedRelated ?? []).join(", "));
+  const [coverSearchTerm, setCoverSearchTerm] = useState(draft.suggestedCoverSearchTerm ?? draft.focusKeyword ?? "");
+  const [faqText, setFaqText] = useState((draft.suggestedFaq ?? []).map((item) => `${item.q} :: ${item.a}`).join("\n"));
 
   async function saveEdits() {
     setBusy(true);

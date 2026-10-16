@@ -49,6 +49,15 @@ export async function POST(request: Request) {
   const category = text(body?.category, 60);
   const cover = text(body?.cover, 40);
   const origin = text(body?.origin, 20) ?? "manual";
+  const suggestedCoverSearchTerm = text(body?.coverSearchTerm, 200);
+  const suggestedRelated = Array.isArray(body?.related)
+    ? body.related.filter((item: unknown): item is string => typeof item === "string").slice(0, 3)
+    : undefined;
+  const suggestedFaq = Array.isArray(body?.faq)
+    ? (body.faq as unknown[])
+        .filter((item): item is { q: string; a: string } => typeof item === "object" && item !== null && typeof (item as any).q === "string" && typeof (item as any).a === "string")
+        .slice(0, 8)
+    : undefined;
 
   let ref;
   try {
@@ -62,7 +71,22 @@ export async function POST(request: Request) {
   if (issues.length > 0) return NextResponse.json({ error: "Rascunho não passou na validação mecânica.", issues }, { status: 422 });
 
   const draft = await prisma.blogDraft.create({
-    data: { agencyId: actor.agencyId, slug, title, excerpt, content, seoTitle, focusKeyword, category, cover, origin, status: "PENDING" },
+    data: {
+      agencyId: actor.agencyId,
+      slug,
+      title,
+      excerpt,
+      content,
+      seoTitle,
+      focusKeyword,
+      category,
+      cover,
+      origin,
+      status: "PENDING",
+      suggestedCoverSearchTerm,
+      ...(suggestedRelated !== undefined ? { suggestedRelated } : {}),
+      ...(suggestedFaq !== undefined ? { suggestedFaq } : {}),
+    },
   });
   return NextResponse.json({ id: draft.id, status: draft.status }, { status: 201 });
 }
