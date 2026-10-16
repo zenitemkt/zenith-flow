@@ -12,6 +12,9 @@ const USER_AGENT = "ZeniteFlowBlogAutomation/1.0 (contato gabri.espi@hotmail.com
 /** Mesmo espírito do filtro de "termos bloqueados" do blueprint (seção 2.6) — evita foto errada por acidente. */
 const BANNED_ALT_TERMS = [/beer|wine|whisky|vodka|cerveja|vinho|alcohol|cigarette|cigarro|nude|naked/i];
 
+/** `list=search` no namespace de arquivo devolve qualquer tipo (PDF, SVG, áudio...), não só foto — filtra pela extensão real. */
+const PHOTO_EXTENSION_PATTERN = /\.(jpe?g|png)$/i;
+
 export interface CommonsPhotoResult {
   slug: string;
   file: string;
@@ -43,7 +46,7 @@ function stripHtml(value: string | undefined): string {
   return (value ?? "").replace(/<[^>]+>/g, "").trim();
 }
 
-async function searchCommonsFiles(term: string, limit = 8): Promise<string[]> {
+async function searchCommonsFiles(term: string, limit = 20): Promise<string[]> {
   const params = new URLSearchParams({
     action: "query",
     format: "json",
@@ -84,6 +87,7 @@ export async function findAndDownloadCommonsPhoto(slug: string, searchTerm: stri
   if (candidates.length === 0) throw new Error(`Nenhum resultado no Commons pra "${searchTerm}"`);
 
   for (const title of candidates) {
+    if (!PHOTO_EXTENSION_PATTERN.test(title)) continue; // pula PDF/SVG/áudio/etc. — só foto de verdade
     const info = await getImageInfo(title);
     if (!info?.thumburl) continue;
     const alt = stripHtml(info.extmetadata?.ImageDescription?.value) || searchTerm;
