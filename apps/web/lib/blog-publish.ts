@@ -13,15 +13,21 @@ export interface PublishBlogDraftInput {
   faq: Array<{ q: string; a: string }>;
 }
 
+/** Data de escrita (criação do rascunho), não de aprovação — e no fuso de Brasília, não UTC (virava o dia errado depois das 21h). */
+function writingDate(createdAt: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(createdAt);
+  const get = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 function buildMjsSource(input: PublishBlogDraftInput): string {
   const { draft } = input;
-  const today = new Date().toISOString().slice(0, 10);
   const fields: Record<string, unknown> = {
     slug: draft.slug,
     title: draft.title,
     description: draft.excerpt,
     category: draft.category ?? "Marketing Digital",
-    date: today,
+    date: writingDate(draft.createdAt),
     cover: draft.cover ?? "seo",
     keyword: draft.focusKeyword ?? "",
     answer: draft.excerpt,
