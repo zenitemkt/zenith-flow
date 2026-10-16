@@ -12,6 +12,24 @@ const USER_AGENT = "ZeniteFlowBlogAutomation/1.0 (contato gabri.espi@hotmail.com
 /** Mesmo espírito do filtro de "termos bloqueados" do blueprint (seção 2.6) — evita foto errada por acidente. */
 const BANNED_ALT_TERMS = [/beer|wine|whisky|vodka|cerveja|vinho|alcohol|cigarette|cigarro|nude|naked/i];
 
+/**
+ * Achado em produção (2026-10-16): termos neutros de escritório ("cluttered
+ * desk", "office corner") batem com fotos de evidência do caso Epstein (lote
+ * "EFTA..." liberado pelo DOJ/FBI em dez/2025) por coincidência de descrição,
+ * não por conteúdo visual relacionado. Bloqueia pelo título/descrição/autor
+ * qualquer coisa ligada a prova criminal, não só termos de bebida/nudez.
+ */
+const BANNED_SENSITIVE_TERMS = [
+  /\bEFTA\d/i,
+  /epstein/i,
+  /\bDOJ\b/i,
+  /\bFBI\b/i,
+  /crime scene/i,
+  /evidence (photo|file)/i,
+  /court exhibit/i,
+  /department of justice/i,
+];
+
 /** `list=search` no namespace de arquivo devolve qualquer tipo (PDF, SVG, áudio...), não só foto — filtra pela extensão real. */
 const PHOTO_EXTENSION_PATTERN = /\.(jpe?g|png)$/i;
 
@@ -88,10 +106,13 @@ export async function findAndDownloadCommonsPhoto(slug: string, searchTerm: stri
 
   for (const title of candidates) {
     if (!PHOTO_EXTENSION_PATTERN.test(title)) continue; // pula PDF/SVG/áudio/etc. — só foto de verdade
+    if (BANNED_SENSITIVE_TERMS.some((pattern) => pattern.test(title))) continue;
     const info = await getImageInfo(title);
     if (!info?.thumburl) continue;
     const alt = stripHtml(info.extmetadata?.ImageDescription?.value) || searchTerm;
+    const artist = stripHtml(info.extmetadata?.Artist?.value);
     if (BANNED_ALT_TERMS.some((pattern) => pattern.test(alt))) continue;
+    if (BANNED_SENSITIVE_TERMS.some((pattern) => pattern.test(alt) || pattern.test(artist))) continue;
     const license = info.extmetadata?.LicenseShortName?.value ?? null;
     if (!license) continue; // sem licença identificada no metadata, pula por segurança
 
