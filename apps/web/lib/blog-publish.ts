@@ -153,9 +153,24 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
       addIfChanged(`dist/assets/blog/${svgName}`, path.join(distDir, "assets", "blog", svgName));
     }
 
+    // Cada arquivo commita de forma independente: uma falha isolada (ex.: hiccup
+    // da API do GitHub num arquivo do meio da lista) não pode impedir os
+    // arquivos seguintes de ir — foi exatamente isso que deixou um artigo
+    // publicado sem a capa SVG (ela é sempre o último item da lista) numa
+    // falha real em produção. githubPutFile já tenta de novo uma vez sozinho;
+    // aqui só evitamos que um `throw` no meio pare os demais.
     const message = `feat(blog): publica "${input.draft.title}" (${input.draft.slug})`;
+    const failed: Array<{ path: string; error: string }> = [];
     for (const write of writes) {
-      await githubPutFile(ref, { path: write.path, content: write.content }, message);
+      try {
+        await githubPutFile(ref, { path: write.path, content: write.content }, message);
+      } catch (error) {
+        failed.push({ path: write.path, error: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    if (failed.length > 0) {
+      const detail = failed.map((f) => `${f.path}: ${f.error}`).join(" | ");
+      throw new Error(`${failed.length} de ${writes.length} arquivo(s) não foram commitados mesmo após nova tentativa: ${detail}`);
     }
 
     return { commitPaths: writes.map((w) => w.path) };
