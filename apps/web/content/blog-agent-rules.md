@@ -220,6 +220,12 @@ num texto de venda.
 - `coverSearchTerm`: 2-4 palavras em inglês, concretas e visuais (ex.: "laptop analytics dashboard") —
   usado na busca da foto de capa real no Wikimedia Commons. Envie junto no `POST /api/admin/blog-drafts`
   (ver "Depois de escrever") — fica salvo no rascunho e pré-preenche a tela de aprovação.
+  **Nunca use termo específico de setor/indústria** (ex.: "industrial factory", "textile manufacturing") —
+  esse tipo de busca tende a trazer foto de arquivo histórico/institucional sem relação com o artigo (já
+  aconteceu: uma foto de inauguração de fábrica de 1999 virou capa de um artigo sobre Google Ads). Prefira
+  sempre cena genérica de escritório/marketing/dado (pessoa com notebook, gráfico, reunião, tela de
+  dashboard) — o tema do artigo já fica claro pelo título e pelo texto, a foto só precisa ilustrar "trabalho
+  com marketing/dados", não o setor específico do exemplo regional.
 
 ## Proibido (reprovação automática pela validação mecânica)
 
@@ -252,7 +258,8 @@ num texto de venda.
    - `faq`: mínimo 3 pares `{q, a}`, mesmo padrão de tom e proibições do corpo do artigo (sem travessão,
      sem muleta, sem adjetivo vazio).
    - `coverSearchTerm`: 2-4 palavras em inglês, concretas e visuais (ex.: "laptop analytics dashboard"),
-     pra busca da foto real no Wikimedia Commons.
+     pra busca da foto real no Wikimedia Commons — nunca específico de setor/indústria (seção 10 explica
+     por quê).
    **Não publica sozinho.** Um humano revisa e aprova pela tela de Automações no Zenite Flow — mas não
    deve precisar escrever `related`/`faq`/`coverSearchTerm` do zero, só revisar o que você já sugeriu.
 3. Se um rascunho seu tiver um comentário aberto (`GET /api/admin/blog-drafts/revisions`), reescreva
