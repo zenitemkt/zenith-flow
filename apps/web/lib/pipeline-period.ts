@@ -1,4 +1,4 @@
-﻿export type PipelinePeriod = "all" | "last30" | "last14" | "last7" | "year" | "month" | "custom";
+﻿export type PipelinePeriod = "today" | "yesterday" | "all" | "last30" | "last14" | "last7" | "year" | "month" | "custom";
 
 export interface PipelinePeriodParams {
   period?: string;
@@ -32,13 +32,23 @@ function parseDate(value?: string) {
 
 export function resolvePipelinePeriod(params: PipelinePeriodParams, now = new Date()): PipelinePeriodResult {
   const today = startOfUtcDay(now);
-  const period = (["all", "last30", "last14", "last7", "year", "month", "custom"] as const).includes(
+  const period = (["today", "yesterday", "all", "last30", "last14", "last7", "year", "month", "custom"] as const).includes(
     params.period as PipelinePeriod,
   )
     ? (params.period as PipelinePeriod)
     : "all";
 
   if (period === "all") return { period, label: "Todo o período" };
+
+  if (period === "today") {
+    return { period, label: "Hoje", createdAt: { gte: today, lt: nextUtcDay(today) } };
+  }
+
+  if (period === "yesterday") {
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    return { period, label: "Ontem", createdAt: { gte: yesterday, lt: today } };
+  }
 
   if (period === "last30" || period === "last14" || period === "last7") {
     const days = period === "last30" ? 30 : period === "last14" ? 14 : 7;

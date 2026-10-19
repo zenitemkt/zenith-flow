@@ -13,6 +13,8 @@ interface Props {
 }
 
 const OPTIONS: Array<{ value: PipelinePeriod; label: string }> = [
+  { value: "today", label: "Hoje" },
+  { value: "yesterday", label: "Ontem" },
   { value: "last30", label: "Últimos 30 dias" },
   { value: "last14", label: "Últimos 14 dias" },
   { value: "last7", label: "Últimos 7 dias" },
