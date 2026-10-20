@@ -94,7 +94,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         // Só clientes ativos entram na lista (a carteira cresce); o filtrado agora continua visível mesmo se inativo.
         clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
         activeClientId={activeClientId}
-        buildHref={(clientId) => (clientId ? `/operacao?clientId=${clientId}` : "/operacao")}
+        basePath="/operacao"
       />
 
       <ContentBoard items={boardItems} people={people} canManage={canManageAnyTask(membership.role)} />

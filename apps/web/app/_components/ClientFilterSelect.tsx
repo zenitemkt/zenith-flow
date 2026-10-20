@@ -12,16 +12,17 @@ interface ClientOption {
 /**
  * Filtro por cliente em caixa de seleção (pedido do usuário, 2026-10-20): no
  * lugar de uma fileira de botões, que não escala com muitos clientes. Abre pra
- * baixo, com busca, e navega via `buildHref` como o `ClientFilterPills` fazia.
+ * baixo, com busca, e navega por `basePath?clientId=` como o `ClientFilterPills` fazia.
  */
 export function ClientFilterSelect({
   clients,
   activeClientId,
-  buildHref,
+  basePath,
 }: {
   clients: ClientOption[];
   activeClientId?: string;
-  buildHref: (clientId?: string) => string;
+  /** Rota da página; o filtro vira `?clientId=`. (Função não passa de Server pra Client Component.) */
+  basePath: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,7 +57,7 @@ export function ClientFilterSelect({
   function choose(clientId?: string) {
     setOpen(false);
     setQuery("");
-    router.push(buildHref(clientId));
+    router.push(clientId ? `${basePath}?clientId=${clientId}` : basePath);
   }
 
   return (
