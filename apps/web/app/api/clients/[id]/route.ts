@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
-import { readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
+import { readDriveUrl, readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
 import { prisma } from "@zenite-mkt/db";
 
 function optionalString(value: unknown): string | null {
@@ -38,6 +38,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Informe o nome do cliente." }, { status: 400 });
   }
 
+  const driveUrl = readDriveUrl(body?.driveUrl);
+  if (driveUrl === false) {
+    return NextResponse.json({ error: "Link da pasta do Drive inválido. Cole o link completo, começando com https://" }, { status: 400 });
+  }
+
   const segmentId = await resolveSegmentId(membership.agencyId, body?.segmentName);
 
   await prisma.client.update({
@@ -50,6 +55,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       whatsapp: optionalString(body?.whatsapp),
       segmentId,
       socialLinks: readSocialLinks(body?.socialLinks),
+      ...(driveUrl !== undefined ? { driveUrl } : {}),
     },
   });
 

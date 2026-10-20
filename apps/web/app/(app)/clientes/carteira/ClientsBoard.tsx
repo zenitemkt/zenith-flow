@@ -1,16 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ClientFormModal, type ClientFormValues } from "../_components/ClientFormModal";
 import Link from "next/link";
 import {
   CheckCircle2,
   Clock,
   Facebook,
+  FolderOpen,
   Globe,
   Instagram,
   Linkedin,
   MessageCircle,
   Music2,
+  Pencil,
   PencilLine,
   RotateCcw,
   Search,
@@ -32,7 +35,39 @@ export interface ClientCardData {
   hasBanner: boolean;
   bannerGradient: string;
   socials: { network: SocialNetworkId; url: string }[];
+  driveUrl: string | null;
   counts: { todo: number; doing: number; review: number; done: number };
+  /** Muda quando o cliente é salvo — força o navegador a buscar logo/banner novos. */
+  imageVersion: number;
+  formValues: Partial<ClientFormValues>;
+}
+
+function EditClientIconButton({ client }: { client: ClientCardData }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`Editar ${client.name}`}
+        title="Editar cadastro"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#344054] hover:bg-[#F2F4F7]"
+      >
+        <Pencil size={15} aria-hidden />
+      </button>
+      {open && (
+        <ClientFormModal
+          open={open}
+          onClose={() => setOpen(false)}
+          mode="edit"
+          clientId={client.id}
+          initialValues={client.formValues}
+          hasAvatar={client.hasAvatar}
+          hasBanner={client.hasBanner}
+        />
+      )}
+    </>
+  );
 }
 
 const SOCIAL_ICONS: Record<SocialNetworkId, LucideIcon> = {
@@ -99,25 +134,26 @@ function ClientCard({ client, canDelete }: { client: ClientCardData; canDelete: 
       <Link href={`/clientes/${client.id}`} className="block" aria-label={`Abrir ${client.name}`}>
         <div
           className="h-[88px] w-full bg-cover bg-center"
-          style={client.hasBanner ? { backgroundImage: `url(/api/clients/${client.id}/image/banner)` } : { background: client.bannerGradient }}
+          style={client.hasBanner ? { backgroundImage: `url(/api/clients/${client.id}/image/banner?v=${client.imageVersion})` } : { background: client.bannerGradient }}
         />
       </Link>
-      {canDelete && (
-        <div className="absolute right-2 top-2 rounded-lg bg-white/90 transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100">
+      <div className="absolute right-2 top-2 flex items-center rounded-lg bg-white/95 shadow-sm transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100">
+        <EditClientIconButton client={client} />
+        {canDelete && (
           <DeleteRecordButton
             endpoint={`/api/clients/${client.id}`}
             recordName={client.name}
             entityLabel="Cliente"
             warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo."
           />
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="px-4 pb-4">
         <div className="-mt-7 mb-2 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border-[3px] border-white bg-[#3b3f4a] text-sm font-bold text-white shadow-sm">
           {client.hasAvatar ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/clients/${client.id}/image/avatar`} alt="" className="h-full w-full object-cover" />
+            <img src={`/api/clients/${client.id}/image/avatar?v=${client.imageVersion}`} alt="" className="h-full w-full object-cover" />
           ) : (
             client.initials
           )}
@@ -140,7 +176,19 @@ function ClientCard({ client, canDelete }: { client: ClientCardData; canDelete: 
 
         <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-[#98A2B3]">Redes sociais</p>
         <div className="mt-1.5 flex min-h-[32px] flex-wrap gap-1.5">
-          {client.socials.length === 0 ? (
+          {client.driveUrl && (
+            <a
+              href={client.driveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir pasta do cliente no Google Drive"
+              className="flex items-center gap-1.5 rounded-full bg-[#101828] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#344054]"
+            >
+              <FolderOpen size={13} aria-hidden />
+              Drive
+            </a>
+          )}
+          {client.socials.length === 0 && !client.driveUrl ? (
             <span className="text-xs text-[#98A2B3]">Nenhuma cadastrada</span>
           ) : (
             client.socials.map(({ network, url }) => {

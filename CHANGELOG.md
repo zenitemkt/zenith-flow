@@ -4,6 +4,9 @@
 
 ### Adicionado
 
+- **Perfil do cliente editável**: página do cliente com cabeçalho de perfil (banner, logo, nome, Ativo/Inativo, ramo, contatos, redes); trocar logo e banner com um clique direto na imagem; botão principal "Editar cadastro". Na grade de Clientes, cada cartão ganhou botão de editar (abre o cadastro sem sair da lista). Imagens novas aparecem na hora (cache por versão).
+- **Pasta do Google Drive no cadastro do cliente**: campo no formulário; atalho "Drive" no cartão da grade e "Pasta no Drive" no perfil, abrindo em nova aba (mesmo campo usado em Arquivos/Biblioteca).
+
 - **Cartão de conteúdo aberto remodelado**: cabeçalho com cliente (avatar), título e status; trilha de etapas (A fazer → Concluído); uma ação principal com texto do que acontece ("Começar produção", "Enviar para revisão interna"...) e dica do que falta; conteúdo (descrição, versões, checklist com barra de progresso, comentários) à esquerda e painel "Detalhes" à direita, com data de publicação e responsáveis editáveis ali mesmo; histórico compacto e "Excluir" fora do caminho. No celular abre em tela cheia, com detalhes logo após o cabeçalho e botão de fechar fixo. Removido o "Voltar" duplicado.
 
 - **Estilo "Minimalista" (Configurações > Aparência)**: opção por usuário (`User.uiStyle`), independente de claro/escuro; o padrão continua sendo o visual Zênite. Layout claro com cartões arredondados, sombras suaves e ação primária preta, aplicado a todas as abas por `apps/web/app/ui-minimal.css` (mesma estratégia de ponte do `zenite-theme.css`).

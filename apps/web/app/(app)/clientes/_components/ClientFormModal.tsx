@@ -13,6 +13,7 @@ export interface ClientFormValues {
   phone: string;
   whatsapp: string;
   segmentName: string;
+  driveUrl: string;
   socials: Record<SocialNetworkId, string>;
 }
 
@@ -25,6 +26,7 @@ const EMPTY_VALUES: ClientFormValues = {
   phone: "",
   whatsapp: "",
   segmentName: "",
+  driveUrl: "",
   socials: EMPTY_SOCIALS,
 };
 
@@ -136,7 +138,7 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function update<K extends "name" | "document" | "email" | "phone" | "whatsapp" | "segmentName">(key: K, value: string) {
+  function update<K extends "name" | "document" | "email" | "phone" | "whatsapp" | "segmentName" | "driveUrl">(key: K, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -313,6 +315,15 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
             ))}
           </datalist>
         </div>
+        <FormField
+          label="Pasta do cliente no Google Drive"
+          name="driveUrl"
+          type="url"
+          inputMode="url"
+          value={values.driveUrl}
+          onChange={(e) => update("driveUrl", e.target.value)}
+          placeholder="https://drive.google.com/drive/folders/..."
+        />
         <FormField
           label="CNPJ / documento"
           name="document"

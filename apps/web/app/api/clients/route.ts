@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
+import { readDriveUrl, readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
 import { prisma, type MembershipRole } from "@zenite-mkt/db";
 
 const PORTAL_ROLES: MembershipRole[] = ["CLIENT_ADMIN", "CLIENT_VIEWER"];
@@ -74,6 +74,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const driveUrl = readDriveUrl(body?.driveUrl);
+  if (driveUrl === false) {
+    return NextResponse.json({ error: "Link da pasta do Drive inválido. Cole o link completo, começando com https://" }, { status: 400 });
+  }
+
   const segmentId = await resolveSegmentId(membership.agencyId, body?.segmentName);
   const socialLinks = readSocialLinks(body?.socialLinks);
 
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
     if (recentDuplicate) return recentDuplicate;
 
     const created = await tx.client.create({
-      data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp, segmentId, socialLinks },
+      data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp, segmentId, socialLinks, driveUrl: driveUrl ?? null },
     });
     await tx.clientStatusHistory.create({
       data: { clientId: created.id, toStatus: "PROSPECT", actorUserId: session.user.id },

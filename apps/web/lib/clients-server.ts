@@ -1,6 +1,24 @@
 import { prisma } from "@zenite-mkt/db";
 import { SOCIAL_NETWORKS, normalizeSocialUrl, type SocialLinks } from "@/lib/clients";
 
+/**
+ * Link da pasta do Google Drive do cliente. `undefined` = campo não enviado
+ * (não mexe), `null` = limpar, string = URL http(s) válida; `false` = inválido.
+ */
+export function readDriveUrl(raw: unknown): string | null | undefined | false {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "string") return false;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : false;
+  } catch {
+    return false;
+  }
+}
+
 /** Server-only. Lê `socialLinks` do corpo da requisição e devolve só URLs http(s) válidas por rede conhecida. */
 export function readSocialLinks(raw: unknown): SocialLinks {
   const links: SocialLinks = {};

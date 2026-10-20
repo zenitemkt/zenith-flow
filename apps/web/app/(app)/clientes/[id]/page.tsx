@@ -11,7 +11,8 @@ import { AddContactForm } from "./AddContactForm";
 import { ClientContactItem } from "./ClientContactItem";
 import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
-import { EMPTY_SOCIAL_VALUES, parseSocialLinks } from "@/lib/clients";
+import { EMPTY_SOCIAL_VALUES, SOCIAL_NETWORKS, clientInitials, defaultBannerGradient, isClientActive, parseSocialLinks } from "@/lib/clients";
+import { ClientProfileHeader } from "./ClientProfileHeader";
 import { ClientPortalSection } from "./ClientPortalSection";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
@@ -101,6 +102,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
   );
 
   const latestRun = client.onboardingRuns[0];
+  const socialLinks = parseSocialLinks(client.socialLinks);
 
   type TimelineEntry = {
     id: string;
@@ -129,12 +131,28 @@ export default async function ClientProfilePage({ params }: PageProps) {
   return (
     <div className="flex flex-col gap-6">
       <Link href="/clientes/carteira" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
-        ← Voltar para Clientes
+        ← Clientes
       </Link>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-[#101828]">
-            {client.name}
+      <ClientProfileHeader
+        clientId={client.id}
+        name={client.name}
+        initials={clientInitials(client.name)}
+        segment={client.segment?.name ?? null}
+        active={isClientActive(client.status)}
+        statusLabel={CLIENT_STATUS_LABELS[client.status]}
+        avatarUrl={client.avatarKey ? `/api/clients/${client.id}/image/avatar?v=${client.updatedAt.getTime()}` : null}
+        bannerUrl={client.bannerKey ? `/api/clients/${client.id}/image/banner?v=${client.updatedAt.getTime()}` : null}
+        bannerGradient={defaultBannerGradient(client.id)}
+        socials={SOCIAL_NETWORKS.flatMap(({ id }) => (socialLinks[id] ? [{ network: id, url: socialLinks[id]! }] : []))}
+        contactLine={
+          [client.document, client.email, client.phone, client.whatsapp ? `WhatsApp ${client.whatsapp}` : null]
+            .filter(Boolean)
+            .join(" · ") || "CNPJ, e-mail, telefone e WhatsApp ainda não cadastrados"
+        }
+        driveUrl={client.driveUrl}
+        canEdit
+        badges={
+          <>
             {latestHealthScore && (
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${HEALTH_BAND_BADGE_CLASS[bandForScore(latestHealthScore.score)]}`}
@@ -143,50 +161,40 @@ export default async function ClientProfilePage({ params }: PageProps) {
               </span>
             )}
             {latestChurnRisk && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${CHURN_BAND_BADGE_CLASS[latestChurnRisk.band]}`}
-              >
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${CHURN_BAND_BADGE_CLASS[latestChurnRisk.band]}`}>
                 Risco de churn: {CHURN_BAND_LABELS[latestChurnRisk.band]}
               </span>
             )}
-          </h1>
-          <p className="text-sm text-[#667085]">
-            {client.document ?? "Sem CNPJ cadastrado"} · {CLIENT_STATUS_LABELS[client.status]}
-          </p>
-          <p className="mt-1 text-sm text-[#98A2B3]">
-            {[client.email, client.phone, client.whatsapp ? `WhatsApp ${client.whatsapp}` : null]
-              .filter(Boolean)
-              .join(" · ") || "E-mail, telefone e WhatsApp ainda não cadastrados"}
-          </p>
-          <p className="mt-1 text-sm text-[#98A2B3]">
+          </>
+        }
+        actions={
+          <>
             <Link
               href={`/operacao?clientId=${client.id}`}
-              className="font-medium text-[#FF2B00] hover:underline"
+              className="flex h-9 items-center rounded-lg border border-[#D0D5DD] px-3 text-sm font-medium text-[#344054] hover:bg-[#F6F7FB]"
             >
-              Conteúdo: {client._count.contentItems} peça
-              {client._count.contentItems === 1 ? "" : "s"}
+              {client._count.contentItems} peça{client._count.contentItems === 1 ? "" : "s"} em Operação
             </Link>
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <StatusActions clientId={client.id} options={CLIENT_STATUS_TRANSITIONS[client.status]} />
-          <EditClientButton
-            clientId={client.id}
-            initialValues={{
-              name: client.name,
-              document: client.document ?? "",
-              email: client.email ?? "",
-              phone: client.phone ?? "",
-              whatsapp: client.whatsapp ?? "",
-              segmentName: client.segment?.name ?? "",
-              socials: { ...EMPTY_SOCIAL_VALUES, ...parseSocialLinks(client.socialLinks) },
-            }}
-            hasAvatar={Boolean(client.avatarKey)}
-            hasBanner={Boolean(client.bannerKey)}
-          />
-          {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." redirectTo="/clientes/carteira" variant="button" />}
-        </div>
-      </div>
+            <StatusActions clientId={client.id} options={CLIENT_STATUS_TRANSITIONS[client.status]} />
+            <EditClientButton
+              clientId={client.id}
+              initialValues={{
+                name: client.name,
+                document: client.document ?? "",
+                email: client.email ?? "",
+                phone: client.phone ?? "",
+                whatsapp: client.whatsapp ?? "",
+                segmentName: client.segment?.name ?? "",
+                driveUrl: client.driveUrl ?? "",
+                socials: { ...EMPTY_SOCIAL_VALUES, ...socialLinks },
+              }}
+              hasAvatar={Boolean(client.avatarKey)}
+              hasBanner={Boolean(client.bannerKey)}
+            />
+            {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." redirectTo="/clientes/carteira" variant="button" />}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">

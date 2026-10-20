@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
-import { clientInitials, defaultBannerGradient, isClientActive, parseSocialLinks, SOCIAL_NETWORKS } from "@/lib/clients";
+import { clientInitials, defaultBannerGradient, EMPTY_SOCIAL_VALUES, isClientActive, parseSocialLinks, SOCIAL_NETWORKS } from "@/lib/clients";
 import { contentBoardColumnForStatus } from "@/lib/content";
 import { prisma } from "@zenite-mkt/db";
 import { canManageTeam } from "@/lib/rbac";
@@ -19,6 +19,12 @@ export default async function CarteiraPage() {
         id: true,
         name: true,
         status: true,
+        document: true,
+        email: true,
+        phone: true,
+        whatsapp: true,
+        driveUrl: true,
+        updatedAt: true,
         avatarKey: true,
         bannerKey: true,
         socialLinks: true,
@@ -57,7 +63,19 @@ export default async function CarteiraPage() {
       hasBanner: Boolean(client.bannerKey),
       bannerGradient: defaultBannerGradient(client.id),
       socials: SOCIAL_NETWORKS.flatMap(({ id }) => (links[id] ? [{ network: id, url: links[id]! }] : [])),
+      driveUrl: client.driveUrl,
       counts: countsByClient.get(client.id) ?? { todo: 0, doing: 0, review: 0, done: 0 },
+      imageVersion: client.updatedAt.getTime(),
+      formValues: {
+        name: client.name,
+        document: client.document ?? "",
+        email: client.email ?? "",
+        phone: client.phone ?? "",
+        whatsapp: client.whatsapp ?? "",
+        segmentName: client.segment?.name ?? "",
+        driveUrl: client.driveUrl ?? "",
+        socials: { ...EMPTY_SOCIAL_VALUES, ...links },
+      },
     };
   });
 

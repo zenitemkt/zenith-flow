@@ -22,10 +22,11 @@ export function EditClientButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 items-center gap-1.5 rounded-lg border border-[#D0D5DD] px-3 text-sm font-medium text-[#344054] hover:bg-[#F6F7FB]"
+        className="flex h-9 items-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold text-white hover:opacity-90"
+        style={{ backgroundColor: "#FF2B00" }}
       >
         <Pencil size={14} aria-hidden />
-        Editar dados
+        Editar cadastro
       </button>
       <ClientFormModal
         open={open}
