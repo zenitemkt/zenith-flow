@@ -61,20 +61,20 @@ export function ClientFilterSelect({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative w-full sm:w-auto">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-10 min-w-[220px] items-center justify-between gap-3 rounded-xl border border-[#E4E7EC] bg-white px-3.5 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
+        className="flex h-11 w-full items-center sm:h-10 sm:w-auto sm:min-w-[220px] justify-between gap-3 rounded-xl border border-[#E4E7EC] bg-white px-3.5 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
       >
         <span className="truncate">{active ? active.name : "Todos os clientes"}</span>
         <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-12 z-40 w-[280px] overflow-hidden rounded-2xl border border-[#E4E7EC] bg-white shadow-xl">
+        <div className="absolute left-0 top-12 z-40 w-full sm:w-[280px] overflow-hidden rounded-2xl border border-[#E4E7EC] bg-white shadow-xl">
           <label className="flex items-center gap-2 border-b border-[#EEF0F3] px-3 py-2.5 text-[#667085]">
             <Search size={15} aria-hidden />
             <input

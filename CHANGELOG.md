@@ -10,6 +10,8 @@
 
 ### Corrigido
 
+- **Uso no celular**: o quadro de Operação deixava de rolar ao tocar num cartão (`touch-none`); agora o arraste exige toque longo e as colunas ocupam a tela com snap. Tabelas rolam na horizontal em vez de espremer colunas, campos usam 16px (sem zoom do iOS), o botão de excluir cliente aparece sem hover, o filtro de cliente ocupa a largura toda, o modal usa `dvh` e o viewport é explícito.
+
 - **Cartão de Operação (e cliente) criado em duplicata/triplicata**: a trava anterior só valia no navegador. Agora o servidor também é idempotente (lock + janela de 15s para o mesmo cliente/canal/título), e o formulário "Nova tarefa" fica bloqueado inteiro enquanto cria. O formulário passa a avisar quando há mais de um canal marcado (uma peça por canal).
 
 - **"Nova tarefa" (Operação) dava "Escolha o cliente." com um cliente aparecendo selecionado**: o formulário só lia a lista de clientes na primeira renderização; quando o primeiro cliente era cadastrado depois (banco novo), o `<select>` mostrava o cliente mas o estado enviado à API ia vazio. Agora, sem escolha válida, vale o primeiro cliente da lista.

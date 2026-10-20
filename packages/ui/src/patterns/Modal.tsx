@@ -79,7 +79,7 @@ export function Modal({ open, onClose, title, description, size = "md", tone = "
         aria-modal="true"
         aria-labelledby="modal-title"
         onKeyDown={handleKeyDown}
-        className={`relative flex max-h-[90vh] w-full flex-col shadow-xl ${
+        className={`relative flex max-h-[90dvh] w-full flex-col shadow-xl ${
           dark
             ? "rounded-[22px] border border-white/10 bg-[#13141C] shadow-[0_40px_120px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]"
             : "rounded-2xl bg-white"

@@ -7,7 +7,8 @@ import { ArrowRight } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -192,7 +193,7 @@ function ContentCard({
         if ((event.target as HTMLElement).closest(CARD_OPEN_IGNORE)) return;
         onOpen(item);
       }}
-      className={`touch-none cursor-pointer rounded-2xl border bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_6px_16px_-10px_rgba(16,24,40,0.15)] transition-colors hover:border-[#FF2B00]/40 ${
+      className={`touch-manipulation cursor-pointer rounded-2xl border bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_6px_16px_-10px_rgba(16,24,40,0.15)] transition-colors hover:border-[#FF2B00]/40 ${
         isDragging ? "opacity-50" : ""
       } border-[#EEF0F3]`}
     >
@@ -342,7 +343,7 @@ function BoardColumn({
   const { setNodeRef, isOver } = useDroppable({ id: columnId, disabled: !droppable });
 
   return (
-    <div className="flex min-w-[260px] flex-col gap-2 rounded-2xl border border-[#EEF0F3] bg-[#F2F4F7] p-2.5">
+    <div className="flex min-w-0 snap-start flex-col gap-2 rounded-2xl border border-[#EEF0F3] bg-[#F2F4F7] p-2.5 sm:min-w-[260px]">
       <p className="flex items-center gap-2 px-1 text-sm font-semibold text-[#101828]">
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: columnDotColor(columnId) }} aria-hidden />
         <span className="truncate">{title}</span>
@@ -427,7 +428,9 @@ export function ContentBoard({
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    // No celular o arraste só começa com toque longo — senão o card engole a rolagem da página e do quadro.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor),
   );
 
@@ -564,7 +567,7 @@ export function ContentBoard({
           void handleDragEnd(e);
         }}
       >
-        <div className="grid auto-cols-[260px] grid-flow-col gap-4 overflow-x-auto pb-2">
+        <div className="grid auto-cols-[84vw] grid-flow-col snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:auto-cols-[260px] sm:snap-none sm:gap-4">
           {columns.map((column) => (
             <BoardColumn
               key={column.id}

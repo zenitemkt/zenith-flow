@@ -66,3 +66,24 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Celular (<768px). Rede de segurança para as ~150 telas escritas só pensando
+ * em desktop: tabelas rolam na horizontal em vez de espremer as colunas, e
+ * campos usam 16px pra o iOS não dar zoom ao focar.
+ */
+@media (max-width: 767px) {
+  html body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea) {
+    font-size: 16px;
+  }
+
+  .zenite-app main :has(> table),
+  main :has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .zenite-app main table {
+    min-width: 560px;
+  }
+}

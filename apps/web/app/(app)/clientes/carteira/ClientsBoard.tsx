@@ -103,7 +103,7 @@ function ClientCard({ client, canDelete }: { client: ClientCardData; canDelete: 
         />
       </Link>
       {canDelete && (
-        <div className="absolute right-2 top-2 rounded-lg bg-white/90 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <div className="absolute right-2 top-2 rounded-lg bg-white/90 transition-opacity focus-within:opacity-100 md:opacity-0 md:group-hover:opacity-100">
           <DeleteRecordButton
             endpoint={`/api/clients/${client.id}`}
             recordName={client.name}
@@ -214,7 +214,7 @@ export function ClientsBoard({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex h-11 min-w-[260px] flex-1 items-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm text-[#667085]">
+        <label className="flex h-11 min-w-0 flex-1 basis-full sm:basis-0 sm:min-w-[260px] items-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm text-[#667085]">
           <Search size={16} aria-hidden />
           <input
             type="search"
