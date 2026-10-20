@@ -137,8 +137,9 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
       >
         Nova tarefa
       </button>
-      <Modal open={open} onClose={close} title="Nova tarefa">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <Modal open={open} onClose={() => { if (!loading) close(); }} title="Nova tarefa">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3" aria-busy={loading}>
+          <fieldset disabled={loading} className="flex min-w-0 flex-col gap-3 border-0 p-0 disabled:opacity-70">
           <FormField
             label="Título"
             name="title"
@@ -232,7 +233,9 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
               })}
             </div>
             <p className="text-xs text-[#98A2B3]">
-              Selecionando mais de um canal, uma peça é criada para cada um.
+              {channels.length > 1
+                ? `Atenção: ${channels.length} canais marcados, então serão criadas ${channels.length} peças (uma para cada).`
+                : "Selecionando mais de um canal, uma peça é criada para cada um."}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -281,13 +284,16 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
             />
           </div>
 
+          </fieldset>
+
           {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-2">
             <button
               type="button"
               onClick={close}
-              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
+              disabled={loading}
+              className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB] disabled:opacity-60"
             >
               Cancelar
             </button>
@@ -297,7 +303,7 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
               style={{ backgroundColor: "#FF2B00" }}
             >
-              {loading ? "Criando..." : "Criar peça"}
+              {loading ? "Criando..." : channels.length > 1 ? `Criar ${channels.length} peças` : "Criar peça"}
             </button>
           </div>
         </form>

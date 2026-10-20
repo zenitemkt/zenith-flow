@@ -12,6 +12,22 @@
 
 **Pendências conhecidas**: variáveis de **Preview** (`DATABASE_URL`/`DIRECT_URL`) ficaram sem valor na Vercel (o CLI exige a branch e deu erro) — só afeta deploys de preview. `packages/db` tem script `seed` apontando para `prisma/seed.ts`, que não existe. A senha do banco e a do admin foram digitadas no chat e devem ser trocadas.
 
+## 2026-10-20 — Estilo Minimalista, cartões de Clientes/Operação e idempotência na criação de cartões
+
+**Contexto**: o Kevin trouxe duas referências (Clientes e Tarefas) de outra plataforma e pediu o estilo como opção de Aparência por usuário, cartões de cliente e um kanban mais visual. Também relatou que um cartão de teste foi criado três vezes.
+
+**Decisão 1 — estilo é uma preferência separada do tema (`User.uiStyle`: ZENITE | MINIMALISTA)**: o Minimalista é sempre claro; o layout raiz não aplica `dark` junto com `ui-minimal`, e o botão de alternar tema some nesse estilo. Implementado por CSS escopado (`.ui-minimal .zenite-app`), sem reescrever as telas, como já feito com o tema escuro. Limitação: telas com cores/raios fixos fora das classes mapeadas podem precisar de ajuste fino depois.
+
+**Decisão 2 — "Ativo/Inativo"**: Ativo = ATIVO, ONBOARDING, REATIVADO, EM_ENCERRAMENTO. Inativo = PAUSADO, ENCERRADO, PROSPECT. Prospect conta como inativo por ainda não ser cliente da carteira (**a confirmar com o Kevin**).
+
+**Decisão 3 — ramo de atuação é tabela própria (`ClientSegment`, único por agência, comparação sem diferenciar maiúsculas)**, criada ao digitar um ramo novo no cadastro. Redes sociais ficam em `Client.socialLinks` (JSON, só URLs http/https normalizadas no servidor). Logo/banner ficam em `Client.avatarKey/bannerKey` (R2), servidos por `/api/clients/:id/image/:kind` (redireciona pra URL assinada), fora de `MediaAsset` pra não aparecerem em Arquivos.
+
+**Decisão 4 — contadores do cartão**: A fazer / Fazendo / Em revisão (= Aguardando aprovação) / Feitos (= Agendar + Concluído), mesmos grupos do quadro de Operação.
+
+**Decisão 5 — duplicação de cartões**: a trava `useSubmitGuard` só impede reentrância no mesmo navegador. Adicionada idempotência no servidor em `POST /api/content` e `POST /api/clients`: `pg_advisory_xact_lock` por chave + busca de registro idêntico criado nos últimos 15s, devolvendo o existente. Causa provável do relato (não reproduzida): reenvio sem proteção no servidor e/ou vários canais marcados (o formulário cria uma peça por canal, agora com aviso explícito).
+
+**Testado**: `tsc --noEmit`, `lint`, `build` de `apps/web` e `vitest` de `packages/ui` limpos. Sem verificação manual no navegador e sem teste automatizado do dedupe (exige banco).
+
 ## 2026-10-04 — Depurar o Pixel/CAPI com evidência, não suposição
 
 **Contexto**: Gabriel reportou "o Pixel não está disparando" depois do deploy da Etapa 2. Minhas duas primeiras hipóteses (extensão bloqueando, cache do navegador) foram corretas em parte, mas Gabriel pediu explicitamente pra eu parar de "colocar culpa em terceiros" e revisar o código de verdade.

@@ -11,6 +11,7 @@ import { AddContactForm } from "./AddContactForm";
 import { ClientContactItem } from "./ClientContactItem";
 import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
+import { EMPTY_SOCIAL_VALUES, parseSocialLinks } from "@/lib/clients";
 import { ClientPortalSection } from "./ClientPortalSection";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
@@ -37,6 +38,7 @@ export default async function ClientProfilePage({ params }: PageProps) {
   const client = await prisma.client.findUnique({
     where: { id: params.id },
     include: {
+      segment: { select: { name: true } },
       contacts: { orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] },
       statusHistory: { orderBy: { createdAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" } },
@@ -176,7 +178,11 @@ export default async function ClientProfilePage({ params }: PageProps) {
               email: client.email ?? "",
               phone: client.phone ?? "",
               whatsapp: client.whatsapp ?? "",
+              segmentName: client.segment?.name ?? "",
+              socials: { ...EMPTY_SOCIAL_VALUES, ...parseSocialLinks(client.socialLinks) },
             }}
+            hasAvatar={Boolean(client.avatarKey)}
+            hasBanner={Boolean(client.bannerKey)}
           />
           {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." redirectTo="/clientes/carteira" variant="button" />}
         </div>

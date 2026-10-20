@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Schibsted_Grotesk } from "next/font/google";
-import { getServerSession, getUserThemePreference } from "@/lib/session";
+import { getServerSession, getUserAppearance } from "@/lib/session";
 import "./globals.css";
 import "./zenite-theme.css";
+import "./ui-minimal.css";
 
 /** Auto-hospedada pelo Next (baixada no build, sem request ao Google em runtime). */
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -16,10 +17,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
-  const isDark = session ? (await getUserThemePreference(session.user.id)) === "DARK" : false;
+  const appearance = session ? await getUserAppearance(session.user.id) : null;
+  // O estilo Minimalista é claro por definição: ignora a preferência de tema escuro.
+  const isMinimal = appearance?.uiStyle === "MINIMALISTA";
+  const isDark = !isMinimal && appearance?.themePreference === "DARK";
 
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${display.variable}${isDark ? " dark" : ""}`}>
+    <html lang="pt-BR" className={`${inter.variable} ${display.variable}${isDark ? " dark" : ""}${isMinimal ? " ui-minimal" : ""}`}>
       <body>{children}</body>
     </html>
   );

@@ -40,6 +40,10 @@ export interface BoardContentItem {
   scheduledDateISO: string | null;
   clientId: string;
   clientName: string;
+  clientInitials: string;
+  clientHasAvatar: boolean;
+  /** Descrição completa; o card mostra só as primeiras linhas. */
+  description: string | null;
   hasVersion: boolean;
   approvalToken: string | null;
   /** Ordem importa: o primeiro decide a coluna de responsável enquanto o card está em "A Fazer". */
@@ -131,6 +135,18 @@ function CopyLinkButton({ url }: { url: string }) {
   );
 }
 
+/** Bolinha de cor ao lado do título de cada coluna (pedido do usuário, 2026-10-20). */
+const COLUMN_DOT_COLOR: Record<string, string> = {
+  fazendo: "#F79009",
+  aguardando_aprovacao: "#8B5CF6",
+  agendar: "#2E90FA",
+  concluido: "#16A36A",
+};
+
+function columnDotColor(columnId: string): string {
+  return COLUMN_DOT_COLOR[columnId] ?? "#101828";
+}
+
 /**
  * Clique em qualquer lugar do card abre a peça — exceto em controles
  * (botões, campo de data, links) e dentro de um popup aberto a partir do card.
@@ -176,15 +192,26 @@ function ContentCard({
         if ((event.target as HTMLElement).closest(CARD_OPEN_IGNORE)) return;
         onOpen(item);
       }}
-      className={`touch-none cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-colors hover:border-[#FF2B00]/40 ${
+      className={`touch-none cursor-pointer rounded-2xl border bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_6px_16px_-10px_rgba(16,24,40,0.15)] transition-colors hover:border-[#FF2B00]/40 ${
         isDragging ? "opacity-50" : ""
-      } border-[#E4E7EC]`}
+      } border-[#EEF0F3]`}
     >
-      <p className="mb-1 truncate text-[10px] font-semibold uppercase tracking-wide text-[#FF2B00]">
-        {item.clientName}
-      </p>
-      <p className="text-sm font-medium text-[#101828]">{item.title}</p>
-      <p className="mt-0.5 truncate text-xs text-[#667085]">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#3b3f4a] text-[9px] font-bold text-white">
+          {item.clientHasAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/clients/${item.clientId}/image/avatar`} alt="" className="h-full w-full object-cover" />
+          ) : (
+            item.clientInitials
+          )}
+        </span>
+        <p className="min-w-0 truncate text-xs font-medium text-[#475467]">{item.clientName}</p>
+      </div>
+      <p className="text-sm font-semibold leading-snug text-[#101828]">{item.title}</p>
+      {item.description && (
+        <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs leading-relaxed text-[#667085]">{item.description}</p>
+      )}
+      <p className="mt-1 truncate text-xs text-[#98A2B3]">
         {CONTENT_CHANNEL_LABELS[item.channel]}
         {item.format ? ` · ${item.format}` : ""}
       </p>
@@ -315,9 +342,11 @@ function BoardColumn({
   const { setNodeRef, isOver } = useDroppable({ id: columnId, disabled: !droppable });
 
   return (
-    <div className="flex min-w-[260px] flex-col gap-2 rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-2.5">
-      <p className="px-0.5 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
-        {title} · {items.length}
+    <div className="flex min-w-[260px] flex-col gap-2 rounded-2xl border border-[#EEF0F3] bg-[#F2F4F7] p-2.5">
+      <p className="flex items-center gap-2 px-1 text-sm font-semibold text-[#101828]">
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: columnDotColor(columnId) }} aria-hidden />
+        <span className="truncate">{title}</span>
+        <span className="text-xs font-medium text-[#98A2B3]">{items.length}</span>
       </p>
       <div
         ref={setNodeRef}

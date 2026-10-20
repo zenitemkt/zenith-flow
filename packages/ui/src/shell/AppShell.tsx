@@ -147,6 +147,7 @@ export function AppShell({
         </div>
         <button
           type="button"
+          data-theme-toggle
           onClick={() => void toggleTheme()}
           disabled={themeSaving}
           aria-label={theme === "DARK" ? "Mudar para tema claro" : "Mudar para tema escuro"}

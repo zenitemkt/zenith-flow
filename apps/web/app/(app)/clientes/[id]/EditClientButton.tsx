@@ -7,9 +7,13 @@ import { ClientFormModal, type ClientFormValues } from "../_components/ClientFor
 export function EditClientButton({
   clientId,
   initialValues,
+  hasAvatar,
+  hasBanner,
 }: {
   clientId: string;
   initialValues: Partial<ClientFormValues>;
+  hasAvatar?: boolean;
+  hasBanner?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -29,6 +33,8 @@ export function EditClientButton({
         mode="edit"
         clientId={clientId}
         initialValues={initialValues}
+        hasAvatar={hasAvatar}
+        hasBanner={hasBanner}
       />
     </>
   );

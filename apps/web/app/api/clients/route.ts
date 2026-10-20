@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
 import { prisma, type MembershipRole } from "@zenite-mkt/db";
 
 const PORTAL_ROLES: MembershipRole[] = ["CLIENT_ADMIN", "CLIENT_VIEWER"];
@@ -73,9 +74,19 @@ export async function POST(request: Request) {
     }
   }
 
+  const segmentId = await resolveSegmentId(membership.agencyId, body?.segmentName);
+  const socialLinks = readSocialLinks(body?.socialLinks);
+
   const client = await prisma.$transaction(async (tx) => {
+    // Idempotência: reenvio do mesmo cadastro em poucos segundos devolve o cliente já criado.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`client:${membership.agencyId}:${name}`}))`;
+    const recentDuplicate = await tx.client.findFirst({
+      where: { agencyId: membership.agencyId, name, createdAt: { gte: new Date(Date.now() - 15_000) } },
+    });
+    if (recentDuplicate) return recentDuplicate;
+
     const created = await tx.client.create({
-      data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp },
+      data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp, segmentId, socialLinks },
     });
     await tx.clientStatusHistory.create({
       data: { clientId: created.id, toStatus: "PROSPECT", actorUserId: session.user.id },

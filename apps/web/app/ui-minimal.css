@@ -1,0 +1,64 @@
+/*
+ * Estilo "Minimalista" (opção em Configurações > Aparência, 2026-10-20).
+ *
+ * Mesma estratégia de zenite-theme.css: as telas foram escritas com a paleta
+ * clara fixa, então este arquivo reestiliza essas classes só quando `ui-minimal`
+ * está no <html> e dentro do shell interno (`.zenite-app`). Sem a classe, nada
+ * muda. Sempre claro: o layout raiz nunca aplica `dark` junto com `ui-minimal`.
+ *
+ * Referência: canvas cinza-claro, cartões brancos bem arredondados com sombra
+ * suave, bordas quase invisíveis, ação primária preta, sidebar escura.
+ */
+
+.ui-minimal body { background-color: #f1f2f6; }
+
+.ui-minimal .zenite-app { background-color: #f1f2f6; color: #0f1115; }
+
+/* ---------- cartões ---------- */
+.ui-minimal .zenite-app .rounded-xl { border-radius: 20px; }
+.ui-minimal .zenite-app .rounded-xl.bg-white {
+  border-color: #eceef3;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -12px rgba(16, 24, 40, 0.1);
+}
+.ui-minimal .zenite-app .border-\[\#E4E7EC\] { border-color: #eceef3; }
+.ui-minimal .zenite-app .bg-\[\#F9FAFB\] { background-color: #f6f7fa; }
+
+/* ---------- campos e botões ---------- */
+.ui-minimal .zenite-app :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, select) {
+  border-radius: 12px;
+  border-color: #e3e6ec;
+  background-color: #fff;
+}
+.ui-minimal .zenite-app :is(input, textarea, select):focus {
+  border-color: #0f1115;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 17, 21, 0.08);
+}
+.ui-minimal .zenite-app button { border-radius: 12px; }
+.ui-minimal .zenite-app button.rounded-full,
+.ui-minimal .zenite-app .rounded-full { border-radius: 9999px; }
+
+/* ação primária: laranja da marca vira preto (botões com cor inline e classe bg-[#FF2B00]) */
+.ui-minimal .zenite-app [style*="rgb(255, 43, 0)"],
+.ui-minimal .zenite-app a.bg-\[\#FF2B00\],
+.ui-minimal .zenite-app button.bg-\[\#FF2B00\] {
+  background-color: #0f1115 !important;
+  color: #fff;
+}
+.ui-minimal .zenite-app .text-\[\#FF2B00\] { color: #0f1115; }
+.ui-minimal .zenite-app .hover\:text-\[\#FF2B00\]:hover { color: #2563eb; }
+
+/* ---------- títulos de página ---------- */
+.ui-minimal .zenite-app main h1 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f1115;
+}
+
+/* ---------- tabelas ---------- */
+.ui-minimal .zenite-app table { border-collapse: separate; border-spacing: 0; }
+.ui-minimal .zenite-app thead { background-color: #f6f7fa; }
+
+/* Tema escuro não existe neste estilo: esconde o botão de alternar. */
+.ui-minimal .zenite-app [data-theme-toggle] { display: none; }

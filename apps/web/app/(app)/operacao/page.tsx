@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageAnyTask } from "@/lib/rbac";
 import { getAgencyMembers } from "@/lib/team";
-import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
+import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
+import { clientInitials, isClientActive } from "@/lib/clients";
 import { prisma } from "@zenite-mkt/db";
 import { ContentBoard, type BoardContentItem } from "./ContentBoard";
 import { NewContentModal } from "./NewContentModal";
@@ -30,13 +31,14 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
       select: {
         id: true,
         title: true,
+        description: true,
         status: true,
         channel: true,
         format: true,
         scheduledDate: true,
         clientId: true,
         assigneeUserIds: true,
-        client: { select: { name: true } },
+        client: { select: { name: true, avatarKey: true } },
         versions: {
           orderBy: { versionNumber: "desc" },
           take: 1,
@@ -47,7 +49,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
     }),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, status: true },
       orderBy: { name: "asc" },
     }),
     getAgencyMembers(membership.agencyId),
@@ -64,6 +66,9 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
       scheduledDateISO: item.scheduledDate ? item.scheduledDate.toISOString() : null,
       clientId: item.clientId,
       clientName: item.client.name,
+      clientInitials: clientInitials(item.client.name),
+      clientHasAvatar: Boolean(item.client.avatarKey),
+      description: item.description,
       hasVersion: Boolean(latestVersion),
       approvalToken: item.status === "AGUARDANDO_CLIENTE" ? (latestVersion?.approval?.token ?? null) : null,
       assigneeUserIds: item.assigneeUserIds,
@@ -81,12 +86,13 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         </div>
         <div className="flex items-center gap-2">
           <RefreshButton />
-          <NewContentModal clients={clients} people={people} />
+          <NewContentModal clients={clients.map(({ id, name }) => ({ id, name }))} people={people} />
         </div>
       </div>
 
-      <ClientFilterPills
-        clients={clients}
+      <ClientFilterSelect
+        // Só clientes ativos entram na lista (a carteira cresce); o filtrado agora continua visível mesmo se inativo.
+        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
         activeClientId={activeClientId}
         buildHref={(clientId) => (clientId ? `/operacao?clientId=${clientId}` : "/operacao")}
       />

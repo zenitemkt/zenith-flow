@@ -24,6 +24,13 @@ enum ThemePreference {
   DARK
 }
 
+/// Estilo visual da interface, independente de claro/escuro. ZENITE é o padrão
+/// atual; MINIMALISTA é o layout claro de cartões (pedido do usuário, 2026-10-20).
+enum UiStyle {
+  ZENITE
+  MINIMALISTA
+}
+
 model User {
   id              String          @id @default(cuid())
   name            String
@@ -34,6 +41,7 @@ model User {
   /// no navegador, pra valer em qualquer dispositivo em que a pessoa logar.
   /// Padrão DARK (identidade "zênite") desde 2026-09-24.
   themePreference ThemePreference @default(DARK)
+  uiStyle         UiStyle         @default(ZENITE)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -132,6 +140,7 @@ model Agency {
   memberships                Membership[]
   auditLogs                  AuditLog[]
   clients                    Client[]
+  clientSegments             ClientSegment[]
   onboardingTemplates        OnboardingTemplate[]
   projects                   Project[]
   recurringTaskTemplates     RecurringTaskTemplate[]
@@ -288,6 +297,14 @@ model Client {
   /// Pasta do cliente no Google Drive (logos, artes, materiais) — a Biblioteca
   /// de conteúdo virou atalho pra essa pasta em vez de upload próprio (2026-09-24).
   driveUrl             String?
+  /// Ramo de atuação — lista própria da agência, cresce conforme entram clientes.
+  segmentId            String?
+  segment              ClientSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  /// Chaves no bucket R2 (logo e banner do cartão) — servidas por /api/clients/:id/image/:kind.
+  avatarKey            String?
+  bannerKey            String?
+  /// Redes sociais: { instagram, facebook, tiktok, youtube, linkedin, site, whatsapp } → URL.
+  socialLinks          Json?
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
@@ -311,6 +328,19 @@ model Client {
 
   @@index([agencyId])
   @@map("client")
+}
+
+model ClientSegment {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+
+  clients Client[]
+
+  @@unique([agencyId, name])
+  @@map("client_segment")
 }
 
 model ClientContact {

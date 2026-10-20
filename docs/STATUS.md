@@ -1,8 +1,12 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-07.
+Última atualização: 2026-10-20.
 
 ## Implementado
+
+- **Estilo Minimalista, Clientes em cartões e Operação redesenhada (2026-10-20)**: ver `docs/DECISIONS.md` (2026-10-20). Inclui idempotência no servidor para criação de cartão/cliente (relato de cartão triplicado).
+  - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web`, `vitest` de `packages/ui`. **Pendente**: aplicar a migration `20261020120000_ui_style_and_client_cards` no banco antes do deploy; verificação visual no navegador; aplicar o estilo em telas que fujam do padrão.
+  - Limitações: filtro por dropdown só em Operação (Calendário, Arquivos e Raio-X ainda usam botões); header preto só em Clientes; cartão de cliente não mostra mais o Health Score da tabela antiga (continua na página do cliente).
 
 - **Restauração do Traqueamento após recriação do banco (2026-10-07)**: a recriação do banco de 2026-10-05 (ver entrada abaixo) gerou uma agência nova do zero, invalidando a `writeKey` do coletor gravada em `dist/tracking.js` (zenitehub) — o coletor passou a responder `writeKey inválido`. Usuário já tinha reconectado Meta Ads e GA4 manualmente pela própria tela de Conexões.
   - **Corrigido**: `dist/tracking.js` atualizado com a `writeKey` da agência nova, implantado em produção e confirmado servindo a chave nova.

@@ -68,9 +68,13 @@ export const getCurrentMembership = cache(async function getCurrentMembership(us
   return preferred ?? memberships[0]!;
 });
 
+export const getUserAppearance = cache(async function getUserAppearance(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { themePreference: true, uiStyle: true } });
+  return { themePreference: user?.themePreference ?? "DARK", uiStyle: user?.uiStyle ?? "ZENITE" } as const;
+});
+
 export const getUserThemePreference = cache(async function getUserThemePreference(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { themePreference: true } });
-  return user?.themePreference ?? "DARK";
+  return (await getUserAppearance(userId)).themePreference;
 });
 
 export async function requireSessionAndMembership() {

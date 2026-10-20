@@ -9,6 +9,9 @@ function optionalString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Janela em que um cartão idêntico (mesmo cliente, canal e título) é tratado como reenvio. */
+const DUPLICATE_WINDOW_MS = 15_000;
+
 const VALID_CHANNELS: ContentChannel[] = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "LINKEDIN", "YOUTUBE", "OUTRO"];
 
 export async function POST(request: Request) {
@@ -60,6 +63,23 @@ export async function POST(request: Request) {
   }
 
   const item = await prisma.$transaction(async (tx) => {
+    // Idempotência no servidor: reenvio (duplo clique, duas abas, retry de rede)
+    // do mesmo cartão em poucos segundos devolve o já criado em vez de duplicar.
+    // O lock por (agência, cliente, título, canal) serializa requisições
+    // simultâneas — sem ele, as duas passariam pela checagem antes de qualquer insert.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`content:${membership.agencyId}:${clientId}:${channel}:${title}`}))`;
+    const recentDuplicate = await tx.contentItem.findFirst({
+      where: {
+        agencyId: membership.agencyId,
+        clientId,
+        channel,
+        title,
+        createdAt: { gte: new Date(Date.now() - DUPLICATE_WINDOW_MS) },
+      },
+      select: { id: true },
+    });
+    if (recentDuplicate) return recentDuplicate;
+
     const created = await tx.contentItem.create({
       data: {
         agencyId: membership.agencyId,

@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Estilo "Minimalista" (Configurações > Aparência)**: opção por usuário (`User.uiStyle`), independente de claro/escuro; o padrão continua sendo o visual Zênite. Layout claro com cartões arredondados, sombras suaves e ação primária preta, aplicado a todas as abas por `apps/web/app/ui-minimal.css` (mesma estratégia de ponte do `zenite-theme.css`).
+- **Clientes em cartões**: grade de cartões com banner, logo/avatar, ramo de atuação, status Ativo/Inativo, redes sociais (abrem em nova aba) e contadores de tarefas só com ícone (A fazer, Fazendo, Em revisão, Feitos). Faixa "Todos os clientes" com contadores Ativos/Inativos/Total (clicáveis como filtro) e busca. Novos campos no cadastro: logo, banner, ramo (lista da agência que cresce ao digitar um ramo novo) e redes (Instagram, Facebook, TikTok, YouTube, LinkedIn, site, WhatsApp). Migration `20261020120000_ui_style_and_client_cards`.
+- **Operação**: cartões arredondados com avatar e nome do cliente e descrição visível (2 linhas), bolinha de cor por coluna, e filtro de cliente em caixa de seleção com busca (só clientes ativos).
+
 ### Corrigido
+
+- **Cartão de Operação (e cliente) criado em duplicata/triplicata**: a trava anterior só valia no navegador. Agora o servidor também é idempotente (lock + janela de 15s para o mesmo cliente/canal/título), e o formulário "Nova tarefa" fica bloqueado inteiro enquanto cria. O formulário passa a avisar quando há mais de um canal marcado (uma peça por canal).
 
 - **"Nova tarefa" (Operação) dava "Escolha o cliente." com um cliente aparecendo selecionado**: o formulário só lia a lista de clientes na primeira renderização; quando o primeiro cliente era cadastrado depois (banco novo), o `<select>` mostrava o cliente mas o estado enviado à API ia vazio. Agora, sem escolha válida, vale o primeiro cliente da lista.
 
