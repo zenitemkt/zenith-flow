@@ -4,6 +4,8 @@
 
 ### Adicionado
 
+- **Cartão de conteúdo aberto remodelado**: cabeçalho com cliente (avatar), título e status; trilha de etapas (A fazer → Concluído); uma ação principal com texto do que acontece ("Começar produção", "Enviar para revisão interna"...) e dica do que falta; conteúdo (descrição, versões, checklist com barra de progresso, comentários) à esquerda e painel "Detalhes" à direita, com data de publicação e responsáveis editáveis ali mesmo; histórico compacto e "Excluir" fora do caminho. No celular abre em tela cheia, com detalhes logo após o cabeçalho e botão de fechar fixo. Removido o "Voltar" duplicado.
+
 - **Estilo "Minimalista" (Configurações > Aparência)**: opção por usuário (`User.uiStyle`), independente de claro/escuro; o padrão continua sendo o visual Zênite. Layout claro com cartões arredondados, sombras suaves e ação primária preta, aplicado a todas as abas por `apps/web/app/ui-minimal.css` (mesma estratégia de ponte do `zenite-theme.css`).
 - **Clientes em cartões**: grade de cartões com banner, logo/avatar, ramo de atuação, status Ativo/Inativo, redes sociais (abrem em nova aba) e contadores de tarefas só com ícone (A fazer, Fazendo, Em revisão, Feitos). Faixa "Todos os clientes" com contadores Ativos/Inativos/Total (clicáveis como filtro) e busca. Novos campos no cadastro: logo, banner, ramo (lista da agência que cresce ao digitar um ramo novo) e redes (Instagram, Facebook, TikTok, YouTube, LinkedIn, site, WhatsApp). Migration `20261020120000_ui_style_and_client_cards`.
 - **Operação**: cartões arredondados com avatar e nome do cliente e descrição visível (2 linhas), bolinha de cor por coluna, e filtro de cliente em caixa de seleção com busca (só clientes ativos).
