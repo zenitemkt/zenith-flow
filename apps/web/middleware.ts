@@ -11,6 +11,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/pesquisa",
   "/pesquisa-interna",
   "/proposta",
+  // Política de privacidade: URL cadastrada no app da Meta, precisa abrir sem login.
+  "/privacidade",
   "/api/auth",
   "/api/approvals",
   "/api/public/survey",
