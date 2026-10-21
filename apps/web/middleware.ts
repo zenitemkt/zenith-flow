@@ -19,6 +19,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/collect",
   "/api/v1/integrations/site-leads",
   "/api/public/blog-views",
+  // Agendador de redes: chamado pelo cron externo, protegido por CRON_SECRET na própria rota.
+  "/api/cron/social-publish",
   // Autenticação própria por chave (x-draft-agent-key, timingSafeEqual) pra
   // além do cookie de sessão — o agente externo (rotina agendada) não tem
   // cookie, então precisa passar pelo middleware antes de chegar na checagem

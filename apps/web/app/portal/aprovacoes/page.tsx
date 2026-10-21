@@ -1,4 +1,5 @@
 import { requirePortalContext } from "@/lib/portal";
+import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
 import { prisma } from "@zenite-mkt/db";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
@@ -10,7 +11,7 @@ export default async function PortalApprovalsPage() {
 
   const pendingApprovals = await prisma.contentApproval.findMany({
     where: { status: "PENDENTE", contentVersion: { contentItem: { clientId: client.id } } },
-    include: { contentVersion: { include: { contentItem: true } } },
+    include: { contentVersion: { include: { contentItem: true, media: { orderBy: { position: "asc" }, select: { id: true, contentType: true, fileName: true } } } } },
     orderBy: { expiresAt: "asc" },
   });
 
@@ -46,7 +47,9 @@ export default async function PortalApprovalsPage() {
             return (
               <article key={approval.id} className={`${panelClass} grid gap-6 p-5 sm:p-6 lg:grid-cols-[1fr_320px]`}>
                 <div className="min-w-0">
-                  {approval.contentVersion.assetUrl ? (
+                  {approval.contentVersion.media.length > 0 ? (
+                    <VersionMediaGallery media={approval.contentVersion.media} srcBase="/api/content-media" large />
+                  ) : approval.contentVersion.assetUrl ? (
                     <MaterialPreview url={approval.contentVersion.assetUrl} tone="dark" />
                   ) : (
                     <p className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-[#8B8D9A]">

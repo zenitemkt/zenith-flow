@@ -1,3 +1,21 @@
+## 2026-10-21 — Agendador de redes (Facebook/Instagram) e incidente do banco de produção
+
+**Incidente (registrar sempre)**: ao gerar o SQL da migration, rodei `prisma migrate diff --from-migrations ... --shadow-database-url <DIRECT_URL de produção>`. O Prisma reseta o banco sombra: o banco de produção ficou vazio (~01:53 UTC de 21/10). O Kevin restaurou pelo Neon (restore da branch `production` para 22:40 de 20/10, Brasília); conferido depois: usuários, agência, cliente, conteúdo, meta e as 63 migrations de volta, nada perdido além de nenhum dado novo no intervalo. **Regra**: `packages/db/.env` aponta para produção e não há banco local — nunca usar shadow, `migrate dev`, `migrate reset` ou `db push` aqui. SQL de migration é gerado com `migrate diff --from-schema-datamodel <schema anterior via git show> --to-schema-datamodel prisma/schema.prisma --script`, sem banco.
+
+**Decisão 1 — integração direta com a Meta, sem serviço agregador**: mesmo app da Meta do Traqueamento e **mesma URL de retorno do OAuth** (o `state` assinado ganhou `extra.flow = "social"` + `clientId` + `userId`), para não exigir nova URL no painel da Meta. Em modo desenvolvimento, admins do app publicam nas Páginas que já administram; App Review só quando outra agência precisar.
+
+**Decisão 2 — token guardado é o da Página** (não expira quando derivado de token de usuário de longa duração), cifrado com `encryptSecret`. Entre o retorno do OAuth e a escolha da Página, só o token de usuário fica num cookie cifrado de 15 min; as Páginas são buscadas de novo na hora (cookie não estoura 4KB com muitas Páginas). Uma conexão por plataforma por cliente (`SocialConnection @@unique([clientId, platform])`); desconectar marca REVOKED e cancela agendamentos, mantendo histórico.
+
+**Decisão 3 — agendamento é nosso, não da rede**: o Instagram não tem agendamento na API; para uniformizar, o Facebook também é publicado pelo nosso motor na hora marcada. `SocialPost.publishAt` é instante absoluto; telas leem/escrevem em America/Sao_Paulo (-03:00). Cron externo (cron-job.org, a cada minuto) porque a Vercel Hobby só roda cron 1x/dia.
+
+**Decisão 4 — garantias do motor** (`lib/social-publisher.ts`): reivindicação por UPDATE condicional (SCHEDULED/PROCESSING → PUBLISHING) evita publicar duas vezes; erro da Meta tenta de novo (5 e 15 min, máx. 3); erro de validação falha na hora; token inválido marca a conexão com erro; vídeo do IG ainda processando fica PROCESSING com o container salvo e é conferido no próximo minuto; PUBLISHING parado >15 min vira FAILED com aviso para conferir na rede antes de reenviar. Peça com todos os posts publicados vai para PUBLICADO; ao agendar, APROVADO → AGENDADO.
+
+**Decisão 5 — arte vira arquivo** (`ContentVersionMedia`, R2, prefixo `agencia/content/item/`). Vercel limita corpo da função a ~4,5MB: até 4MB sobe pelo servidor, acima disso o navegador sobe direto com URL assinada (**exige CORS no bucket**; a chave R2 do app não tem permissão de configurar o bucket). Sem `sharp` no projeto: PNG/WEBP viram JPEG no navegador. A Meta baixa a mídia por URL assinada de 2h.
+
+**Decisão 6 — automático ao aprovar** é opt-in por cliente (`Client.autoScheduleOnApproval` + `defaultPublishTime`): exige data de publicação na peça, arte em arquivo e a rede do canal conectada; se faltar algo, só registra `social_post.auto_schedule_skipped` no AuditLog — nunca quebra a aprovação.
+
+**Pendências**: CORS do R2 (Cloudflare), cron-job.org, permissões de Páginas/Instagram no app da Meta, pedido de acesso à Business Profile API do Google. Sem teste real de publicação ainda.
+
 ## 2026-10-05 — Banco migrado para o Neon da conta Zenite, recriado do zero
 
 **Contexto**: o banco tinha sido criado na conta Neon pessoal do Kevin. Ele criou uma conta com o e-mail da Zenite e pediu para mover o projeto pra lá.

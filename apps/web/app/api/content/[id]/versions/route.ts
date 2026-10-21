@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { CONTENT_MEDIA_MAX_FILES, validateContentMediaFile } from "@/lib/content-media";
+import { contentMediaPrefix } from "@/lib/content-media-server";
 
 interface RouteParams {
   params: { id: string };
@@ -29,8 +31,27 @@ export async function POST(request: Request, { params }: RouteParams) {
   const assetUrl = typeof body?.assetUrl === "string" ? body.assetUrl.trim() || null : null;
   const notes = typeof body?.notes === "string" ? body.notes.trim() || null : null;
 
-  if (!assetUrl) {
-    return NextResponse.json({ error: "Informe o link do material (Drive, Figma, Canva...)." }, { status: 400 });
+  // Arquivos já enviados ao R2 por /media-upload. A chave precisa ser deste item (nunca de outro cliente).
+  const prefix = contentMediaPrefix(item.agencyId, item.id);
+  const rawMedia: unknown[] = Array.isArray(body?.media) ? body.media : [];
+  const media: { key: string; fileName: string; contentType: string; sizeBytes: number }[] = [];
+  for (const entry of rawMedia) {
+    const m = entry as Record<string, unknown>;
+    const key = typeof m?.key === "string" ? m.key : "";
+    const fileName = typeof m?.fileName === "string" ? m.fileName : "";
+    const contentType = typeof m?.contentType === "string" ? m.contentType : "";
+    const sizeBytes = Number(m?.sizeBytes);
+    if (!key.startsWith(prefix) || !fileName || validateContentMediaFile({ name: fileName, type: contentType, size: sizeBytes })) {
+      return NextResponse.json({ error: "Arquivo da arte inválido. Envie de novo." }, { status: 400 });
+    }
+    media.push({ key, fileName, contentType, sizeBytes });
+  }
+  if (media.length > CONTENT_MEDIA_MAX_FILES) {
+    return NextResponse.json({ error: `No máximo ${CONTENT_MEDIA_MAX_FILES} arquivos por versão (limite do carrossel).` }, { status: 400 });
+  }
+
+  if (!assetUrl && media.length === 0) {
+    return NextResponse.json({ error: "Envie os arquivos da arte ou informe um link (Drive, Figma, Canva...)." }, { status: 400 });
   }
 
   const lastVersion = await prisma.contentVersion.findFirst({
@@ -54,6 +75,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         assetUrl,
         notes,
         createdByUserId: session.user.id,
+        media: { create: media.map((m, position) => ({ ...m, position })) },
       },
     });
 

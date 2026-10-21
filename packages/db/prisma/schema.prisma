@@ -136,67 +136,69 @@ model Agency {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces                 Workspace[]
-  memberships                Membership[]
-  auditLogs                  AuditLog[]
-  clients                    Client[]
-  clientSegments             ClientSegment[]
-  commercialGoals            CommercialGoal[]
-  onboardingTemplates        OnboardingTemplate[]
-  projects                   Project[]
-  recurringTaskTemplates     RecurringTaskTemplate[]
-  vendors                    Vendor[]
-  contentItems               ContentItem[]
-  commentThreads             CommentThread[]
-  employees                  Employee[]
-  positions                  Position[]
-  jobs                       Job[]
-  candidates                 Candidate[]
-  leaveRequests              LeaveRequest[]
-  timesheets                 Timesheet[]
-  timeEntries                TimeEntry[]
-  financeCategories          FinanceCategory[]
-  financeEntries             FinanceEntry[]
-  mediaAssets                MediaAsset[]
-  healthScoreSnapshots       HealthScoreSnapshot[]
-  churnRiskSnapshots         ChurnRiskSnapshot[]
-  retentionPlans             RetentionPlan[]
-  surveyCampaigns            SurveyCampaign[]
-  npsSnapshots               NpsSnapshot[]
-  enpsCampaigns              EnpsCampaign[]
-  enpsSnapshots              EnpsSnapshot[]
-  leads                      Lead[]
-  commercialAlerts           CommercialAlert[]
-  leadEmails                 LeadEmail[]
-  leadPhones                 LeadPhone[]
-  leadSubmissions            LeadSubmission[]
-  pipelineStages             PipelineStage[]
-  opportunities              Opportunity[]
-  proposals                  Proposal[]
+  workspaces                   Workspace[]
+  memberships                  Membership[]
+  auditLogs                    AuditLog[]
+  clients                      Client[]
+  clientSegments               ClientSegment[]
+  commercialGoals              CommercialGoal[]
+  socialConnections            SocialConnection[]
+  socialPosts                  SocialPost[]
+  onboardingTemplates          OnboardingTemplate[]
+  projects                     Project[]
+  recurringTaskTemplates       RecurringTaskTemplate[]
+  vendors                      Vendor[]
+  contentItems                 ContentItem[]
+  commentThreads               CommentThread[]
+  employees                    Employee[]
+  positions                    Position[]
+  jobs                         Job[]
+  candidates                   Candidate[]
+  leaveRequests                LeaveRequest[]
+  timesheets                   Timesheet[]
+  timeEntries                  TimeEntry[]
+  financeCategories            FinanceCategory[]
+  financeEntries               FinanceEntry[]
+  mediaAssets                  MediaAsset[]
+  healthScoreSnapshots         HealthScoreSnapshot[]
+  churnRiskSnapshots           ChurnRiskSnapshot[]
+  retentionPlans               RetentionPlan[]
+  surveyCampaigns              SurveyCampaign[]
+  npsSnapshots                 NpsSnapshot[]
+  enpsCampaigns                EnpsCampaign[]
+  enpsSnapshots                EnpsSnapshot[]
+  leads                        Lead[]
+  commercialAlerts             CommercialAlert[]
+  leadEmails                   LeadEmail[]
+  leadPhones                   LeadPhone[]
+  leadSubmissions              LeadSubmission[]
+  pipelineStages               PipelineStage[]
+  opportunities                Opportunity[]
+  proposals                    Proposal[]
   /// Chave pública (não-secreta) do coletor de tracking — ver seção "Tracking"
   /// abaixo. Gerada sob demanda na primeira visita a `/integracoes`.
-  trackingWriteKey           String?                 @unique
+  trackingWriteKey             String?                       @unique
   /// Measurement ID do GA4 (seção 37, Etapa 3 do plano de Traqueamento,
   /// 2026-10-04) — formato `G-XXXXXXXXXX`, dado público (vai embutido no
   /// `gtag.js` do site). Não é uma conexão OAuth como `AdAccountConnection`
   /// — GA4 por tag no navegador só precisa desse ID pra funcionar.
-  ga4MeasurementId           String?
+  ga4MeasurementId             String?
   /// Liga/desliga a entrada server-to-server do formulário público do Zenite Hub.
   /// A credencial continua exclusivamente nas variáveis protegidas da Vercel.
-  siteLeadIntegrationEnabled Boolean                 @default(true)
-  trackingVisitors           TrackingVisitor[]
-  trackingEvents             TrackingEvent[]
-  trackingConsents           TrackingConsent[]
-  campaigns                  Campaign[]
-  adAccountConnections       AdAccountConnection[]
-  eventDeliveries            EventDelivery[]
-  commercialMetaEvents       CommercialMetaEvent[]
-  workflows                  Workflow[]
-  operationStages            OperationStage[]
-  blogDrafts                 BlogDraft[]
+  siteLeadIntegrationEnabled   Boolean                       @default(true)
+  trackingVisitors             TrackingVisitor[]
+  trackingEvents               TrackingEvent[]
+  trackingConsents             TrackingConsent[]
+  campaigns                    Campaign[]
+  adAccountConnections         AdAccountConnection[]
+  eventDeliveries              EventDelivery[]
+  commercialMetaEvents         CommercialMetaEvent[]
+  workflows                    Workflow[]
+  operationStages              OperationStage[]
+  blogDrafts                   BlogDraft[]
   contentAutomationConnections ContentAutomationConnection[]
-  blogPageViewCounts          BlogPageViewCount[]
-  searchConsoleConnection     SearchConsoleConnection?
+  blogPageViewCounts           BlogPageViewCount[]
+  searchConsoleConnection      SearchConsoleConnection?
 
   @@map("agency")
 }
@@ -277,37 +279,41 @@ enum ClientStatus {
 }
 
 model Client {
-  id                   String       @id @default(cuid())
-  agencyId             String
-  agency               Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  id                     String         @id @default(cuid())
+  agencyId               String
+  agency                 Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   /// Criado somente na ativação (seção 10: "ao ativar: ... criar portal").
   /// Antes disso o cliente não tem escopo de acesso próprio.
-  workspaceId          String?      @unique
-  workspace            Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  name                 String
-  document             String?
-  email                String?
-  phone                String?
-  whatsapp             String?
-  status               ClientStatus @default(PROSPECT)
+  workspaceId            String?        @unique
+  workspace              Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  name                   String
+  document               String?
+  email                  String?
+  phone                  String?
+  whatsapp               String?
+  status                 ClientStatus   @default(PROSPECT)
   /// Seção 32.3: "clientes encerrados mantêm motivo [já em ClientStatusHistory.reason],
   /// concorrente quando informado... elegibilidade." MRR perdido fica de fora —
   /// não há modelo de receita recorrente ainda (mesmo bloqueio da seção 29).
-  competitorName       String?
-  reactivationEligible Boolean      @default(true)
+  competitorName         String?
+  reactivationEligible   Boolean        @default(true)
   /// Pasta do cliente no Google Drive (logos, artes, materiais) — a Biblioteca
   /// de conteúdo virou atalho pra essa pasta em vez de upload próprio (2026-09-24).
-  driveUrl             String?
+  driveUrl               String?
   /// Ramo de atuação — lista própria da agência, cresce conforme entram clientes.
-  segmentId            String?
-  segment              ClientSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  segmentId              String?
+  segment                ClientSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
   /// Chaves no bucket R2 (logo e banner do cartão) — servidas por /api/clients/:id/image/:kind.
-  avatarKey            String?
-  bannerKey            String?
+  avatarKey              String?
+  bannerKey              String?
   /// Redes sociais: { instagram, facebook, tiktok, youtube, linkedin, site, whatsapp } → URL.
-  socialLinks          Json?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  socialLinks            Json?
+  /// Agendador de redes: ao aprovar no portal, cria a publicação sozinha (se houver rede conectada e data).
+  autoScheduleOnApproval Boolean        @default(false)
+  /// Horário padrão (HH:MM, São Paulo) usado no agendamento automático.
+  defaultPublishTime     String         @default("10:00")
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
 
   contacts               ClientContact[]
   statusHistory          ClientStatusHistory[]
@@ -316,6 +322,8 @@ model Client {
   projects               Project[]
   recurringTaskTemplates RecurringTaskTemplate[]
   contentItems           ContentItem[]
+  socialConnections      SocialConnection[]
+  socialPosts            SocialPost[]
   financeEntries         FinanceEntry[]
   mediaAssets            MediaAsset[]
   healthScoreSnapshots   HealthScoreSnapshot[]
@@ -819,6 +827,7 @@ model ContentItem {
   updatedAt       DateTime       @updatedAt
 
   versions       ContentVersion[]
+  socialPosts    SocialPost[]
   statusHistory  ContentStatusHistory[]
   checklistItems ContentChecklistItem[]
 
@@ -842,7 +851,9 @@ model ContentVersion {
   createdByUserId String?
   createdAt       DateTime    @default(now())
 
-  approval ContentApproval?
+  approval    ContentApproval?
+  media       ContentVersionMedia[]
+  socialPosts SocialPost[]
 
   @@unique([contentItemId, versionNumber])
   @@map("content_version")
@@ -1847,22 +1858,22 @@ enum CommercialAlertType {
 }
 
 model CommercialAlert {
-  id          String                @id @default(cuid())
-  agencyId    String
-  agency      Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  leadId      String
-  lead        Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  eventKey    String
-  type        CommercialAlertType
-  status      CommercialAlertStatus @default(OPEN)
-  title       String
-  detail      String
-  score       Int?
-  detectedAt  DateTime              @default(now())
-  resolvedAt  DateTime?
-  ignoredAt   DateTime?
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
+  id         String                @id @default(cuid())
+  agencyId   String
+  agency     Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId     String
+  lead       Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  eventKey   String
+  type       CommercialAlertType
+  status     CommercialAlertStatus @default(OPEN)
+  title      String
+  detail     String
+  score      Int?
+  detectedAt DateTime              @default(now())
+  resolvedAt DateTime?
+  ignoredAt  DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
 
   @@unique([agencyId, eventKey])
   @@index([agencyId, status, detectedAt])
@@ -1904,25 +1915,25 @@ model LeadPhone {
 
 /// Cada entrada representa um novo preenchimento/interesse, sem duplicar a pessoa.
 model LeadSubmission {
-  id          String       @id @default(cuid())
-  agencyId    String
-  agency      Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  leadId      String
-  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  source      String?
-  name        String?
-  email       String?
-  phone       String?
-  company     String?
-  city        String?
-  interest    String?
-  service     String?
-  employees   String?
-  investment  String?
-  summary     String?
+  id              String       @id @default(cuid())
+  agencyId        String
+  agency          Agency       @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  source          String?
+  name            String?
+  email           String?
+  phone           String?
+  company         String?
+  city            String?
+  interest        String?
+  service         String?
+  employees       String?
+  investment      String?
+  summary         String?
   trackingContext Json?
-  createdAt   DateTime     @default(now())
-  opportunity Opportunity?
+  createdAt       DateTime     @default(now())
+  opportunity     Opportunity?
 
   @@index([agencyId, createdAt])
   @@index([leadId, createdAt])
@@ -2019,8 +2030,8 @@ model Opportunity {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  statusHistory OpportunityStatusHistory[]
-  proposals     Proposal[]
+  statusHistory  OpportunityStatusHistory[]
+  proposals      Proposal[]
   financeEntries FinanceEntry[]
 
   @@index([agencyId])
@@ -2104,7 +2115,7 @@ model Proposal {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  statusHistory ProposalStatusHistory[]
+  statusHistory  ProposalStatusHistory[]
   financeEntries FinanceEntry[]
 
   @@index([agencyId])
@@ -2225,7 +2236,7 @@ model TrackingEvent {
   occurredAt  DateTime
   receivedAt  DateTime         @default(now())
 
-  deliveries  EventDelivery[]
+  deliveries EventDelivery[]
 
   @@unique([agencyId, eventId])
   @@index([agencyId, occurredAt])
@@ -2444,9 +2455,9 @@ enum AdConnectionStatus {
 /// caso real de agência com mais de uma conta de anúncio Meta, vira fatia
 /// própria (ver docs/DECISIONS.md).
 model AdAccountConnection {
-  id                  String              @id @default(cuid())
+  id                  String             @id @default(cuid())
   agencyId            String
-  agency              Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency              Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   platform            AdPlatform
   /// ID da conta de anúncio na plataforma (ex.: "act_123456789" na Meta).
   externalAccountId   String
@@ -2455,19 +2466,19 @@ model AdAccountConnection {
   accessTokenEnc      String
   tokenExpiresAt      DateTime?
   scopes              String[]
-  status              AdConnectionStatus  @default(ACTIVE)
+  status              AdConnectionStatus @default(ACTIVE)
   lastError           String?
   lastValidatedAt     DateTime?
   connectedByUserId   String?
-  connectedByUser     User?               @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
+  connectedByUser     User?              @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
   /// Pixel ID da Meta (seção 38.1, Etapa 2 do plano de Traqueamento,
   /// 2026-09-30) — dado público (vai embutido no `fbq` do navegador), mas
   /// fica junto da conexão porque é usado ao lado do `accessTokenEnc` pra
   /// mandar eventos pela Conversions API. Só existe/faz sentido quando
   /// `platform = META`.
   metaPixelId         String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@unique([agencyId, platform])
   @@index([agencyId])
@@ -2489,15 +2500,15 @@ enum EventDeliveryStatus {
 /// Nunca bloqueia o coletor: é gravado depois da resposta ao navegador já ter
 /// saído (fire-and-forget, mesmo padrão de `fireWorkflowTrigger`).
 model EventDelivery {
-  id              String                    @id @default(cuid())
+  id              String                   @id @default(cuid())
   agencyId        String
-  agency          Agency                    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency          Agency                   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   trackingEventId String
-  trackingEvent   TrackingEvent             @relation(fields: [trackingEventId], references: [id], onDelete: Cascade)
+  trackingEvent   TrackingEvent            @relation(fields: [trackingEventId], references: [id], onDelete: Cascade)
   destination     EventDeliveryDestination
   status          EventDeliveryStatus
   error           String?
-  attemptedAt     DateTime                  @default(now())
+  attemptedAt     DateTime                 @default(now())
 
   @@index([agencyId, attemptedAt])
   @@index([trackingEventId])
@@ -2675,20 +2686,20 @@ enum BlogDraftStatus {
 /// Decisão revisada em 2026-10-15: nada publica sozinho por enquanto — todo
 /// rascunho fica PENDING até aprovação manual pela tela de Automações.
 model BlogDraft {
-  id           String          @id @default(cuid())
-  agencyId     String
-  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  slug         String
-  title        String
-  excerpt      String
-  content      String
-  origin       String          @default("manual") // 'manual' | 'search_console' | 'refresh'
-  status       BlogDraftStatus @default(PENDING)
-  reviewNote   String?
-  seoTitle     String?
-  focusKeyword String?
-  cover        String?
-  category     String?
+  id                       String          @id @default(cuid())
+  agencyId                 String
+  agency                   Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  slug                     String
+  title                    String
+  excerpt                  String
+  content                  String
+  origin                   String          @default("manual") // 'manual' | 'search_console' | 'refresh'
+  status                   BlogDraftStatus @default(PENDING)
+  reviewNote               String?
+  seoTitle                 String?
+  focusKeyword             String?
+  cover                    String?
+  category                 String?
   /// Sugestões do próprio agente na hora de criar o rascunho — pré-preenchem
   /// a tela de aprovação pra não exigir digitação manual toda vez. Formato:
   /// string[] de slugs já existentes.
@@ -2696,8 +2707,8 @@ model BlogDraft {
   /// Formato: {q: string, a: string}[].
   suggestedFaq             Json?
   suggestedCoverSearchTerm String?
-  createdAt    DateTime        @default(now())
-  reviewedAt   DateTime?
+  createdAt                DateTime        @default(now())
+  reviewedAt               DateTime?
 
   comments BlogDraftComment[]
 
@@ -2727,16 +2738,16 @@ model BlogDraftComment {
 /// padrão de `AdAccountConnection.accessTokenEnc`), nunca em variável de
 /// ambiente global — cada agência tem o seu.
 model ContentAutomationConnection {
-  id                String   @id @default(cuid())
-  agencyId          String
-  agency            Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  githubOwner       String
-  githubRepo        String
-  githubBranch      String   @default("main")
-  githubTokenEnc    String
-  agentApiKeyEnc    String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id             String   @id @default(cuid())
+  agencyId       String
+  agency         Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  githubOwner    String
+  githubRepo     String
+  githubBranch   String   @default("main")
+  githubTokenEnc String
+  agentApiKeyEnc String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([agencyId])
   @@map("content_automation_connection")
@@ -2764,16 +2775,16 @@ model BlogPageViewCount {
 /// espírito do GBP descrito no blueprint) — usada só pra ler as pesquisas
 /// dos últimos 7 dias e priorizar o tema do blog automático.
 model SearchConsoleConnection {
-  id                String   @id @default(cuid())
-  agencyId          String   @unique
-  agency            Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  agencyId          String    @unique
+  agency            Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   siteUrl           String
   refreshTokenEnc   String
   connectedByUserId String?
   lastValidatedAt   DateTime?
   lastError         String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@map("search_console_connection")
 }
@@ -2815,4 +2826,120 @@ model CommercialGoal {
   @@unique([agencyId, metric, period, periodStart])
   @@index([agencyId, periodStart])
   @@map("commercial_goal")
+}
+
+// ---------------------------------------------------------------------------
+// Agendador de redes sociais (pedido do usuário, 2026-10-20) — Facebook e
+// Instagram primeiro; Google Meu Negócio depois da liberação da API.
+// ---------------------------------------------------------------------------
+
+/// Arquivo da arte de uma versão (imagem/vídeo), guardado no R2. Vários = carrossel, na ordem de `position`.
+model ContentVersionMedia {
+  id          String         @id @default(cuid())
+  versionId   String
+  version     ContentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  key         String         @unique
+  fileName    String
+  contentType String
+  sizeBytes   Int
+  position    Int            @default(0)
+  createdAt   DateTime       @default(now())
+
+  @@index([versionId])
+  @@map("content_version_media")
+}
+
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE_BUSINESS
+}
+
+enum SocialConnectionStatus {
+  ACTIVE
+  ERROR
+  REVOKED
+}
+
+/// Conta de rede social conectada a um cliente. Uma por plataforma por cliente.
+model SocialConnection {
+  id                String                 @id @default(cuid())
+  agencyId          String
+  agency            Agency                 @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId          String
+  client            Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform          SocialPlatform
+  /// ID da Página (Facebook), do usuário IG Business (Instagram) ou da location (Google).
+  externalId        String
+  name              String
+  username          String?
+  pictureUrl        String?
+  /// Token cifrado (lib/crypto-secrets.ts). Facebook/Instagram usam o token da Página.
+  accessTokenEnc    String
+  tokenExpiresAt    DateTime?
+  status            SocialConnectionStatus @default(ACTIVE)
+  lastError         String?
+  connectedByUserId String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  posts SocialPost[]
+
+  @@unique([clientId, platform])
+  @@index([agencyId])
+  @@map("social_connection")
+}
+
+enum SocialPostStatus {
+  SCHEDULED
+  PUBLISHING
+  /// Vídeo do Instagram ainda processando na Meta — o cron confere e publica depois.
+  PROCESSING
+  PUBLISHED
+  FAILED
+  CANCELED
+}
+
+enum SocialPostFormat {
+  FEED
+  REEL
+  STORY
+}
+
+/// Uma publicação numa rede. Mídia vem da versão (`versionId`); legenda é congelada no agendamento.
+model SocialPost {
+  id                  String           @id @default(cuid())
+  agencyId            String
+  agency              Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId            String
+  client              Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contentItemId       String?
+  contentItem         ContentItem?     @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  versionId           String?
+  version             ContentVersion?  @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  connectionId        String
+  connection          SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  platform            SocialPlatform
+  format              SocialPostFormat @default(FEED)
+  caption             String?
+  publishAt           DateTime
+  status              SocialPostStatus @default(SCHEDULED)
+  attempts            Int              @default(0)
+  nextAttemptAt       DateTime?
+  /// Container de mídia do Instagram aguardando processamento (vídeo).
+  externalContainerId String?
+  externalPostId      String?
+  permalink           String?
+  lastError           String?
+  publishedAt         DateTime?
+  /// true = criado sozinho quando o cliente aprovou no portal.
+  autoScheduled       Boolean          @default(false)
+  createdByUserId     String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([status, publishAt])
+  @@index([agencyId, publishAt])
+  @@index([contentItemId])
+  @@map("social_post")
 }

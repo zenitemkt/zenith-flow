@@ -1,8 +1,13 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-20.
+Última atualização: 2026-10-21.
 
 ## Implementado
+
+- **Agendador de redes — Facebook e Instagram (2026-10-21)**: ver `docs/DECISIONS.md` (2026-10-21). Conectar redes no perfil do cliente, agendar/publicar agora no cartão, publicações no calendário, automático ao aprovar, motor + cron externo, arte em arquivo nas versões.
+  - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web`; testes unitários de horário/formato (`lib/social-scheduling.test.ts`) e metas. Migration aplicada em produção; `CRON_SECRET` criado na Vercel.
+  - **Não testado ao vivo**: conexão com a Meta, publicação real em FB/IG, upload >4MB (depende de CORS no R2), cron externo.
+  - Pendências do Kevin: CORS do R2, cron-job.org, permissões no app da Meta, pedido de acesso à API do Google Meu Negócio.
 
 - **Estilo Minimalista, Clientes em cartões e Operação redesenhada (2026-10-20)**: ver `docs/DECISIONS.md` (2026-10-20). Inclui idempotência no servidor para criação de cartão/cliente (relato de cartão triplicado).
   - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web`, `vitest` de `packages/ui`. **Pendente**: aplicar a migration `20261020120000_ui_style_and_client_cards` no banco antes do deploy; verificação visual no navegador; aplicar o estilo em telas que fujam do padrão.

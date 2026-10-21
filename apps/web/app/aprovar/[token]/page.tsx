@@ -1,4 +1,5 @@
 import { prisma } from "@zenite-mkt/db";
+import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { ApprovalActions } from "./ApprovalActions";
@@ -10,7 +11,7 @@ interface PageProps {
 export default async function AprovarPage({ params }: PageProps) {
   const approval = await prisma.contentApproval.findUnique({
     where: { token: params.token },
-    include: { contentVersion: { include: { contentItem: { include: { client: true } } } } },
+    include: { contentVersion: { include: { contentItem: { include: { client: true } }, media: { orderBy: { position: "asc" }, select: { id: true, contentType: true, fileName: true } } } } },
   });
 
   const expired =
@@ -46,6 +47,12 @@ export default async function AprovarPage({ params }: PageProps) {
             <h1 className="mb-3 text-lg font-semibold text-[#101828]">
               {approval.contentVersion.contentItem.title}
             </h1>
+
+            {approval.contentVersion.media.length > 0 && (
+              <div className="mb-3">
+                <VersionMediaGallery media={approval.contentVersion.media} srcBase={`/api/approvals/${params.token}/media`} large />
+              </div>
+            )}
 
             {approval.contentVersion.assetUrl && (
               <div className="mb-3 flex flex-col gap-1.5">

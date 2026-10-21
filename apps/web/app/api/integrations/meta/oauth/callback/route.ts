@@ -3,6 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { encryptSecret } from "@/lib/crypto-secrets";
 import { exchangeMetaCodeForShortLivedToken, exchangeMetaTokenForLongLived, fetchMetaAdAccounts, META_OAUTH_SCOPES } from "@/lib/meta-ads";
 import { verifyOAuthState } from "@/lib/oauth-state";
+import { handleSocialOAuthCallback } from "@/lib/social-oauth-callback";
 import { META_OAUTH_PENDING_COOKIE, META_OAUTH_PENDING_TTL_SECONDS, encodeMetaOAuthPending } from "@/lib/meta-oauth-pending";
 
 function redirectToTracking(request: Request, params: Record<string, string>) {
@@ -24,6 +25,18 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const metaError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
+
+  // Mesma URL de retorno serve o agendador de redes (perfil do cliente) — o state assinado diz qual fluxo é.
+  const socialState = verifyOAuthState(state);
+  if (socialState?.extra.flow === "social" && socialState.extra.clientId && socialState.extra.userId) {
+    return handleSocialOAuthCallback(request, {
+      agencyId: socialState.agencyId,
+      clientId: socialState.extra.clientId,
+      userId: socialState.extra.userId,
+      code,
+      denied: Boolean(metaError),
+    });
+  }
 
   if (metaError) {
     return redirectToTracking(request, { meta: "error", reason: "authorization_denied" });

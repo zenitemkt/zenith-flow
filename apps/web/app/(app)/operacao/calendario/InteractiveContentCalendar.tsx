@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2 } from "lucide-react";
 import { WEEKDAY_LABELS, buildMonthCells } from "@/lib/content-calendar";
 import {
   CONTENT_CALENDAR_BUCKET_CLASS,
@@ -22,6 +22,40 @@ const CALENDAR_BUCKET_ICON: Record<ContentCalendarBucket, typeof Clock | null> =
   agenda: CalendarDays,
   concluido: CheckCircle2,
 };
+
+/** Publicação agendada/publicada nas redes (agendador, 2026-10-20). */
+export interface CalendarSocialPost {
+  id: string;
+  contentItemId: string | null;
+  title: string;
+  clientName: string;
+  platform: "INSTAGRAM" | "FACEBOOK" | "GOOGLE_BUSINESS";
+  status: "SCHEDULED" | "PUBLISHING" | "PROCESSING" | "PUBLISHED" | "FAILED" | "CANCELED";
+  publishAtISO: string;
+}
+
+const POST_STATUS_CLASS: Record<CalendarSocialPost["status"], string> = {
+  SCHEDULED: "border-[#2E90FA]/40 bg-[#EEF4FF] text-[#2859B8]",
+  PUBLISHING: "border-[#F79009]/40 bg-[#FEF3C7] text-[#92600A]",
+  PROCESSING: "border-[#F79009]/40 bg-[#FEF3C7] text-[#92600A]",
+  PUBLISHED: "border-[#16A36A]/40 bg-[#DCFCE7] text-[#166534]",
+  FAILED: "border-[#D94343]/40 bg-[#FEE4E2] text-[#B42318]",
+  CANCELED: "border-[#E4E7EC] bg-[#F2F4F7] text-[#667085]",
+};
+const POST_STATUS_LABEL: Record<CalendarSocialPost["status"], string> = {
+  SCHEDULED: "agendado",
+  PUBLISHING: "publicando",
+  PROCESSING: "processando",
+  PUBLISHED: "publicado",
+  FAILED: "falhou",
+  CANCELED: "cancelado",
+};
+
+/** Dia (1-31) e hora "HH:MM" do instante no fuso de São Paulo. */
+function spDayAndTime(iso: string): { day: number; month: number; time: string } {
+  const shifted = new Date(new Date(iso).getTime() - 3 * 3600_000);
+  return { day: shifted.getUTCDate(), month: shifted.getUTCMonth(), time: shifted.toISOString().slice(11, 16) };
+}
 
 export interface CalendarContentItem {
   id: string;
@@ -51,11 +85,13 @@ export function InteractiveContentCalendar({
   month,
   monthItems,
   pendingItems,
+  posts = [],
 }: {
   year: number;
   month: number;
   monthItems: CalendarContentItem[];
   pendingItems: CalendarContentItem[];
+  posts?: CalendarSocialPost[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<"grade" | "lista">("grade");
@@ -75,6 +111,19 @@ export function InteractiveContentCalendar({
     }
     return map;
   }, [monthItems]);
+
+  const postsByDay = useMemo(() => {
+    const map = new Map<number, (CalendarSocialPost & { time: string })[]>();
+    for (const post of posts) {
+      const { day, month: postMonth, time } = spDayAndTime(post.publishAtISO);
+      if (postMonth !== month) continue;
+      const list = map.get(day) ?? [];
+      list.push({ ...post, time });
+      map.set(day, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.time.localeCompare(b.time));
+    return map;
+  }, [posts, month]);
 
   const sortedPending = useMemo(
     () =>
@@ -196,6 +245,27 @@ export function InteractiveContentCalendar({
                                   {BucketIcon && <BucketIcon className="h-3 w-3 shrink-0" aria-hidden />}
                                   <span className="truncate">{item.title}</span>
                                 </Link>
+                              );
+                            })}
+                            {(postsByDay.get(day) ?? []).map((post) => {
+                              const PostIcon = post.platform === "INSTAGRAM" ? Instagram : Facebook;
+                              const className = `flex items-center gap-1 truncate rounded border px-1.5 py-1 text-[11px] font-medium ${POST_STATUS_CLASS[post.status]}`;
+                              const content = (
+                                <>
+                                  <span className="shrink-0 font-semibold tabular-nums">{post.time}</span>
+                                  <PostIcon className="h-3 w-3 shrink-0" aria-hidden />
+                                  <span className="truncate">{post.title}</span>
+                                </>
+                              );
+                              const title = `${post.time} · ${post.platform === "INSTAGRAM" ? "Instagram" : "Facebook"} · ${post.title} · ${post.clientName} · ${POST_STATUS_LABEL[post.status]}`;
+                              return post.contentItemId ? (
+                                <Link key={post.id} href={`/conteudo/${post.contentItemId}`} className={className} title={title}>
+                                  {content}
+                                </Link>
+                              ) : (
+                                <span key={post.id} className={className} title={title}>
+                                  {content}
+                                </span>
                               );
                             })}
                           </div>

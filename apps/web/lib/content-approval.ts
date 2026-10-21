@@ -1,4 +1,5 @@
 import { prisma, type ApprovalStatus } from "@zenite-mkt/db";
+import { autoScheduleAfterApproval } from "@/lib/social-scheduling";
 
 type Decision = Extract<ApprovalStatus, "APROVADO" | "AJUSTES_SOLICITADOS">;
 
@@ -56,6 +57,9 @@ export async function applyApprovalDecision({
       },
     });
   });
+
+  // Agendador de redes: cliente com "agendar sozinho ao aprovar" ligado já entra na fila de publicação.
+  if (decision === "APROVADO") await autoScheduleAfterApproval(contentItem.id).catch(() => undefined);
 
   return nextStatus;
 }

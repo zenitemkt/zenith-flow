@@ -24,7 +24,10 @@ import { EditVersionLinkButton } from "./EditVersionLinkButton";
 import { EditContentDetailsButton } from "./EditContentDetailsButton";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { ChecklistPanel } from "./ChecklistPanel";
+import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
 import { ContentPropertiesPanel } from "./ContentPropertiesPanel";
+import { SocialPublishPanel } from "./SocialPublishPanel";
+import { platformForChannel, postFormatFor } from "@/lib/social-scheduling";
 
 /** Rótulos curtos da trilha de etapas — mesmos 5 baldes do quadro de Operação. */
 const STEP_LABEL: Record<string, string> = {
@@ -79,14 +82,16 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
           id: true,
           name: true,
           avatarKey: true,
+          defaultPublishTime: true,
           contacts: { select: { email: true, phone: true, isPrimary: true }, orderBy: { isPrimary: "desc" } },
         },
       },
       versions: {
         orderBy: { versionNumber: "desc" },
-        include: { approval: true },
+        include: { approval: true, media: { orderBy: { position: "asc" }, select: { id: true, contentType: true, fileName: true } } },
       },
       statusHistory: { orderBy: { createdAt: "desc" } },
+      socialPosts: { where: { status: { not: "CANCELED" } }, orderBy: { publishAt: "desc" }, take: 20 },
       checklistItems: { orderBy: { order: "asc" } },
     },
   });
@@ -97,11 +102,17 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
 
   const canSubmit = SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
   const primaryContact = item.client.contacts.find((c) => c.isPrimary) ?? item.client.contacts.find((c) => c.email);
-  const [thread, mentionableMembers, agencyMembers] = await Promise.all([
+  const [thread, mentionableMembers, agencyMembers, socialConnections] = await Promise.all([
     loadCommentThreadView("content_item", item.id),
     getMentionableMembers(membership.agencyId),
     getAgencyMembers(membership.agencyId),
+    prisma.socialConnection.findMany({
+      where: { clientId: item.client.id, platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
+      select: { platform: true, name: true, status: true },
+      orderBy: { platform: "desc" },
+    }),
   ]);
+  const latestMedia = item.versions[0]?.media ?? [];
 
   const currentStep = CONTENT_BOARD_COLUMNS.findIndex((c) => c.id === contentBoardColumnForStatus(item.status));
   const isArchived = item.status === "ARQUIVADO";
@@ -229,15 +240,19 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
               {item.versions.map((version) => (
                 <div key={version.id} className="rounded-lg border border-[#EEF0F3] px-3 py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <a
-                      href={version.assetUrl ?? "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#101828] hover:text-[#FF2B00]"
-                    >
-                      Versão {version.versionNumber}
-                      <ExternalLink size={13} aria-hidden className="text-[#98A2B3]" />
-                    </a>
+                    {version.assetUrl ? (
+                      <a
+                        href={version.assetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#101828] hover:text-[#FF2B00]"
+                      >
+                        Versão {version.versionNumber}
+                        <ExternalLink size={13} aria-hidden className="text-[#98A2B3]" />
+                      </a>
+                    ) : (
+                      <span className="text-sm font-semibold text-[#101828]">Versão {version.versionNumber}</span>
+                    )}
                     {version.approval && (
                       <span
                         className={
@@ -256,6 +271,11 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                       </span>
                     )}
                   </div>
+                  {version.media.length > 0 && (
+                    <div className="mt-2">
+                      <VersionMediaGallery media={version.media} srcBase="/api/content-media" />
+                    </div>
+                  )}
                   {version.notes && <p className="mt-1 text-xs text-[#667085]">{version.notes}</p>}
                   {version.approval?.decisionNote && (
                     <p className="mt-1.5 rounded-md bg-[#FEF3F2] px-2 py-1.5 text-xs text-[#B42318]">
@@ -270,6 +290,31 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                 </div>
               ))}
             </div>
+          </Section>
+
+          <Section title="Publicação nas redes">
+            <SocialPublishPanel
+              contentId={item.id}
+              clientId={item.client.id}
+              connections={socialConnections.map((c) => ({ platform: c.platform, name: c.name, status: c.status === "ACTIVE" ? "ACTIVE" : "ERROR" }))}
+              posts={item.socialPosts.map((p) => ({
+                id: p.id,
+                platform: p.platform,
+                status: p.status,
+                format: p.format,
+                publishAtISO: p.publishAt.toISOString(),
+                permalink: p.permalink,
+                lastError: p.lastError,
+                autoScheduled: p.autoScheduled,
+              }))}
+              mediaCount={latestMedia.length}
+              hasVideo={latestMedia.some((m) => m.contentType.startsWith("video/"))}
+              defaultCaption={item.caption ?? ""}
+              defaultDate={item.scheduledDate ? item.scheduledDate.toISOString().slice(0, 10) : null}
+              defaultTime={item.client.defaultPublishTime}
+              defaultFormat={postFormatFor(item.format)}
+              defaultPlatform={platformForChannel(item.channel)}
+            />
           </Section>
 
           <div className="flex flex-col gap-2">

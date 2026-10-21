@@ -13,6 +13,7 @@ import { AddNoteForm } from "./AddNoteForm";
 import { EditClientButton } from "./EditClientButton";
 import { EMPTY_SOCIAL_VALUES, SOCIAL_NETWORKS, clientInitials, defaultBannerGradient, isClientActive, parseSocialLinks } from "@/lib/clients";
 import { ClientProfileHeader } from "./ClientProfileHeader";
+import { SocialConnectionsSection } from "./SocialConnectionsSection";
 import { ClientPortalSection } from "./ClientPortalSection";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
@@ -28,9 +29,10 @@ import { canManageTeam } from "@/lib/rbac";
 
 interface PageProps {
   params: { id: string };
+  searchParams: { social?: string; reason?: string };
 }
 
-export default async function ClientProfilePage({ params }: PageProps) {
+export default async function ClientProfilePage({ params, searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
@@ -194,6 +196,14 @@ export default async function ClientProfilePage({ params }: PageProps) {
             {canManageTeam(membership.role) && <DeleteRecordButton endpoint={`/api/clients/${client.id}`} recordName={client.name} entityLabel="Cliente" warning="Contatos, portal e dados operacionais ou financeiros dependentes serão removidos; propostas e negociações comerciais serão preservadas sem o vínculo." redirectTo="/clientes/carteira" variant="button" />}
           </>
         }
+      />
+
+      <SocialConnectionsSection
+        clientId={client.id}
+        socialParam={searchParams.social}
+        reasonParam={searchParams.reason}
+        autoScheduleOnApproval={client.autoScheduleOnApproval}
+        defaultPublishTime={client.defaultPublishTime}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

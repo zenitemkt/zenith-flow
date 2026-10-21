@@ -5,7 +5,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { prisma } from "@zenite-mkt/db";
 import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
-import type { CalendarContentItem } from "./InteractiveContentCalendar";
+import type { CalendarContentItem, CalendarSocialPost } from "./InteractiveContentCalendar";
 
 /** Code-split: framer-motion só baixa quando esta rota é visitada. */
 const InteractiveContentCalendar = dynamic(() =>
@@ -29,7 +29,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
   const activeClientId = searchParams.clientId;
 
-  const [monthItems, pendingItems, clients] = await Promise.all([
+  const [monthItems, pendingItems, clients, socialPosts] = await Promise.all([
     prisma.contentItem.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -53,7 +53,36 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    // Publicações nas redes do mês (em São Paulo: o mês começa às 03:00 UTC do dia 1).
+    prisma.socialPost.findMany({
+      where: {
+        agencyId: membership.agencyId,
+        status: { not: "CANCELED" },
+        publishAt: { gte: new Date(rangeStart.getTime() + 3 * 3600_000), lt: new Date(rangeEnd.getTime() + 3 * 3600_000) },
+        ...(activeClientId ? { clientId: activeClientId } : {}),
+      },
+      select: {
+        id: true,
+        platform: true,
+        status: true,
+        publishAt: true,
+        contentItemId: true,
+        contentItem: { select: { title: true } },
+        client: { select: { name: true } },
+      },
+      orderBy: { publishAt: "asc" },
+    }),
   ]);
+
+  const calendarPosts: CalendarSocialPost[] = socialPosts.map((p) => ({
+    id: p.id,
+    contentItemId: p.contentItemId,
+    title: p.contentItem?.title ?? "Publicação",
+    clientName: p.client.name,
+    platform: p.platform,
+    status: p.status,
+    publishAtISO: p.publishAt.toISOString(),
+  }));
 
   const toCalendarItem = (item: (typeof monthItems)[number]): CalendarContentItem => ({
     id: item.id,
@@ -121,6 +150,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
         month={month}
         monthItems={monthItems.map(toCalendarItem)}
         pendingItems={pendingItems.map(toCalendarItem)}
+        posts={calendarPosts}
       />
     </div>
   );

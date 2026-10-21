@@ -22,15 +22,21 @@ function sign(payload: string): string {
   return createHmac("sha256", getSigningSecret()).update(payload).digest("base64url");
 }
 
-/** `agencyId` + nonce aleatório + timestamp, tudo assinado — formato: `<payload base64url>.<assinatura>`. */
-export function createOAuthState(agencyId: string): string {
-  const payload = JSON.stringify({ agencyId, nonce: randomBytes(12).toString("hex"), issuedAt: Date.now() });
+/**
+ * `agencyId` + nonce aleatório + timestamp, tudo assinado — formato: `<payload base64url>.<assinatura>`.
+ * `extra` carrega contexto do fluxo (ex.: `{ flow: "social", clientId }` no agendador de redes),
+ * protegido pela mesma assinatura.
+ */
+export function createOAuthState(agencyId: string, extra?: Record<string, string>): string {
+  const payload = JSON.stringify({ agencyId, extra, nonce: randomBytes(12).toString("hex"), issuedAt: Date.now() });
   const payloadB64 = Buffer.from(payload, "utf8").toString("base64url");
   return `${payloadB64}.${sign(payloadB64)}`;
 }
 
 /** Verifica assinatura e validade (TTL); devolve `agencyId` só quando tudo bate. */
-export function verifyOAuthState(state: string | null | undefined): { agencyId: string } | null {
+export function verifyOAuthState(
+  state: string | null | undefined,
+): { agencyId: string; extra: Record<string, string> } | null {
   if (!state) return null;
   const [payloadB64, signature] = state.split(".");
   if (!payloadB64 || !signature) return null;
@@ -44,10 +50,15 @@ export function verifyOAuthState(state: string | null | undefined): { agencyId: 
     const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as {
       agencyId?: unknown;
       issuedAt?: unknown;
+      extra?: unknown;
     };
     if (typeof payload.agencyId !== "string" || typeof payload.issuedAt !== "number") return null;
     if (Date.now() - payload.issuedAt > STATE_TTL_MS) return null;
-    return { agencyId: payload.agencyId };
+    const extra =
+      payload.extra && typeof payload.extra === "object"
+        ? Object.fromEntries(Object.entries(payload.extra).filter(([, v]) => typeof v === "string")) as Record<string, string>
+        : {};
+    return { agencyId: payload.agencyId, extra };
   } catch {
     return null;
   }
