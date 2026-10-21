@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Política de privacidade pública** em `/privacidade` (sem login), com o texto do site + seção sobre dados do Facebook/Instagram e instruções de exclusão (`/privacidade#exclusao-de-dados`). URLs usadas no cadastro do app da Meta.
 - **Agendador de redes (Facebook + Instagram)**: conectar a Página e o Instagram profissional de cada cliente no perfil dele (OAuth da Meta, token cifrado); no cartão da peça, painel "Publicação nas redes" com escolha das redes, formato (Feed/carrossel, Reels, Story), legenda, data e hora de Brasília, botões **Agendar** e **Publicar agora**, histórico com status, link do post, cancelar e reenviar. Publicações aparecem no Calendário da Operação. Opção por cliente de **agendar sozinho quando o cliente aprovar** no portal, no horário padrão do cliente. Motor com trava contra publicação duplicada, novas tentativas e espera de processamento de vídeo; disparado a cada minuto por cron externo em `/api/cron/social-publish` (`CRON_SECRET`). Google Meu Negócio aparece como "em breve" (aguarda liberação da API pelo Google). Migration `20261021020000_social_scheduler`.
 - **Arte em arquivo nas versões**: "Nova versão" aceita imagens e vídeos (até 10 = carrossel), além do link. PNG/WEBP viram JPEG no navegador (exigência do Instagram). Arquivos até 4MB passam pelo servidor; maiores sobem direto ao R2 (exige CORS no bucket). A arte aparece no cartão, no portal do cliente e no link público de aprovação.
 
