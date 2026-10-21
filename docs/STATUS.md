@@ -4,6 +4,7 @@
 
 ## Implementado
 
+- **Publicação direta pelo Calendário (2026-10-21)**: botão "Nova publicação" e clique em qualquer dia (de hoje em diante) em Operação > Calendário abrem o formulário: cliente (só os com rede conectada), redes, formato, arte, título opcional, legenda, data/hora de Brasília, Agendar ou Publicar agora (só no dia de hoje). Por baixo cria a peça (`/api/social/quick-post`), sobe a arte e aprova+agenda (`/api/social/quick-post/[id]`); se a arte falhar no meio, a peça é apagada. Imagens agora são reduzidas/comprimidas no navegador (< 4MB) e nunca dependem de CORS do R2. Testes: `lib/social-quick-post.test.ts`. Conexão Meta da Zenite testada ao vivo (Página + Instagram conectados).
 - **Agendador de redes — Facebook e Instagram (2026-10-21)**: ver `docs/DECISIONS.md` (2026-10-21). Conectar redes no perfil do cliente, agendar/publicar agora no cartão, publicações no calendário, automático ao aprovar, motor + cron externo, arte em arquivo nas versões.
   - Testado: `tsc --noEmit`, `lint`, `build` de `apps/web`; testes unitários de horário/formato (`lib/social-scheduling.test.ts`) e metas. Migration aplicada em produção; `CRON_SECRET` criado na Vercel.
   - **Não testado ao vivo**: conexão com a Meta, publicação real em FB/IG, upload >4MB (depende de CORS no R2), cron externo.

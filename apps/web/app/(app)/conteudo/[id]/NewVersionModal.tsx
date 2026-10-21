@@ -6,74 +6,9 @@ import { Film, ImagePlus, X } from "lucide-react";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
-import {
-  CONTENT_MEDIA_MAX_FILES,
-  DIRECT_UPLOAD_THRESHOLD_BYTES,
-  isVideoType,
-  validateContentMediaFile,
-} from "@/lib/content-media";
+import { CONTENT_MEDIA_MAX_FILES, isVideoType, validateContentMediaFile } from "@/lib/content-media";
+import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-upload";
 import { formatBytes } from "@/lib/media";
-
-interface UploadedMedia {
-  key: string;
-  fileName: string;
-  contentType: string;
-  sizeBytes: number;
-}
-
-/**
- * O Instagram só aceita JPEG oficialmente: PNG/WEBP são convertidos no
- * próprio navegador (canvas), com fundo branco onde houver transparência.
- */
-async function toJpegIfNeeded(file: File): Promise<File> {
-  if (file.type === "image/jpeg" || !file.type.startsWith("image/")) return file;
-  const bitmap = await createImageBitmap(file);
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(bitmap, 0, 0);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-  if (!blob) return file;
-  return new File([blob], file.name.replace(/\.(png|webp)$/i, "") + ".jpg", { type: "image/jpeg" });
-}
-
-/**
- * Sobe um arquivo: pequeno vai pelo servidor; grande (vídeo) vai direto pro
- * R2 com URL assinada. Devolve os dados que a criação da versão precisa.
- */
-async function uploadFile(contentId: string, original: File): Promise<UploadedMedia> {
-  const file = await toJpegIfNeeded(original);
-  const base = { fileName: file.name, contentType: file.type, sizeBytes: file.size };
-
-  if (file.size <= DIRECT_UPLOAD_THRESHOLD_BYTES) {
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch(`/api/content/${contentId}/media-upload`, { method: "POST", body: form });
-    const body = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(body?.error ?? `Não foi possível enviar "${file.name}".`);
-    return { ...base, key: body.key };
-  }
-
-  const res = await fetch(`/api/content/${contentId}/media-upload`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(base),
-  });
-  const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.error ?? `Não foi possível preparar o envio de "${file.name}".`);
-
-  const put = await fetch(body.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file }).catch(() => null);
-  if (!put || !put.ok) {
-    throw new Error(
-      `Não foi possível enviar "${file.name}" (${formatBytes(file.size)}). Arquivos acima de 4MB precisam do CORS liberado no armazenamento — avise o administrador.`,
-    );
-  }
-  return { ...base, key: body.key };
-}
 
 export function NewVersionModal({ contentId }: { contentId: string }) {
   const router = useRouter();
@@ -101,7 +36,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
     setError(null);
     const next = [...files];
     for (const file of Array.from(list)) {
-      const invalid = validateContentMediaFile(file);
+      const invalid = validateContentMediaFile(file, { source: true });
       if (invalid) {
         setError(invalid);
         continue;
@@ -128,7 +63,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
         const media: UploadedMedia[] = [];
         for (const [index, file] of files.entries()) {
           setProgress(`Enviando arquivo ${index + 1} de ${files.length}...`);
-          media.push(await uploadFile(contentId, file));
+          media.push(await uploadContentMedia(contentId, file));
         }
         setProgress("Salvando versão...");
         const response = await fetch(`/api/content/${contentId}/versions`, {
@@ -173,7 +108,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
             <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[#D0D5DD] px-4 py-6 text-center hover:border-[#FF2B00] hover:bg-[#FFF9F7]">
               <ImagePlus size={22} className="text-[#667085]" aria-hidden />
               <span className="text-sm font-semibold text-[#101828]">Escolher arquivos</span>
-              <span className="text-xs text-[#667085]">JPG, PNG, WEBP (até 8MB) · MP4, MOV (até 300MB) · até 10 arquivos</span>
+              <span className="text-xs text-[#667085]">JPG, PNG, WEBP (reduzidas automaticamente) · MP4, MOV (até 300MB) · até 10 arquivos</span>
               <input
                 type="file"
                 multiple

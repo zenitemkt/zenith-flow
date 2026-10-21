@@ -3,7 +3,7 @@ import { prisma, type SocialPlatform, type SocialPostFormat } from "@zenite-mkt/
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { ScheduleError, scheduleContentPosts } from "@/lib/social-scheduling";
-import { publishSocialPostNow } from "@/lib/social-publisher";
+import { publishPostsNow } from "@/lib/social-publisher";
 
 export const maxDuration = 60;
 
@@ -53,15 +53,5 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!now) return NextResponse.json({ ok: true, scheduled: ids.length }, { status: 201 });
 
   // "Publicar agora": publica na hora, uma rede por vez, dentro do tempo da função.
-  const started = Date.now();
-  const outcomes: Record<string, string | null> = {};
-  for (const id of ids) {
-    const remaining = 55_000 - (Date.now() - started);
-    if (remaining < 10_000) {
-      outcomes[id] = "queued";
-      continue;
-    }
-    outcomes[id] = await publishSocialPostNow(id, remaining - 5_000);
-  }
-  return NextResponse.json({ ok: true, outcomes });
+  return NextResponse.json({ ok: true, outcomes: await publishPostsNow(ids) });
 }

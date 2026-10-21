@@ -44,7 +44,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Arquivo grande demais para este modo." }, { status: 413 });
     }
     const key = buildContentMediaKey(item.agencyId, item.id, file.name);
-    await putContentMedia(key, new Uint8Array(await file.arrayBuffer()), file.type);
+    try {
+      await putContentMedia(key, new Uint8Array(await file.arrayBuffer()), file.type);
+    } catch (error) {
+      console.error("[media-upload] falha ao gravar no R2", error);
+      return NextResponse.json({ error: `Não foi possível guardar "${file.name}". Tente de novo.` }, { status: 502 });
+    }
     return NextResponse.json({ key });
   }
 

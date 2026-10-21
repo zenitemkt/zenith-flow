@@ -193,6 +193,24 @@ export async function publishSocialPostNow(postId: string, budgetMs: number) {
   return runPublish(post, budgetMs);
 }
 
+/**
+ * "Publicar agora" de vários posts dentro do tempo de uma requisição (~55s):
+ * uma rede por vez; o que não couber fica na fila e o cron publica.
+ */
+export async function publishPostsNow(ids: string[], budgetMs = 55_000): Promise<Record<string, string | null>> {
+  const started = Date.now();
+  const outcomes: Record<string, string | null> = {};
+  for (const id of ids) {
+    const remaining = budgetMs - (Date.now() - started);
+    if (remaining < 10_000) {
+      outcomes[id] = "queued";
+      continue;
+    }
+    outcomes[id] = await publishSocialPostNow(id, remaining - 5_000);
+  }
+  return outcomes;
+}
+
 /** Um ciclo do cron: publica o que venceu e confere vídeos em processamento, dentro do tempo disponível. */
 export async function publishDueSocialPosts(budgetMs: number, now = new Date()): Promise<PublishRunSummary> {
   const started = Date.now();

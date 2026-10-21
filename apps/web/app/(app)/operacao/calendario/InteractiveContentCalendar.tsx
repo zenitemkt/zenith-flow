@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2, Plus } from "lucide-react";
 import { WEEKDAY_LABELS, buildMonthCells } from "@/lib/content-calendar";
 import {
   CONTENT_CALENDAR_BUCKET_CLASS,
@@ -15,6 +15,7 @@ import {
   type ContentCalendarBucket,
 } from "@/lib/content";
 import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
+import { QuickPostModal, todaySP, type QuickPostClient } from "./QuickPostModal";
 
 const CALENDAR_BUCKET_ICON: Record<ContentCalendarBucket, typeof Clock | null> = {
   neutral: null,
@@ -86,17 +87,24 @@ export function InteractiveContentCalendar({
   monthItems,
   pendingItems,
   posts = [],
+  quickPostClients = [],
+  activeClientId,
 }: {
   year: number;
   month: number;
   monthItems: CalendarContentItem[];
   pendingItems: CalendarContentItem[];
   posts?: CalendarSocialPost[];
+  /** Clientes com rede conectada — publicação direta clicando no dia. */
+  quickPostClients?: QuickPostClient[];
+  activeClientId?: string;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"grade" | "lista">("grade");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Dia clicado (AAAA-MM-DD) com a publicação direta aberta. */
+  const [quickDate, setQuickDate] = useState<string | null>(null);
 
   const { cells } = buildMonthCells(year, month);
 
@@ -135,7 +143,8 @@ export function InteractiveContentCalendar({
     [pendingItems],
   );
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  // "Hoje" no fuso de São Paulo, igual ao agendador.
+  const todayKey = todaySP();
 
   async function markAsScheduled(item: CalendarContentItem) {
     if (item.status !== "APROVADO" || busyId) return;
@@ -157,7 +166,16 @@ export function InteractiveContentCalendar({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setQuickDate(todayKey)}
+          className="flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-white"
+          style={{ backgroundColor: "#FF2B00" }}
+        >
+          <Plus size={16} aria-hidden />
+          Nova publicação
+        </button>
         <div className="relative flex items-center gap-1 rounded-lg border border-[#E4E7EC] bg-white p-1">
           <motion.div
             className="absolute h-7 w-8 rounded-md bg-[#FF2B00]"
@@ -213,15 +231,31 @@ export function InteractiveContentCalendar({
                   const pendingCount = dayItems.filter((item) => isPending(item.status)).length;
                   const cellKey = day ? new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10) : null;
                   const isToday = cellKey === todayKey;
+                  const canPost = cellKey !== null && cellKey >= todayKey;
                   return (
                     <div
                       key={idx}
-                      className={`relative min-h-[110px] border-b border-r border-[#EEF0F3] p-2 align-top transition-colors hover:bg-[#FFF7F5] ${
+                      onClick={(e) => {
+                        // Clique no espaço vazio do dia abre a publicação direta (os itens têm links próprios).
+                        if (canPost && !(e.target as HTMLElement).closest("a,button")) setQuickDate(cellKey);
+                      }}
+                      className={`group relative min-h-[110px] border-b border-r border-[#EEF0F3] p-2 align-top transition-colors hover:bg-[#FFF7F5] ${
                         day ? "bg-white" : "bg-[#FAFAFB]"
-                      }`}
+                      } ${canPost ? "cursor-pointer" : ""}`}
                     >
                       {day && (
                         <>
+                          {canPost && (
+                            <button
+                              type="button"
+                              onClick={() => setQuickDate(cellKey)}
+                              title="Agendar publicação neste dia"
+                              aria-label={`Agendar publicação no dia ${day}`}
+                              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-[#FF2B00] text-white opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+                            >
+                              <Plus size={14} aria-hidden />
+                            </button>
+                          )}
                           <p
                             className={`mb-1 text-xs font-semibold ${
                               isToday
@@ -352,6 +386,14 @@ export function InteractiveContentCalendar({
           )}
         </AnimatePresence>
       </div>
+
+      <QuickPostModal
+        open={quickDate !== null}
+        onClose={() => setQuickDate(null)}
+        initialDate={quickDate ?? todayKey}
+        initialClientId={activeClientId}
+        clients={quickPostClients}
+      />
     </div>
   );
 }
