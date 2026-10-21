@@ -141,6 +141,7 @@ model Agency {
   auditLogs                  AuditLog[]
   clients                    Client[]
   clientSegments             ClientSegment[]
+  commercialGoals            CommercialGoal[]
   onboardingTemplates        OnboardingTemplate[]
   projects                   Project[]
   recurringTaskTemplates     RecurringTaskTemplate[]
@@ -2775,4 +2776,43 @@ model SearchConsoleConnection {
   updatedAt         DateTime @updatedAt
 
   @@map("search_console_connection")
+}
+
+// ---------------------------------------------------------------------------
+// Metas comerciais (aba Comercial > Metas, pedido do usuário 2026-10-20)
+// ---------------------------------------------------------------------------
+
+/// O que a meta mede. O realizado é sempre calculado (nunca digitado) — ver lib/commercial-goals.ts.
+enum GoalMetric {
+  ACTIVE_CLIENTS
+  NEW_CLIENTS
+  REVENUE
+  RECEIVED
+  WON_DEALS_VALUE
+  NEW_LEADS
+}
+
+enum GoalPeriod {
+  MONTHLY
+  QUARTERLY
+}
+
+model CommercialGoal {
+  id              String     @id @default(cuid())
+  agencyId        String
+  agency          Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  title           String?
+  metric          GoalMetric
+  period          GoalPeriod
+  /// Início do mês/trimestre no fuso de São Paulo (00:00 -03:00).
+  periodStart     DateTime
+  /// Contagem (clientes, leads) ou centavos (faturamento, recebido, vendas).
+  target          Int
+  createdByUserId String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([agencyId, metric, period, periodStart])
+  @@index([agencyId, periodStart])
+  @@map("commercial_goal")
 }

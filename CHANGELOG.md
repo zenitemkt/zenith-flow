@@ -4,6 +4,8 @@
 
 ### Adicionado
 
+- **Comercial > Metas**: metas mensais ou trimestrais definidas pela equipe (clientes ativos, faturamento, recebido, novos clientes, vendas fechadas, novos leads), com realizado calculado automaticamente a partir do Financeiro, Pipeline, CRM e histórico de clientes. Cada meta mostra um gráfico redondo com a % concluída, status (batida, no ritmo, atrasada, não atingida), quanto falta e ritmo necessário por dia. Navegação por mês; trimestrais aparecem em todos os meses do trimestre. Migration `20261020200000_commercial_goals`.
+
 - **Perfil do cliente editável**: página do cliente com cabeçalho de perfil (banner, logo, nome, Ativo/Inativo, ramo, contatos, redes); trocar logo e banner com um clique direto na imagem; botão principal "Editar cadastro". Na grade de Clientes, cada cartão ganhou botão de editar (abre o cadastro sem sair da lista). Imagens novas aparecem na hora (cache por versão).
 - **Pasta do Google Drive no cadastro do cliente**: campo no formulário; atalho "Drive" no cartão da grade e "Pasta no Drive" no perfil, abrindo em nova aba (mesmo campo usado em Arquivos/Biblioteca).
 
