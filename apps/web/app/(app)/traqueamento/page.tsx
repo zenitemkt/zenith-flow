@@ -24,7 +24,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const range = selectedPeriod.createdAt;
   const agencyId = membership.agencyId;
 
-  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews, eventGroups] =
+  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews, eventGroups, consentDecisions] =
     await Promise.all([
       prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
       prisma.trackingSession.findMany({
@@ -43,6 +43,19 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         by: ["eventName"],
         where: { agencyId, ...(range ? { occurredAt: range } : {}) },
         _count: { _all: true },
+      }),
+      prisma.trackingConsent.findMany({
+        where: { agencyId, ...(range ? { createdAt: range } : {}) },
+        orderBy: { createdAt: "desc" },
+        distinct: ["visitorId"],
+        include: {
+          visitor: {
+            include: {
+              lead: { select: { name: true, email: true, phone: true } },
+              sessions: { orderBy: { startedAt: "desc" }, take: 1, select: { city: true, region: true, deviceType: true } },
+            },
+          },
+        },
       }),
     ]);
 
@@ -112,6 +125,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     { label: "Vendas", value: wonCount },
   ];
   const hasFunnelData = funnelData.some((stage) => stage.value > 0);
+
+  const acceptedConsents = consentDecisions.filter((decision) => decision.categories.length > 0).slice(0, 50);
 
   return (
     <div className="flex flex-col gap-6">
@@ -270,6 +285,39 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           <div className="mx-auto w-full max-w-md"><FunnelChart data={funnelData} orientation="vertical" color="#FF2B00" layers={3} /></div>
         ) : (
           <p className="py-6 text-center text-sm text-[#667085]">Nenhum dado neste período.</p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-[#101828]">Visitantes que aceitaram cookies</h2>
+          <p className="text-xs text-[#667085]">
+            {acceptedConsents.length} visitante(s) com a decisão mais recente igual a &quot;aceitar&quot; em{" "}
+            {selectedPeriod.label.toLowerCase()} (de até 50 exibidos). Quem recusou ou mudou de ideia depois não
+            conta aqui — é sempre a última decisão de cada um.
+          </p>
+        </div>
+        {acceptedConsents.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[#667085]">Ninguém aceitou os cookies neste período.</p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {acceptedConsents.map((decision) => {
+              const lastSession = decision.visitor.sessions[0];
+              const cityLabel = lastSession?.city
+                ? `${lastSession.city}${lastSession.region ? ` (${lastSession.region})` : ""}`
+                : "cidade desconhecida";
+              const who = decision.visitor.lead?.name || decision.visitor.lead?.email || decision.visitor.lead?.phone || "Visitante anônimo";
+              return (
+                <div key={decision.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F2F4F7] py-1.5 text-sm last:border-0">
+                  <span className="font-medium text-[#344054]">{who}</span>
+                  <span className="text-xs text-[#98A2B3]">
+                    {cityLabel} · {DEVICE_LABELS[lastSession?.deviceType ?? "desconhecido"] ?? "aparelho desconhecido"} ·{" "}
+                    {decision.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </section>
     </div>
