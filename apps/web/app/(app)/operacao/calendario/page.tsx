@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { requireSessionAndMembership } from "@/lib/session";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { prisma } from "@zenite-mkt/db";
-import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
+import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
+import { isClientActive } from "@/lib/clients";
 import type { CalendarContentItem, CalendarSocialPost } from "./InteractiveContentCalendar";
 import type { QuickPostClient } from "./QuickPostModal";
 
@@ -51,7 +52,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     }),
     prisma.client.findMany({
       where: { agencyId: membership.agencyId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, status: true },
       orderBy: { name: "asc" },
     }),
     // Publicações nas redes do mês (em São Paulo: o mês começa às 03:00 UTC do dia 1).
@@ -165,10 +166,12 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <ClientFilterPills
-        clients={clients}
+      <ClientFilterSelect
+        // Só clientes ativos entram na lista; o filtrado continua visível mesmo se inativo.
+        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
         activeClientId={activeClientId}
-        buildHref={(clientId) => calendarHref(monthParam(year, month), clientId)}
+        basePath="/operacao/calendario"
+        params={{ month: monthParam(year, month) }}
       />
 
       <InteractiveContentCalendar

@@ -18,11 +18,14 @@ export function ClientFilterSelect({
   clients,
   activeClientId,
   basePath,
+  params,
 }: {
   clients: ClientOption[];
   activeClientId?: string;
   /** Rota da página; o filtro vira `?clientId=`. (Função não passa de Server pra Client Component.) */
   basePath: string;
+  /** Outros parâmetros da URL a manter ao trocar de cliente (ex.: `month` no Calendário). */
+  params?: Record<string, string>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -57,7 +60,10 @@ export function ClientFilterSelect({
   function choose(clientId?: string) {
     setOpen(false);
     setQuery("");
-    router.push(clientId ? `${basePath}?clientId=${clientId}` : basePath);
+    const query = new URLSearchParams(params);
+    if (clientId) query.set("clientId", clientId);
+    const qs = query.toString();
+    router.push(qs ? `${basePath}?${qs}` : basePath);
   }
 
   return (

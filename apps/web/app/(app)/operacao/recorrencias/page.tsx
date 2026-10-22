@@ -8,6 +8,8 @@ import {
   hasPendingGeneration,
 } from "@/lib/recurring-tasks";
 import { prisma, type RecurringTaskStatus } from "@zenite-mkt/db";
+import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
+import { isClientActive } from "@/lib/clients";
 import { RecurringTaskActions } from "./RecurringTaskActions";
 
 const STATUS_BADGE_CLASS: Record<RecurringTaskStatus, string> = {
@@ -18,15 +20,21 @@ const STATUS_BADGE_CLASS: Record<RecurringTaskStatus, string> = {
 
 const STATUS_ORDER: Record<RecurringTaskStatus, number> = { ATIVO: 0, PAUSADO: 1, RASCUNHO: 2 };
 
-export default async function RecurringTasksPage() {
+interface PageProps {
+  searchParams: { clientId?: string };
+}
+
+export default async function RecurringTasksPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const [templates, people] = await Promise.all([
+  const activeClientId = searchParams.clientId;
+
+  const [templates, people, clients] = await Promise.all([
     prisma.recurringTaskTemplate.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { agencyId: membership.agencyId, ...(activeClientId ? { clientId: activeClientId } : {}) },
       include: {
         client: { select: { id: true, name: true } },
         assignees: { orderBy: { order: "asc" } },
@@ -36,6 +44,11 @@ export default async function RecurringTasksPage() {
       },
     }),
     getAgencyMembers(membership.agencyId),
+    prisma.client.findMany({
+      where: { agencyId: membership.agencyId },
+      select: { id: true, name: true, status: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const nameByUserId = new Map(people.map((p) => [p.userId, p.name]));
@@ -55,6 +68,13 @@ export default async function RecurringTasksPage() {
           . Geração é manual, mesmo padrão de tudo que dependeria de um cron real.
         </p>
       </div>
+
+      <ClientFilterSelect
+        // Só clientes ativos entram na lista; o filtrado continua visível mesmo se inativo.
+        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
+        activeClientId={activeClientId}
+        basePath="/operacao/recorrencias"
+      />
 
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
