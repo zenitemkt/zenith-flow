@@ -7,7 +7,7 @@ import { handleSocialOAuthCallback } from "@/lib/social-oauth-callback";
 import { META_OAUTH_PENDING_COOKIE, META_OAUTH_PENDING_TTL_SECONDS, encodeMetaOAuthPending } from "@/lib/meta-oauth-pending";
 
 function redirectToTracking(request: Request, params: Record<string, string>) {
-  const url = new URL("/traqueamento/conexoes", request.url);
+  const url = new URL("/integracoes", request.url);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return NextResponse.redirect(url);
 }
@@ -16,7 +16,7 @@ function redirectToTracking(request: Request, params: Record<string, string>) {
  * Callback do OAuth da Meta (seção 38) — chamado pelo navegador do usuário
  * depois de autorizar (ou cancelar) no diálogo da Meta, nunca por chamada
  * server-to-server. Por isso toda saída é um redirect de volta pra
- * `/traqueamento/conexoes` com um parâmetro de resultado (`?meta=connected|error`),
+ * `/integracoes` com um parâmetro de resultado (`?meta=connected|error`),
  * nunca um JSON de erro puro — quem está do outro lado é uma navegação, não
  * um `fetch`.
  */
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
      * pessoal, não só a conta da própria Zenite. Com mais de uma, nunca
      * adivinhamos: guardamos o token (ainda não persistido) num cookie
      * cifrado de curta duração e deixamos o usuário escolher explicitamente
-     * em `/traqueamento/conexoes`.
+     * em `/integracoes`.
      */
     if (adAccounts.length > 1) {
       const pendingCookie = encodeMetaOAuthPending({

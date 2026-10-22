@@ -39,7 +39,7 @@ export function ChooseMetaAccountForm({ candidates }: Props) {
         return;
       }
       toast.success("Conta da Meta conectada.");
-      router.replace("/traqueamento/conexoes");
+      router.replace("/integracoes");
       router.refresh();
     } catch {
       toast.error("Erro de rede — tente novamente.");

@@ -129,17 +129,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "Inteligência e automação",
     items: [
       { id: "automations", label: "Automações", icon: Zap, href: "/automacoes", comingSoon: false },
-      {
-        id: "tracking",
-        label: "Traqueamento",
-        icon: Target,
-        href: "/traqueamento",
-        comingSoon: false,
-        children: [
-          { id: "tracking-overview", label: "Visão geral", href: "/traqueamento", comingSoon: false },
-          { id: "tracking-connections", label: "Conexões", href: "/traqueamento/conexoes", comingSoon: false },
-        ],
-      },
+      { id: "tracking", label: "Traqueamento", icon: Target, href: "/traqueamento", comingSoon: false },
       {
         id: "content-automation",
         label: "Publicação automática",

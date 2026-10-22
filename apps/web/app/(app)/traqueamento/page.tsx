@@ -183,8 +183,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-lg font-semibold text-[#101828]">Traqueamento</h1><Link href="/comercial/relatorios" className="text-sm font-semibold text-[#FF2B00] hover:underline">Ver conversões comerciais →</Link></div>
         <p className="text-sm text-[#667085]">
           Acessos ao site e o que eles viraram no comercial de {membership.agency.name} (seções 34/36/39 do manual).
-          Saúde do coletor e eventos brutos ficam em <span className="font-medium">Sistema → Integrações</span>;
-          conexão com Meta/Google Ads fica em <span className="font-medium">Conexões</span>, ao lado.
+          Saúde do coletor, eventos brutos e conexão com Meta/Google Ads ficam em{" "}
+          <span className="font-medium">Sistema → Integrações</span>.
         </p>
       </div>
 

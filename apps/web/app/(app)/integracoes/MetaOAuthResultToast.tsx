@@ -35,7 +35,7 @@ export function MetaOAuthResultToast() {
       toast.error(ERROR_MESSAGES[reason] ?? "Não foi possível conectar a conta da Meta.");
     }
 
-    router.replace("/traqueamento/conexoes");
+    router.replace("/integracoes");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

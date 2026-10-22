@@ -10,7 +10,7 @@ import { META_OAUTH_PENDING_COOKIE, decodeMetaOAuthPending } from "@/lib/meta-oa
 /**
  * Passo 2 da conexão quando `/me/adaccounts` devolveu mais de uma conta (ver
  * `oauth/callback`) — o usuário escolheu qual conectar em
- * `/traqueamento/conexoes`; aqui é onde a conexão de fato é gravada.
+ * `/integracoes`; aqui é onde a conexão de fato é gravada.
  */
 export async function POST(request: Request) {
   const session = await getServerSession();
