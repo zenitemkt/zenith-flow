@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
-import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
+import { requireSessionAndMembership } from "@/lib/session";
+import { resolveContentAutomationActor } from "@/lib/content-automation-auth";
 import { loadGithubRef, listExistingBlogSlugs } from "@/lib/content-automation-connection";
 import { validateBlogDraft } from "@/lib/blog-validation";
 import { publishBlogDraft } from "@/lib/blog-publish";
@@ -11,36 +12,48 @@ interface RouteParams {
 }
 
 /**
- * Único caminho que publica de verdade — sempre acionado por um humano
- * (decisão revisada em 2026-10-15: nada publica sozinho por enquanto).
- * Revalida antes de publicar (o rascunho pode ter sido editado desde a
- * criação) e commita no repositório do site via GitHub Contents API.
+ * Único caminho que publica de verdade — por um humano pela tela de
+ * aprovação OU pela própria rotina agendada (decisão revisada em
+ * 2026-10-22: publicação diária passa a ser automática, sem revisão
+ * humana prévia; mesma autenticação dupla das demais rotas de
+ * automação de conteúdo). Revalida antes de publicar (o rascunho pode
+ * ter sido editado desde a criação) e commita no repositório do site
+ * via GitHub Contents API.
  */
 export async function POST(request: Request, { params }: RouteParams) {
-  const { session, membership } = await requireSessionAndMembership();
-  if (!session || !membership) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  if (!canManageIntegrations(membership.role)) {
-    return NextResponse.json({ error: "Apenas administradores podem aprovar publicações." }, { status: 403 });
+  const actor = await resolveContentAutomationActor(request);
+  if (!actor) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  if (actor.actor === "admin") {
+    const { membership } = await requireSessionAndMembership();
+    if (!membership || !canManageIntegrations(membership.role)) {
+      return NextResponse.json({ error: "Apenas administradores podem aprovar publicações." }, { status: 403 });
+    }
   }
 
-  const draft = await prisma.blogDraft.findFirst({ where: { id: params.id, agencyId: membership.agencyId } });
+  const draft = await prisma.blogDraft.findFirst({ where: { id: params.id, agencyId: actor.agencyId } });
   if (!draft) return NextResponse.json({ error: "Rascunho não encontrado." }, { status: 404 });
   if (draft.status !== "PENDING") {
     return NextResponse.json({ error: "Só rascunhos pendentes podem ser aprovados." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => ({}) as Record<string, unknown>);
-  const related = Array.isArray(body?.related) ? body.related.filter((item: unknown): item is string => typeof item === "string").slice(0, 3) : [];
-  const faq = Array.isArray(body?.faq)
+  const bodyRelated = Array.isArray(body?.related) ? body.related.filter((item: unknown): item is string => typeof item === "string").slice(0, 3) : [];
+  const bodyFaq = Array.isArray(body?.faq)
     ? (body.faq as unknown[])
         .filter((item): item is { q: string; a: string } => typeof item === "object" && item !== null && typeof (item as any).q === "string" && typeof (item as any).a === "string")
         .slice(0, 8)
     : [];
-  const coverSearchTerm = typeof body?.coverSearchTerm === "string" && body.coverSearchTerm.trim() ? body.coverSearchTerm.trim() : draft.focusKeyword ?? draft.title;
+  // Sem related/faq no corpo, cai pro que o próprio agente já sugeriu na criação (seção 1.2) — evita uma segunda rodada de geração pra quem aprova sem reabrir o rascunho.
+  const related = bodyRelated.length > 0 ? bodyRelated : (Array.isArray(draft.suggestedRelated) ? (draft.suggestedRelated as string[]) : []);
+  const faq = bodyFaq.length > 0 ? bodyFaq : (Array.isArray(draft.suggestedFaq) ? (draft.suggestedFaq as { q: string; a: string }[]) : []);
+  const coverSearchTerm =
+    typeof body?.coverSearchTerm === "string" && body.coverSearchTerm.trim()
+      ? body.coverSearchTerm.trim()
+      : draft.suggestedCoverSearchTerm ?? draft.focusKeyword ?? draft.title;
 
   let ref;
   try {
-    ref = await loadGithubRef(membership.agencyId);
+    ref = await loadGithubRef(actor.agencyId);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Conexão não configurada." }, { status: 400 });
   }
