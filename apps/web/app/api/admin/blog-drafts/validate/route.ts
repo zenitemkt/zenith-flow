@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     category: text(body?.category),
     cover: text(body?.cover),
     existingSlugs,
+    isRefresh: text(body?.origin) === "refresh",
   });
 
   return NextResponse.json({ valid: issues.length === 0, issues });

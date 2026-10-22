@@ -3,15 +3,17 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { ContentAutomationConnectionForm } from "./ContentAutomationConnectionForm";
 import { SearchConsoleConnectionCard } from "./SearchConsoleConnectionCard";
+import { BlogSettingsForm } from "./BlogSettingsForm";
 import { BlogDraftCard, type BlogDraftSummary } from "./BlogDraftCard";
 
 export default async function BlogAutomationPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
 
-  const [connection, searchConsole, drafts] = await Promise.all([
+  const [connection, searchConsole, agency, drafts] = await Promise.all([
     prisma.contentAutomationConnection.findUnique({ where: { agencyId: membership.agencyId } }),
     prisma.searchConsoleConnection.findUnique({ where: { agencyId: membership.agencyId } }),
+    prisma.agency.findUnique({ where: { id: membership.agencyId }, select: { blogAutoPublish: true, blogVoiceNotes: true } }),
     prisma.blogDraft.findMany({
       where: { agencyId: membership.agencyId },
       orderBy: { createdAt: "desc" },
@@ -47,9 +49,12 @@ export default async function BlogAutomationPage() {
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Blog automático</h1>
         <p className="text-sm text-[#667085]">
-          O agente externo (rotina agendada) escreve os rascunhos; nada publica sozinho por enquanto — revise e aprove aqui.
+          O agente externo (rotina agendada) escreve, valida e publica os artigos todo dia útil, sem aprovação manual
+          por padrão — ajuste em &quot;Configurações de publicação&quot; abaixo se quiser revisar antes.
         </p>
       </div>
+
+      <BlogSettingsForm initialAutoPublish={agency?.blogAutoPublish ?? true} initialVoiceNotes={agency?.blogVoiceNotes ?? ""} />
 
       <ContentAutomationConnectionForm
         connected={Boolean(connection)}

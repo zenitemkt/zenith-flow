@@ -39,6 +39,8 @@ export interface BlogDraftValidationInput {
   cover?: string | null;
   /** Slugs de artigos já publicados — pra checar link interno e evitar repetir slug. */
   existingSlugs: string[];
+  /** true quando `origin === "refresh"` — inverte a regra de slug: exige que já exista, em vez de proibir. */
+  isRefresh?: boolean;
 }
 
 export interface ValidationIssue {
@@ -155,8 +157,13 @@ export function validateBlogDraft(input: BlogDraftValidationInput): ValidationIs
     else if (!input.existingSlugs.includes(linkedSlug)) push("content", `link interno pra slug inexistente: @${linkedSlug}`);
   }
 
-  if (slug && input.existingSlugs.includes(slug)) {
-    push("slug", "slug já existe — use o fluxo de revisão (origin: refresh) em vez de criar um novo rascunho");
+  if (slug) {
+    const slugExists = input.existingSlugs.includes(slug);
+    if (input.isRefresh && !slugExists) {
+      push("slug", 'origin "refresh" exige um slug de artigo que já existe — pra artigo novo, use origin "manual" ou "search_console"');
+    } else if (!input.isRefresh && slugExists) {
+      push("slug", "slug já existe — use o fluxo de revisão (origin: refresh) em vez de criar um novo rascunho");
+    }
   }
 
   // Rodapé de referências (política de pesquisa, 2026-10-15) — checa só a

@@ -260,9 +260,21 @@ num texto de venda.
    - `coverSearchTerm`: 2-4 palavras em inglês, concretas e visuais (ex.: "laptop analytics dashboard"),
      pra busca da foto real no Wikimedia Commons — nunca específico de setor/indústria (seção 10 explica
      por quê).
-   **Não publica sozinho.** Um humano revisa e aprova pela tela de Automações no Zenite Flow — mas não
-   deve precisar escrever `related`/`faq`/`coverSearchTerm` do zero, só revisar o que você já sugeriu.
-3. Se um rascunho seu tiver um comentário aberto (`GET /api/admin/blog-drafts/revisions`), reescreva
-   considerando o pedido e envie de novo via `PATCH /api/admin/blog-drafts/[id]`, incluindo também os
-   três campos de sugestão se algo relevante mudou (por exemplo, um novo link interno pede um related
-   novo).
+   A resposta traz `{id, status: "PENDING"}`.
+3. Chame `POST /api/admin/blog-drafts/{id}/approve` com corpo `{}` — publica na hora (decisão de
+   2026-10-22: sem aprovação manual obrigatória, salvo quando a agência desligou isso em
+   "Configurações de publicação"; nesse caso a chamada responde erro e o rascunho fica pendente pra um
+   humano revisar, o que é esperado, não um bug).
+4. Se um rascunho seu (já publicado ou não) tiver um comentário aberto (`GET
+   /api/admin/blog-drafts/revisions`), reescreva considerando o pedido e envie de novo via `PATCH
+   /api/admin/blog-drafts/[id]`, incluindo também os três campos de sugestão se algo relevante mudou.
+   Se o artigo já estava publicado, essa mesma chamada já recommita a correção no site sozinha.
+
+## Atualizando um artigo antigo (origin: refresh)
+
+Pra reescrever de verdade um artigo já publicado (não um ajuste pontual — ver item 4 acima pra isso),
+use `origin: "refresh"` no `POST /api/admin/blog-drafts`, com o **mesmo `slug`** do artigo existente
+(confira em `/llms.txt`). Validação e publicação tratam isso como o mesmo registro: a data de publicação
+original é preservada, e a data da reescrita entra como `modifiedDate` (mostrada como "Atualizado em" no
+site). Usar `origin: "refresh"` com um slug que não existe ainda é rejeitado — e criar um slug novo com
+`origin: "refresh"` também. Essa trava existe por causa de um incidente real (artigo duplicado foi ao ar).

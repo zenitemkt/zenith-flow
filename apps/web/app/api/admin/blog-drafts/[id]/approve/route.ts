@@ -36,6 +36,19 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Só rascunhos pendentes podem ser aprovados." }, { status: 400 });
   }
 
+  // Seção 5 do Blueprint: publicação automática é configurável por agência —
+  // se desligada, só um admin (sessão) aprova; o agente recebe erro e deixa
+  // o rascunho pendente pra revisão manual.
+  if (actor.actor === "agent") {
+    const agency = await prisma.agency.findUnique({ where: { id: actor.agencyId }, select: { blogAutoPublish: true } });
+    if (agency && !agency.blogAutoPublish) {
+      return NextResponse.json(
+        { error: "Esta agência exige aprovação manual antes de publicar — o rascunho fica pendente até um administrador aprovar pela tela." },
+        { status: 403 },
+      );
+    }
+  }
+
   const body = await request.json().catch(() => ({}) as Record<string, unknown>);
   const bodyRelated = Array.isArray(body?.related) ? body.related.filter((item: unknown): item is string => typeof item === "string").slice(0, 3) : [];
   const bodyFaq = Array.isArray(body?.faq)
@@ -69,6 +82,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     category: draft.category,
     cover: draft.cover,
     existingSlugs,
+    isRefresh: draft.origin === "refresh",
   });
   if (issues.length > 0) {
     return NextResponse.json({ error: "Rascunho não passa mais na validação mecânica — ajuste antes de aprovar.", issues }, { status: 422 });

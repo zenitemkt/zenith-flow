@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
 import path from "node:path";
 import type { BlogDraft } from "@zenite-mkt/db";
 import { githubGetFile, githubListDir, githubPutFile, type GithubRepoRef } from "./github-content";
@@ -11,6 +12,8 @@ export interface PublishBlogDraftInput {
   coverSearchTerm: string; // termo (de preferência em inglês) pra busca no Wikimedia Commons
   related: string[]; // 1-3 slugs relacionados já existentes
   faq: Array<{ q: string; a: string }>;
+  /** true numa republicação por edição pós-aprovação (seção "revisions") — o texto mudou, a foto não precisa mudar junto. */
+  skipCoverPhoto?: boolean;
 }
 
 /** Data de escrita (criação do rascunho), não de aprovação — e no fuso de Brasília, não UTC (virava o dia errado depois das 21h). */
@@ -20,14 +23,16 @@ function writingDate(createdAt: Date): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-function buildMjsSource(input: PublishBlogDraftInput): string {
+function buildMjsSource(input: PublishBlogDraftInput, preservedDate?: string): string {
   const { draft } = input;
+  const isRefresh = draft.origin === "refresh" && preservedDate;
   const fields: Record<string, unknown> = {
     slug: draft.slug,
     title: draft.title,
     description: draft.excerpt,
     category: draft.category ?? "Marketing Digital",
-    date: writingDate(draft.createdAt),
+    date: isRefresh ? preservedDate : writingDate(draft.createdAt),
+    ...(isRefresh ? { modifiedDate: writingDate(draft.createdAt) } : {}),
     cover: draft.cover ?? "seo",
     keyword: draft.focusKeyword ?? "",
     answer: draft.excerpt,
@@ -81,6 +86,18 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
       writeFileSync(path.join(contentBlogDir, "photo-credits.json"), "{}\n", "utf8");
     }
 
+    // "refresh" preserva a data original de publicação (seção 2.5 do
+    // Blueprint) — lê do próprio arquivo .mjs já existente pra esse slug,
+    // antes de sobrescrevê-lo no passo 3.
+    let preservedDate: string | undefined;
+    if (input.draft.origin === "refresh") {
+      const existingPath = path.join(contentBlogDir, `${input.draft.slug}.mjs`);
+      if (existsSync(existingPath)) {
+        const mod = await import(pathToFileURL(existingPath).href + `?t=${Date.now()}`);
+        if (typeof mod.default?.date === "string") preservedDate = mod.default.date;
+      }
+    }
+
     // Snapshot do HTML/SVG já publicado de cada post existente — só pra
     // comparar depois e não recommitar arquivo que o gerador reescreveu
     // idêntico (ele regenera TODO post a cada rodada, não só o novo).
@@ -99,23 +116,29 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
     writeFileSync(path.join(distDir, "sitemap.xml"), sitemap.content, "utf8");
     beforeFiles.set("dist/sitemap.xml", sitemap.content);
 
-    // 2. Foto real do Wikimedia Commons (mesma fonte do site, busca automática).
-    const photo = await findAndDownloadCommonsPhoto(input.draft.slug, input.coverSearchTerm);
-    writeFileSync(path.join(distDir, "assets", "blog", "photos", `${input.draft.slug}.jpg`), photo.jpegBuffer);
+    // 2. Foto real do Wikimedia Commons (mesma fonte do site, busca
+    // automática) — pulado numa republicação por edição de texto
+    // (`skipCoverPhoto`): a foto já publicada continua valendo, sem refazer
+    // a busca (que pode falhar por motivo alheio ao texto corrigido).
     const creditsPath = path.join(contentBlogDir, "photo-credits.json");
-    const credits = JSON.parse(readFileSync(creditsPath, "utf8")) as Record<string, unknown>;
-    credits[input.draft.slug] = {
-      alt: photo.alt,
-      author: photo.author,
-      license: photo.license,
-      licenseUrl: photo.licenseUrl,
-      source: "Wikimedia Commons",
-      sourceUrl: photo.sourceUrl,
-    };
-    writeFileSync(creditsPath, JSON.stringify(credits, null, 2) + "\n", "utf8");
+    let photo: Awaited<ReturnType<typeof findAndDownloadCommonsPhoto>> | null = null;
+    if (!input.skipCoverPhoto) {
+      photo = await findAndDownloadCommonsPhoto(input.draft.slug, input.coverSearchTerm);
+      writeFileSync(path.join(distDir, "assets", "blog", "photos", `${input.draft.slug}.jpg`), photo.jpegBuffer);
+      const credits = JSON.parse(readFileSync(creditsPath, "utf8")) as Record<string, unknown>;
+      credits[input.draft.slug] = {
+        alt: photo.alt,
+        author: photo.author,
+        license: photo.license,
+        licenseUrl: photo.licenseUrl,
+        source: "Wikimedia Commons",
+        sourceUrl: photo.sourceUrl,
+      };
+      writeFileSync(creditsPath, JSON.stringify(credits, null, 2) + "\n", "utf8");
+    }
 
-    // 3. Escreve o novo artigo.
-    const mjsSource = buildMjsSource(input);
+    // 3. Escreve o artigo (novo, atualizado ou corrigido).
+    const mjsSource = buildMjsSource(input, preservedDate);
     const mjsPath = path.join(contentBlogDir, `${input.draft.slug}.mjs`);
     writeFileSync(mjsPath, mjsSource, "utf8");
 
@@ -136,8 +159,10 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
     };
 
     addIfChanged("content/blog/" + `${input.draft.slug}.mjs`, mjsPath);
-    addIfChanged("content/blog/photo-credits.json", creditsPath);
-    writes.push({ path: `dist/assets/blog/photos/${input.draft.slug}.jpg`, content: photo.jpegBuffer });
+    if (photo) {
+      addIfChanged("content/blog/photo-credits.json", creditsPath);
+      writes.push({ path: `dist/assets/blog/photos/${input.draft.slug}.jpg`, content: photo.jpegBuffer });
+    }
     addIfChanged("dist/index.html", path.join(distDir, "index.html"));
     addIfChanged("dist/sitemap.xml", path.join(distDir, "sitemap.xml"));
     addIfChanged("dist/blog/index.html", path.join(distDir, "blog", "index.html"));
@@ -159,7 +184,8 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
     // publicado sem a capa SVG (ela é sempre o último item da lista) numa
     // falha real em produção. githubPutFile já tenta de novo uma vez sozinho;
     // aqui só evitamos que um `throw` no meio pare os demais.
-    const message = `feat(blog): publica "${input.draft.title}" (${input.draft.slug})`;
+    const verb = input.skipCoverPhoto ? "corrige" : input.draft.origin === "refresh" ? "atualiza" : "publica";
+    const message = `feat(blog): ${verb} "${input.draft.title}" (${input.draft.slug})`;
     const failed: Array<{ path: string; error: string }> = [];
     for (const write of writes) {
       try {

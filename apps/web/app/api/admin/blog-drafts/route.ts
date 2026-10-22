@@ -67,26 +67,34 @@ export async function POST(request: Request) {
   }
   const existingSlugs = await listExistingBlogSlugs(ref);
 
-  const issues = validateBlogDraft({ slug, title, excerpt, content, seoTitle, focusKeyword, category, cover, existingSlugs });
+  const isRefresh = origin === "refresh";
+  const issues = validateBlogDraft({ slug, title, excerpt, content, seoTitle, focusKeyword, category, cover, existingSlugs, isRefresh });
   if (issues.length > 0) return NextResponse.json({ error: "Rascunho não passou na validação mecânica.", issues }, { status: 422 });
 
-  const draft = await prisma.blogDraft.create({
-    data: {
-      agencyId: actor.agencyId,
-      slug,
-      title,
-      excerpt,
-      content,
-      seoTitle,
-      focusKeyword,
-      category,
-      cover,
-      origin,
-      status: "PENDING",
-      suggestedCoverSearchTerm,
-      ...(suggestedRelated !== undefined ? { suggestedRelated } : {}),
-      ...(suggestedFaq !== undefined ? { suggestedFaq } : {}),
-    },
-  });
+  const data = {
+    title,
+    excerpt,
+    content,
+    seoTitle,
+    focusKeyword,
+    category,
+    cover,
+    origin,
+    status: "PENDING" as const,
+    reviewedAt: null,
+    suggestedCoverSearchTerm,
+    ...(suggestedRelated !== undefined ? { suggestedRelated } : {}),
+    ...(suggestedFaq !== undefined ? { suggestedFaq } : {}),
+  };
+  // "refresh" reaproveita o mesmo artigo/slug (preserva a data original na
+  // publicação — ver blog-publish.ts) em vez de criar outro registro, já que
+  // slug é único por agência mesmo entre status diferentes.
+  const draft = isRefresh
+    ? await prisma.blogDraft.upsert({
+        where: { agencyId_slug: { agencyId: actor.agencyId, slug } },
+        create: { agencyId: actor.agencyId, slug, ...data },
+        update: data,
+      })
+    : await prisma.blogDraft.create({ data: { agencyId: actor.agencyId, slug, ...data } });
   return NextResponse.json({ id: draft.id, status: draft.status }, { status: 201 });
 }

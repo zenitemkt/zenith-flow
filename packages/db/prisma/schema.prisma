@@ -186,6 +186,17 @@ model Agency {
   /// Liga/desliga a entrada server-to-server do formulário público do Zenite Hub.
   /// A credencial continua exclusivamente nas variáveis protegidas da Vercel.
   siteLeadIntegrationEnabled   Boolean                       @default(true)
+  /// Blog automático (Blueprint de Automações, seção 5) — se true (padrão), a
+  /// rotina agendada aprova e publica sozinha; se false, todo rascunho fica
+  /// pendente até um admin aprovar pela tela, mesmo que a validação mecânica
+  /// passe. Configurável por agência porque nem todo cliente vai querer
+  /// publicação 100% automática.
+  blogAutoPublish              Boolean                       @default(true)
+  /// Texto livre com tom de voz/gírias específicas desta agência — anexado ao
+  /// final das regras de escrita globais (`GET /api/admin/agent-rules`) só
+  /// quando preenchido. Seção 2.3 do Blueprint: "marcas de tom pessoal
+  /// configuradas por cliente".
+  blogVoiceNotes               String?                       @db.Text
   trackingVisitors             TrackingVisitor[]
   trackingEvents               TrackingEvent[]
   trackingConsents             TrackingConsent[]
