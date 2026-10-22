@@ -258,7 +258,16 @@ export function QuickPostModal({
             </select>
           </label>
 
-          {client && (
+          {client && client.connections.length === 0 && (
+            <p className="rounded-lg bg-[#FEF3C7] px-3 py-2 text-sm text-[#92600A]">
+              {client.name} ainda não tem Instagram nem Facebook conectado.{" "}
+              <Link href={`/clientes/${client.id}#redes`} className="font-semibold underline">
+                Conectar redes
+              </Link>
+            </p>
+          )}
+
+          {client && client.connections.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-[#344054]">Redes</span>
               <div className="flex flex-wrap gap-2">

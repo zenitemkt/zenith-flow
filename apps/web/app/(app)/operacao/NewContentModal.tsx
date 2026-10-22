@@ -20,7 +20,16 @@ interface PersonOption {
 const CHANNELS = Object.entries(CONTENT_CHANNEL_LABELS);
 const FORMAT_OPTIONS = ["Reels", "Carrossel", "Stories", "Post estático", "Vídeo", "Outro"];
 
-export function NewContentModal({ clients, people }: { clients: ClientOption[]; people: PersonOption[] }) {
+export function NewContentModal({
+  clients,
+  people,
+  defaultClientId,
+}: {
+  clients: ClientOption[];
+  people: PersonOption[];
+  /** Cliente do filtro da página: a nova tarefa já abre nele. */
+  defaultClientId?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -32,7 +41,9 @@ export function NewContentModal({ clients, people }: { clients: ClientOption[]; 
   // "Escolha o cliente." mesmo com um cliente aparecendo selecionado.
   const clientId = clients.some((client) => client.id === selectedClientId)
     ? selectedClientId
-    : (clients[0]?.id ?? "");
+    : clients.some((client) => client.id === defaultClientId)
+      ? (defaultClientId as string)
+      : (clients[0]?.id ?? "");
   const [channels, setChannels] = useState<string[]>(["INSTAGRAM"]);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [format, setFormat] = useState("");

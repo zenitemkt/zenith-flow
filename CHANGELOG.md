@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Cliente do filtro vira o padrão nos formulários**: com um cliente filtrado em Operação, "Nova tarefa" (Quadro) e "Nova publicação" (Calendário) já abrem nele; em "Todos os clientes" vale o comportamento de antes. Cliente sem redes conectadas aparece no formulário do Calendário com aviso e link para conectar.
 - **Filtro por cliente em toda a Operação**: o seletor "Todos os clientes" / cliente ativo (com busca) agora também está no Calendário (no lugar dos botões, mantendo o mês) e nas Recorrências, além do Quadro. Dá para ver tudo de uma vez ou só de uma empresa.
 - **Melhor horário para publicar (Instagram e Facebook)**: no agendamento (Calendário e cartão), cada rede marcada ganha o próprio campo de hora, com um botão pequeno ao lado que sugere o melhor horário daquela rede para o dia da semana da data que está no campo (se você mudar a data, o botão acompanha). A data é a mesma; só o horário muda por rede. Base de horários interna, pesquisada em 7 fontes de 2026.
 - **Publicação direta pelo Calendário**: em Operação > Calendário, botão "Nova publicação" ou clique no dia abre o formulário (cliente, redes, formato, arte, legenda, data e hora de Brasília) com **Agendar** e, no dia de hoje, **Publicar agora** — sem precisar criar o cartão antes (o sistema cria a peça sozinho, já aprovada).

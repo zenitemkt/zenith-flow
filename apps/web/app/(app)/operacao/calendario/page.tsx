@@ -101,6 +101,12 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     connections: c.socialConnections.map((conn) => ({ platform: conn.platform, name: conn.name, active: conn.status === "ACTIVE" })),
   }));
 
+  // O cliente do filtro sempre entra no formulário (mesmo sem redes conectadas), para ele abrir já nesse cliente.
+  const filtered = clients.find((c) => c.id === activeClientId);
+  if (filtered && !quickPostClients.some((c) => c.id === filtered.id)) {
+    quickPostClients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", connections: [] });
+  }
+
   const calendarPosts: CalendarSocialPost[] = socialPosts.map((p) => ({
     id: p.id,
     contentItemId: p.contentItemId,

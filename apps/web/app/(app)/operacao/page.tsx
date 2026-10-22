@@ -86,7 +86,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         </div>
         <div className="flex items-center gap-2">
           <RefreshButton />
-          <NewContentModal clients={clients.map(({ id, name }) => ({ id, name }))} people={people} />
+          <NewContentModal clients={clients.map(({ id, name }) => ({ id, name }))} people={people} defaultClientId={activeClientId} />
         </div>
       </div>
 
