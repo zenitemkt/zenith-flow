@@ -108,7 +108,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
     getAgencyMembers(membership.agencyId),
     prisma.socialConnection.findMany({
       where: { clientId: item.client.id, platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
-      select: { platform: true, name: true, status: true },
+      select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
       orderBy: { platform: "desc" },
     }),
   ]);
@@ -296,7 +296,13 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
             <SocialPublishPanel
               contentId={item.id}
               clientId={item.client.id}
-              connections={socialConnections.map((c) => ({ platform: c.platform, name: c.name, status: c.status === "ACTIVE" ? "ACTIVE" : "ERROR" }))}
+              connections={socialConnections.map((c) => ({
+                platform: c.platform,
+                name: c.name,
+                username: c.username,
+                avatarUrl: item.client.avatarKey ? `/api/clients/${item.client.id}/image/avatar` : c.pictureUrl,
+                status: c.status === "ACTIVE" ? "ACTIVE" : "ERROR",
+              }))}
               posts={item.socialPosts.map((p) => ({
                 id: p.id,
                 platform: p.platform,
@@ -307,6 +313,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                 lastError: p.lastError,
                 autoScheduled: p.autoScheduled,
               }))}
+              media={latestMedia.map((m) => ({ url: `/api/content-media/${m.id}`, isVideo: m.contentType.startsWith("video/") }))}
               mediaCount={latestMedia.length}
               hasVideo={latestMedia.some((m) => m.contentType.startsWith("video/"))}
               defaultCaption={item.caption ?? ""}

@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Pré-visualização da publicação**: ao anexar a arte e escrever a legenda, o agendador mostra como o post vai ficar — Instagram (feed com carrossel, Reels e Story) e Facebook, com abas quando as duas redes estão marcadas, nome/@ e foto do cliente, e a legenda cortada no "mais" como na rede. Aparece ao lado do formulário em Nova publicação (Calendário) e dentro do painel "Publicação nas redes" do cartão. É uma simulação aproximada.
 - **Cliente do filtro vira o padrão nos formulários**: com um cliente filtrado em Operação, "Nova tarefa" (Quadro) e "Nova publicação" (Calendário) já abrem nele; em "Todos os clientes" vale o comportamento de antes. Cliente sem redes conectadas aparece no formulário do Calendário com aviso e link para conectar.
 - **Filtro por cliente em toda a Operação**: o seletor "Todos os clientes" / cliente ativo (com busca) agora também está no Calendário (no lugar dos botões, mantendo o mês) e nas Recorrências, além do Quadro. Dá para ver tudo de uma vez ou só de uma empresa.
 - **Melhor horário para publicar (Instagram e Facebook)**: no agendamento (Calendário e cartão), cada rede marcada ganha o próprio campo de hora, com um botão pequeno ao lado que sugere o melhor horário daquela rede para o dia da semana da data que está no campo (se você mudar a data, o botão acompanha). A data é a mesma; só o horário muda por rede. Base de horários interna, pesquisada em 7 fontes de 2026.

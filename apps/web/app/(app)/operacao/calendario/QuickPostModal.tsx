@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarClock, Facebook, Film, ImagePlus, Instagram, X, Zap } from "lucide-react";
@@ -11,13 +11,15 @@ import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-uplo
 import { formatBytes } from "@/lib/media";
 import { quickPostMediaError } from "@/lib/social-quick-post";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
+import { PostPreview, type PreviewProfile } from "@/components/PostPreview";
 
 /** Cliente com Instagram/Facebook conectado — só esses aparecem na publicação direta. */
 export interface QuickPostClient {
   id: string;
   name: string;
   defaultPublishTime: string;
-  connections: { platform: SocialPlatform; name: string; active: boolean }[];
+  hasAvatar: boolean;
+  connections: { platform: SocialPlatform; name: string; username?: string | null; pictureUrl?: string | null; active: boolean }[];
 }
 
 const ICON = { INSTAGRAM: Instagram, FACEBOOK: Facebook, GOOGLE_BUSINESS: CalendarClock } as const;
@@ -100,6 +102,22 @@ export function QuickPostModal({
   }, [open, initialDate]);
 
   const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
+
+  // Pré-visualização: a arte escolhida vira URL local (liberada ao trocar os arquivos).
+  const previewMedia = useMemo(() => files.map((f) => ({ url: URL.createObjectURL(f), isVideo: isVideoType(f.type) })), [files]);
+  useEffect(() => () => previewMedia.forEach((m) => URL.revokeObjectURL(m.url)), [previewMedia]);
+  const previewProfiles = useMemo(() => {
+    const out: Partial<Record<SocialPlatform, PreviewProfile>> = {};
+    if (!client) return out;
+    for (const c of client.connections) {
+      out[c.platform] = {
+        name: c.name || client.name,
+        username: c.username,
+        avatarUrl: client.hasAvatar ? `/api/clients/${client.id}/image/avatar` : c.pictureUrl,
+      };
+    }
+    return out;
+  }, [client]);
 
   function close() {
     if (busy) return;
@@ -221,7 +239,7 @@ export function QuickPostModal({
   const isToday = date === todaySP();
 
   return (
-    <Modal open={open} onClose={close} size="lg" title="Nova publicação" description="Agende ou publique direto, sem precisar de um cartão antes.">
+    <Modal open={open} onClose={close} size="xl" title="Nova publicação" description="Agende ou publique direto, sem precisar de um cartão antes.">
       {done ? (
         <div className="flex flex-col gap-4">
           <p className="rounded-lg bg-[#DCFCE7] px-3 py-3 text-sm font-medium text-[#166534]">{done}</p>
@@ -241,6 +259,7 @@ export function QuickPostModal({
           .
         </p>
       ) : (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <fieldset disabled={busy !== null} className="flex min-w-0 flex-col gap-4 border-0 p-0">
           <label className="flex flex-col gap-1.5 text-sm font-medium text-[#344054]">
             Cliente
@@ -450,6 +469,17 @@ export function QuickPostModal({
             </button>
           </div>
         </fieldset>
+        <aside className="min-w-0 lg:sticky lg:top-0 lg:self-start">
+          <PostPreview
+            platforms={platforms}
+            format={format}
+            media={previewMedia}
+            caption={caption}
+            profiles={previewProfiles}
+            whenLabel={`Agendado para ${date.split("-").reverse().slice(0, 2).join("/")} às ${timeOf("FACEBOOK")}`}
+          />
+        </aside>
+        </div>
       )}
     </Modal>
   );

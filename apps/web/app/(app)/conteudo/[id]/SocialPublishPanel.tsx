@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, ExternalLink, Facebook, Instagram, Send, Zap } from "lucide-react";
 import type { SocialPlatform, SocialPostFormat, SocialPostStatus } from "@zenite-mkt/db";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
+import { PostPreview, type PreviewMedia, type PreviewProfile } from "@/components/PostPreview";
 
 export interface PanelConnection {
   platform: SocialPlatform;
   name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
   status: "ACTIVE" | "ERROR";
 }
 
@@ -52,6 +55,7 @@ export function SocialPublishPanel({
   clientId,
   connections,
   posts,
+  media,
   mediaCount,
   hasVideo,
   defaultCaption,
@@ -64,6 +68,7 @@ export function SocialPublishPanel({
   clientId: string;
   connections: PanelConnection[];
   posts: PanelPost[];
+  media: PreviewMedia[];
   mediaCount: number;
   hasVideo: boolean;
   defaultCaption: string;
@@ -302,6 +307,15 @@ export function SocialPublishPanel({
           />
         )}
       </div>
+
+      <PostPreview
+        platforms={platforms}
+        format={format}
+        media={media}
+        caption={caption}
+        profiles={Object.fromEntries(connections.map((c) => [c.platform, { name: c.name, username: c.username, avatarUrl: c.avatarUrl } satisfies PreviewProfile]))}
+        whenLabel={`Agendado para ${date.split("-").reverse().slice(0, 2).join("/")} às ${timeOf("FACEBOOK")}`}
+      />
 
       <div className="flex flex-wrap gap-2">
         <button

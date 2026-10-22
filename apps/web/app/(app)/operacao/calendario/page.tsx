@@ -84,9 +84,10 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
         id: true,
         name: true,
         defaultPublishTime: true,
+        avatarKey: true,
         socialConnections: {
           where: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
-          select: { platform: true, name: true, status: true },
+          select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
           orderBy: { platform: "desc" },
         },
       },
@@ -98,13 +99,20 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     id: c.id,
     name: c.name,
     defaultPublishTime: c.defaultPublishTime,
-    connections: c.socialConnections.map((conn) => ({ platform: conn.platform, name: conn.name, active: conn.status === "ACTIVE" })),
+    hasAvatar: Boolean(c.avatarKey),
+    connections: c.socialConnections.map((conn) => ({
+      platform: conn.platform,
+      name: conn.name,
+      username: conn.username,
+      pictureUrl: conn.pictureUrl,
+      active: conn.status === "ACTIVE",
+    })),
   }));
 
   // O cliente do filtro sempre entra no formulário (mesmo sem redes conectadas), para ele abrir já nesse cliente.
   const filtered = clients.find((c) => c.id === activeClientId);
   if (filtered && !quickPostClients.some((c) => c.id === filtered.id)) {
-    quickPostClients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", connections: [] });
+    quickPostClients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", hasAvatar: false, connections: [] });
   }
 
   const calendarPosts: CalendarSocialPost[] = socialPosts.map((p) => ({
