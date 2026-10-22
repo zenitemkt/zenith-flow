@@ -20,7 +20,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
 
-  const selectedPeriod = resolvePipelinePeriod({ ...searchParams, period: searchParams.period ?? "last30" });
+  const selectedPeriod = resolvePipelinePeriod({ ...searchParams, period: searchParams.period ?? "today" });
   const range = selectedPeriod.createdAt;
   const agencyId = membership.agencyId;
 
