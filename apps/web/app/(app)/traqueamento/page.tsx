@@ -7,10 +7,9 @@ import { resolvePipelinePeriod } from "@/lib/pipeline-period";
 import { resolveTouchpoint } from "@/lib/attribution";
 import { TrackingPeriodFilter } from "./TrackingPeriodFilter";
 import { BotTrafficToggle } from "./BotTrafficToggle";
-import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
 
-const FunnelChart = dynamic(() =>
-  import("@/app/_components/charts/FunnelChart").then((module) => module.FunnelChart),
+const BarsChart = dynamic(() =>
+  import("@/app/_components/charts/BarsChart").then((module) => module.BarsChart),
 );
 
 interface PageProps {
@@ -28,16 +27,15 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const excludeBots = searchParams.excludeBots !== "0";
   const eventWhereBotFilter = excludeBots ? { session: { isBot: false } } : {};
 
-  const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews, eventGroups, consentDecisions] =
+  const [visitorsCount, sessions, campaigns, leadsCount, totalEventsCount, pageViews, eventGroups, consentDecisions, scrollDepthEvents] =
     await Promise.all([
       prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
       prisma.trackingSession.findMany({
         where: { visitor: { agencyId }, ...(range ? { startedAt: range } : {}) },
+        include: { visitor: { select: { firstSeenAt: true } } },
       }),
       prisma.campaign.findMany({ where: { agencyId } }),
       prisma.lead.count({ where: { agencyId, ...(range ? { createdAt: range } : {}) } }),
-      prisma.proposal.count({ where: { agencyId, sentAt: range ? range : { not: null } } }),
-      prisma.opportunity.count({ where: { agencyId, status: "WON", ...(range ? { updatedAt: range } : {}) } }),
       prisma.trackingEvent.count({ where: { agencyId, ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) } }),
       prisma.trackingEvent.findMany({
         where: { agencyId, eventName: "page_view", ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) },
@@ -61,6 +59,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           },
         },
       }),
+      prisma.trackingEvent.findMany({
+        where: { agencyId, eventName: "scroll_depth", ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) },
+        select: { sessionId: true, properties: true },
+      }),
     ]);
 
   const botSessionsCount = sessions.filter((trackingSession) => trackingSession.isBot).length;
@@ -78,6 +80,19 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const formAbandons = countEvent("form_abandon");
   const engagementRate = effectiveSessions.length > 0 ? Math.round((engagedSessions / effectiveSessions.length) * 100) : 0;
   const formCompletionRate = formStarts > 0 ? Math.round((formSubmits / formStarts) * 100) : 0;
+
+  const sessions50 = new Set<string>();
+  const sessions90 = new Set<string>();
+  for (const event of scrollDepthEvents) {
+    const percent = typeof (event.properties as Record<string, unknown> | null)?.percent === "number"
+      ? ((event.properties as Record<string, unknown>).percent as number)
+      : null;
+    if (percent === null || !event.sessionId) continue;
+    if (percent >= 50) sessions50.add(event.sessionId);
+    if (percent >= 90) sessions90.add(event.sessionId);
+  }
+  const scroll50Rate = effectiveSessions.length > 0 ? Math.round((sessions50.size / effectiveSessions.length) * 100) : 0;
+  const scroll90Rate = effectiveSessions.length > 0 ? Math.round((sessions90.size / effectiveSessions.length) * 100) : 0;
 
   const channelCounts = new Map<string, number>();
   for (const trackingSession of effectiveSessions) {
@@ -134,15 +149,33 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     desconhecido: "Desconhecido",
   };
 
-  const funnelData: FunnelStage[] = [
-    { label: "Visitantes", value: visitorsCount },
-    { label: "Leads", value: leadsCount },
-    { label: "Propostas enviadas", value: proposalsSentCount },
-    { label: "Vendas", value: wonCount },
-  ];
-  const hasFunnelData = funnelData.some((stage) => stage.value > 0);
+  /** Segunda-feira (UTC) da semana de `date` — mesma semana = mesmo rótulo no gráfico abaixo. */
+  function weekStartKey(date: Date): string {
+    const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const isoDay = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() - isoDay + 1);
+    return d.toISOString().slice(0, 10);
+  }
+  const weekBuckets = new Map<string, { novos: Set<string>; recorrentes: Set<string> }>();
+  for (const trackingSession of effectiveSessions) {
+    const weekKey = weekStartKey(trackingSession.startedAt);
+    const bucket = weekBuckets.get(weekKey) ?? { novos: new Set<string>(), recorrentes: new Set<string>() };
+    const isNewThisWeek = weekStartKey(trackingSession.visitor.firstSeenAt) === weekKey;
+    (isNewThisWeek ? bucket.novos : bucket.recorrentes).add(trackingSession.visitorId);
+    weekBuckets.set(weekKey, bucket);
+  }
+  const weeklyVisitorsData = Array.from(weekBuckets.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([weekKey, bucket]) => ({
+      label: new Date(`${weekKey}T00:00:00Z`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }),
+      novos: bucket.novos.size,
+      recorrentes: bucket.recorrentes.size,
+    }));
 
-  const acceptedConsents = consentDecisions.filter((decision) => decision.categories.length > 0).slice(0, 50);
+  const allAcceptedConsents = consentDecisions.filter((decision) => decision.categories.length > 0);
+  const acceptedConsents = allAcceptedConsents.slice(0, 50);
+  const rejectedConsentsCount = consentDecisions.length - allAcceptedConsents.length;
+  const acceptedConsentsRatePct = consentDecisions.length > 0 ? Math.round((allAcceptedConsents.length / consentDecisions.length) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,7 +242,6 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
-            [engagedSessions, "sessões engajadas", engagementRate + "% das sessões"],
             [serviceViews, "serviços visualizados", "interesse em oferta"],
             [whatsappClicks, "cliques no WhatsApp", "contato direto"],
             [formViews, "visualizações do formulário", "chegaram ao orçamento"],
@@ -330,18 +362,57 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-[#101828]">Funil visitante → venda</h2>
+          <h2 className="text-sm font-semibold text-[#101828]">Engajamento (quem leu de verdade)</h2>
           <p className="text-xs text-[#667085]">
-            Aproximado: nem todo Lead nasce de uma visita ao site rastreada (pode vir de indicação, WhatsApp direto
-            etc.) — este funil mostra o volume de cada etapa no período, não uma jornada garantida 1:1 do mesmo
-            visitante até a venda.
+            Sessão engajada = ficou pelo menos 10s com a aba visível. Rolagem conta quem passou de 50%/90% da página.
           </p>
         </div>
-        {hasFunnelData ? (
-          <div className="mx-auto w-full max-w-md"><FunnelChart data={funnelData} orientation="vertical" color="#FF2B00" layers={3} /></div>
-        ) : (
-          <p className="py-6 text-center text-sm text-[#667085]">Nenhum dado neste período.</p>
-        )}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-[#EEF0F3] p-3">
+            <p className="text-xl font-semibold text-[#101828]">{engagementRate}%</p>
+            <p className="text-xs text-[#667085]">Sessões engajadas ({engagedSessions} de {effectiveSessions.length})</p>
+          </div>
+          <div className="rounded-lg border border-[#EEF0F3] p-3">
+            <p className="text-xl font-semibold text-[#101828]">{scroll50Rate}%</p>
+            <p className="text-xs text-[#667085]">Rolaram até 50% da página</p>
+          </div>
+          <div className="rounded-lg border border-[#EEF0F3] p-3">
+            <p className="text-xl font-semibold text-[#101828]">{scroll90Rate}%</p>
+            <p className="text-xs text-[#667085]">Rolaram até 90% da página</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <p className="text-xl font-semibold text-[#101828]">{acceptedConsentsRatePct}%</p>
+          <p className="mb-2 text-xs text-[#667085]">aceitaram cookies ({allAcceptedConsents.length} de {consentDecisions.length})</p>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#F2F4F7]">
+            <div className="h-full rounded-full bg-[#17B26A]" style={{ width: `${acceptedConsentsRatePct}%` }} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <p className="text-xl font-semibold text-[#101828]">{rejectedConsentsCount}</p>
+          <p className="text-xs text-[#667085]">rejeitaram cookies no período</p>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+        <div className="mb-4">
+          <h2 className="text-sm font-semibold text-[#101828]">Visitantes rastreados: novos vs. recorrentes por semana</h2>
+          <p className="text-xs text-[#667085]">
+            Novo rastreado = primeira visita registrada em toda a história. Recorrente rastreado = já havia uma
+            visita registrada antes da semana.
+          </p>
+        </div>
+        <BarsChart
+          data={weeklyVisitorsData}
+          series={[
+            { key: "novos", label: "Novos rastreados", color: "#17B26A" },
+            { key: "recorrentes", label: "Recorrentes rastreados", color: "#98A2B3" },
+          ]}
+          stacked
+        />
       </section>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

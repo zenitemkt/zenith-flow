@@ -24,7 +24,8 @@ export default async function PipelinePage({ searchParams }: PageProps) {
 
   const selectedPeriod = resolvePipelinePeriod(searchParams);
   const periodWhere = selectedPeriod.createdAt ? { createdAt: selectedPeriod.createdAt } : {};
-  const [stages, openOpportunities, periodOpportunities, closedOpportunities, clients, leads] = await Promise.all([
+  const visitorsRange = selectedPeriod.createdAt ? { firstSeenAt: selectedPeriod.createdAt } : {};
+  const [stages, openOpportunities, periodOpportunities, closedOpportunities, clients, leads, trackedVisitorsCount] = await Promise.all([
     prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, orderBy: { order: "asc" } }),
     prisma.opportunity.findMany({
       where: { agencyId: membership.agencyId, status: "OPEN" },
@@ -46,6 +47,10 @@ export default async function PipelinePage({ searchParams }: PageProps) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    // Traqueamento (seção 34) — primeira etapa do funil, só contando visitantes com pelo menos uma sessão não-bot.
+    prisma.trackingVisitor.count({
+      where: { agencyId: membership.agencyId, ...visitorsRange, sessions: { some: { isBot: false } } },
+    }),
   ]);
 
   const wonOpportunities = periodOpportunities.filter((opportunity) => opportunity.status === "WON");
@@ -53,6 +58,7 @@ export default async function PipelinePage({ searchParams }: PageProps) {
   const conversionRate = periodOpportunities.length > 0 ? (wonOpportunities.length / periodOpportunities.length) * 100 : 0;
   const stageOrderById = new Map(stages.map((stage) => [stage.id, stage.order]));
   const funnelData: FunnelStage[] = [
+    { label: "Visitantes do site", value: trackedVisitorsCount },
     ...stages.map((stage) => ({
       label: stage.name,
       // O funil é cumulativo: quem chegou a "Em andamento" também passou por
@@ -80,7 +86,7 @@ export default async function PipelinePage({ searchParams }: PageProps) {
     lastActivityAt: opportunity.leadId ? leadSnapshots.get(opportunity.leadId)?.lastActivityAt?.toISOString() ?? null : null,
   }));
   const openValueCents = openOpportunities.reduce((sum, opportunity) => sum + (opportunity.valueCents ?? 0), 0);
-  const funnelStageIds = [...stages.map((stage) => stage.id), "WON"];
+  const funnelStageIds = ["VISITORS", ...stages.map((stage) => stage.id), "WON"];
   const periodQueryParams = new URLSearchParams();
   if (searchParams.period) periodQueryParams.set("period", searchParams.period);
   if (searchParams.year) periodQueryParams.set("year", searchParams.year);

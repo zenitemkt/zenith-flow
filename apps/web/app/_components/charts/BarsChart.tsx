@@ -23,6 +23,7 @@ export function BarsChart({
   layout = "horizontal",
   format = "number",
   barColors,
+  stacked = false,
 }: {
   data: Record<string, string | number>[];
   series: BarSeries[];
@@ -32,6 +33,8 @@ export function BarsChart({
   format?: ChartValueFormat;
   /** Cores alternadas por barra (cockpit/protótipo) — só tem efeito com uma única série. */
   barColors?: string[];
+  /** Empilha as séries na mesma barra em vez de agrupar lado a lado. */
+  stacked?: boolean;
 }) {
   const valueFormatter = (value: number) => formatChartValue(value, format);
   if (data.length === 0) {
@@ -73,7 +76,15 @@ export function BarsChart({
           />
           {series.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           {series.map((s) => (
-            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 4, 4]} maxBarSize={32}>
+            <Bar
+              key={s.key}
+              dataKey={s.key}
+              name={s.label}
+              fill={s.color}
+              radius={[4, 4, 4, 4]}
+              maxBarSize={32}
+              {...(stacked ? { stackId: "stack" } : {})}
+            >
               {barColors &&
                 series.length === 1 &&
                 data.map((_, index) => <Cell key={index} fill={barColors[index % barColors.length]} />)}

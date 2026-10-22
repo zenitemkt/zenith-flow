@@ -45,6 +45,7 @@ export function PipelineFunnelSection({
     const stageId = stageIds[index];
     if (!stageId) return;
     setOpenIndex(index);
+    if (stageId === "VISITORS") return;
     setLoading(true);
     setError(null);
     setOpportunities([]);
@@ -61,6 +62,7 @@ export function PipelineFunnelSection({
   }
 
   const isWonSegment = openIndex !== null && stageIds[openIndex] === "WON";
+  const isVisitorsSegment = openIndex !== null && stageIds[openIndex] === "VISITORS";
   const stageLabel = openIndex !== null ? (funnelData[openIndex]?.label ?? "") : "";
 
   return (
@@ -72,10 +74,20 @@ export function PipelineFunnelSection({
         open={openIndex !== null}
         onClose={() => setOpenIndex(null)}
         title={stageLabel}
-        description={isWonSegment ? "Oportunidades ganhas no período." : "Oportunidades atualmente nesta etapa."}
+        description={
+          isVisitorsSegment
+            ? "Visitantes únicos do site rastreados no período (seção 34) — ainda não viraram lead."
+            : isWonSegment
+              ? "Oportunidades ganhas no período."
+              : "Oportunidades atualmente nesta etapa."
+        }
         size="lg"
       >
-        {loading ? (
+        {isVisitorsSegment ? (
+          <p className="py-6 text-center text-sm text-[#667085]">
+            Detalhe por visitante fica em Traqueamento → Visão geral.
+          </p>
+        ) : loading ? (
           <p className="py-6 text-center text-sm text-[#667085]">Carregando...</p>
         ) : error ? (
           <p className="text-sm font-medium text-[#D94343]">{error}</p>
