@@ -6,6 +6,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { resolvePipelinePeriod } from "@/lib/pipeline-period";
 import { resolveTouchpoint } from "@/lib/attribution";
 import { TrackingPeriodFilter } from "./TrackingPeriodFilter";
+import { BotTrafficToggle } from "./BotTrafficToggle";
 import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
 
 const FunnelChart = dynamic(() =>
@@ -13,7 +14,7 @@ const FunnelChart = dynamic(() =>
 );
 
 interface PageProps {
-  searchParams: { period?: string; year?: string; month?: string; from?: string; to?: string };
+  searchParams: { period?: string; year?: string; month?: string; from?: string; to?: string; excludeBots?: string };
 }
 
 export default async function TrackingOverviewPage({ searchParams }: PageProps) {
@@ -23,6 +24,9 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const selectedPeriod = resolvePipelinePeriod({ ...searchParams, period: searchParams.period ?? "today" });
   const range = selectedPeriod.createdAt;
   const agencyId = membership.agencyId;
+  // Seção 2.1 (2026-10-22) — filtro de tráfego não humano, ativo por padrão (só desliga com ?excludeBots=0).
+  const excludeBots = searchParams.excludeBots !== "0";
+  const eventWhereBotFilter = excludeBots ? { session: { isBot: false } } : {};
 
   const [visitorsCount, sessions, campaigns, leadsCount, proposalsSentCount, wonCount, totalEventsCount, pageViews, eventGroups, consentDecisions] =
     await Promise.all([
@@ -34,14 +38,14 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       prisma.lead.count({ where: { agencyId, ...(range ? { createdAt: range } : {}) } }),
       prisma.proposal.count({ where: { agencyId, sentAt: range ? range : { not: null } } }),
       prisma.opportunity.count({ where: { agencyId, status: "WON", ...(range ? { updatedAt: range } : {}) } }),
-      prisma.trackingEvent.count({ where: { agencyId, session: { isBot: false }, ...(range ? { occurredAt: range } : {}) } }),
+      prisma.trackingEvent.count({ where: { agencyId, ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) } }),
       prisma.trackingEvent.findMany({
-        where: { agencyId, eventName: "page_view", session: { isBot: false }, ...(range ? { occurredAt: range } : {}) },
+        where: { agencyId, eventName: "page_view", ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) },
         select: { url: true },
       }),
       prisma.trackingEvent.groupBy({
         by: ["eventName"],
-        where: { agencyId, session: { isBot: false }, ...(range ? { occurredAt: range } : {}) },
+        where: { agencyId, ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) },
         _count: { _all: true },
       }),
       prisma.trackingConsent.findMany({
@@ -59,9 +63,9 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       }),
     ]);
 
-  const humanSessions = sessions.filter((trackingSession) => !trackingSession.isBot);
-  const botSessionsCount = sessions.length - humanSessions.length;
+  const botSessionsCount = sessions.filter((trackingSession) => trackingSession.isBot).length;
   const botTrafficPercentage = sessions.length > 0 ? Math.round((botSessionsCount / sessions.length) * 100) : 0;
+  const effectiveSessions = excludeBots ? sessions.filter((trackingSession) => !trackingSession.isBot) : sessions;
 
   const eventCounts = new Map(eventGroups.map((group) => [group.eventName, group._count._all]));
   const countEvent = (name: string) => eventCounts.get(name) ?? 0;
@@ -72,11 +76,11 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const formStarts = countEvent("form_start");
   const formSubmits = countEvent("form_submit");
   const formAbandons = countEvent("form_abandon");
-  const engagementRate = humanSessions.length > 0 ? Math.round((engagedSessions / humanSessions.length) * 100) : 0;
+  const engagementRate = effectiveSessions.length > 0 ? Math.round((engagedSessions / effectiveSessions.length) * 100) : 0;
   const formCompletionRate = formStarts > 0 ? Math.round((formSubmits / formStarts) * 100) : 0;
 
   const channelCounts = new Map<string, number>();
-  for (const trackingSession of humanSessions) {
+  for (const trackingSession of effectiveSessions) {
     const touchpoint = resolveTouchpoint(trackingSession, campaigns);
     channelCounts.set(touchpoint.channel, (channelCounts.get(touchpoint.channel) ?? 0) + 1);
   }
@@ -95,7 +99,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     .slice(0, 10);
 
   const sessionsByVisitor = new Map<string, number>();
-  for (const trackingSession of humanSessions) {
+  for (const trackingSession of effectiveSessions) {
     sessionsByVisitor.set(trackingSession.visitorId, (sessionsByVisitor.get(trackingSession.visitorId) ?? 0) + 1);
   }
   const returningVisitorsCount = Array.from(sessionsByVisitor.values()).filter((count) => count > 1).length;
@@ -104,7 +108,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const deviceCounts = new Map<string, number>();
   const osCounts = new Map<string, number>();
   const browserCounts = new Map<string, number>();
-  for (const trackingSession of humanSessions) {
+  for (const trackingSession of effectiveSessions) {
     const cityLabel = trackingSession.city
       ? `${trackingSession.city}${trackingSession.region ? ` (${trackingSession.region})` : ""}`
       : null;
@@ -119,7 +123,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const topCities = Array.from(cityCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-  const deviceTotal = humanSessions.length;
+  const deviceTotal = effectiveSessions.length;
   const deviceBreakdown = Array.from(deviceCounts.entries()).sort((a, b) => b[1] - a[1]);
   const osBreakdown = Array.from(osCounts.entries()).sort((a, b) => b[1] - a[1]);
   const browserBreakdown = Array.from(browserCounts.entries()).sort((a, b) => b[1] - a[1]);
@@ -151,13 +155,16 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </p>
       </div>
 
-      <TrackingPeriodFilter
-        initialPeriod={selectedPeriod.period}
-        initialYear={searchParams.year}
-        initialMonth={searchParams.month}
-        initialFrom={searchParams.from}
-        initialTo={searchParams.to}
-      />
+      <div className="flex flex-wrap items-end gap-2">
+        <TrackingPeriodFilter
+          initialPeriod={selectedPeriod.period}
+          initialYear={searchParams.year}
+          initialMonth={searchParams.month}
+          initialFrom={searchParams.from}
+          initialTo={searchParams.to}
+        />
+        <BotTrafficToggle active={excludeBots} />
+      </div>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-4">
@@ -174,7 +181,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
             <p className="text-xs text-[#667085]">visitantes recorrentes</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{humanSessions.length}</p>
+            <p className="text-xl font-semibold text-[#101828]">{effectiveSessions.length}</p>
             <p className="text-xs text-[#667085]">sessões</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
@@ -187,7 +194,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
             <p className="text-xl font-semibold text-[#101828]">{botTrafficPercentage}%</p>
-            <p className="text-xs text-[#667085]">tráfego não humano detectado ({botSessionsCount} de {sessions.length} sessões)</p>
+            <p className="text-xs text-[#667085]">
+              tráfego não humano detectado ({botSessionsCount} de {sessions.length} sessões)
+              {excludeBots ? " · já removido dos números abaixo" : " · incluído nos números abaixo"}
+            </p>
           </div>
         </div>
       </section>
