@@ -44,6 +44,7 @@ interface SessionSeed {
   city: string | null;
   deviceType: string | null;
   browser: string | null;
+  os: string | null;
   isBot: boolean;
 }
 

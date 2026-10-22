@@ -211,6 +211,7 @@ export function looksLikeBot(userAgent: string | null, city?: string | null): bo
 export interface DeviceInfo {
   deviceType: "mobile" | "tablet" | "desktop" | null;
   browser: string | null;
+  os: string | null;
 }
 
 /**
@@ -220,7 +221,7 @@ export interface DeviceInfo {
  * precisamos de versão exata de OS/navegador, só a categoria).
  */
 export function parseDeviceInfo(userAgent: string | null): DeviceInfo {
-  if (!userAgent) return { deviceType: null, browser: null };
+  if (!userAgent) return { deviceType: null, browser: null, os: null };
 
   let deviceType: DeviceInfo["deviceType"] = "desktop";
   if (/tablet|ipad/i.test(userAgent)) {
@@ -238,5 +239,12 @@ export function parseDeviceInfo(userAgent: string | null): DeviceInfo {
   else if (/firefox\//i.test(userAgent)) browser = "Firefox";
   else if (/safari\//i.test(userAgent) && /version\//i.test(userAgent)) browser = "Safari";
 
-  return { deviceType, browser };
+  let os: string | null = null;
+  if (/windows/i.test(userAgent)) os = "Windows";
+  else if (/iphone|ipad|ipod/i.test(userAgent)) os = "iOS";
+  else if (/android/i.test(userAgent)) os = "Android";
+  else if (/mac os x|macintosh/i.test(userAgent)) os = "macOS";
+  else if (/linux/i.test(userAgent)) os = "Linux";
+
+  return { deviceType, browser, os };
 }

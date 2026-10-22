@@ -2199,6 +2199,7 @@ model TrackingSession {
   city        String?
   deviceType  String?
   browser     String?
+  os          String?
   /// Seção 2.1 (detecção de tráfego não humano, 2026-10-22) — resolvido uma
   /// única vez na criação da sessão, mesmo espírito do deviceType/browser.
   isBot       Boolean         @default(false)

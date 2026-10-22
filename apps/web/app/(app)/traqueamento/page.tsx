@@ -52,7 +52,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           visitor: {
             include: {
               lead: { select: { name: true, email: true, phone: true } },
-              sessions: { orderBy: { startedAt: "desc" }, take: 1, select: { city: true, region: true, deviceType: true } },
+              sessions: { orderBy: { startedAt: "desc" }, take: 1, select: { city: true, region: true, deviceType: true, browser: true, os: true } },
             },
           },
         },
@@ -102,6 +102,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
   const cityCounts = new Map<string, number>();
   const deviceCounts = new Map<string, number>();
+  const osCounts = new Map<string, number>();
+  const browserCounts = new Map<string, number>();
   for (const trackingSession of humanSessions) {
     const cityLabel = trackingSession.city
       ? `${trackingSession.city}${trackingSession.region ? ` (${trackingSession.region})` : ""}`
@@ -109,12 +111,18 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     if (cityLabel) cityCounts.set(cityLabel, (cityCounts.get(cityLabel) ?? 0) + 1);
     const deviceLabel = trackingSession.deviceType ?? "desconhecido";
     deviceCounts.set(deviceLabel, (deviceCounts.get(deviceLabel) ?? 0) + 1);
+    const osLabel = trackingSession.os ?? "desconhecido";
+    osCounts.set(osLabel, (osCounts.get(osLabel) ?? 0) + 1);
+    const browserLabel = trackingSession.browser ?? "desconhecido";
+    browserCounts.set(browserLabel, (browserCounts.get(browserLabel) ?? 0) + 1);
   }
   const topCities = Array.from(cityCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
   const deviceTotal = humanSessions.length;
   const deviceBreakdown = Array.from(deviceCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const osBreakdown = Array.from(osCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const browserBreakdown = Array.from(browserCounts.entries()).sort((a, b) => b[1] - a[1]);
   const DEVICE_LABELS: Record<string, string> = {
     desktop: "Computador",
     mobile: "Celular",
@@ -227,7 +235,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </div>
 
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Por cidade e aparelho</h2>
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Por cidade, aparelho, sistema e navegador</h2>
           {topCities.length === 0 ? (
             <p className="py-2 text-sm text-[#667085]">Nenhuma cidade identificada neste período.</p>
           ) : (
@@ -245,6 +253,24 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
               {deviceBreakdown.map(([device, count]) => (
                 <span key={device} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
                   {DEVICE_LABELS[device] ?? device}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
+                </span>
+              ))}
+            </div>
+          )}
+          {osBreakdown.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
+              {osBreakdown.map(([os, count]) => (
+                <span key={os} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
+                  {os}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
+                </span>
+              ))}
+            </div>
+          )}
+          {browserBreakdown.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
+              {browserBreakdown.map(([browser, count]) => (
+                <span key={browser} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
+                  {browser}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
                 </span>
               ))}
             </div>
@@ -319,7 +345,9 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
                 <div key={decision.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F2F4F7] py-1.5 text-sm last:border-0">
                   <span className="font-medium text-[#344054]">{who}</span>
                   <span className="text-xs text-[#98A2B3]">
-                    {cityLabel} · {DEVICE_LABELS[lastSession?.deviceType ?? "desconhecido"] ?? "aparelho desconhecido"} ·{" "}
+                    {cityLabel} · {DEVICE_LABELS[lastSession?.deviceType ?? "desconhecido"] ?? "aparelho desconhecido"}
+                    {lastSession?.os ? ` · ${lastSession.os}` : ""}
+                    {lastSession?.browser ? ` · ${lastSession.browser}` : ""} ·{" "}
                     {decision.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                   </span>
                 </div>

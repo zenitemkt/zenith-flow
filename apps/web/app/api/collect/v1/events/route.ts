@@ -81,6 +81,7 @@ export async function POST(request: Request) {
     city,
     deviceType: device.deviceType,
     browser: device.browser,
+    os: device.os,
     isBot,
   });
 
