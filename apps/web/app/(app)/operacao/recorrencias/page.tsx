@@ -9,7 +9,7 @@ import {
 } from "@/lib/recurring-tasks";
 import { prisma, type RecurringTaskStatus } from "@zenite-mkt/db";
 import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
-import { isClientActive } from "@/lib/clients";
+import { filterableClients } from "@/lib/clients";
 import { RecurringTaskActions } from "./RecurringTaskActions";
 
 const STATUS_BADGE_CLASS: Record<RecurringTaskStatus, string> = {
@@ -71,7 +71,7 @@ export default async function RecurringTasksPage({ searchParams }: PageProps) {
 
       <ClientFilterSelect
         // Só clientes ativos entram na lista; o filtrado continua visível mesmo se inativo.
-        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
+        clients={filterableClients(clients, activeClientId)}
         activeClientId={activeClientId}
         basePath="/operacao/recorrencias"
       />

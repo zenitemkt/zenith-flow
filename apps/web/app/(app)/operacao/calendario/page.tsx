@@ -5,7 +5,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/content-calendar";
 import { prisma } from "@zenite-mkt/db";
 import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
-import { isClientActive } from "@/lib/clients";
+import { filterableClients } from "@/lib/clients";
 import type { CalendarContentItem, CalendarSocialPost } from "./InteractiveContentCalendar";
 import type { QuickPostClient } from "./QuickPostModal";
 
@@ -168,7 +168,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
 
       <ClientFilterSelect
         // Só clientes ativos entram na lista; o filtrado continua visível mesmo se inativo.
-        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
+        clients={filterableClients(clients, activeClientId)}
         activeClientId={activeClientId}
         basePath="/operacao/calendario"
         params={{ month: monthParam(year, month) }}

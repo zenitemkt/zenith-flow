@@ -3,7 +3,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { canManageAnyTask } from "@/lib/rbac";
 import { getAgencyMembers } from "@/lib/team";
 import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
-import { clientInitials, isClientActive } from "@/lib/clients";
+import { clientInitials, filterableClients } from "@/lib/clients";
 import { prisma } from "@zenite-mkt/db";
 import { ContentBoard, type BoardContentItem } from "./ContentBoard";
 import { NewContentModal } from "./NewContentModal";
@@ -92,7 +92,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
 
       <ClientFilterSelect
         // Só clientes ativos entram na lista (a carteira cresce); o filtrado agora continua visível mesmo se inativo.
-        clients={clients.filter((c) => isClientActive(c.status) || c.id === activeClientId).map(({ id, name }) => ({ id, name }))}
+        clients={filterableClients(clients, activeClientId)}
         activeClientId={activeClientId}
         basePath="/operacao"
       />

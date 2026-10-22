@@ -36,6 +36,20 @@ export function isClientActive(status: ClientStatus): boolean {
   return ACTIVE_STATUSES.includes(status);
 }
 
+/**
+ * Clientes que entram no filtro de uma tela: os ativos (mais o já filtrado, mesmo
+ * inativo). Se a carteira não tiver nenhum ativo, lista todos — melhor um filtro
+ * completo do que o filtro sumir.
+ */
+export function filterableClients<T extends { id: string; name: string; status: ClientStatus }>(
+  clients: T[],
+  activeClientId?: string,
+): { id: string; name: string }[] {
+  const active = clients.filter((c) => isClientActive(c.status));
+  const pool = active.length > 0 ? clients.filter((c) => active.includes(c) || c.id === activeClientId) : clients;
+  return pool.map(({ id, name }) => ({ id, name }));
+}
+
 export const SOCIAL_NETWORKS = [
   { id: "instagram", label: "Instagram", placeholder: "@perfil ou link" },
   { id: "facebook", label: "Facebook", placeholder: "página ou link" },
