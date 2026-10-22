@@ -122,6 +122,8 @@ async function dispatchMetaCapiEvent(
   clientIp: string | null,
   clientUserAgent: string | null,
   consent: ConsentSnapshot,
+  fbp: string | null,
+  fbc: string | null,
 ): Promise<void> {
   const metaEventName = META_EVENT_NAME_MAP[eventName];
   if (!metaEventName || !consent.marketing) return;
@@ -144,6 +146,8 @@ async function dispatchMetaCapiEvent(
       phone: typeof properties.phone === "string" ? properties.phone : null,
       clientIp,
       clientUserAgent,
+      fbp,
+      fbc,
       // Só pra verificação manual no Gerenciador de Eventos — var só deve existir na Vercel durante o teste, nunca em uso real.
       testEventCode: process.env.META_CAPI_TEST_EVENT_CODE || null,
     });
@@ -239,6 +243,8 @@ export async function processTrackingEvent(
     requestContext.clientIp,
     requestContext.clientUserAgent,
     consent,
+    typeof body?.fbp === "string" ? body.fbp : null,
+    typeof body?.fbc === "string" ? body.fbc : null,
   );
 
   return { eventId, status: "stored" };
