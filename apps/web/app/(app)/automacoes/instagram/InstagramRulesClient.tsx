@@ -87,7 +87,14 @@ export function InstagramRulesClient({
     });
     setSubscribing(false);
     const body = await response.json().catch(() => null);
-    setSubscribeMsg(response.ok ? "Automação ativada." : (body?.error ?? "Falha ao ativar."));
+    if (!response.ok) {
+      setSubscribeMsg(body?.error ?? "Falha ao ativar.");
+    } else if (body?.missing?.length > 0) {
+      const labels: Record<string, string> = { messages: "DM", messaging_postbacks: "botões", message_reads: "leitura", comments: "comentário" };
+      setSubscribeMsg(`Ativado (sem ${body.missing.map((f: string) => labels[f] ?? f).join(", ")} — precisa de mais um passo no painel da Meta).`);
+    } else {
+      setSubscribeMsg("Automação ativada (DM, resposta de story, comentário e confirmação de leitura).");
+    }
   }
 
   async function toggleActive(rule: Rule) {

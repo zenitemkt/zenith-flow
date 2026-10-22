@@ -99,11 +99,29 @@ export async function sendInstagramPublicCommentReply(pageToken: string, comment
  * evento, mesmo com o webhook já configurado no painel do app (esse passo é
  * por Página/cliente, não é global).
  */
-export async function subscribeInstagramWebhook(pageToken: string, pageId: string): Promise<void> {
-  await graphPost(`/${pageId}/subscribed_apps`, {
-    access_token: pageToken,
-    subscribed_fields: "messages,messaging_postbacks,messaging_seen,comments",
-  });
+/**
+ * Alguns campos (ex.: `comments`) só ficam disponíveis depois de um passo
+ * manual no painel do app na Meta (seção 4.1 do Blueprint) — se o pedido
+ * falhar por causa de um campo específico ainda não habilitado, tenta de
+ * novo sem ele em vez de travar a ativação inteira (mensagem/DM funcionando
+ * já vale, mesmo sem comentário ainda).
+ */
+export async function subscribeInstagramWebhook(pageToken: string, pageId: string): Promise<{ fields: string[] }> {
+  const allFields = ["messages", "messaging_postbacks", "message_reads", "comments"];
+  let fields = allFields;
+  for (let attempt = 0; attempt < allFields.length; attempt++) {
+    try {
+      await graphPost(`/${pageId}/subscribed_apps`, { access_token: pageToken, subscribed_fields: fields.join(",") });
+      return { fields };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const match = message.match(/got ["'`]([a-z_]+)["'`]/i);
+      const invalidField = match ? fields.find((field) => field === match[1]) : undefined;
+      if (!invalidField || fields.length === 1) throw error;
+      fields = fields.filter((field) => field !== invalidField);
+    }
+  }
+  throw new Error("Nenhum campo de webhook disponível pra esta Página.");
 }
 
 export interface RecentMediaItem {

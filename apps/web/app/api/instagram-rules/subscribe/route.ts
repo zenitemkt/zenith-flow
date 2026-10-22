@@ -27,8 +27,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    await subscribeInstagramWebhook(decryptSecret(facebook.accessTokenEnc), facebook.externalId);
-    return NextResponse.json({ ok: true });
+    const { fields } = await subscribeInstagramWebhook(decryptSecret(facebook.accessTokenEnc), facebook.externalId);
+    const missing = ["messages", "messaging_postbacks", "message_reads", "comments"].filter((f) => !fields.includes(f));
+    return NextResponse.json({ ok: true, fields, missing });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Não foi possível ativar — confira se a Página tem as permissões de mensagem (reconecte se precisar)." },
