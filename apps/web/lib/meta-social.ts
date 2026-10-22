@@ -13,9 +13,15 @@ const GRAPH = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
 /**
  * Permissões do fluxo de publicação + mini-chat de Instagram (Blueprint de
  * Automações, seção 4 — reaproveita esta MESMA conexão/token de Página em
- * vez de um fluxo de OAuth separado, só com escopo a mais). Em modo
- * desenvolvimento do app, quem tem papel no app (admin) pode usá-las sem App
- * Review, nas Páginas que já administra — o caso da Zenite hoje.
+ * vez de um fluxo de OAuth separado, só com escopo a mais: `pages_messaging`
+ * e `pages_manage_metadata`). `instagram_manage_messages`/
+ * `instagram_manage_comments` foram tentados primeiro mas a Meta rejeita
+ * esses dois nomes nesse app ("Invalid Scopes" direto no diálogo, antes de
+ * mostrar a tela) — `pages_messaging` sozinho já é a permissão exigida pra
+ * assinar os campos de mensagem (confirmado pelo próprio erro da API ao
+ * tentar assinar o webhook). Em modo desenvolvimento do app, quem tem papel
+ * no app (admin) pode usá-las sem App Review, nas Páginas que já administra
+ * — o caso da Zenite hoje.
  */
 export const META_SOCIAL_SCOPES = [
   "pages_show_list",
@@ -25,8 +31,6 @@ export const META_SOCIAL_SCOPES = [
   "pages_messaging",
   "instagram_basic",
   "instagram_content_publish",
-  "instagram_manage_messages",
-  "instagram_manage_comments",
   "business_management",
 ] as const;
 
