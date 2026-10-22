@@ -143,6 +143,8 @@ model Agency {
   clientSegments               ClientSegment[]
   commercialGoals              CommercialGoal[]
   socialConnections            SocialConnection[]
+  instagramAutomationRules     InstagramAutomationRule[]
+  instagramAutomationLogs      InstagramAutomationLog[]
   socialPosts                  SocialPost[]
   onboardingTemplates          OnboardingTemplate[]
   projects                     Project[]
@@ -335,6 +337,8 @@ model Client {
   contentItems           ContentItem[]
   socialConnections      SocialConnection[]
   socialPosts            SocialPost[]
+  instagramAutomationRules InstagramAutomationRule[]
+  instagramAutomationLogs  InstagramAutomationLog[]
   financeEntries         FinanceEntry[]
   mediaAssets            MediaAsset[]
   healthScoreSnapshots   HealthScoreSnapshot[]
@@ -2957,4 +2961,66 @@ model SocialPost {
   @@index([agencyId, publishAt])
   @@index([contentItemId])
   @@map("social_post")
+}
+
+/// Mini-chat de Instagram (Blueprint de Automações, seção 4) — reaproveita o
+/// token de Página já guardado em `SocialConnection` (platform INSTAGRAM) em
+/// vez de uma conexão própria: mesmo app da Meta, só precisa de escopo a mais.
+model InstagramAutomationRule {
+  id       String @id @default(cuid())
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  triggerType String // 'story_reply' | 'comment' | 'direct_message'
+  /// null = regra "pega-tudo" (qualquer texto daquele tipo).
+  keyword     String?
+  responseText String
+  buttonText   String?
+  buttonUrl    String?
+  /// Só pra comment: null = vale pra qualquer post/reels; preenchido = só nesse post específico.
+  mediaId         String?
+  mediaCaption    String?
+  mediaPermalink  String?
+  /// Só pra comment: lista de variações pra resposta pública, sorteada a cada match.
+  publicReplyTexts String[]
+  active           Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  logs InstagramAutomationLog[]
+
+  @@index([agencyId])
+  @@index([clientId, triggerType, active])
+  @@map("instagram_automation_rule")
+}
+
+model InstagramAutomationLog {
+  id       String @id @default(cuid())
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  ruleId   String?
+  rule     InstagramAutomationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+
+  senderIgsid  String
+  storyId      String?
+  /// Único — a Meta reenvia webhook em timeout; sem essa trava duplicaria a resposta ao comentário.
+  commentId    String? @unique
+  /// Único — mesma razão, pra DM/story.
+  messageId    String? @unique
+  receivedText String?
+  sentText     String?
+  /// Destino real do botão — usado pelo redirecionador de clique, nunca exposto direto na DM.
+  buttonUrl    String?
+  status       String // 'pending' | 'sent' | 'failed' | 'no_match'
+  error        String?
+  readAt       DateTime?
+  clickedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([agencyId, clientId, createdAt])
+  @@map("instagram_automation_log")
 }

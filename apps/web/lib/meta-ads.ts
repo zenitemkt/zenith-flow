@@ -25,7 +25,7 @@ function requireEnv(name: "META_APP_ID" | "META_APP_SECRET"): string {
 }
 
 /** URL base do próprio app (sem barra final) — mesmo padrão de `MAIN_APP_URL` em `lib/auth.ts`. */
-function getAppBaseUrl(): string {
+export function getAppBaseUrl(): string {
   return process.env.MAIN_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.hubzenite.com.br";
 }
 

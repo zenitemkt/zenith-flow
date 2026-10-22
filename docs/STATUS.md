@@ -1,8 +1,34 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-21.
+Última atualização: 2026-10-22.
 
 ## Implementado
+
+- **Mini-chat de Instagram (2026-10-22)**: Automações → Instagram. Responde DM, resposta de story e comentário
+  automaticamente (Blueprint de Automações, seção 4), reaproveitando a MESMA conexão Facebook/Instagram do
+  agendador de redes (`SocialConnection`, token de Página) em vez de um fluxo de OAuth próprio — escopo ampliado
+  em `META_SOCIAL_SCOPES` (`instagram_manage_messages`, `instagram_manage_comments`, `pages_messaging`,
+  `pages_manage_metadata`). Modelos `InstagramAutomationRule`/`InstagramAutomationLog` com `agencyId`+`clientId`
+  desde o início. Rotas: `POST /api/instagram/webhook` (handshake GET + eventos, assinatura
+  `x-hub-signature-256` verificada com `META_APP_SECRET`, idempotência via `messageId`/`commentId` únicos),
+  `GET /api/instagram/click/[id]` (redirecionador de clique — Meta não avisa clique em botão, só leitura),
+  `/api/instagram-rules` (CRUD de regras, admin), `/api/instagram-rules/media` (posts/reels recentes pra regra
+  de comentário presa a um post), `/api/instagram-rules/metrics`, `/api/instagram-rules/subscribe` ("Ativar
+  automação" — assina o webhook pra Página daquele cliente). Prioridade de regra: (post específico +
+  palavra-chave) → (qualquer post + palavra-chave) → (post específico, pega-tudo) → (qualquer post, pega-tudo).
+  - Testado: `tsc --noEmit` limpo. **Não testado ao vivo** — depende de configuração manual fora do código
+    que só um humano pode fazer no painel da Meta: (1) adicionar o caso de uso "Gerenciar mensagens e
+    conteúdo no Instagram" ao app já existente; (2) configurar a URL do webhook
+    (`https://portal.hubzenite.com.br/api/instagram/webhook`) + um verify token secreto no painel do app,
+    salvo também como `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` na Vercel; (3) assinar os campos `messages` e
+    `comments`; (4) o app precisa estar em modo "Ativo/Publicado", não "Em desenvolvimento" (senão a Meta
+    bloqueia); (5) qualquer cliente já conectado antes desta mudança precisa reconectar (botão já existente
+    no perfil do cliente) pra renovar o token com os escopos novos antes de "Ativar automação" funcionar.
+  - Pesquisado via WebSearch contra a documentação oficial da Meta antes de implementar — dois pontos
+    ficaram com nomes divergentes entre páginas da própria Meta (não resolvido por fonte única): o escopo
+    pode ser `instagram_manage_messages` OU `instagram_manage_messaging`, e o campo do payload de comentário
+    pode vir como `value.comment_id` OU `value.id` dependendo da variante do produto. Implementado com a
+    primeira opção de cada par (mais citada); se o teste ao vivo falhar, é o primeiro lugar pra olhar.
 
 - **Publicação direta pelo Calendário (2026-10-21)**: botão "Nova publicação" e clique em qualquer dia (de hoje em diante) em Operação > Calendário abrem o formulário: cliente (só os com rede conectada), redes, formato, arte, título opcional, legenda, data/hora de Brasília, Agendar ou Publicar agora (só no dia de hoje). Por baixo cria a peça (`/api/social/quick-post`), sobe a arte e aprova+agenda (`/api/social/quick-post/[id]`); se a arte falhar no meio, a peça é apagada. Imagens agora são reduzidas/comprimidas no navegador (< 4MB) e nunca dependem de CORS do R2. Testes: `lib/social-quick-post.test.ts`. Conexão Meta da Zenite testada ao vivo (Página + Instagram conectados).
 - **Agendador de redes — Facebook e Instagram (2026-10-21)**: ver `docs/DECISIONS.md` (2026-10-21). Conectar redes no perfil do cliente, agendar/publicar agora no cartão, publicações no calendário, automático ao aprovar, motor + cron externo, arte em arquivo nas versões.
