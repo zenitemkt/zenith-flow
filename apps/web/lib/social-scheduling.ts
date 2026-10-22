@@ -36,6 +36,24 @@ export function spDateTime(date: string, time: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+export type PublishAtByPlatform = Partial<Record<SocialPlatform, Date>>;
+
+/**
+ * Lê `{ INSTAGRAM: "<ISO>", FACEBOOK: "<ISO>" }` do corpo da requisição (horário
+ * próprio por rede). Ignora redes não agendáveis e valores inválidos.
+ */
+export function parsePublishAtByPlatform(raw: unknown): PublishAtByPlatform {
+  const out: PublishAtByPlatform = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const platform of SCHEDULABLE_PLATFORMS) {
+    const value = (raw as Record<string, unknown>)[platform];
+    if (typeof value !== "string") continue;
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) out[platform] = date;
+  }
+  return out;
+}
+
 export class ScheduleError extends Error {}
 
 /**
@@ -49,6 +67,8 @@ export async function scheduleContentPosts(input: {
   format: SocialPostFormat;
   caption: string;
   publishAt: Date;
+  /** Horário próprio de cada rede (mesma data); a rede que não aparece usa `publishAt`. */
+  publishAtByPlatform?: PublishAtByPlatform;
   userId: string | null;
   autoScheduled?: boolean;
 }): Promise<string[]> {
@@ -66,7 +86,12 @@ export async function scheduleContentPosts(input: {
   const platforms = [...new Set(input.platforms)].filter((p) => SCHEDULABLE_PLATFORMS.includes(p));
   if (platforms.length === 0) throw new ScheduleError("Escolha pelo menos uma rede.");
   if (input.caption.length > CAPTION_MAX) throw new ScheduleError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
-  if (input.publishAt.getTime() < Date.now() - 60_000) throw new ScheduleError("Escolha uma data e hora no futuro.");
+  const publishAtOf = (platform: SocialPlatform) => input.publishAtByPlatform?.[platform] ?? input.publishAt;
+  for (const platform of platforms) {
+    if (publishAtOf(platform).getTime() < Date.now() - 60_000) {
+      throw new ScheduleError(`Escolha uma data e hora no futuro (${PLATFORM_LABELS[platform]}).`);
+    }
+  }
 
   const version = item.versions[0] ?? null;
   const media = version?.media ?? [];
@@ -100,7 +125,7 @@ export async function scheduleContentPosts(input: {
         connectionId: connection.id,
         format: input.format,
         caption: input.caption || null,
-        publishAt: input.publishAt,
+        publishAt: publishAtOf(connection.platform),
         status: "SCHEDULED" as const,
         attempts: 0,
         nextAttemptAt: null,
@@ -148,7 +173,12 @@ export async function scheduleContentPosts(input: {
         action: input.autoScheduled ? "social_post.auto_scheduled" : "social_post.scheduled",
         resourceType: "content_item",
         resourceId: item.id,
-        metadata: { platforms: connections.map((c) => c.platform), publishAt: input.publishAt.toISOString(), format: input.format },
+        metadata: {
+          platforms: connections.map((c) => c.platform),
+          publishAt: input.publishAt.toISOString(),
+          publishAtByPlatform: Object.fromEntries(connections.map((c) => [c.platform, publishAtOf(c.platform).toISOString()])),
+          format: input.format,
+        },
       },
     });
   });

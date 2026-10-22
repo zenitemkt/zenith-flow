@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Melhor horário para publicar (Instagram e Facebook)**: no agendamento (Calendário e cartão), cada rede marcada ganha o próprio campo de hora, com um botão pequeno ao lado que sugere o melhor horário daquela rede para o dia da semana da data que está no campo (se você mudar a data, o botão acompanha). A data é a mesma; só o horário muda por rede. Base de horários interna, pesquisada em 7 fontes de 2026.
 - **Publicação direta pelo Calendário**: em Operação > Calendário, botão "Nova publicação" ou clique no dia abre o formulário (cliente, redes, formato, arte, legenda, data e hora de Brasília) com **Agendar** e, no dia de hoje, **Publicar agora** — sem precisar criar o cartão antes (o sistema cria a peça sozinho, já aprovada).
 - **Envio de imagem sem depender de CORS**: imagens grandes são reduzidas e comprimidas no navegador antes de subir (antes, imagem acima de 4MB falhava com "Não foi possível enviar").
 - **Política de privacidade pública** em `/privacidade` (sem login), com o texto do site + seção sobre dados do Facebook/Instagram e instruções de exclusão (`/privacidade#exclusao-de-dados`). URLs usadas no cadastro do app da Meta.

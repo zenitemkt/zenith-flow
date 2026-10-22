@@ -1138,3 +1138,12 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: exclusões de Proposta, Campanha e Cliente são permanentes, exclusivas de administradores, confirmadas por modal e auditadas. Proposta não leva a Opportunity junto; seu valor aberto é recalculado. Campanha leva apenas sua árvore própria de métricas, conjuntos, anúncios e segmentação. Cliente leva portal e entidades com dependência forte, enquanto Lead convertido, Opportunity, Proposal e Campaign usam `SetNull` e permanecem como histórico sem vínculo.
 
 **Consequência**: excluir um cliente não apaga o histórico comercial nem altera artificialmente conversões passadas, mas remove dados operacionais e financeiros dependentes conforme informado na confirmação.
+
+## 2026-10-22 — Melhor horário por rede e horário próprio de cada rede
+
+**Contexto**: Instagram e Facebook têm melhores horários diferentes, e o agendamento tinha um único horário para a peça inteira.
+
+**Decisão**: a tabela de melhor horário (rede x dia da semana, fuso de São Paulo) fica no código, em `apps/web/lib/best-times.ts`, com a data e as fontes da pesquisa no comentário; atualizar é refazer a pesquisa e trocar os valores. O botão lê a data que está no campo no momento do clique e calcula o dia da semana dela. Cada rede marcada tem seu campo de hora; a data é a mesma. As rotas aceitam `publishAtByPlatform` (ISO por rede), com `publishAt` como padrão e como o mais cedo (dá a data da peça). Sem migration: `SocialPost.publishAt` já era por rede.
+
+**Consequência**: a mesma peça pode sair em horários diferentes em cada rede, cada uma cancelável e reenviável por conta própria. Sexta a domingo no Facebook têm pouca evidência nas fontes (baixa confiança). O agendamento automático ao aprovar continua com um horário único (o padrão do cliente).
+

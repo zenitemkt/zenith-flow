@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma, type SocialPlatform, type SocialPostFormat } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { ScheduleError, scheduleContentPosts } from "@/lib/social-scheduling";
+import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@/lib/social-scheduling";
 import { publishPostsNow } from "@/lib/social-publisher";
 
 export const maxDuration = 60;
@@ -15,7 +15,8 @@ const FORMATS: SocialPostFormat[] = ["FEED", "REEL", "STORY"];
 
 /**
  * Agendar ou publicar agora a peça nas redes conectadas do cliente.
- * Body: { platforms, format, caption, publishAt (ISO) } ou { ..., now: true }.
+ * Body: { platforms, format, caption, publishAt (ISO), publishAtByPlatform? (ISO por rede) }
+ * ou { ..., now: true }.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
@@ -44,7 +45,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   let ids: string[];
   try {
-    ids = await scheduleContentPosts({ contentItemId: item.id, platforms, format, caption, publishAt, userId: session.user.id });
+    ids = await scheduleContentPosts({
+      contentItemId: item.id,
+      platforms,
+      format,
+      caption,
+      publishAt,
+      publishAtByPlatform: now ? undefined : parsePublishAtByPlatform(body?.publishAtByPlatform),
+      userId: session.user.id,
+    });
   } catch (error) {
     if (error instanceof ScheduleError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;

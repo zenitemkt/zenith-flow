@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma, type SocialPlatform, type SocialPostFormat } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { ScheduleError, scheduleContentPosts } from "@/lib/social-scheduling";
+import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@/lib/social-scheduling";
 import { publishPostsNow } from "@/lib/social-publisher";
 import { QUICK_POST_AUDIT_ACTION } from "@/lib/social-quick-post";
 
@@ -42,7 +42,8 @@ async function loadQuickPostItem(id: string) {
 /**
  * Publicação direta pelo Calendário — passo final: com a arte já na versão,
  * aprova a peça (quem agenda é a própria equipe) e agenda ou publica agora.
- * Body: { platforms, format, caption, publishAt (ISO) } ou { ..., now: true }.
+ * Body: { platforms, format, caption, publishAt (ISO), publishAtByPlatform? (ISO por rede) }
+ * ou { ..., now: true }.
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const loaded = await loadQuickPostItem(params.id);
@@ -80,7 +81,15 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   let ids: string[];
   try {
-    ids = await scheduleContentPosts({ contentItemId: item.id, platforms, format, caption, publishAt, userId: session.user.id });
+    ids = await scheduleContentPosts({
+      contentItemId: item.id,
+      platforms,
+      format,
+      caption,
+      publishAt,
+      publishAtByPlatform: now ? undefined : parsePublishAtByPlatform(body?.publishAtByPlatform),
+      userId: session.user.id,
+    });
   } catch (error) {
     await prisma.contentItem.update({ where: { id: item.id }, data: { status: "PRODUCAO" } });
     if (error instanceof ScheduleError) return NextResponse.json({ error: error.message }, { status: 400 });

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarClock, ExternalLink, Facebook, Instagram, Send, Zap } from "lucide-react";
 import type { SocialPlatform, SocialPostFormat, SocialPostStatus } from "@zenite-mkt/db";
+import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 
 export interface PanelConnection {
   platform: SocialPlatform;
@@ -81,6 +82,9 @@ export function SocialPublishPanel({
   const [caption, setCaption] = useState(defaultCaption);
   const [date, setDate] = useState(defaultDate && defaultDate >= todaySP() ? defaultDate : todaySP());
   const [time, setTime] = useState(defaultTime);
+  /** Horário próprio de cada rede (mesma data); a rede que não está aqui usa `time`. */
+  const [overrides, setOverrides] = useState<Partial<Record<SocialPlatform, string>>>({});
+  const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
   const [busy, setBusy] = useState<"schedule" | "now" | string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
@@ -91,14 +95,23 @@ export function SocialPublishPanel({
   async function submit(now: boolean) {
     if (busy) return;
     setMessage(null);
-    if (!now && !window.confirm(`Agendar para ${date.split("-").reverse().join("/")} às ${time}?`)) return;
+    const instants = Object.fromEntries(platforms.map((p) => [p, new Date(`${date}T${timeOf(p)}:00-03:00`)])) as Record<string, Date>;
+    if (!now && Object.values(instants).some((d) => Number.isNaN(d.getTime()))) {
+      setMessage({ kind: "error", text: "Escolha a hora de cada rede." });
+      return;
+    }
+    const when = platforms.map((p) => `${LABEL[p]} às ${timeOf(p)}`).join(" e ");
+    if (!now && !window.confirm(`Agendar para ${date.split("-").reverse().join("/")} — ${when}?`)) return;
     if (now && !window.confirm("Publicar agora nas redes marcadas? Isso vai ao ar imediatamente.")) return;
     setBusy(now ? "now" : "schedule");
-    const publishAt = new Date(`${date}T${time}:00-03:00`).toISOString();
+    // publishAt = o mais cedo (padrão); cada rede segue o próprio horário em publishAtByPlatform.
+    const earliest = Math.min(...Object.values(instants).map((d) => d.getTime()));
+    const publishAt = new Date(now || !Number.isFinite(earliest) ? Date.now() : earliest).toISOString();
+    const publishAtByPlatform = now ? undefined : Object.fromEntries(Object.entries(instants).map(([p, d]) => [p, d.toISOString()]));
     const res = await fetch(`/api/content/${contentId}/social-posts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platforms, format, caption, publishAt, now }),
+      body: JSON.stringify({ platforms, format, caption, publishAt, publishAtByPlatform, now }),
     });
     const body = await res.json().catch(() => null);
     setBusy(null);
@@ -263,12 +276,31 @@ export function SocialPublishPanel({
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
           Data
-          <input type="date" value={date} min={todaySP()} onChange={(e) => setDate(e.target.value)} className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
+          <input
+            type="date"
+            value={date}
+            min={todaySP()}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setOverrides({});
+            }}
+            className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+          />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
-          Hora (Brasília)
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
-        </label>
+        {platforms.length === 0 ? (
+          <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
+            Hora (Brasília)
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
+          </label>
+        ) : (
+          <PlatformTimeFields
+            platforms={platforms}
+            date={date}
+            times={Object.fromEntries(platforms.map((p) => [p, timeOf(p)]))}
+            onChange={(p, value) => setOverrides((prev) => ({ ...prev, [p]: value }))}
+            labelClass="text-xs font-medium text-[#667085]"
+          />
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">

@@ -3,7 +3,22 @@ import { describe, expect, it, vi } from "vitest";
 // As regras puras não usam o banco; o mock evita abrir conexão ao importar o módulo.
 vi.mock("@zenite-mkt/db", () => ({ prisma: {} }));
 
-const { platformForChannel, postFormatFor, spDateTime } = await import("./social-scheduling");
+const { parsePublishAtByPlatform, platformForChannel, postFormatFor, spDateTime } = await import("./social-scheduling");
+
+describe("agendador — horário por rede", () => {
+  it("lê um instante por rede e ignora lixo", () => {
+    const parsed = parsePublishAtByPlatform({
+      INSTAGRAM: "2026-10-29T16:00:00.000Z",
+      FACEBOOK: "2026-10-29T12:00:00.000Z",
+      GOOGLE_BUSINESS: "2026-10-29T12:00:00.000Z",
+    });
+    expect(parsed.INSTAGRAM?.toISOString()).toBe("2026-10-29T16:00:00.000Z");
+    expect(parsed.FACEBOOK?.toISOString()).toBe("2026-10-29T12:00:00.000Z");
+    expect(parsed.GOOGLE_BUSINESS).toBeUndefined();
+    expect(parsePublishAtByPlatform({ INSTAGRAM: "nada" })).toEqual({});
+    expect(parsePublishAtByPlatform(null)).toEqual({});
+  });
+});
 
 describe("agendador — horário de Brasília", () => {
   it("data + hora digitadas viram o instante certo (UTC-3)", () => {

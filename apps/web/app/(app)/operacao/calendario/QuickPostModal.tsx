@@ -10,6 +10,7 @@ import { CONTENT_MEDIA_MAX_FILES, isVideoType, validateContentMediaFile } from "
 import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-upload";
 import { formatBytes } from "@/lib/media";
 import { quickPostMediaError } from "@/lib/social-quick-post";
+import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 
 /** Cliente com Instagram/Facebook conectado — só esses aparecem na publicação direta. */
 export interface QuickPostClient {
@@ -64,6 +65,8 @@ export function QuickPostModal({
   const [caption, setCaption] = useState("");
   const [date, setDate] = useState(initialDate);
   const [time, setTime] = useState("10:00");
+  /** Horário próprio de cada rede (mesma data); a rede que não está aqui usa `time`. */
+  const [overrides, setOverrides] = useState<Partial<Record<SocialPlatform, string>>>({});
   const [busy, setBusy] = useState<"schedule" | "now" | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,7 @@ export function QuickPostModal({
     setClientId(id);
     setPlatforms(next ? next.connections.filter((c) => c.active).map((c) => c.platform) : []);
     setTime(defaultTimeFor(forDate, next));
+    setOverrides({});
   }
 
   // Cada abertura começa limpa, no dia clicado.
@@ -94,6 +98,8 @@ export function QuickPostModal({
     selectClient(preset?.id ?? "", start);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialDate]);
+
+  const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
 
   function close() {
     if (busy) return;
@@ -130,16 +136,26 @@ export function QuickPostModal({
     const mediaError = quickPostMediaError({ platforms, format, files });
     if (mediaError) return setError(mediaError);
     if (caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
-    const publishAt = now ? new Date() : new Date(`${date}T${time}:00-03:00`);
-    if (!now && publishAt.getTime() < Date.now()) return setError("Esse horário já passou. Escolha outro ou use Publicar agora.");
+    const byPlatform = Object.fromEntries(platforms.map((p) => [p, new Date(`${date}T${timeOf(p)}:00-03:00`)])) as Partial<Record<SocialPlatform, Date>>;
+    const instants = platforms.map((p) => byPlatform[p]!);
+    if (!now && instants.some((d) => Number.isNaN(d.getTime()))) return setError("Escolha a hora de cada rede.");
+    if (!now && instants.some((d) => d.getTime() < Date.now())) return setError("Esse horário já passou. Escolha outro ou use Publicar agora.");
+    // publishAt = o mais cedo; é ele que dá a data da peça e valida a criação.
+    const publishAt = now ? new Date() : new Date(Math.min(...instants.map((d) => d.getTime())));
     const networks = platforms.map((p) => LABEL[p]).join(" e ");
     const question = now
       ? `Publicar agora no ${networks} de ${client.name}? Vai ao ar imediatamente.`
-      : `Agendar no ${networks} de ${client.name} para ${date.split("-").reverse().join("/")} às ${time}?`;
+      : `Agendar para ${date.split("-").reverse().join("/")} — ${platforms.map((p) => `${LABEL[p]} às ${timeOf(p)}`).join(" e ")} (${client.name})?`;
     if (!window.confirm(question)) return;
 
     setBusy(now ? "now" : "schedule");
-    const payload = { platforms, format, caption: format === "STORY" ? "" : caption, publishAt: publishAt.toISOString() };
+    const payload = {
+      platforms,
+      format,
+      caption: format === "STORY" ? "" : caption,
+      publishAt: publishAt.toISOString(),
+      publishAtByPlatform: now ? undefined : Object.fromEntries(platforms.map((p) => [p, byPlatform[p]!.toISOString()])),
+    };
     let contentId: string | null = null;
     let scheduled = false;
     try {
@@ -362,7 +378,7 @@ export function QuickPostModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
             <label className="flex flex-col gap-1 text-sm font-medium text-[#344054]">
               Data
               <input
@@ -372,19 +388,30 @@ export function QuickPostModal({
                 onChange={(e) => {
                   setDate(e.target.value);
                   setTime(defaultTimeFor(e.target.value, client));
+                  setOverrides({});
                 }}
                 className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-[#344054]">
-              Hora (Brasília)
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+            {platforms.length === 0 ? (
+              <label className="flex flex-col gap-1 text-sm font-medium text-[#344054]">
+                Hora (Brasília)
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+                />
+              </label>
+            ) : (
+              <PlatformTimeFields
+                platforms={platforms}
+                date={date}
+                times={Object.fromEntries(platforms.map((p) => [p, timeOf(p)]))}
+                onChange={(p, value) => setOverrides((prev) => ({ ...prev, [p]: value }))}
+                labelClass="text-sm font-medium text-[#344054]"
               />
-            </label>
+            )}
           </div>
 
           {progress && <p className="text-sm text-[#667085]">{progress}</p>}
@@ -410,7 +437,7 @@ export function QuickPostModal({
               style={{ backgroundColor: "#FF2B00" }}
             >
               <CalendarClock size={16} aria-hidden />
-              {busy === "schedule" ? "Agendando..." : `Agendar para ${time}`}
+              {busy === "schedule" ? "Agendando..." : platforms.length === 0 ? "Agendar" : `Agendar para ${[...new Set(platforms.map(timeOf))].join(" / ")}`}
             </button>
           </div>
         </fieldset>
