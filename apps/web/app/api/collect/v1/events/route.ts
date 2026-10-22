@@ -44,10 +44,6 @@ export async function POST(request: Request) {
     return json({ error: "writeKey inválido." }, 401);
   }
 
-  if (looksLikeBot(request.headers.get("user-agent"))) {
-    return json({ visitorId: null, sessionId: null, results: [] }, 202);
-  }
-
   const rawEvents: unknown[] = Array.isArray(body?.events) ? body.events : [];
   if (rawEvents.length === 0) {
     return json({ error: "Informe ao menos um evento em events." }, 400);
@@ -69,6 +65,8 @@ export async function POST(request: Request) {
   const firstEvent = rawEvents[0] as Record<string, unknown> | undefined;
   const firstUrl = normalizeTrackingUrl(firstEvent?.url);
   const device = parseDeviceInfo(request.headers.get("user-agent"));
+  const city = decodeHeaderValue(request.headers.get("x-vercel-ip-city"));
+  const isBot = looksLikeBot(request.headers.get("user-agent"), city);
   const session = await resolveSession(visitor.id, body?.sessionId, {
     landingUrl: firstUrl.url,
     referrer: normalizeReferrer(firstEvent?.referrer),
@@ -80,15 +78,17 @@ export async function POST(request: Request) {
     country: request.headers.get("x-vercel-ip-country"),
     region: request.headers.get("x-vercel-ip-country-region"),
     // A Vercel manda esse header URL-encoded (ex.: "S%C3%A3o%20Paulo").
-    city: decodeHeaderValue(request.headers.get("x-vercel-ip-city")),
+    city,
     deviceType: device.deviceType,
     browser: device.browser,
+    isBot,
   });
 
   const requestContext = {
     // `x-forwarded-for` pode ter uma cadeia de IPs (proxy) — o primeiro é o do visitante.
     clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
     clientUserAgent: request.headers.get("user-agent"),
+    isBot: isBot || session.isBot,
   };
   const results = [];
   for (const raw of rawEvents) {

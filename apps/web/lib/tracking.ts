@@ -176,12 +176,36 @@ export function normalizeReferrer(rawReferrer: unknown): string | null {
   return url;
 }
 
-/** Heurística simples de bot — sem serviço de detecção real ainda (ver docs/DECISIONS.md). */
-const BOT_USER_AGENT_PATTERN = /bot|spider|crawl|headless|curl\/|wget\//i;
+/**
+ * Heurística de bot (seção 2.1, 2026-10-22) — combina User-Agent conhecido de
+ * bot/ferramenta de automação com cidade de datacenter (quando a Vercel
+ * resolve o IP pra uma cidade conhecida de hosting/cloud, não de público
+ * final — foi assim que percebemos tráfego de Forest City NC, Prineville OR
+ * e Fort Worth TX, sedes de datacenter da Meta/Google/outros, aparecendo
+ * como "visitante" de um site cujo público é só Brasil).
+ */
+const BOT_USER_AGENT_PATTERN =
+  /bot|spider|crawl|headless|phantom|selenium|puppeteer|playwright|slurp|curl\/|wget\/|python-requests|python-urllib|node-fetch|axios\/|go-http-client|okhttp|libwww-perl|apache-httpclient|postmanruntime|facebookexternalhit|slackbot|discordbot|telegrambot|whatsapp|ahrefsbot|semrushbot|mj12bot|dotbot|bytespider/i;
 
-export function looksLikeBot(userAgent: string | null): boolean {
+const DATACENTER_CITIES = new Set([
+  "forest city",
+  "prineville",
+  "fort worth",
+  "ashburn",
+  "boydton",
+  "the dalles",
+  "council bluffs",
+  "quincy",
+  "altoona",
+  "papillion",
+  "moses lake",
+]);
+
+export function looksLikeBot(userAgent: string | null, city?: string | null): boolean {
   if (!userAgent || !userAgent.trim()) return true;
-  return BOT_USER_AGENT_PATTERN.test(userAgent);
+  if (BOT_USER_AGENT_PATTERN.test(userAgent)) return true;
+  if (city && DATACENTER_CITIES.has(city.trim().toLowerCase())) return true;
+  return false;
 }
 
 export interface DeviceInfo {

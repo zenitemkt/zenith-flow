@@ -44,6 +44,7 @@ interface SessionSeed {
   city: string | null;
   deviceType: string | null;
   browser: string | null;
+  isBot: boolean;
 }
 
 export async function resolveSession(
@@ -167,7 +168,7 @@ export async function processTrackingEvent(
   visitorId: string,
   sessionId: string,
   raw: unknown,
-  requestContext: { clientIp: string | null; clientUserAgent: string | null },
+  requestContext: { clientIp: string | null; clientUserAgent: string | null; isBot: boolean },
 ): Promise<EventResult> {
   const body = raw as Record<string, unknown> | null;
   const eventId = typeof body?.eventId === "string" && body.eventId ? body.eventId : null;
@@ -232,20 +233,22 @@ export async function processTrackingEvent(
     await identifyVisitor(agencyId, visitorId, properties);
   }
 
-  await dispatchMetaCapiEvent(
-    agencyId,
-    created.id,
-    eventName,
-    eventId,
-    occurredAtRaw,
-    normalizedUrl.url,
-    properties,
-    requestContext.clientIp,
-    requestContext.clientUserAgent,
-    consent,
-    typeof body?.fbp === "string" ? body.fbp : null,
-    typeof body?.fbc === "string" ? body.fbc : null,
-  );
+  if (!requestContext.isBot) {
+    await dispatchMetaCapiEvent(
+      agencyId,
+      created.id,
+      eventName,
+      eventId,
+      occurredAtRaw,
+      normalizedUrl.url,
+      properties,
+      requestContext.clientIp,
+      requestContext.clientUserAgent,
+      consent,
+      typeof body?.fbp === "string" ? body.fbp : null,
+      typeof body?.fbc === "string" ? body.fbc : null,
+    );
+  }
 
   return { eventId, status: "stored" };
 }

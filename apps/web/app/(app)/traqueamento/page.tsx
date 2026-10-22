@@ -34,14 +34,14 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       prisma.lead.count({ where: { agencyId, ...(range ? { createdAt: range } : {}) } }),
       prisma.proposal.count({ where: { agencyId, sentAt: range ? range : { not: null } } }),
       prisma.opportunity.count({ where: { agencyId, status: "WON", ...(range ? { updatedAt: range } : {}) } }),
-      prisma.trackingEvent.count({ where: { agencyId, ...(range ? { occurredAt: range } : {}) } }),
+      prisma.trackingEvent.count({ where: { agencyId, session: { isBot: false }, ...(range ? { occurredAt: range } : {}) } }),
       prisma.trackingEvent.findMany({
-        where: { agencyId, eventName: "page_view", ...(range ? { occurredAt: range } : {}) },
+        where: { agencyId, eventName: "page_view", session: { isBot: false }, ...(range ? { occurredAt: range } : {}) },
         select: { url: true },
       }),
       prisma.trackingEvent.groupBy({
         by: ["eventName"],
-        where: { agencyId, ...(range ? { occurredAt: range } : {}) },
+        where: { agencyId, session: { isBot: false }, ...(range ? { occurredAt: range } : {}) },
         _count: { _all: true },
       }),
       prisma.trackingConsent.findMany({
@@ -59,6 +59,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       }),
     ]);
 
+  const humanSessions = sessions.filter((trackingSession) => !trackingSession.isBot);
+  const botSessionsCount = sessions.length - humanSessions.length;
+  const botTrafficPercentage = sessions.length > 0 ? Math.round((botSessionsCount / sessions.length) * 100) : 0;
+
   const eventCounts = new Map(eventGroups.map((group) => [group.eventName, group._count._all]));
   const countEvent = (name: string) => eventCounts.get(name) ?? 0;
   const engagedSessions = countEvent("engaged_session");
@@ -68,11 +72,11 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const formStarts = countEvent("form_start");
   const formSubmits = countEvent("form_submit");
   const formAbandons = countEvent("form_abandon");
-  const engagementRate = sessions.length > 0 ? Math.round((engagedSessions / sessions.length) * 100) : 0;
+  const engagementRate = humanSessions.length > 0 ? Math.round((engagedSessions / humanSessions.length) * 100) : 0;
   const formCompletionRate = formStarts > 0 ? Math.round((formSubmits / formStarts) * 100) : 0;
 
   const channelCounts = new Map<string, number>();
-  for (const trackingSession of sessions) {
+  for (const trackingSession of humanSessions) {
     const touchpoint = resolveTouchpoint(trackingSession, campaigns);
     channelCounts.set(touchpoint.channel, (channelCounts.get(touchpoint.channel) ?? 0) + 1);
   }
@@ -91,14 +95,14 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     .slice(0, 10);
 
   const sessionsByVisitor = new Map<string, number>();
-  for (const trackingSession of sessions) {
+  for (const trackingSession of humanSessions) {
     sessionsByVisitor.set(trackingSession.visitorId, (sessionsByVisitor.get(trackingSession.visitorId) ?? 0) + 1);
   }
   const returningVisitorsCount = Array.from(sessionsByVisitor.values()).filter((count) => count > 1).length;
 
   const cityCounts = new Map<string, number>();
   const deviceCounts = new Map<string, number>();
-  for (const trackingSession of sessions) {
+  for (const trackingSession of humanSessions) {
     const cityLabel = trackingSession.city
       ? `${trackingSession.city}${trackingSession.region ? ` (${trackingSession.region})` : ""}`
       : null;
@@ -109,7 +113,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   const topCities = Array.from(cityCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-  const deviceTotal = sessions.length;
+  const deviceTotal = humanSessions.length;
   const deviceBreakdown = Array.from(deviceCounts.entries()).sort((a, b) => b[1] - a[1]);
   const DEVICE_LABELS: Record<string, string> = {
     desktop: "Computador",
@@ -162,7 +166,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
             <p className="text-xs text-[#667085]">visitantes recorrentes</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{sessions.length}</p>
+            <p className="text-xl font-semibold text-[#101828]">{humanSessions.length}</p>
             <p className="text-xs text-[#667085]">sessões</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
@@ -172,6 +176,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           <div className="rounded-lg border border-[#EEF0F3] p-3">
             <p className="text-xl font-semibold text-[#101828]">{leadsCount}</p>
             <p className="text-xs text-[#667085]">leads no período</p>
+          </div>
+          <div className="rounded-lg border border-[#EEF0F3] p-3">
+            <p className="text-xl font-semibold text-[#101828]">{botTrafficPercentage}%</p>
+            <p className="text-xs text-[#667085]">tráfego não humano detectado ({botSessionsCount} de {sessions.length} sessões)</p>
           </div>
         </div>
       </section>
