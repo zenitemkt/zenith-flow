@@ -227,7 +227,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <h2 className="mb-3 text-sm font-semibold text-[#101828]">Páginas mais vistas</h2>
           {topPages.length === 0 ? (
@@ -245,11 +245,11 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </div>
 
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Por cidade, aparelho, sistema e navegador</h2>
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Por cidade</h2>
           {topCities.length === 0 ? (
-            <p className="py-2 text-sm text-[#667085]">Nenhuma cidade identificada neste período.</p>
+            <p className="py-6 text-center text-sm text-[#667085]">Nenhuma cidade identificada neste período.</p>
           ) : (
-            <div className="mb-4 flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               {topCities.map(([city, count]) => (
                 <div key={city} className="flex items-center justify-between gap-2 text-sm">
                   <span className="truncate text-[#344054]">{city}</span>
@@ -258,8 +258,12 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
               ))}
             </div>
           )}
+        </div>
+
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Dispositivo</h2>
           {deviceBreakdown.length > 0 && (
-            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
+            <div className="mb-4 flex flex-wrap gap-2">
               {deviceBreakdown.map(([device, count]) => (
                 <span key={device} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
                   {DEVICE_LABELS[device] ?? device}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
@@ -267,22 +271,30 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
               ))}
             </div>
           )}
-          {osBreakdown.length > 0 && (
-            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
-              {osBreakdown.map(([os, count]) => (
-                <span key={os} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
-                  {os}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
-                </span>
-              ))}
+          {browserBreakdown.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-1.5 text-xs font-medium text-[#98A2B3]">Navegador</p>
+              <div className="flex flex-col gap-1.5">
+                {browserBreakdown.map(([browser, count]) => (
+                  <div key={browser} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate text-[#344054]">{browser === "desconhecido" ? "Desconhecido" : browser}</span>
+                    <span className="shrink-0 font-semibold text-[#101828]">{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          {browserBreakdown.length > 0 && (
-            <div className="flex flex-wrap gap-2 border-t border-[#EEF0F3] pt-3">
-              {browserBreakdown.map(([browser, count]) => (
-                <span key={browser} className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-xs font-medium text-[#344054]">
-                  {browser}: {deviceTotal > 0 ? Math.round((count / deviceTotal) * 100) : 0}%
-                </span>
-              ))}
+          {osBreakdown.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-[#98A2B3]">Sistema operacional</p>
+              <div className="flex flex-col gap-1.5">
+                {osBreakdown.map(([os, count]) => (
+                  <div key={os} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="truncate text-[#344054]">{os === "desconhecido" ? "Desconhecido" : os}</span>
+                    <span className="shrink-0 font-semibold text-[#101828]">{count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

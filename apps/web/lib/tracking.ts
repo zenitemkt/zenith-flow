@@ -201,9 +201,17 @@ const DATACENTER_CITIES = new Set([
   "moses lake",
 ]);
 
-export function looksLikeBot(userAgent: string | null, city?: string | null): boolean {
+/**
+ * Zenite Hub/Flow só anuncia e atende clientes no Brasil — qualquer sessão
+ * resolvida fora do Brasil é, na prática, bot/scraper/VPN (foi assim que
+ * "Springfield" nos EUA apareceu no painel sem bater em nenhuma cidade da
+ * lista de datacenter abaixo: provavelmente um IP não localizável que o
+ * provedor de geo-IP resolveu pra uma cidade-padrão dos EUA).
+ */
+export function looksLikeBot(userAgent: string | null, city?: string | null, country?: string | null): boolean {
   if (!userAgent || !userAgent.trim()) return true;
   if (BOT_USER_AGENT_PATTERN.test(userAgent)) return true;
+  if (country && country.trim().toUpperCase() !== "BR") return true;
   if (city && DATACENTER_CITIES.has(city.trim().toLowerCase())) return true;
   return false;
 }

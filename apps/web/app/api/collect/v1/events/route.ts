@@ -66,7 +66,8 @@ export async function POST(request: Request) {
   const firstUrl = normalizeTrackingUrl(firstEvent?.url);
   const device = parseDeviceInfo(request.headers.get("user-agent"));
   const city = decodeHeaderValue(request.headers.get("x-vercel-ip-city"));
-  const isBot = looksLikeBot(request.headers.get("user-agent"), city);
+  const country = request.headers.get("x-vercel-ip-country");
+  const isBot = looksLikeBot(request.headers.get("user-agent"), city, country);
   const session = await resolveSession(visitor.id, body?.sessionId, {
     landingUrl: firstUrl.url,
     referrer: normalizeReferrer(firstEvent?.referrer),
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     utmCampaign: firstUrl.utmCampaign,
     utmContent: firstUrl.utmContent,
     utmTerm: firstUrl.utmTerm,
-    country: request.headers.get("x-vercel-ip-country"),
+    country,
     region: request.headers.get("x-vercel-ip-country-region"),
     // A Vercel manda esse header URL-encoded (ex.: "S%C3%A3o%20Paulo").
     city,
