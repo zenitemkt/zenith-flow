@@ -116,12 +116,15 @@ export async function refreshInstagramToken(longLivedToken: string): Promise<{ a
 
 export interface InstagramTokenIdentity {
   id: string;
+  /** Formato que aparece em `entry.id`/`recipient.id` nos webhooks — diferente do `id` acima (confirmado testando ao vivo em 2026-10-23). É esse que precisa ser guardado como `messagingAccountId`. */
+  userId: string;
   username: string;
 }
 
 /** Confirma que o token é válido e devolve a conta dona dele — usado ao salvar o token colado manualmente. */
 export async function fetchInstagramTokenIdentity(igToken: string): Promise<InstagramTokenIdentity> {
-  return graphGet<InstagramTokenIdentity>(GRAPH, "/me", { fields: "id,username", access_token: igToken });
+  const result = await graphGet<{ id: string; user_id: string; username: string }>(GRAPH, "/me", { fields: "id,user_id,username", access_token: igToken });
+  return { id: result.id, userId: result.user_id, username: result.username };
 }
 
 export interface RecentMediaItem {

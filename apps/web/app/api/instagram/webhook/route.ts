@@ -87,7 +87,6 @@ export async function POST(request: Request) {
     return new NextResponse("Invalid signature", { status: 403 });
   }
   const payload = JSON.parse(rawBody) as { entry?: Array<Record<string, unknown>> };
-  console.log("[instagram-webhook] payload", JSON.stringify(payload));
 
   for (const entry of payload.entry ?? []) {
     const igAccountId = String(entry.id ?? "");

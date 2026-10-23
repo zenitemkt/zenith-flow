@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
   await prisma.socialConnection.updateMany({
     where: { clientId, platform: "INSTAGRAM" },
-    data: { messagingAccessTokenEnc: encryptSecret(finalToken), messagingAccountId: identity.id, messagingTokenExpiresAt: expiresAt },
+    data: { messagingAccessTokenEnc: encryptSecret(finalToken), messagingAccountId: identity.userId, messagingTokenExpiresAt: expiresAt },
   });
 
   return NextResponse.json({ ok: true, username: identity.username, longLived: Boolean(expiresAt), expiresAt });
