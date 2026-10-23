@@ -27,6 +27,8 @@ const PUBLIC_PATH_PREFIXES = [
   // sessão. Webhook protegido por assinatura (x-hub-signature-256) + verify token no handshake, não por login.
   "/api/instagram/webhook",
   "/api/instagram/click",
+  // Disparo interno pontual de teste (2026-10-23, remover depois) — protegido por INTERNAL_TEST_SECRET, não por login.
+  "/api/internal/fire-test-meta-event",
   // Autenticação própria por chave (x-draft-agent-key, timingSafeEqual) pra
   // além do cookie de sessão — o agente externo (rotina agendada) não tem
   // cookie, então precisa passar pelo middleware antes de chegar na checagem
