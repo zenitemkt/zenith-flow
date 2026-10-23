@@ -28,8 +28,9 @@ export async function GET(request: Request) {
   return new NextResponse("Forbidden", { status: 403 });
 }
 
+/** Assinado com a chave secreta do app DO INSTAGRAM (produto "API do Instagram"), não a do app principal da Meta — são apps diferentes. */
 function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
-  const secret = process.env.META_APP_SECRET;
+  const secret = process.env.INSTAGRAM_APP_SECRET;
   if (!secret || !signatureHeader?.startsWith("sha256=")) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   const given = signatureHeader.slice("sha256=".length);
