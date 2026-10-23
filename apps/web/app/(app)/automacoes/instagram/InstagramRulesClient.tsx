@@ -4,19 +4,25 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 
+interface Button {
+  text: string;
+  url: string;
+}
+
 interface Rule {
   id: string;
   triggerType: string;
   keyword: string | null;
   responseText: string;
-  buttonText: string | null;
-  buttonUrl: string | null;
+  buttons: Button[];
   mediaId: string | null;
   mediaCaption: string | null;
   mediaPermalink: string | null;
   publicReplyTexts: string[];
   active: boolean;
 }
+
+const MAX_BUTTONS = 3;
 
 interface MediaItem {
   id: string;
@@ -42,7 +48,7 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 function emptyDraft(triggerType: string): Omit<Rule, "id" | "active"> {
-  return { triggerType, keyword: "", responseText: "", buttonText: "", buttonUrl: "", mediaId: null, mediaCaption: null, mediaPermalink: null, publicReplyTexts: [] };
+  return { triggerType, keyword: "", responseText: "", buttons: [], mediaId: null, mediaCaption: null, mediaPermalink: null, publicReplyTexts: [] };
 }
 
 export function InstagramRulesClient({
@@ -261,8 +267,7 @@ function RuleFormModal({
   const [triggerType, setTriggerType] = useState(initial?.triggerType ?? "direct_message");
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
   const [responseText, setResponseText] = useState(initial?.responseText ?? "");
-  const [buttonText, setButtonText] = useState(initial?.buttonText ?? "");
-  const [buttonUrl, setButtonUrl] = useState(initial?.buttonUrl ?? "");
+  const [buttons, setButtons] = useState<Button[]>(initial?.buttons ?? []);
   const [mediaScope, setMediaScope] = useState<"any" | "specific">(initial?.mediaId ? "specific" : "any");
   const [mediaId, setMediaId] = useState(initial?.mediaId ?? null as string | null);
   const [mediaCaption, setMediaCaption] = useState(initial?.mediaCaption ?? null as string | null);
@@ -275,8 +280,7 @@ function RuleFormModal({
     setTriggerType(initial?.triggerType ?? "direct_message");
     setKeyword(initial?.keyword ?? "");
     setResponseText(initial?.responseText ?? "");
-    setButtonText(initial?.buttonText ?? "");
-    setButtonUrl(initial?.buttonUrl ?? "");
+    setButtons(initial?.buttons ?? []);
     setMediaScope(initial?.mediaId ? "specific" : "any");
     setMediaId(initial?.mediaId ?? null);
     setMediaCaption(initial?.mediaCaption ?? null);
@@ -302,8 +306,7 @@ function RuleFormModal({
       triggerType,
       keyword: keyword || null,
       responseText,
-      buttonText: buttonText || null,
-      buttonUrl: buttonUrl || null,
+      buttons: buttons.filter((b) => b.text.trim() && b.url.trim()),
       mediaId: triggerType === "comment" && mediaScope === "specific" ? mediaId : null,
       mediaCaption: triggerType === "comment" && mediaScope === "specific" ? mediaCaption : null,
       publicReplyTexts: triggerType === "comment" ? publicReplyTexts.split("\n").map((l) => l.trim()).filter(Boolean) : [],
@@ -385,15 +388,40 @@ function RuleFormModal({
           <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} rows={3} className="rounded-lg border border-[#D0D5DD] p-2.5 text-sm" />
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-[#475467]">
-            Texto do botão (opcional)
-            <input value={buttonText} onChange={(e) => setButtonText(e.target.value)} className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-[#475467]">
-            Link do botão
-            <input value={buttonUrl} onChange={(e) => setButtonUrl(e.target.value)} className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm" />
-          </label>
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-[#475467]">Botões (opcional, até {MAX_BUTTONS})</p>
+          {buttons.map((button, index) => (
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <input
+                value={button.text}
+                onChange={(e) => setButtons(buttons.map((b, i) => (i === index ? { ...b, text: e.target.value } : b)))}
+                placeholder="Texto do botão"
+                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm"
+              />
+              <input
+                value={button.url}
+                onChange={(e) => setButtons(buttons.map((b, i) => (i === index ? { ...b, url: e.target.value } : b)))}
+                placeholder="Link do botão"
+                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setButtons(buttons.filter((_, i) => i !== index))}
+                className="h-9 rounded-lg border border-[#FDA29B] px-2.5 text-xs font-semibold text-[#B42318] hover:bg-[#FEF3F2]"
+              >
+                Remover
+              </button>
+            </div>
+          ))}
+          {buttons.length < MAX_BUTTONS && (
+            <button
+              type="button"
+              onClick={() => setButtons([...buttons, { text: "", url: "" }])}
+              className="h-9 self-start rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]"
+            >
+              + Adicionar botão
+            </button>
+          )}
         </div>
 
         {triggerType === "comment" && (

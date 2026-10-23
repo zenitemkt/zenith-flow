@@ -13,6 +13,17 @@ function text(value: unknown, maxLength = 1000): string | null {
   return normalized ? normalized.slice(0, maxLength) : null;
 }
 
+const MAX_BUTTONS = 3;
+
+function parseButtons(value: unknown): Array<{ text: string; url: string }> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((b): b is { text?: unknown; url?: unknown } => typeof b === "object" && b !== null)
+    .map((b) => ({ text: text(b.text, 20), url: text(b.url, 500) }))
+    .filter((b): b is { text: string; url: string } => Boolean(b.text && b.url))
+    .slice(0, MAX_BUTTONS);
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
@@ -25,9 +36,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const body = await request.json().catch(() => null);
   const data: Record<string, unknown> = {};
   if (typeof body?.active === "boolean") data.active = body.active;
-  for (const field of ["keyword", "responseText", "buttonText", "buttonUrl", "mediaId", "mediaCaption", "mediaPermalink"] as const) {
+  for (const field of ["keyword", "responseText", "mediaId", "mediaCaption", "mediaPermalink"] as const) {
     if (field in (body ?? {})) data[field] = text(body[field], field === "responseText" ? 1000 : 500);
   }
+  if (Array.isArray(body?.buttons)) data.buttons = parseButtons(body.buttons);
   if (Array.isArray(body?.publicReplyTexts)) {
     data.publicReplyTexts = body.publicReplyTexts
       .filter((item: unknown): item is string => typeof item === "string" && Boolean(item.trim()))

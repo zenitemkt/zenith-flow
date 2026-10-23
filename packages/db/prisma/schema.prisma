@@ -2989,8 +2989,8 @@ model InstagramAutomationRule {
   /// null = regra "pega-tudo" (qualquer texto daquele tipo).
   keyword     String?
   responseText String
-  buttonText   String?
-  buttonUrl    String?
+  /// Até 3 botões (limite da Meta pro template de botão): [{text, url}]. Substitui buttonText/buttonUrl.
+  buttons      Json?
   /// Só pra comment: null = vale pra qualquer post/reels; preenchido = só nesse post específico.
   mediaId         String?
   mediaCaption    String?
@@ -3025,13 +3025,15 @@ model InstagramAutomationLog {
   messageId    String? @unique
   receivedText String?
   sentText     String?
-  /// Destino real do botão — usado pelo redirecionador de clique, nunca exposto direto na DM.
-  buttonUrl    String?
-  status       String // 'pending' | 'sent' | 'failed' | 'no_match'
-  error        String?
-  readAt       DateTime?
-  clickedAt    DateTime?
-  createdAt    DateTime @default(now())
+  /// Destinos reais dos botões (mesma ordem enviada) — usado pelo redirecionador de clique, nunca exposto direto na DM. string[].
+  buttonUrls       Json?
+  status           String // 'pending' | 'sent' | 'failed' | 'no_match'
+  error            String?
+  readAt           DateTime?
+  clickedAt        DateTime?
+  /// Qual botão (índice em buttonUrls) foi clicado primeiro.
+  clickedButtonIndex Int?
+  createdAt        DateTime @default(now())
 
   @@index([agencyId, clientId, createdAt])
   @@map("instagram_automation_log")

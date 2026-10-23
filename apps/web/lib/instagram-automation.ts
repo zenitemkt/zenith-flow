@@ -43,21 +43,29 @@ async function graphGet<T>(base: string, path: string, params: Record<string, st
 // Envio
 // ---------------------------------------------------------------------------
 
+export interface MessageButton {
+  text: string;
+  url: string;
+}
+
+/** Limite da Meta pro template de botão (Messenger/Instagram). */
+export const MAX_MESSAGE_BUTTONS = 3;
+
 interface SendMessagePayload {
   text: string;
-  buttonText?: string | null;
-  buttonUrl?: string | null;
+  buttons?: MessageButton[] | null;
 }
 
 function buildMessageBody(payload: SendMessagePayload): string {
-  if (!payload.buttonText || !payload.buttonUrl) return JSON.stringify({ text: payload.text });
+  const buttons = (payload.buttons ?? []).slice(0, MAX_MESSAGE_BUTTONS);
+  if (buttons.length === 0) return JSON.stringify({ text: payload.text });
   return JSON.stringify({
     attachment: {
       type: "template",
       payload: {
         template_type: "button",
         text: payload.text,
-        buttons: [{ type: "web_url", url: payload.buttonUrl, title: payload.buttonText.slice(0, 20) }],
+        buttons: buttons.map((button) => ({ type: "web_url", url: button.url, title: button.text.slice(0, 20) })),
       },
     },
   });

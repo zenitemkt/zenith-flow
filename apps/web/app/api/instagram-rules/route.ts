@@ -10,6 +10,16 @@ function text(value: unknown, maxLength = 1000): string | null {
 }
 
 const VALID_TRIGGERS = ["story_reply", "comment", "direct_message"];
+const MAX_BUTTONS = 3;
+
+function parseButtons(value: unknown): Array<{ text: string; url: string }> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((b): b is { text?: unknown; url?: unknown } => typeof b === "object" && b !== null)
+    .map((b) => ({ text: text(b.text, 20), url: text(b.url, 500) }))
+    .filter((b): b is { text: string; url: string } => Boolean(b.text && b.url))
+    .slice(0, MAX_BUTTONS);
+}
 
 /** Regras do mini-chat de Instagram (Blueprint, seção 4.6) — uma tela por cliente da agência. */
 export async function GET(request: Request) {
@@ -43,8 +53,7 @@ export async function POST(request: Request) {
   if (!responseText) return NextResponse.json({ error: "Mensagem privada é obrigatória." }, { status: 400 });
 
   const keyword = text(body?.keyword, 100);
-  const buttonText = text(body?.buttonText, 20);
-  const buttonUrl = text(body?.buttonUrl, 500);
+  const buttons = parseButtons(body?.buttons);
   const mediaId = triggerType === "comment" ? text(body?.mediaId, 100) : null;
   const mediaCaption = triggerType === "comment" ? text(body?.mediaCaption, 300) : null;
   const mediaPermalink = triggerType === "comment" ? text(body?.mediaPermalink, 300) : null;
@@ -60,8 +69,7 @@ export async function POST(request: Request) {
       triggerType,
       keyword,
       responseText,
-      buttonText,
-      buttonUrl,
+      buttons,
       mediaId,
       mediaCaption,
       mediaPermalink,

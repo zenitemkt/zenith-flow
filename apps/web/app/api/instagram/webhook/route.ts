@@ -10,6 +10,7 @@ import {
   sendInstagramPrivateReplyToComment,
   sendInstagramPublicCommentReply,
   type MatchableRule,
+  type MessageButton,
 } from "@/lib/instagram-automation";
 
 /**
@@ -81,6 +82,16 @@ async function loadActiveRules(agencyId: string, clientId: string): Promise<Matc
   });
 }
 
+/** Troca os links reais da regra por URLs do nosso redirecionador de clique (seção 4.4 — a Meta só avisa leitura, não clique). */
+function buildTrackedButtons(buttons: unknown, logId: string): { send: MessageButton[]; realUrls: string[] } {
+  const parsed = Array.isArray(buttons) ? (buttons as Array<{ text?: string; url?: string }>) : [];
+  const valid = parsed.filter((b): b is { text: string; url: string } => Boolean(b.text && b.url));
+  return {
+    send: valid.map((b, index) => ({ text: b.text, url: `${getAppBaseUrl()}/api/instagram/click/${logId}/${index}` })),
+    realUrls: valid.map((b) => b.url),
+  };
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"))) {
@@ -91,8 +102,6 @@ export async function POST(request: Request) {
   for (const entry of payload.entry ?? []) {
     const igAccountId = String(entry.id ?? "");
     if (!igAccountId) continue;
-    const diagnosticTarget = await resolveTarget(igAccountId);
-    console.log("[instagram-webhook] entry.id=", igAccountId, "resolved=", Boolean(diagnosticTarget));
 
     const messagingEvents = Array.isArray(entry.messaging) ? (entry.messaging as Array<Record<string, unknown>>) : [];
     const changeEvents = Array.isArray(entry.changes) ? (entry.changes as Array<Record<string, unknown>>) : [];
@@ -132,16 +141,15 @@ export async function POST(request: Request) {
       }
       const fullRule = await prisma.instagramAutomationRule.findUnique({ where: { id: rule.id } });
       if (!fullRule) continue;
-      const buttonUrl = fullRule.buttonUrl ? `${getAppBaseUrl()}/api/instagram/click/${claimed.id}` : null;
+      const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
         await sendInstagramDirectMessage(target.igToken, target.igAccountId, senderId, {
           text: fullRule.responseText,
-          buttonText: fullRule.buttonText,
-          buttonUrl,
+          buttons: sendButtons,
         });
         await prisma.instagramAutomationLog.update({
           where: { id: claimed.id },
-          data: { status: "sent", sentText: fullRule.responseText, buttonUrl: fullRule.buttonUrl, ruleId: fullRule.id },
+          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id },
         });
       } catch (error) {
         await prisma.instagramAutomationLog.update({
@@ -179,18 +187,17 @@ export async function POST(request: Request) {
       }
       const fullRule = await prisma.instagramAutomationRule.findUnique({ where: { id: rule.id } });
       if (!fullRule) continue;
-      const buttonUrl = fullRule.buttonUrl ? `${getAppBaseUrl()}/api/instagram/click/${claimed.id}` : null;
+      const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
         await sendInstagramPrivateReplyToComment(target.igToken, target.igAccountId, commentId, {
           text: fullRule.responseText,
-          buttonText: fullRule.buttonText,
-          buttonUrl,
+          buttons: sendButtons,
         });
         const publicText = pickPublicReplyVariation(fullRule.publicReplyTexts);
         if (publicText) await sendInstagramPublicCommentReply(target.igToken, commentId, publicText);
         await prisma.instagramAutomationLog.update({
           where: { id: claimed.id },
-          data: { status: "sent", sentText: fullRule.responseText, buttonUrl: fullRule.buttonUrl, ruleId: fullRule.id },
+          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id },
         });
       } catch (error) {
         await prisma.instagramAutomationLog.update({
