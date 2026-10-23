@@ -135,34 +135,45 @@ async function dispatchMetaCapiEvent(
   });
   if (!connection || !connection.metaPixelId || connection.status !== "ACTIVE") return;
 
-  let status: "SENT" | "FAILED" = "SENT";
-  let error: string | null = null;
-  try {
-    const accessToken = decryptSecret(connection.accessTokenEnc);
-    await sendMetaCapiEvent(connection.metaPixelId, accessToken, {
-      eventName: metaEventName,
-      eventId,
-      occurredAt,
-      url,
-      email: typeof properties.email === "string" ? properties.email : null,
-      phone: typeof properties.phone === "string" ? properties.phone : null,
-      clientIp,
-      clientUserAgent,
-      fbp,
-      fbc,
-      // Só pra verificação manual no Gerenciador de Eventos — var só deve existir na Vercel durante o teste, nunca em uso real.
-      testEventCode: process.env.META_CAPI_TEST_EVENT_CODE || null,
-    });
-  } catch (err) {
-    status = "FAILED";
-    error = err instanceof Error ? err.message : "Erro desconhecido.";
-  }
+  /**
+   * `form_submit` manda dois eventos pra Meta: o padrão `Lead` (já existia) e
+   * um evento personalizado `FormSubmit` (2026-10-23, pedido explícito) —
+   * mesmo gate de consentimento do Lead (marketing, banner ou o checkbox do
+   * próprio formulário), eventId derivado pra não colidir com o do Lead.
+   */
+  const eventsToSend: Array<{ name: string; id: string }> = [{ name: metaEventName, id: eventId }];
+  if (eventName === "form_submit") eventsToSend.push({ name: "FormSubmit", id: `${eventId}-fs` });
 
-  await prisma.eventDelivery
-    .create({ data: { agencyId, trackingEventId, destination: "META", status, error } })
-    .catch(() => {
-      /* Falha ao gravar o log de auditoria não pode mascarar nem agravar o problema original. */
-    });
+  const accessToken = decryptSecret(connection.accessTokenEnc);
+  for (const toSend of eventsToSend) {
+    let status: "SENT" | "FAILED" = "SENT";
+    let error: string | null = null;
+    try {
+      await sendMetaCapiEvent(connection.metaPixelId, accessToken, {
+        eventName: toSend.name,
+        eventId: toSend.id,
+        occurredAt,
+        url,
+        email: typeof properties.email === "string" ? properties.email : null,
+        phone: typeof properties.phone === "string" ? properties.phone : null,
+        clientIp,
+        clientUserAgent,
+        fbp,
+        fbc,
+        // Só pra verificação manual no Gerenciador de Eventos — var só deve existir na Vercel durante o teste, nunca em uso real.
+        testEventCode: process.env.META_CAPI_TEST_EVENT_CODE || null,
+      });
+    } catch (err) {
+      status = "FAILED";
+      error = err instanceof Error ? err.message : "Erro desconhecido.";
+    }
+
+    await prisma.eventDelivery
+      .create({ data: { agencyId, trackingEventId, destination: "META", status, error } })
+      .catch(() => {
+        /* Falha ao gravar o log de auditoria não pode mascarar nem agravar o problema original. */
+      });
+  }
 }
 export async function processTrackingEvent(
   agencyId: string,
