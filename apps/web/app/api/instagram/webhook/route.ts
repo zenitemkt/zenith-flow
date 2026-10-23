@@ -40,24 +40,25 @@ function verifySignature(rawBody: string, signatureHeader: string | null): boole
 interface ResolvedTarget {
   agencyId: string;
   clientId: string;
-  pageToken: string;
-  pageId: string;
+  igToken: string;
+  igAccountId: string;
 }
 
+/**
+ * Casada pelo `messagingAccountId` (token IGAA), não pelo `externalId`
+ * antigo (token de Página) — são IDs em espaços diferentes (seção 4.1,
+ * correção de 2026-10-23).
+ */
 async function resolveTarget(igAccountId: string): Promise<ResolvedTarget | null> {
   const connection = await prisma.socialConnection.findFirst({
-    where: { platform: "INSTAGRAM", externalId: igAccountId, status: "ACTIVE" },
+    where: { platform: "INSTAGRAM", messagingAccountId: igAccountId, status: "ACTIVE" },
   });
-  if (!connection) return null;
-  const pageConnection = await prisma.socialConnection.findUnique({
-    where: { clientId_platform: { clientId: connection.clientId, platform: "FACEBOOK" } },
-  });
-  if (!pageConnection) return null;
+  if (!connection?.messagingAccessTokenEnc) return null;
   return {
     agencyId: connection.agencyId,
     clientId: connection.clientId,
-    pageToken: decryptSecret(pageConnection.accessTokenEnc),
-    pageId: pageConnection.externalId,
+    igToken: decryptSecret(connection.messagingAccessTokenEnc),
+    igAccountId,
   };
 }
 
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
       if (!fullRule) continue;
       const buttonUrl = fullRule.buttonUrl ? `${getAppBaseUrl()}/api/instagram/click/${claimed.id}` : null;
       try {
-        await sendInstagramDirectMessage(target.pageToken, senderId, {
+        await sendInstagramDirectMessage(target.igToken, target.igAccountId, senderId, {
           text: fullRule.responseText,
           buttonText: fullRule.buttonText,
           buttonUrl,
@@ -177,13 +178,13 @@ export async function POST(request: Request) {
       if (!fullRule) continue;
       const buttonUrl = fullRule.buttonUrl ? `${getAppBaseUrl()}/api/instagram/click/${claimed.id}` : null;
       try {
-        await sendInstagramPrivateReplyToComment(target.pageToken, target.pageId, commentId, {
+        await sendInstagramPrivateReplyToComment(target.igToken, target.igAccountId, commentId, {
           text: fullRule.responseText,
           buttonText: fullRule.buttonText,
           buttonUrl,
         });
         const publicText = pickPublicReplyVariation(fullRule.publicReplyTexts);
-        if (publicText) await sendInstagramPublicCommentReply(target.pageToken, commentId, publicText);
+        if (publicText) await sendInstagramPublicCommentReply(target.igToken, commentId, publicText);
         await prisma.instagramAutomationLog.update({
           where: { id: claimed.id },
           data: { status: "sent", sentText: fullRule.responseText, buttonUrl: fullRule.buttonUrl, ruleId: fullRule.id },

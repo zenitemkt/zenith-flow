@@ -1,24 +1,25 @@
 import { META_GRAPH_API_VERSION, MetaApiError } from "@/lib/meta-ads";
 
 /**
- * Mini-chat de Instagram (Blueprint de Automações, seção 4) — construído
- * direto na API oficial, usando o MESMO token de Página já guardado em
- * `SocialConnection` (platform INSTAGRAM) que o agendador de redes usa pra
- * publicar. `graph.facebook.com`, não `graph.instagram.com`: essa é a rota
- * de token de Página (Facebook Login for Business), não o produto mais novo
- * de "Instagram Login" standalone (token IGAA) — evita o token de 60 dias
- * daquele outro fluxo, já que o token de Página de um usuário de longa
- * duração não expira.
+ * Mini-chat de Instagram (Blueprint de Automações, seção 4). Correção de
+ * 2026-10-23: mensageria do Instagram SÓ funciona pela "API do Instagram com
+ * Login do Instagram" (token IGAA, `graph.instagram.com`) — o token de
+ * Página (`graph.facebook.com`, usado pra publicar posts) nunca entrega
+ * webhook de mensagem/comentário, por mais que a assinatura pareça aceita. O
+ * Blueprint já avisava isso na seção 4.1; a tentativa inicial de reaproveitar
+ * só o token de Página foi um erro corrigido depois de testar ao vivo.
  */
-const GRAPH = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
+const GRAPH = `https://graph.instagram.com/v26.0`;
+/** Chamadas que ainda usam o token de Página (listar mídia pra regra de comentário, ex.) continuam em graph.facebook.com. */
+const PAGE_GRAPH = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
 
 function graphErrorMessage(body: unknown): string {
   const error = (body as { error?: { message?: string; error_user_msg?: string } } | null)?.error;
   return error?.error_user_msg ?? error?.message ?? "Erro na Graph API da Meta.";
 }
 
-async function graphPost<T>(path: string, params: Record<string, string>): Promise<T> {
-  const response = await fetch(`${GRAPH}${path}`, {
+async function graphPost<T>(base: string, path: string, params: Record<string, string>): Promise<T> {
+  const response = await fetch(`${base}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(params),
@@ -29,8 +30,8 @@ async function graphPost<T>(path: string, params: Record<string, string>): Promi
   return body as T;
 }
 
-async function graphGet<T>(path: string, params: Record<string, string>): Promise<T> {
-  const url = new URL(`${GRAPH}${path}`);
+async function graphGet<T>(base: string, path: string, params: Record<string, string>): Promise<T> {
+  const url = new URL(`${base}${path}`);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   const response = await fetch(url, { method: "GET", cache: "no-store" });
   const body = await response.json().catch(() => null);
@@ -62,66 +63,65 @@ function buildMessageBody(payload: SendMessagePayload): string {
   });
 }
 
-/** DM direta ou resposta a story — `recipient.id` é o IGSID de quem mandou. */
-export async function sendInstagramDirectMessage(pageToken: string, igsid: string, payload: SendMessagePayload): Promise<void> {
-  await graphPost("/me/messages", {
-    access_token: pageToken,
+/** DM direta ou resposta a story — `recipient.id` é o ID (Instagram-scoped) de quem mandou. */
+export async function sendInstagramDirectMessage(igToken: string, igAccountId: string, igsid: string, payload: SendMessagePayload): Promise<void> {
+  await graphPost(GRAPH, `/${igAccountId}/messages`, {
+    access_token: igToken,
     recipient: JSON.stringify({ id: igsid }),
     message: buildMessageBody(payload),
   });
 }
 
 /**
- * Resposta privada a um comentário (vira DM) — precisa do `pageId` na URL
- * (não `/me/messages`) e só funciona até 7 dias depois do comentário, uma
- * vez por autor antes dele responder (limite da própria Meta).
+ * Resposta privada a um comentário (vira DM) — só funciona até 7 dias depois
+ * do comentário, uma vez por autor antes dele responder (limite da própria
+ * Meta).
  */
 export async function sendInstagramPrivateReplyToComment(
-  pageToken: string,
-  pageId: string,
+  igToken: string,
+  igAccountId: string,
   commentId: string,
   payload: SendMessagePayload,
 ): Promise<void> {
-  await graphPost(`/${pageId}/messages`, {
-    access_token: pageToken,
+  await graphPost(GRAPH, `/${igAccountId}/messages`, {
+    access_token: igToken,
     recipient: JSON.stringify({ comment_id: commentId }),
     message: buildMessageBody(payload),
   });
 }
 
 /** Resposta pública visível embaixo do comentário. */
-export async function sendInstagramPublicCommentReply(pageToken: string, commentId: string, text: string): Promise<void> {
-  await graphPost(`/${commentId}/replies`, { access_token: pageToken, message: text });
+export async function sendInstagramPublicCommentReply(igToken: string, commentId: string, text: string): Promise<void> {
+  await graphPost(GRAPH, `/${commentId}/replies`, { access_token: igToken, message: text });
 }
 
-/**
- * Liga o webhook do app pra essa Página — sem isso a Meta nunca manda
- * evento, mesmo com o webhook já configurado no painel do app (esse passo é
- * por Página/cliente, não é global).
- */
-/**
- * Alguns campos (ex.: `comments`) só ficam disponíveis depois de um passo
- * manual no painel do app na Meta (seção 4.1 do Blueprint) — se o pedido
- * falhar por causa de um campo específico ainda não habilitado, tenta de
- * novo sem ele em vez de travar a ativação inteira (mensagem/DM funcionando
- * já vale, mesmo sem comentário ainda).
- */
-export async function subscribeInstagramWebhook(pageToken: string, pageId: string): Promise<{ fields: string[] }> {
-  const allFields = ["messages", "messaging_postbacks", "message_reads", "comments"];
-  let fields = allFields;
-  for (let attempt = 0; attempt < allFields.length; attempt++) {
-    try {
-      await graphPost(`/${pageId}/subscribed_apps`, { access_token: pageToken, subscribed_fields: fields.join(",") });
-      return { fields };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      const match = message.match(/got ["'`]([a-z_]+)["'`]/i);
-      const invalidField = match ? fields.find((field) => field === match[1]) : undefined;
-      if (!invalidField || fields.length === 1) throw error;
-      fields = fields.filter((field) => field !== invalidField);
-    }
-  }
-  throw new Error("Nenhum campo de webhook disponível pra esta Página.");
+/** Troca o token curto por um de longa duração (60 dias) — seção 4.1 do Blueprint, corrigida: esse token expira, precisa de refresh periódico. */
+export async function exchangeForLongLivedInstagramToken(shortLivedToken: string, appSecret: string): Promise<{ accessToken: string; expiresInSeconds: number }> {
+  const result = await graphGet<{ access_token: string; expires_in: number }>(GRAPH, "/access_token", {
+    grant_type: "ig_exchange_token",
+    client_secret: appSecret,
+    access_token: shortLivedToken,
+  });
+  return { accessToken: result.access_token, expiresInSeconds: result.expires_in };
+}
+
+/** Renova um token de longa duração já existente (precisa ter pelo menos 24h de vida) — rodar antes dos 60 dias expirarem. */
+export async function refreshInstagramToken(longLivedToken: string): Promise<{ accessToken: string; expiresInSeconds: number }> {
+  const result = await graphGet<{ access_token: string; expires_in: number }>(GRAPH, "/refresh_access_token", {
+    grant_type: "ig_refresh_token",
+    access_token: longLivedToken,
+  });
+  return { accessToken: result.access_token, expiresInSeconds: result.expires_in };
+}
+
+export interface InstagramTokenIdentity {
+  id: string;
+  username: string;
+}
+
+/** Confirma que o token é válido e devolve a conta dona dele — usado ao salvar o token colado manualmente. */
+export async function fetchInstagramTokenIdentity(igToken: string): Promise<InstagramTokenIdentity> {
+  return graphGet<InstagramTokenIdentity>(GRAPH, "/me", { fields: "id,username", access_token: igToken });
 }
 
 export interface RecentMediaItem {
@@ -135,7 +135,7 @@ export interface RecentMediaItem {
 
 /** Posts/reels recentes da conta — pra tela de regra "este comentário só nesse post". */
 export async function fetchRecentInstagramMedia(pageToken: string, igUserId: string): Promise<RecentMediaItem[]> {
-  const result = await graphGet<{ data: Array<Record<string, string>> }>(`/${igUserId}/media`, {
+  const result = await graphGet<{ data: Array<Record<string, string>> }>(PAGE_GRAPH, `/${igUserId}/media`, {
     access_token: pageToken,
     fields: "id,caption,permalink,media_type,thumbnail_url,media_url,timestamp",
     limit: "30",

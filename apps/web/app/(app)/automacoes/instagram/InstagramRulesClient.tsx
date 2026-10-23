@@ -63,6 +63,7 @@ export function InstagramRulesClient({
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeMsg, setSubscribeMsg] = useState<string | null>(null);
+  const [tokenInput, setTokenInput] = useState("");
   const [editing, setEditing] = useState<Rule | null>(null);
   const [creatingTrigger, setCreatingTrigger] = useState<string | null>(null);
 
@@ -77,23 +78,22 @@ export function InstagramRulesClient({
       .catch(() => setMetrics(null));
   }, [selectedClientId]);
 
-  async function activateAutomation() {
+  async function saveMessagingToken() {
+    if (!tokenInput.trim()) return;
     setSubscribing(true);
     setSubscribeMsg(null);
     const response = await fetch("/api/instagram-rules/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: selectedClientId }),
+      body: JSON.stringify({ clientId: selectedClientId, accessToken: tokenInput.trim() }),
     });
     setSubscribing(false);
     const body = await response.json().catch(() => null);
     if (!response.ok) {
-      setSubscribeMsg(body?.error ?? "Falha ao ativar.");
-    } else if (body?.missing?.length > 0) {
-      const labels: Record<string, string> = { messages: "DM", messaging_postbacks: "botões", message_reads: "leitura", comments: "comentário" };
-      setSubscribeMsg(`Ativado (sem ${body.missing.map((f: string) => labels[f] ?? f).join(", ")} — precisa de mais um passo no painel da Meta).`);
+      setSubscribeMsg(body?.error ?? "Falha ao salvar o token.");
     } else {
-      setSubscribeMsg("Automação ativada (DM, resposta de story, comentário e confirmação de leitura).");
+      setTokenInput("");
+      setSubscribeMsg(`Token salvo pra @${body.username}${body.longLived ? " (trocado por um de 60 dias)" : " (não foi possível trocar por um de longa duração ainda)"}.`);
     }
   }
 
@@ -133,14 +133,23 @@ export function InstagramRulesClient({
             ))}
           </select>
         </label>
+        <label className="flex min-w-72 flex-1 flex-col gap-1 text-xs font-medium text-[#475467]">
+          Token de mensageria do Instagram (IGAA...)
+          <input
+            value={tokenInput}
+            onChange={(event) => setTokenInput(event.target.value)}
+            placeholder="Cole aqui o token gerado no painel da Meta"
+            className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm font-mono"
+          />
+        </label>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={activateAutomation}
-            disabled={subscribing || !instagramConnected}
+            onClick={saveMessagingToken}
+            disabled={subscribing || !tokenInput.trim()}
             className="h-9 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {subscribing ? "Ativando..." : "Ativar automação"}
+            {subscribing ? "Salvando..." : "Salvar token"}
           </button>
           {instagramUsername && <span className="text-xs text-[#667085]">@{instagramUsername}</span>}
           {subscribeMsg && <span className="text-xs font-medium text-[#344054]">{subscribeMsg}</span>}

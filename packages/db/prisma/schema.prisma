@@ -2902,6 +2902,18 @@ model SocialConnection {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
 
+  /// Mini-chat de Instagram (Blueprint, seção 4.1) — token IGAA separado do
+  /// token de Página acima. Mensageria do Instagram só funciona pela "API do
+  /// Instagram com Login do Instagram" (graph.instagram.com), nunca pelo
+  /// token de Página/anúncios (graph.facebook.com) — só platform INSTAGRAM
+  /// preenche estes campos. Expira em 60 dias; precisa de refresh periódico.
+  messagingAccessTokenEnc String?
+  messagingTokenExpiresAt DateTime?
+  /// ID da conta no formato do produto de login do Instagram — diferente do
+  /// `externalId` acima (que vem do token de Página), é o que aparece em
+  /// `entry[].id` nos webhooks de mensageria.
+  messagingAccountId      String?
+
   posts SocialPost[]
 
   @@unique([clientId, platform])
