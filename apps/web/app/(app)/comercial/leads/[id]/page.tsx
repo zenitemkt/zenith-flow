@@ -91,6 +91,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     servico: "Serviço específico",
     plano: "Plano completo de marketing",
     consultoria: "Consultoria de marketing",
+    "garantia-devolucao": "Garantia de devolução (1º mês)",
   };
 
   type TimelineEntry = { id: string; kind: "status" | "note" | "commercial" | "finance"; createdAt: Date; label: string };
@@ -354,7 +355,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
                       ))}
                     </dl>
                   )}
-                  {submission.summary && <p className="mt-3 border-t border-[#EEF0F3] pt-3 text-sm text-[#475467]">{submission.summary}</p>}
+                  {submission.summary && <p className="mt-3 whitespace-pre-line border-t border-[#EEF0F3] pt-3 text-sm text-[#475467]">{submission.summary}</p>}
                   <SubmissionAttribution context={submission.trackingContext} />
                   {(submission.email || submission.phone) && (
                     <p className="mt-3 text-xs text-[#98A2B3]">{[submission.email, submission.phone].filter(Boolean).join(" · ")}</p>
