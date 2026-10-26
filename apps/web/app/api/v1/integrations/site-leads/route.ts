@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@zenite-mkt/db";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { LeadIdentityConflictError, upsertLeadSubmission } from "@/lib/lead-contact";
+import { LeadIdentityConflictError, mostCompleteName, normalizePhone, splitContactName, upsertLeadSubmission } from "@/lib/lead-contact";
+import { createInitialOpportunityForLead } from "@/lib/lead-pipeline";
+import { normalizeEmail } from "@/lib/leads";
 
 const SOURCE = "Site Zenite Hub";
 
@@ -31,6 +33,10 @@ export async function POST(request: Request) {
   if (!integration?.siteLeadIntegrationEnabled) return NextResponse.json({ code: "integration_disabled", message: "Integração desativada.", correlationId }, { status: 503 });
 
   const body = await request.json().catch(() => null);
+  // Candidatura em andamento (2026-10-26): o site salva o que já foi preenchido com `partial: true`, e todos os envios
+  // da mesma tentativa levam o mesmo `draftId`, pra atualizar um único registro em vez de criar um por campo.
+  const partial = body?.partial === true;
+  const draftId = text(body?.draftId, 64);
   const trackingVisitorId = text(body?.trackingVisitorId, 100);
   const trackingSessionId = text(body?.trackingSessionId, 100);
   const trackingContext = {
@@ -45,6 +51,7 @@ export async function POST(request: Request) {
     gclid: text(body?.trackingGclid, 500),
     fbp: text(body?.trackingFbp, 500),
     fbc: text(body?.trackingFbc, 500),
+    draftId,
   };
   const input = {
     agencyId,
@@ -62,16 +69,72 @@ export async function POST(request: Request) {
     trackingContext,
     createOpportunity: "always" as const,
   };
-  if (!input.name || !input.email || !input.phone || !input.company || !input.email.includes("@")) {
+  if (partial) {
+    // Rascunho só vira registro com nome e alguma forma de contato válida; o resto pode estar em branco.
+    if (!input.email?.includes("@")) input.email = null;
+    if ((normalizePhone(input.phone)?.length ?? 0) < 12) input.phone = null;
+    if (!draftId || !input.name || (!input.email && !input.phone)) {
+      return NextResponse.json({ code: "invalid_payload", message: "Nome ou contato inválido.", correlationId }, { status: 400 });
+    }
+  } else if (!input.name || !input.email || !input.phone || !input.company || !input.email.includes("@")) {
     return NextResponse.json({ code: "invalid_payload", message: "Dados obrigatórios inválidos.", correlationId }, { status: 400 });
   }
 
   const recentCount = await prisma.leadSubmission.count({ where: { agencyId, source: SOURCE, createdAt: { gte: new Date(Date.now() - 60_000) } } });
   if (recentCount >= 30) return NextResponse.json({ code: "rate_limited", message: "Muitas solicitações. Tente novamente.", correlationId }, { status: 429 });
 
+  /** Atualiza o registro da mesma tentativa (rascunho ou conclusão), sem criar outro envio nem outra oportunidade. */
+  async function updateDraft(tx: Prisma.TransactionClient) {
+    if (!draftId) return null;
+    const draft = await tx.leadSubmission.findFirst({
+      where: { agencyId, source: SOURCE, trackingContext: { path: ["draftId"], equals: draftId } },
+      include: { opportunity: { select: { id: true } }, lead: { select: { id: true, name: true, email: true, phone: true, company: true, source: true } } },
+    });
+    if (!draft) return null;
+    // Rascunho atrasado chegando depois da conclusão: não sobrescreve a candidatura completa.
+    if (partial && draft.summary && !draft.summary.startsWith("Candidatura incompleta")) {
+      return { lead: draft.lead, submission: draft, opportunity: draft.opportunity, createdNewLead: false };
+    }
+    const email = normalizeEmail(input.email);
+    const phone = normalizePhone(input.phone);
+    const name = mostCompleteName(draft.lead.name, input.name!);
+    const lead = await tx.lead.update({
+      where: { id: draft.leadId },
+      data: { name, ...splitContactName(name), email: draft.lead.email ?? email, phone: draft.lead.phone ?? input.phone, company: draft.lead.company ?? input.company },
+    });
+    if (email) {
+      await tx.leadEmail.upsert({
+        where: { agencyId_normalizedValue: { agencyId: agencyId!, normalizedValue: email } },
+        create: { agencyId: agencyId!, leadId: lead.id, value: input.email!, normalizedValue: email },
+        update: { lastSeenAt: new Date() },
+      });
+    }
+    if (phone) {
+      await tx.leadPhone.upsert({
+        where: { agencyId_normalizedValue: { agencyId: agencyId!, normalizedValue: phone } },
+        create: { agencyId: agencyId!, leadId: lead.id, value: input.phone!, normalizedValue: phone },
+        update: { lastSeenAt: new Date() },
+      });
+    }
+    const submission = await tx.leadSubmission.update({
+      where: { id: draft.id },
+      data: {
+        name: input.name, email: input.email, phone: input.phone, company: input.company, interest: input.interest, service: input.service,
+        employees: input.employees, investment: input.investment, summary: input.summary, trackingContext,
+      },
+    });
+    const detail = input.service ?? input.interest;
+    const opportunity = draft.opportunity ?? (partial ? null : await createInitialOpportunityForLead(tx, {
+      agencyId: agencyId!, leadId: lead.id, leadName: detail ? `${lead.name} — ${detail}` : lead.name, actorUserId: null, submissionId: submission.id,
+    }));
+    // Lead nasceu deste rascunho: a automação de "lead criado" fica pra quando a candidatura for concluída.
+    const leadBornFromDraft = (await tx.leadSubmission.count({ where: { leadId: lead.id } })) === 1;
+    return { lead, submission, opportunity, createdNewLead: !partial && leadBornFromDraft };
+  }
+
   async function ingest() {
     return prisma.$transaction(async (tx) => {
-      const result = await upsertLeadSubmission(tx, input as typeof input & { name: string });
+      const result = (await updateDraft(tx)) ?? (await upsertLeadSubmission(tx, { ...input, name: input.name!, createOpportunity: partial ? "new-only" : "always" }));
       if (trackingVisitorId) {
         const visitor = await tx.trackingVisitor.findFirst({
           where: {
@@ -98,7 +161,7 @@ export async function POST(request: Request) {
       result = await ingest();
     }
 
-    if (result.createdNewLead) {
+    if (result.createdNewLead && !partial) {
       await fireWorkflowTrigger(agencyId, "lead.created", "lead", result.lead.id, {
         leadId: result.lead.id,
         name: result.lead.name,
