@@ -39,7 +39,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       prisma.trackingEvent.count({ where: { agencyId, ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) } }),
       prisma.trackingEvent.findMany({
         where: { agencyId, eventName: "page_view", ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) },
-        select: { url: true },
+        select: { url: true, sessionId: true },
       }),
       prisma.trackingEvent.groupBy({
         by: ["eventName"],
@@ -104,9 +104,27 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     .slice(0, 8);
   const maxChannelCount = topChannels.length > 0 ? Math.max(...topChannels.map(([, count]) => count)) : 0;
 
+  // page_view só é gravado com consentimento de analytics; quem recusou ou ignorou o banner (a maioria) entra pela
+  // página de entrada da sessão, que é registrada sempre — senão a lista mostra só uma fração das visitas.
+  const pagePath = (url: string | null) => {
+    if (!url) return "(sem URL)";
+    try {
+      const path = decodeURIComponent(new URL(url).pathname);
+      return path.length > 1 ? path.replace(/\/+$/, "") : path;
+    } catch {
+      return "(sem URL)";
+    }
+  };
   const pageCounts = new Map<string, number>();
+  const sessionsWithPageView = new Set<string>();
   for (const pageView of pageViews) {
-    const path = pageView.url ? new URL(pageView.url).pathname : "(sem URL)";
+    if (pageView.sessionId) sessionsWithPageView.add(pageView.sessionId);
+    const path = pagePath(pageView.url);
+    pageCounts.set(path, (pageCounts.get(path) ?? 0) + 1);
+  }
+  for (const trackingSession of effectiveSessions) {
+    if (sessionsWithPageView.has(trackingSession.id)) continue;
+    const path = pagePath(trackingSession.landingUrl);
     pageCounts.set(path, (pageCounts.get(path) ?? 0) + 1);
   }
   const topPages = Array.from(pageCounts.entries())
@@ -261,7 +279,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Páginas mais vistas</h2>
+          <h2 className="text-sm font-semibold text-[#101828]">Páginas mais vistas</h2>
+          <p className="mb-3 text-xs text-[#667085]">Quem não aceitou cookies conta pela página de entrada.</p>
           {topPages.length === 0 ? (
             <p className="py-6 text-center text-sm text-[#667085]">Nenhuma página vista neste período.</p>
           ) : (
