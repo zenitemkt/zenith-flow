@@ -3026,6 +3026,8 @@ model InstagramAutomationLog {
   commentId    String? @unique
   /// Único — mesma razão, pra DM/story.
   messageId    String? @unique
+  /// `message_id` da resposta que nós enviamos — é esse que o webhook `message_reads` devolve em `read.mid`.
+  sentMessageId String? @unique
   receivedText String?
   sentText     String?
   /// Destinos reais dos botões (mesma ordem enviada) — usado pelo redirecionador de clique, nunca exposto direto na DM. string[].

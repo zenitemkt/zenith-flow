@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       // Confirmação de leitura: não cria evento novo, só marca o já enviado.
       const read = event.read as { mid?: string } | undefined;
       if (read?.mid) {
-        await prisma.instagramAutomationLog.updateMany({ where: { messageId: read.mid, readAt: null }, data: { readAt: new Date() } });
+        await prisma.instagramAutomationLog.updateMany({ where: { sentMessageId: read.mid, readAt: null }, data: { readAt: new Date() } });
         continue;
       }
 
@@ -143,13 +143,13 @@ export async function POST(request: Request) {
       if (!fullRule) continue;
       const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
-        await sendInstagramDirectMessage(target.igToken, target.igAccountId, senderId, {
+        const sentMessageId = await sendInstagramDirectMessage(target.igToken, target.igAccountId, senderId, {
           text: fullRule.responseText,
           buttons: sendButtons,
         });
         await prisma.instagramAutomationLog.update({
           where: { id: claimed.id },
-          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id },
+          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id, sentMessageId },
         });
       } catch (error) {
         await prisma.instagramAutomationLog.update({
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
       if (!fullRule) continue;
       const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
-        await sendInstagramPrivateReplyToComment(target.igToken, target.igAccountId, commentId, {
+        const sentMessageId = await sendInstagramPrivateReplyToComment(target.igToken, target.igAccountId, commentId, {
           text: fullRule.responseText,
           buttons: sendButtons,
         });
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
         if (publicText) await sendInstagramPublicCommentReply(target.igToken, commentId, publicText);
         await prisma.instagramAutomationLog.update({
           where: { id: claimed.id },
-          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id },
+          data: { status: "sent", sentText: fullRule.responseText, buttonUrls: realUrls, ruleId: fullRule.id, sentMessageId },
         });
       } catch (error) {
         await prisma.instagramAutomationLog.update({

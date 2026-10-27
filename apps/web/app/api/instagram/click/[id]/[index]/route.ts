@@ -12,12 +12,16 @@ interface RouteParams {
  */
 export async function GET(request: Request, { params }: RouteParams) {
   const index = Number(params.index);
-  const log = await prisma.instagramAutomationLog.findUnique({ where: { id: params.id }, select: { buttonUrls: true, clickedAt: true } });
+  const log = await prisma.instagramAutomationLog.findUnique({ where: { id: params.id }, select: { buttonUrls: true, clickedAt: true, readAt: true } });
   const urls = Array.isArray(log?.buttonUrls) ? (log!.buttonUrls as string[]) : [];
   const target = urls[index];
   if (!target) return new NextResponse("Not found", { status: 404 });
   if (!log!.clickedAt) {
-    await prisma.instagramAutomationLog.update({ where: { id: params.id }, data: { clickedAt: new Date(), clickedButtonIndex: index } }).catch(() => {});
+    // Clique implica leitura — cobre quem desativou a confirmação de leitura no Instagram.
+    const now = new Date();
+    await prisma.instagramAutomationLog
+      .update({ where: { id: params.id }, data: { clickedAt: now, clickedButtonIndex: index, ...(log!.readAt ? {} : { readAt: now }) } })
+      .catch(() => {});
   }
   return NextResponse.redirect(target, { status: 302 });
 }

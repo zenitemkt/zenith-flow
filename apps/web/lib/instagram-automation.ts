@@ -72,12 +72,13 @@ function buildMessageBody(payload: SendMessagePayload): string {
 }
 
 /** DM direta ou resposta a story — `recipient.id` é o ID (Instagram-scoped) de quem mandou. */
-export async function sendInstagramDirectMessage(igToken: string, igAccountId: string, igsid: string, payload: SendMessagePayload): Promise<void> {
-  await graphPost(GRAPH, `/${igAccountId}/messages`, {
+export async function sendInstagramDirectMessage(igToken: string, igAccountId: string, igsid: string, payload: SendMessagePayload): Promise<string | null> {
+  const result = await graphPost<{ message_id?: string }>(GRAPH, `/${igAccountId}/messages`, {
     access_token: igToken,
     recipient: JSON.stringify({ id: igsid }),
     message: buildMessageBody(payload),
   });
+  return result?.message_id ?? null;
 }
 
 /**
@@ -90,12 +91,13 @@ export async function sendInstagramPrivateReplyToComment(
   igAccountId: string,
   commentId: string,
   payload: SendMessagePayload,
-): Promise<void> {
-  await graphPost(GRAPH, `/${igAccountId}/messages`, {
+): Promise<string | null> {
+  const result = await graphPost<{ message_id?: string }>(GRAPH, `/${igAccountId}/messages`, {
     access_token: igToken,
     recipient: JSON.stringify({ comment_id: commentId }),
     message: buildMessageBody(payload),
   });
+  return result?.message_id ?? null;
 }
 
 /** Resposta pública visível embaixo do comentário. */
