@@ -1,8 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { prisma, Prisma } from "@zenite-mkt/db";
-import { decryptSecret } from "@/lib/crypto-secrets";
-import { getAppBaseUrl } from "@/lib/meta-ads";
 import {
   matchInstagramRule,
   pickPublicReplyVariation,
@@ -10,8 +8,11 @@ import {
   sendInstagramPrivateReplyToComment,
   sendInstagramPublicCommentReply,
   type MatchableRule,
-  type MessageButton,
 } from "@/lib/instagram-automation";
+import { buildTrackedButtons, continueFlowWithReply, loadMessagingTarget, startFlow, touchContact, type MessagingTarget } from "@/lib/instagram-flow";
+
+/** Sequência com atraso curto e "digitando..." roda dentro do próprio webhook. */
+export const maxDuration = 60;
 
 /**
  * Handshake único (seção 4.2 do Blueprint) — a Meta chama isso uma vez
@@ -39,29 +40,8 @@ function verifySignature(rawBody: string, signatureHeader: string | null): boole
   return timingSafeEqual(Buffer.from(expected), Buffer.from(given));
 }
 
-interface ResolvedTarget {
-  agencyId: string;
-  clientId: string;
-  igToken: string;
-  igAccountId: string;
-}
-
-/**
- * Casada pelo `messagingAccountId` (token IGAA), não pelo `externalId`
- * antigo (token de Página) — são IDs em espaços diferentes (seção 4.1,
- * correção de 2026-10-23).
- */
-async function resolveTarget(igAccountId: string): Promise<ResolvedTarget | null> {
-  const connection = await prisma.socialConnection.findFirst({
-    where: { platform: "INSTAGRAM", messagingAccountId: igAccountId, status: "ACTIVE" },
-  });
-  if (!connection?.messagingAccessTokenEnc) return null;
-  return {
-    agencyId: connection.agencyId,
-    clientId: connection.clientId,
-    igToken: decryptSecret(connection.messagingAccessTokenEnc),
-    igAccountId,
-  };
+async function resolveTarget(igAccountId: string): Promise<MessagingTarget | null> {
+  return loadMessagingTarget({ igAccountId });
 }
 
 /** Cria o log com `ON CONFLICT DO NOTHING` via unicidade do banco — só processa se realmente inseriu (seção "Por que message_id/comment_id são UNIQUE" do Blueprint). */
@@ -80,16 +60,6 @@ async function loadActiveRules(agencyId: string, clientId: string): Promise<Matc
     where: { agencyId, clientId, active: true },
     select: { id: true, triggerType: true, keyword: true, mediaId: true, active: true },
   });
-}
-
-/** Troca os links reais da regra por URLs do nosso redirecionador de clique (seção 4.4 — a Meta só avisa leitura, não clique). */
-function buildTrackedButtons(buttons: unknown, logId: string): { send: MessageButton[]; realUrls: string[] } {
-  const parsed = Array.isArray(buttons) ? (buttons as Array<{ text?: string; url?: string }>) : [];
-  const valid = parsed.filter((b): b is { text: string; url: string } => Boolean(b.text && b.url));
-  return {
-    send: valid.map((b, index) => ({ text: b.text, url: `${getAppBaseUrl()}/api/instagram/click/${logId}/${index}` })),
-    realUrls: valid.map((b) => b.url),
-  };
 }
 
 export async function POST(request: Request) {
@@ -117,8 +87,10 @@ export async function POST(request: Request) {
         continue;
       }
 
-      const message = event.message as { mid?: string; text?: string; reply_to?: { story?: unknown } } | undefined;
-      if (!message?.mid) continue;
+      const message = event.message as
+        | { mid?: string; text?: string; is_echo?: boolean; reply_to?: { story?: unknown }; quick_reply?: { payload?: string } }
+        | undefined;
+      if (!message?.mid || message.is_echo) continue;
       const triggerType = message.reply_to?.story ? "story_reply" : "direct_message";
 
       const target = await resolveTarget(igAccountId);
@@ -133,6 +105,18 @@ export async function POST(request: Request) {
       });
       if (!claimed) continue;
 
+      const contact = await touchContact(target, senderId, true);
+      const continued = await continueFlowWithReply({
+        target,
+        contact,
+        text: message.text ?? null,
+        quickReplyPayload: message.quick_reply?.payload ?? null,
+      });
+      if (continued.consumed) {
+        await prisma.instagramAutomationLog.update({ where: { id: claimed.id }, data: { status: "flow_reply", ruleId: continued.ruleId } });
+        continue;
+      }
+
       const rules = await loadActiveRules(target.agencyId, target.clientId);
       const rule = matchInstagramRule(rules, { triggerType, text: message.text ?? null });
       if (!rule) {
@@ -141,6 +125,7 @@ export async function POST(request: Request) {
       }
       const fullRule = await prisma.instagramAutomationRule.findUnique({ where: { id: rule.id } });
       if (!fullRule) continue;
+      if (fullRule.flow && (await startFlow({ target, ruleId: fullRule.id, flow: fullRule.flow, contact, commentId: null, triggerLogId: claimed.id }))) continue;
       const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
         const sentMessageId = await sendInstagramDirectMessage(target.igToken, target.igAccountId, senderId, {
@@ -187,6 +172,14 @@ export async function POST(request: Request) {
       }
       const fullRule = await prisma.instagramAutomationRule.findUnique({ where: { id: rule.id } });
       if (!fullRule) continue;
+      if (fullRule.flow) {
+        const contact = await touchContact(target, senderId, false);
+        if (await startFlow({ target, ruleId: fullRule.id, flow: fullRule.flow, contact, commentId, triggerLogId: claimed.id })) {
+          const publicText = pickPublicReplyVariation(fullRule.publicReplyTexts);
+          if (publicText) await sendInstagramPublicCommentReply(target.igToken, commentId, publicText).catch(() => {});
+          continue;
+        }
+      }
       const { send: sendButtons, realUrls } = buildTrackedButtons(fullRule.buttons, claimed.id);
       try {
         const sentMessageId = await sendInstagramPrivateReplyToComment(target.igToken, target.igAccountId, commentId, {

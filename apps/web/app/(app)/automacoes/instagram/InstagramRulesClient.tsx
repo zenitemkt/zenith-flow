@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
+import type { FlowStep } from "@/lib/instagram-flow-model";
+import { FlowEditor, messageStep } from "./FlowEditor";
 
 interface Button {
   text: string;
@@ -19,10 +21,29 @@ interface Rule {
   mediaCaption: string | null;
   mediaPermalink: string | null;
   publicReplyTexts: string[];
+  flow: FlowStep[] | null;
   active: boolean;
 }
 
-const MAX_BUTTONS = 3;
+interface Contact {
+  id: string;
+  username: string | null;
+  name: string | null;
+  tags: string[];
+  fields: Record<string, string>;
+  lastInboundAt: string | null;
+  lastSession: { status: string; keyword: string | null; triggerType: string } | null;
+}
+
+const SESSION_LABELS: Record<string, string> = {
+  running: "na sequência",
+  waiting_delay: "aguardando atraso",
+  waiting_input: "aguardando resposta",
+  waiting_reply: "aguardando resposta",
+  done: "concluiu",
+  expired: "expirou (24h)",
+  failed: "falhou",
+};
 
 interface MediaItem {
   id: string;
@@ -48,7 +69,7 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 function emptyDraft(triggerType: string): Omit<Rule, "id" | "active"> {
-  return { triggerType, keyword: "", responseText: "", buttons: [], mediaId: null, mediaCaption: null, mediaPermalink: null, publicReplyTexts: [] };
+  return { triggerType, keyword: "", responseText: "", buttons: [], mediaId: null, mediaCaption: null, mediaPermalink: null, publicReplyTexts: [], flow: null };
 }
 
 export function InstagramRulesClient({
@@ -198,6 +219,9 @@ export function InstagramRulesClient({
                       <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#344054]">
                         {rule.keyword ? `"${rule.keyword}"` : "pega-tudo"}
                       </span>
+                      {rule.flow && rule.flow.length > 1 && (
+                        <span className="rounded-full bg-[#FFF4F2] px-2 py-0.5 text-xs font-medium text-[#FF2B00]">sequência · {rule.flow.length} passos</span>
+                      )}
                       {rule.mediaId && <span className="rounded-full bg-[#FFF4ED] px-2 py-0.5 text-xs font-medium text-[#B93815]">post específico</span>}
                       {!rule.active && <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#98A2B3]">pausada</span>}
                     </div>
@@ -220,6 +244,8 @@ export function InstagramRulesClient({
           )}
         </section>
       ))}
+
+      <ContactsSection clientId={selectedClientId} />
 
       <RuleFormModal
         open={creatingTrigger !== null || editing !== null}
@@ -249,6 +275,72 @@ function Stat({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function ContactsSection({ clientId }: { clientId: string }) {
+  const [contacts, setContacts] = useState<Contact[] | null>(null);
+  const [tag, setTag] = useState("");
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const query = tag.trim() ? `&tag=${encodeURIComponent(tag.trim())}` : "";
+      fetch(`/api/instagram-rules/contacts?clientId=${clientId}${query}`)
+        .then((r) => (r.ok ? r.json() : { contacts: [] }))
+        .then((body) => setContacts(body.contacts ?? []))
+        .catch(() => setContacts([]));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [clientId, tag]);
+
+  return (
+    <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-[#101828]">Contatos</h2>
+        <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="Filtrar por etiqueta" className="h-8 rounded-lg border border-[#D0D5DD] px-3 text-xs" />
+      </div>
+      {contacts === null ? (
+        <p className="py-4 text-center text-sm text-[#98A2B3]">Carregando...</p>
+      ) : contacts.length === 0 ? (
+        <p className="py-4 text-center text-sm text-[#98A2B3]">Ninguém conversou com o mini-chat ainda{tag.trim() ? " com essa etiqueta" : ""}.</p>
+      ) : (
+        <div className="flex flex-col divide-y divide-[#EEF0F3]">
+          {contacts.map((contact) => (
+            <div key={contact.id} className="flex flex-wrap items-start justify-between gap-2 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-[#101828]">
+                  {contact.username ? `@${contact.username}` : (contact.name ?? "Sem nome")}
+                  {contact.username && contact.name && <span className="ml-1.5 font-normal text-[#667085]">{contact.name}</span>}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {contact.tags.map((t) => (
+                    <span key={t} className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#344054]">
+                      {t}
+                    </span>
+                  ))}
+                  {Object.entries(contact.fields).map(([key, value]) => (
+                    <span key={key} className="rounded-full bg-[#FFF4ED] px-2 py-0.5 text-xs text-[#B93815]">
+                      {key}: {value}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {contact.lastSession && (
+                <span className="shrink-0 text-xs text-[#667085]">
+                  {SESSION_LABELS[contact.lastSession.status] ?? contact.lastSession.status} ·{" "}
+                  {contact.lastSession.keyword ? `"${contact.lastSession.keyword}"` : "pega-tudo"}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function initialSteps(rule: Rule | null): FlowStep[] {
+  if (rule?.flow && rule.flow.length > 0) return rule.flow;
+  return [messageStep(rule?.responseText ?? "", rule?.buttons ?? [])];
+}
+
 function RuleFormModal({
   open,
   clientId,
@@ -266,8 +358,7 @@ function RuleFormModal({
 }) {
   const [triggerType, setTriggerType] = useState(initial?.triggerType ?? "direct_message");
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
-  const [responseText, setResponseText] = useState(initial?.responseText ?? "");
-  const [buttons, setButtons] = useState<Button[]>(initial?.buttons ?? []);
+  const [steps, setSteps] = useState<FlowStep[]>(() => initialSteps(initial));
   const [mediaScope, setMediaScope] = useState<"any" | "specific">(initial?.mediaId ? "specific" : "any");
   const [mediaId, setMediaId] = useState(initial?.mediaId ?? null as string | null);
   const [mediaCaption, setMediaCaption] = useState(initial?.mediaCaption ?? null as string | null);
@@ -279,8 +370,7 @@ function RuleFormModal({
   useEffect(() => {
     setTriggerType(initial?.triggerType ?? "direct_message");
     setKeyword(initial?.keyword ?? "");
-    setResponseText(initial?.responseText ?? "");
-    setButtons(initial?.buttons ?? []);
+    setSteps(initialSteps(initial));
     setMediaScope(initial?.mediaId ? "specific" : "any");
     setMediaId(initial?.mediaId ?? null);
     setMediaCaption(initial?.mediaCaption ?? null);
@@ -305,8 +395,7 @@ function RuleFormModal({
       clientId,
       triggerType,
       keyword: keyword || null,
-      responseText,
-      buttons: buttons.filter((b) => b.text.trim() && b.url.trim()),
+      flow: steps,
       mediaId: triggerType === "comment" && mediaScope === "specific" ? mediaId : null,
       mediaCaption: triggerType === "comment" && mediaScope === "specific" ? mediaCaption : null,
       publicReplyTexts: triggerType === "comment" ? publicReplyTexts.split("\n").map((l) => l.trim()).filter(Boolean) : [],
@@ -383,45 +472,9 @@ function RuleFormModal({
           </div>
         )}
 
-        <label className="flex flex-col gap-1 text-xs font-medium text-[#475467]">
-          Mensagem privada (DM enviada)
-          <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} rows={3} className="rounded-lg border border-[#D0D5DD] p-2.5 text-sm" />
-        </label>
-
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-[#475467]">Botões (opcional, até {MAX_BUTTONS})</p>
-          {buttons.map((button, index) => (
-            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-              <input
-                value={button.text}
-                onChange={(e) => setButtons(buttons.map((b, i) => (i === index ? { ...b, text: e.target.value } : b)))}
-                placeholder="Texto do botão"
-                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm"
-              />
-              <input
-                value={button.url}
-                onChange={(e) => setButtons(buttons.map((b, i) => (i === index ? { ...b, url: e.target.value } : b)))}
-                placeholder="Link do botão"
-                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setButtons(buttons.filter((_, i) => i !== index))}
-                className="h-9 rounded-lg border border-[#FDA29B] px-2.5 text-xs font-semibold text-[#B42318] hover:bg-[#FEF3F2]"
-              >
-                Remover
-              </button>
-            </div>
-          ))}
-          {buttons.length < MAX_BUTTONS && (
-            <button
-              type="button"
-              onClick={() => setButtons([...buttons, { text: "", url: "" }])}
-              className="h-9 self-start rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]"
-            >
-              + Adicionar botão
-            </button>
-          )}
+          <p className="text-xs font-medium text-[#475467]">Mensagens enviadas na DM. Adicione passos pra montar uma sequência.</p>
+          <FlowEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
         </div>
 
         {triggerType === "comment" && (
@@ -440,7 +493,7 @@ function RuleFormModal({
           <button
             type="button"
             onClick={save}
-            disabled={saving || !responseText.trim()}
+            disabled={saving || !(steps[0]?.type === "message" && steps[0].text.trim())}
             className="h-9 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Salvando..." : "Salvar"}

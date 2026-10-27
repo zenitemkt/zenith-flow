@@ -1,3 +1,13 @@
+## 2026-10-27 — Sequências do mini-chat de Instagram
+
+**Decisão 1 — passos em JSON na própria regra**, não tabela por passo: a sequência é editada e salva inteira, sempre lida junto com a regra, e `parseFlow` limpa tudo no servidor (referência solta vira "encerrar"). O passo 0 é sempre mensagem e espelha `responseText`/`buttons`, então a lista e o caminho antigo (regra sem sequência) seguem iguais.
+
+**Decisão 2 — atraso curto dentro do webhook, longo no cron existente**: até 15 s roda na hora (webhook com `maxDuration = 60`); acima disso a sessão fica `waiting_delay` com `resumeAt` e o cron de minuto em minuto já usado pelo agendador de redes retoma (orçamento de 12 s antes da publicação). Evitou cadastrar outro job no cron-job.org.
+
+**Decisão 3 — sessão em espera "consome" a próxima DM** da pessoa (as regras por palavra-chave não rodam pra ela), por no máximo 24h. Respostas rápidas sem correspondência e sem caminho alternativo encerram a sessão e devolvem a mensagem pras regras normais. Trava contra retomada dupla: UPDATE condicional no status.
+
+**Decisão 4 — comentário**: a 1ª mensagem sai como resposta privada e a sessão marca `needsUserReply`; o próximo passo de mensagem espera a pessoa responder (regra da Meta para respostas privadas).
+
 ## 2026-10-21 — Agendador de redes (Facebook/Instagram) e incidente do banco de produção
 
 **Incidente (registrar sempre)**: ao gerar o SQL da migration, rodei `prisma migrate diff --from-migrations ... --shadow-database-url <DIRECT_URL de produção>`. O Prisma reseta o banco sombra: o banco de produção ficou vazio (~01:53 UTC de 21/10). O Kevin restaurou pelo Neon (restore da branch `production` para 22:40 de 20/10, Brasília); conferido depois: usuários, agência, cliente, conteúdo, meta e as 63 migrations de volta, nada perdido além de nenhum dado novo no intervalo. **Regra**: `packages/db/.env` aponta para produção e não há banco local — nunca usar shadow, `migrate dev`, `migrate reset` ou `db push` aqui. SQL de migration é gerado com `migrate diff --from-schema-datamodel <schema anterior via git show> --to-schema-datamodel prisma/schema.prisma --script`, sem banco.

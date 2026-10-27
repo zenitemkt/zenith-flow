@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
+import type { FlowStep } from "@/lib/instagram-flow-model";
 import { InstagramRulesClient } from "./InstagramRulesClient";
 
 interface PageProps {
@@ -55,6 +56,7 @@ export default async function InstagramAutomationPage({ searchParams }: PageProp
             mediaCaption: r.mediaCaption,
             mediaPermalink: r.mediaPermalink,
             publicReplyTexts: r.publicReplyTexts,
+            flow: Array.isArray(r.flow) ? (r.flow as unknown as FlowStep[]) : null,
             active: r.active,
           }))}
           instagramConnected={Boolean(instagramConnection)}

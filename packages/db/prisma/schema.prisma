@@ -148,6 +148,8 @@ model Agency {
   assistantConversations       AssistantConversation[]
   assistantBookings            AssistantBooking[]
   instagramAutomationLogs      InstagramAutomationLog[]
+  instagramContacts            InstagramContact[]
+  instagramFlowSessions        InstagramFlowSession[]
   socialPosts                  SocialPost[]
   onboardingTemplates          OnboardingTemplate[]
   projects                     Project[]
@@ -331,27 +333,29 @@ model Client {
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
 
-  contacts               ClientContact[]
-  statusHistory          ClientStatusHistory[]
-  notes                  ClientNote[]
-  onboardingRuns         OnboardingRun[]
-  projects               Project[]
-  recurringTaskTemplates RecurringTaskTemplate[]
-  contentItems           ContentItem[]
-  socialConnections      SocialConnection[]
-  socialPosts            SocialPost[]
+  contacts                 ClientContact[]
+  statusHistory            ClientStatusHistory[]
+  notes                    ClientNote[]
+  onboardingRuns           OnboardingRun[]
+  projects                 Project[]
+  recurringTaskTemplates   RecurringTaskTemplate[]
+  contentItems             ContentItem[]
+  socialConnections        SocialConnection[]
+  socialPosts              SocialPost[]
   instagramAutomationRules InstagramAutomationRule[]
   instagramAutomationLogs  InstagramAutomationLog[]
-  financeEntries         FinanceEntry[]
-  mediaAssets            MediaAsset[]
-  healthScoreSnapshots   HealthScoreSnapshot[]
-  churnRiskSnapshots     ChurnRiskSnapshot[]
-  retentionPlans         RetentionPlan[]
-  surveyRecipients       SurveyRecipient[]
-  convertedFromLead      Lead?
-  opportunities          Opportunity[]
-  proposals              Proposal[]
-  campaigns              Campaign[]
+  instagramContacts        InstagramContact[]
+  instagramFlowSessions    InstagramFlowSession[]
+  financeEntries           FinanceEntry[]
+  mediaAssets              MediaAsset[]
+  healthScoreSnapshots     HealthScoreSnapshot[]
+  churnRiskSnapshots       ChurnRiskSnapshot[]
+  retentionPlans           RetentionPlan[]
+  surveyRecipients         SurveyRecipient[]
+  convertedFromLead        Lead?
+  opportunities            Opportunity[]
+  proposals                Proposal[]
+  campaigns                Campaign[]
 
   @@index([agencyId])
   @@map("client")
@@ -2988,23 +2992,26 @@ model InstagramAutomationRule {
   clientId String
   client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-  triggerType String // 'story_reply' | 'comment' | 'direct_message'
+  triggerType      String // 'story_reply' | 'comment' | 'direct_message'
   /// null = regra "pega-tudo" (qualquer texto daquele tipo).
-  keyword     String?
-  responseText String
+  keyword          String?
+  responseText     String
   /// Até 3 botões (limite da Meta pro template de botão): [{text, url}]. Substitui buttonText/buttonUrl.
-  buttons      Json?
+  buttons          Json?
   /// Só pra comment: null = vale pra qualquer post/reels; preenchido = só nesse post específico.
-  mediaId         String?
-  mediaCaption    String?
-  mediaPermalink  String?
+  mediaId          String?
+  mediaCaption     String?
+  mediaPermalink   String?
   /// Só pra comment: lista de variações pra resposta pública, sorteada a cada match.
   publicReplyTexts String[]
-  active           Boolean @default(true)
+  /// Sequência de passos (mensagem, atraso, pergunta, etiqueta, condição) — null = só a mensagem única acima. O passo 0 espelha responseText/buttons.
+  flow             Json?
+  active           Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  logs InstagramAutomationLog[]
+  logs     InstagramAutomationLog[]
+  sessions InstagramFlowSession[]
 
   @@index([agencyId])
   @@index([clientId, triggerType, active])
@@ -3012,49 +3019,102 @@ model InstagramAutomationRule {
 }
 
 model InstagramAutomationLog {
-  id       String @id @default(cuid())
+  id       String                   @id @default(cuid())
   agencyId String
-  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency   Agency                   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   clientId String
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client   Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   ruleId   String?
   rule     InstagramAutomationRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
 
-  senderIgsid  String
-  storyId      String?
+  senderIgsid        String
+  storyId            String?
   /// Único — a Meta reenvia webhook em timeout; sem essa trava duplicaria a resposta ao comentário.
-  commentId    String? @unique
+  commentId          String?   @unique
   /// Único — mesma razão, pra DM/story.
-  messageId    String? @unique
+  messageId          String?   @unique
   /// `message_id` da resposta que nós enviamos — é esse que o webhook `message_reads` devolve em `read.mid`.
-  sentMessageId String? @unique
-  receivedText String?
-  sentText     String?
+  sentMessageId      String?   @unique
+  receivedText       String?
+  sentText           String?
   /// Destinos reais dos botões (mesma ordem enviada) — usado pelo redirecionador de clique, nunca exposto direto na DM. string[].
-  buttonUrls       Json?
-  status           String // 'pending' | 'sent' | 'failed' | 'no_match'
-  error            String?
-  readAt           DateTime?
-  clickedAt        DateTime?
+  buttonUrls         Json?
+  status             String // 'pending' | 'sent' | 'failed' | 'no_match'
+  error              String?
+  readAt             DateTime?
+  clickedAt          DateTime?
   /// Qual botão (índice em buttonUrls) foi clicado primeiro.
   clickedButtonIndex Int?
-  createdAt        DateTime @default(now())
+  createdAt          DateTime  @default(now())
 
   @@index([agencyId, clientId, createdAt])
   @@map("instagram_automation_log")
 }
 
+/// Quem já conversou com o mini-chat — etiquetas e respostas salvas pelos passos "Pergunta" e "Etiqueta".
+model InstagramContact {
+  id       String @id @default(cuid())
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  igsid         String
+  username      String?
+  name          String?
+  tags          String[]
+  /// Respostas salvas: { email: "...", telefone: "..." }.
+  fields        Json      @default("{}")
+  /// Janela de 24h da Meta: só dá pra mandar mensagem até 24h depois da última mensagem da pessoa.
+  lastInboundAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions InstagramFlowSession[]
+
+  @@unique([clientId, igsid])
+  @@index([agencyId, clientId, updatedAt])
+  @@map("instagram_contact")
+}
+
+/// Uma pessoa passando por uma sequência — guarda em que passo parou e quando retomar.
+model InstagramFlowSession {
+  id        String                  @id @default(cuid())
+  agencyId  String
+  agency    Agency                  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   InstagramContact        @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  ruleId    String
+  rule      InstagramAutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  status         String // 'running' | 'waiting_delay' | 'waiting_input' | 'waiting_reply' | 'done' | 'expired' | 'failed'
+  currentStepId  String?
+  /// waiting_delay: quando mandar o próximo passo; waiting_input: quando desistir da resposta.
+  resumeAt       DateTime?
+  /// Depois da resposta privada a comentário a Meta só libera nova mensagem quando a pessoa responder.
+  needsUserReply Boolean   @default(false)
+  error          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, resumeAt])
+  @@index([contactId, status])
+  @@map("instagram_flow_session")
+}
+
 /// Assistente virtual de WhatsApp (Milena, 2026-10-27): configurações editáveis no painel em /automacoes/assistente.
 model AssistantSettings {
-  id        String   @id @default(cuid())
-  agencyId  String   @unique
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  enabled   Boolean  @default(false)
-  config    Json
+  id                    String   @id @default(cuid())
+  agencyId              String   @unique
+  agency                Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  enabled               Boolean  @default(false)
+  config                Json
   /// Conta Google com edição nas agendas dos sócios (refresh token cifrado com crypto-secrets).
   googleRefreshTokenEnc String?
   googleAccountEmail    String?
-  updatedAt DateTime @updatedAt
+  updatedAt             DateTime @updatedAt
 
   @@map("assistant_settings")
 }
@@ -3068,7 +3128,7 @@ model AssistantConversation {
   profileName    String?
   leadId         String?
   mode           String             @default("bot") // bot | human
-  classification String?            // icp | fora_icp | vendedor | indefinido
+  classification String? // icp | fora_icp | vendedor | indefinido
   replyDueAt     DateTime?
   lastInboundAt  DateTime?
   failures       Int                @default(0)
@@ -3086,10 +3146,10 @@ model AssistantMessage {
   id             String                @id @default(cuid())
   conversationId String
   conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           String                // user | assistant | partner
+  role           String // user | assistant | partner
   content        String
   mediaId        String?
-  mediaType      String?               // audio | image | document | video | sticker | other
+  mediaType      String? // audio | image | document | video | sticker | other
   waMessageId    String?               @unique
   createdAt      DateTime              @default(now())
 

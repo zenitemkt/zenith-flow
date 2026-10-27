@@ -4,6 +4,12 @@
 
 ## Implementado
 
+- **Sequências do mini-chat de Instagram (2026-10-27)**: passos em `InstagramAutomationRule.flow` (formato e validação em
+  `lib/instagram-flow-model.ts`, motor em `lib/instagram-flow.ts`), contatos em `InstagramContact`, progresso em
+  `InstagramFlowSession`. O webhook retoma a sessão quando a pessoa responde; `/api/cron/social-publish` (cron-job.org,
+  1x/min) também retoma atrasos e perguntas vencidas. Limites: janela de 24h da Meta (passo depois dela vira "expirou"),
+  respostas rápidas não convivem com botões de link na mesma mensagem, e não há editor visual em canvas (passos em lista
+  com "próximo passo" escolhido em cada um). Respostas rápidas na resposta privada a comentário ainda não testadas ao vivo.
 - **Mini-chat de Instagram (2026-10-22)**: Automações → Instagram. Responde DM, resposta de story e comentário
   automaticamente (Blueprint de Automações, seção 4), reaproveitando a MESMA conexão Facebook/Instagram do
   agendador de redes (`SocialConnection`, token de Página) em vez de um fluxo de OAuth próprio — escopo ampliado

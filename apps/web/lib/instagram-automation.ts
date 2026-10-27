@@ -51,14 +51,31 @@ export interface MessageButton {
 /** Limite da Meta pro template de botão (Messenger/Instagram). */
 export const MAX_MESSAGE_BUTTONS = 3;
 
+export interface QuickReply {
+  title: string;
+  payload: string;
+}
+
+/** Limite da Meta pra respostas rápidas no Instagram. */
+export const MAX_QUICK_REPLIES = 13;
+
 interface SendMessagePayload {
   text: string;
   buttons?: MessageButton[] | null;
+  /** Só com texto puro — a mensagem com botões de link vai sem respostas rápidas. */
+  quickReplies?: QuickReply[] | null;
 }
 
 function buildMessageBody(payload: SendMessagePayload): string {
   const buttons = (payload.buttons ?? []).slice(0, MAX_MESSAGE_BUTTONS);
-  if (buttons.length === 0) return JSON.stringify({ text: payload.text });
+  if (buttons.length === 0) {
+    const quickReplies = (payload.quickReplies ?? []).slice(0, MAX_QUICK_REPLIES);
+    if (quickReplies.length === 0) return JSON.stringify({ text: payload.text });
+    return JSON.stringify({
+      text: payload.text,
+      quick_replies: quickReplies.map((reply) => ({ content_type: "text", title: reply.title.slice(0, 20), payload: reply.payload })),
+    });
+  }
   return JSON.stringify({
     attachment: {
       type: "template",
@@ -79,6 +96,30 @@ export async function sendInstagramDirectMessage(igToken: string, igAccountId: s
     message: buildMessageBody(payload),
   });
   return result?.message_id ?? null;
+}
+
+/** Mostra "digitando..." pra pessoa — usado antes das mensagens da sequência. Falha aqui nunca impede o envio. */
+export async function sendInstagramTypingOn(igToken: string, igAccountId: string, igsid: string): Promise<void> {
+  await graphPost(GRAPH, `/${igAccountId}/messages`, {
+    access_token: igToken,
+    recipient: JSON.stringify({ id: igsid }),
+    sender_action: "typing_on",
+  }).catch(() => {});
+}
+
+export interface InstagramUserProfile {
+  name: string | null;
+  username: string | null;
+  followsBusiness: boolean | null;
+}
+
+/** Perfil de quem mandou mensagem (API de perfil de usuário da mensageria) — só funciona depois que a pessoa iniciou a conversa. */
+export async function fetchInstagramUserProfile(igToken: string, igsid: string): Promise<InstagramUserProfile> {
+  const result = await graphGet<{ name?: string; username?: string; is_user_follow_business?: boolean }>(GRAPH, `/${igsid}`, {
+    fields: "name,username,is_user_follow_business",
+    access_token: igToken,
+  });
+  return { name: result.name ?? null, username: result.username ?? null, followsBusiness: result.is_user_follow_business ?? null };
 }
 
 /**

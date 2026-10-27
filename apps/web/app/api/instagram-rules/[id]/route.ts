@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
+import { Prisma } from "@zenite-mkt/db";
 
 interface RouteParams {
   params: { id: string };
@@ -40,6 +42,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (field in (body ?? {})) data[field] = text(body[field], field === "responseText" ? 1000 : 500);
   }
   if (Array.isArray(body?.buttons)) data.buttons = parseButtons(body.buttons);
+  if (body && "flow" in body) {
+    const flow = body.flow ? parseFlow(body.flow) : null;
+    const first = flow?.[0]?.type === "message" ? flow[0] : null;
+    if (first) {
+      data.responseText = first.text;
+      data.buttons = first.buttons;
+    }
+    data.flow = flow && !isTrivialFlow(flow) ? (flow as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+  }
   if (Array.isArray(body?.publicReplyTexts)) {
     data.publicReplyTexts = body.publicReplyTexts
       .filter((item: unknown): item is string => typeof item === "string" && Boolean(item.trim()))
