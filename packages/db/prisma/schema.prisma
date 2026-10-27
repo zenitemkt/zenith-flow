@@ -144,6 +144,9 @@ model Agency {
   commercialGoals              CommercialGoal[]
   socialConnections            SocialConnection[]
   instagramAutomationRules     InstagramAutomationRule[]
+  assistantSettings            AssistantSettings?
+  assistantConversations       AssistantConversation[]
+  assistantBookings            AssistantBooking[]
   instagramAutomationLogs      InstagramAutomationLog[]
   socialPosts                  SocialPost[]
   onboardingTemplates          OnboardingTemplate[]
@@ -3037,4 +3040,73 @@ model InstagramAutomationLog {
 
   @@index([agencyId, clientId, createdAt])
   @@map("instagram_automation_log")
+}
+
+/// Assistente virtual de WhatsApp (Milena, 2026-10-27): configurações editáveis no painel em /automacoes/assistente.
+model AssistantSettings {
+  id        String   @id @default(cuid())
+  agencyId  String   @unique
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  enabled   Boolean  @default(false)
+  config    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("assistant_settings")
+}
+
+/// Uma conversa por telefone. `replyDueAt` implementa a espera depois da última mensagem da pessoa.
+model AssistantConversation {
+  id             String             @id @default(cuid())
+  agencyId       String
+  agency         Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  phone          String
+  profileName    String?
+  leadId         String?
+  mode           String             @default("bot") // bot | human
+  classification String?            // icp | fora_icp | vendedor | indefinido
+  replyDueAt     DateTime?
+  lastInboundAt  DateTime?
+  failures       Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  messages       AssistantMessage[]
+  bookings       AssistantBooking[]
+
+  @@unique([agencyId, phone])
+  @@index([replyDueAt])
+  @@map("assistant_conversation")
+}
+
+model AssistantMessage {
+  id             String                @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String                // user | assistant | partner
+  content        String
+  mediaId        String?
+  mediaType      String?               // audio | image | document | video | sticker | other
+  waMessageId    String?               @unique
+  createdAt      DateTime              @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("assistant_message")
+}
+
+model AssistantBooking {
+  id                String                @id @default(cuid())
+  agencyId          String
+  agency            Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  conversationId    String
+  conversation      AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  startsAt          DateTime
+  endsAt            DateTime
+  meetUrl           String?
+  calendarEventIds  Json?
+  status            String                @default("scheduled") // pending_partner | scheduled | confirmed | cancelled
+  reminderSentAt    DateTime?
+  startNoticeSentAt DateTime?
+  createdAt         DateTime              @default(now())
+
+  @@index([agencyId, startsAt])
+  @@map("assistant_booking")
 }

@@ -26,6 +26,8 @@ const PUBLIC_PATH_PREFIXES = [
   // Mini-chat de Instagram: chamado pela Meta (webhook) e por quem clica no botão da DM, nunca com cookie de
   // sessão. Webhook protegido por assinatura (x-hub-signature-256) + verify token no handshake, não por login.
   "/api/instagram/webhook",
+  "/api/assistant/webhook",
+  "/api/assistant/process",
   "/api/instagram/click",
   // Autenticação própria por chave (x-draft-agent-key, timingSafeEqual) pra
   // além do cookie de sessão — o agente externo (rotina agendada) não tem
