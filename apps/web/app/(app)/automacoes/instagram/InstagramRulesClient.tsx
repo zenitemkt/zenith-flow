@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import type { FlowStep } from "@/lib/instagram-flow-model";
-import { FlowEditor, messageStep } from "./FlowEditor";
+import { FlowEditor, FlowPreview, messageStep } from "./FlowEditor";
 
 interface Button {
   text: string;
@@ -252,6 +252,7 @@ export function InstagramRulesClient({
         clientId={selectedClientId}
         initial={editing ?? (creatingTrigger ? { id: "", active: true, ...emptyDraft(creatingTrigger) } : null)}
         isEditing={editing !== null}
+        instagramUsername={instagramUsername}
         onClose={() => {
           setEditing(null);
           setCreatingTrigger(null);
@@ -346,6 +347,7 @@ function RuleFormModal({
   clientId,
   initial,
   isEditing,
+  instagramUsername,
   onClose,
   onSaved,
 }: {
@@ -353,6 +355,7 @@ function RuleFormModal({
   clientId: string;
   initial: Rule | null;
   isEditing: boolean;
+  instagramUsername: string | null;
   onClose: () => void;
   onSaved: (rule: Rule, isNew: boolean) => void;
 }) {
@@ -415,90 +418,126 @@ function RuleFormModal({
     onSaved(body.rule, isNew);
   }
 
+  const chip = (active: boolean) =>
+    `flex h-10 w-full items-center rounded-lg border px-3 text-left text-sm font-semibold transition ${
+      active ? "border-[#FF2B00] bg-[#FFF1EC] text-[#FF2B00]" : "border-[#D0D5DD] text-[#344054] hover:bg-[#F9FAFB]"
+    }`;
+  const fieldClass = "h-10 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
+  const canSave = steps[0]?.type === "message" && Boolean(steps[0].text.trim());
+
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? "Editar regra" : "Nova regra"} size="lg">
-      <div className="flex flex-col gap-4">
-        {!isEditing && (
-          <div className="flex gap-2">
-            {Object.entries(TRIGGER_LABELS).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setTriggerType(value)}
-                className={`h-9 flex-1 rounded-lg border px-3 text-xs font-semibold ${
-                  triggerType === value ? "border-[#FF2B00] bg-[#FFF4F2] text-[#FF2B00]" : "border-[#D0D5DD] text-[#344054]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? "Editar regra" : "Nova regra"}
+      description="Defina quando a regra dispara e monte a conversa. A prévia ao lado mostra o caminho principal."
+      size="full"
+    >
+      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+        {/* Gatilho */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start">
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-4">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Gatilho</p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-[#475467]">Quando a pessoa</span>
+                {isEditing ? (
+                  <span className={chip(true)}>{TRIGGER_LABELS[triggerType]}</span>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {Object.entries(TRIGGER_LABELS).map(([value, label]) => (
+                      <button key={value} type="button" onClick={() => setTriggerType(value)} className={chip(triggerType === value)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-        <label className="flex flex-col gap-1 text-xs font-medium text-[#475467]">
-          Palavra-chave (vazio = responde qualquer coisa)
-          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm" />
-        </label>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-[#475467]">
+                Com a palavra-chave
+                <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Vazio = qualquer mensagem" className={fieldClass} />
+                <span className="font-normal text-[#98A2B3]">Basta a mensagem conter a palavra, sem diferenciar maiúsculas.</span>
+              </label>
 
-        {triggerType === "comment" && (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium text-[#475467]">Onde vale</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setMediaScope("any")} className={`h-9 flex-1 rounded-lg border px-3 text-xs font-semibold ${mediaScope === "any" ? "border-[#FF2B00] bg-[#FFF4F2] text-[#FF2B00]" : "border-[#D0D5DD] text-[#344054]"}`}>
-                Qualquer post
-              </button>
-              <button type="button" onClick={() => setMediaScope("specific")} className={`h-9 flex-1 rounded-lg border px-3 text-xs font-semibold ${mediaScope === "specific" ? "border-[#FF2B00] bg-[#FFF4F2] text-[#FF2B00]" : "border-[#D0D5DD] text-[#344054]"}`}>
-                Post específico
-              </button>
+              {triggerType === "comment" && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#475467]">Em qual post</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" onClick={() => setMediaScope("any")} className={chip(mediaScope === "any")}>
+                      Qualquer
+                    </button>
+                    <button type="button" onClick={() => setMediaScope("specific")} className={chip(mediaScope === "specific")}>
+                      Específico
+                    </button>
+                  </div>
+                  {mediaScope === "specific" && (
+                    <select
+                      value={mediaId ?? ""}
+                      onChange={(e) => {
+                        const item = media.find((m) => m.id === e.target.value);
+                        setMediaId(e.target.value || null);
+                        setMediaCaption(item?.caption ?? null);
+                      }}
+                      className={fieldClass}
+                    >
+                      <option value="">Selecione um post...</option>
+                      {media.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.caption ? item.caption.slice(0, 60) : item.id} ({item.mediaType})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
             </div>
-            {mediaScope === "specific" && (
-              <select
-                value={mediaId ?? ""}
-                onChange={(e) => {
-                  const item = media.find((m) => m.id === e.target.value);
-                  setMediaId(e.target.value || null);
-                  setMediaCaption(item?.caption ?? null);
-                }}
-                className="h-9 rounded-lg border border-[#D0D5DD] px-3 text-sm"
-              >
-                <option value="">Selecione um post...</option>
-                {media.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.caption ? item.caption.slice(0, 60) : item.id} ({item.mediaType})
-                  </option>
-                ))}
-              </select>
-            )}
           </div>
-        )}
 
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-[#475467]">Mensagens enviadas na DM. Adicione passos pra montar uma sequência.</p>
+          {triggerType === "comment" && (
+            <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-4">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Resposta pública</p>
+              <p className="mb-2 text-xs text-[#667085]">Uma por linha. Sorteia uma a cada comentário, pra não repetir sempre a mesma frase.</p>
+              <textarea
+                value={publicReplyTexts}
+                onChange={(e) => setPublicReplyTexts(e.target.value)}
+                rows={4}
+                placeholder={"Te mandei no direct!\nOlha sua DM 😉"}
+                className="w-full rounded-lg border border-[#D0D5DD] bg-white p-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+              />
+            </div>
+          )}
+        </aside>
+
+        {/* Conversa */}
+        <section className="min-w-0">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Conversa na DM</p>
           <FlowEditor steps={steps} onChange={setSteps} triggerType={triggerType} />
-        </div>
+        </section>
 
-        {triggerType === "comment" && (
-          <label className="flex flex-col gap-1 text-xs font-medium text-[#475467]">
-            Respostas públicas (uma por linha — sorteia uma a cada comentário)
-            <textarea value={publicReplyTexts} onChange={(e) => setPublicReplyTexts(e.target.value)} rows={3} className="rounded-lg border border-[#D0D5DD] p-2.5 text-sm" />
-          </label>
-        )}
+        {/* Prévia */}
+        <aside className="hidden xl:sticky xl:top-0 xl:block xl:self-start">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Prévia</p>
+          <FlowPreview steps={steps} username={instagramUsername} />
+        </aside>
+      </div>
 
-        {error && <p className="text-sm font-medium text-[#B42318]">{error}</p>}
-
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-9 rounded-lg border border-[#D0D5DD] px-4 text-sm font-semibold text-[#344054]">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={saving || !(steps[0]?.type === "message" && steps[0].text.trim())}
-            className="h-9 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Salvando..." : "Salvar"}
-          </button>
-        </div>
+      <div className="sticky -bottom-4 z-10 -mx-5 -mb-4 mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-[#EEF0F3] bg-white px-5 py-3">
+        {error && <p className="mr-auto text-sm font-medium text-[#B42318]">{error}</p>}
+        <span className="text-xs text-[#98A2B3]">
+          {steps.length} {steps.length === 1 ? "passo" : "passos"}
+        </span>
+        <button type="button" onClick={onClose} className="h-10 rounded-lg border border-[#D0D5DD] px-4 text-sm font-semibold text-[#344054] hover:bg-[#F9FAFB]">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !canSave}
+          className="h-10 rounded-lg bg-[#FF2B00] px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {saving ? "Salvando..." : "Salvar regra"}
+        </button>
       </div>
     </Modal>
   );

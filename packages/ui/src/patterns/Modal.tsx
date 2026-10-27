@@ -9,7 +9,7 @@ export interface ModalProps {
   title: string;
   description?: string;
   /** "lg" para conteúdo mais denso (ex.: detalhe de tarefa com checklist + comentários); "xl" para duas colunas (formulário + pré-visualização). */
-  size?: "md" | "lg" | "xl";
+  size?: "md" | "lg" | "xl" | "full";
   /** "dark" só no Portal do Cliente, que tem identidade visual escura própria. */
   tone?: "light" | "dark";
   children: ReactNode;
@@ -83,7 +83,7 @@ export function Modal({ open, onClose, title, description, size = "md", tone = "
           dark
             ? "rounded-[22px] border border-white/10 bg-[#13141C] shadow-[0_40px_120px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]"
             : "rounded-2xl bg-white"
-        } ${size === "xl" ? "max-w-5xl" : size === "lg" ? "max-w-2xl" : "max-w-md"}`}
+        } ${size === "full" ? "max-w-[1440px]" : size === "xl" ? "max-w-5xl" : size === "lg" ? "max-w-2xl" : "max-w-md"}`}
       >
         <div
           className={`flex items-start justify-between gap-3 border-b px-5 py-4 ${
