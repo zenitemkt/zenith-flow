@@ -6,6 +6,7 @@ import type { AssistantConfig } from "@/lib/assistant/config";
 interface Props {
   initialEnabled: boolean;
   initialConfig: AssistantConfig;
+  calendars: { id: string; name: string; canWrite: boolean }[];
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -31,7 +32,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Editor das regras da assistente. Tudo aqui entra nas instruções dela na próxima mensagem. */
-export function AssistantSettingsForm({ initialEnabled, initialConfig }: Props) {
+export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars }: Props) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [config, setConfig] = useState(initialConfig);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -170,11 +171,39 @@ export function AssistantSettingsForm({ initialEnabled, initialConfig }: Props) 
         <Field label="Tempo para os sócios responderem (min)">
           <input className={input} type="number" value={m.partnerApprovalTimeoutMinutes} onChange={(e) => set("meeting", { partnerApprovalTimeoutMinutes: num(e.target.value) })} />
         </Field>
-        <div className="sm:col-span-2">
-          <Field label="Agendas dos sócios (e-mails do Google Agenda)" hint="Um por linha. A primeira é a que cria o evento; as outras entram como convidadas.">
-            <textarea className={input} rows={2} value={m.calendarIds.join("\n")} onChange={(e) => set("meeting", { calendarIds: lines(e.target.value) })} />
-          </Field>
-        </div>
+        {calendars.length === 0 ? (
+          <p className="text-sm text-[#B42318] sm:col-span-2">Conecte o Google Agenda (em Conexões) para escolher as agendas.</p>
+        ) : (
+          <>
+            <Field label="Agenda onde a reunião é criada">
+              <select className={input} value={m.targetCalendarId} onChange={(e) => set("meeting", { targetCalendarId: e.target.value })}>
+                <option value="">Selecione</option>
+                {calendars.filter((cal) => cal.canWrite).map((cal) => (
+                  <option key={cal.id} value={cal.id}>{cal.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Convidados da reunião (e-mails dos sócios)" hint="Um por linha.">
+              <textarea className={input} rows={2} value={m.attendeeEmails.join("\n")} onChange={(e) => set("meeting", { attendeeEmails: lines(e.target.value) })} />
+            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Agendas checadas para saber se o horário está livre" hint="Marque todas que têm compromissos dos sócios.">
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {calendars.map((cal) => (
+                    <label key={cal.id} className="flex items-center gap-2 text-sm text-[#344054]">
+                      <input
+                        type="checkbox"
+                        checked={m.calendarIds.includes(cal.id)}
+                        onChange={(e) => set("meeting", { calendarIds: e.target.checked ? [...m.calendarIds, cal.id] : m.calendarIds.filter((id) => id !== cal.id) })}
+                      />
+                      {cal.name}
+                    </label>
+                  ))}
+                </div>
+              </Field>
+            </div>
+          </>
+        )}
         <Field label="Lembrete antes da reunião (horas)">
           <input className={input} type="number" value={config.reminders.confirmHoursBefore} onChange={(e) => set("reminders", { confirmHoursBefore: num(e.target.value) })} />
         </Field>

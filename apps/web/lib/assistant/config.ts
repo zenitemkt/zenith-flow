@@ -35,7 +35,12 @@ export interface AssistantConfig {
     preferMorning: boolean;
     partnerApprovalUnderHours: number;
     partnerApprovalTimeoutMinutes: number;
+    /** Agendas consultadas para saber se o horário está livre. */
     calendarIds: string[];
+    /** Agenda onde o evento é criado (ex.: "Reunião de vendas"). */
+    targetCalendarId: string;
+    /** E-mails convidados para a reunião (sócios). */
+    attendeeEmails: string[];
   };
   reminders: {
     confirmHoursBefore: number;
@@ -98,6 +103,8 @@ export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
     partnerApprovalUnderHours: 24,
     partnerApprovalTimeoutMinutes: 30,
     calendarIds: [],
+    targetCalendarId: "",
+    attendeeEmails: [],
   },
   reminders: {
     confirmHoursBefore: 2,

@@ -96,8 +96,9 @@ export async function findFreeSlots(config: AssistantConfig, now: Date, days = 7
 }
 
 export async function createMeeting(config: AssistantConfig, input: { start: Date; title: string; description: string; leadEmail: string | null }) {
-  const [organizer, ...others] = config.meeting.calendarIds;
+  const organizer = config.meeting.targetCalendarId || config.meeting.calendarIds[0];
   if (!organizer) throw new Error("Nenhuma agenda configurada no painel.");
+  const others = config.meeting.attendeeEmails;
   const token = await accessToken();
   const end = new Date(input.start.getTime() + config.meeting.durationMinutes * 60_000);
   const response = await fetch(`${API}/calendars/${encodeURIComponent(organizer)}/events?conferenceDataVersion=1&sendUpdates=all`, {
@@ -128,4 +129,17 @@ export async function cancelMeeting(calendarId: string, eventId: string) {
 
 export function formatSlot(d: Date): string {
   return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+/** Agendas que a conta conectada enxerga (as próprias e as compartilhadas), para escolher no painel. */
+export async function listCalendars(): Promise<{ id: string; name: string; canWrite: boolean }[]> {
+  const token = await accessToken();
+  const response = await fetch(`${API}/users/me/calendarList?maxResults=250`, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await response.json();
+  if (!response.ok) throw new Error(`calendarList falhou: ${response.status}`);
+  return (data.items ?? []).map((c: { id: string; summary: string; summaryOverride?: string; accessRole: string }) => ({
+    id: c.id,
+    name: c.summaryOverride ?? c.summary,
+    canWrite: c.accessRole === "owner" || c.accessRole === "writer",
+  }));
 }

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { mergeAssistantConfig } from "@/lib/assistant/config";
+import { listCalendars } from "@/lib/assistant/calendar";
 import { AssistantSettingsForm } from "./AssistantSettingsForm";
 import { HumanConversations } from "./HumanConversations";
 
@@ -27,6 +28,7 @@ export default async function AssistantPage() {
     }),
   ]);
   const config = mergeAssistantConfig(settings?.config);
+  const calendars = settings?.googleRefreshTokenEnc ? await listCalendars().catch(() => []) : [];
 
   return (
     <div className="space-y-6">
@@ -56,7 +58,7 @@ export default async function AssistantPage() {
         </ul>
       </section>
 
-      <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} />
+      <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} calendars={calendars} />
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
