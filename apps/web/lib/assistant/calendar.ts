@@ -1,3 +1,5 @@
+import { prisma } from "@zenite-mkt/db";
+import { decryptSecret } from "@/lib/crypto-secrets";
 import type { AssistantConfig } from "./config";
 
 // Google Agenda: uma conta Google conectada (refresh token) com acesso de edição às agendas dos dois sócios
@@ -6,9 +8,28 @@ import type { AssistantConfig } from "./config";
 const TZ_OFFSET = "-03:00"; // Brasília, sem horário de verão desde 2019.
 const API = "https://www.googleapis.com/calendar/v3";
 
+export function assistantAgencyId(): string | undefined {
+  return process.env.ASSISTANT_AGENCY_ID ?? process.env.SITE_LEADS_AGENCY_ID;
+}
+
+export function calendarRedirectUri() {
+  return `${process.env.MAIN_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://portal.hubzenite.com.br"}/api/admin/assistant-calendar-oauth/callback`;
+}
+
+/** Mesmo cliente OAuth do Google usado no Search Console. */
+export function googleClient() {
+  const id = process.env.GOOGLE_CALENDAR_CLIENT_ID ?? process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_ID;
+  const secret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET ?? process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET;
+  if (!id || !secret) throw new Error("Cliente OAuth do Google não configurado.");
+  return { id, secret };
+}
+
 async function accessToken(): Promise<string> {
-  const { GOOGLE_CALENDAR_CLIENT_ID: id, GOOGLE_CALENDAR_CLIENT_SECRET: secret, GOOGLE_CALENDAR_REFRESH_TOKEN: refresh } = process.env;
-  if (!id || !secret || !refresh) throw new Error("Google Agenda não conectado (GOOGLE_CALENDAR_*).");
+  const { id, secret } = googleClient();
+  const agencyId = assistantAgencyId();
+  const settings = agencyId ? await prisma.assistantSettings.findUnique({ where: { agencyId }, select: { googleRefreshTokenEnc: true } }) : null;
+  const refresh = settings?.googleRefreshTokenEnc ? decryptSecret(settings.googleRefreshTokenEnc) : process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+  if (!refresh) throw new Error("Google Agenda não conectado no painel.");
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

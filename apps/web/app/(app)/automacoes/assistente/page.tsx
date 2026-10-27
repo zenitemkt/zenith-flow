@@ -6,10 +6,9 @@ import { AssistantSettingsForm } from "./AssistantSettingsForm";
 import { HumanConversations } from "./HumanConversations";
 
 const CONNECTIONS: [string, string[]][] = [
-  ["WhatsApp (coexistência)", ["ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_APP_SECRET", "ASSISTANT_WA_VERIFY_TOKEN", "ASSISTANT_AGENCY_ID"]],
+  ["WhatsApp (coexistência)", ["ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_APP_SECRET", "ASSISTANT_WA_VERIFY_TOKEN"]],
   ["Claude (respostas)", ["ANTHROPIC_API_KEY"]],
   ["OpenAI (transcrição de áudio)", ["OPENAI_API_KEY"]],
-  ["Google Agenda dos sócios", ["GOOGLE_CALENDAR_CLIENT_ID", "GOOGLE_CALENDAR_CLIENT_SECRET", "GOOGLE_CALENDAR_REFRESH_TOKEN"]],
   ["Agendador de 1 minuto", ["ASSISTANT_CRON_SECRET"]],
 ];
 
@@ -48,6 +47,12 @@ export default async function AssistantPage() {
               </li>
             );
           })}
+          <li className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm">
+            <span className="text-[#344054]">Google Agenda{settings?.googleAccountEmail ? ` (${settings.googleAccountEmail})` : ""}</span>
+            <a href="/api/admin/assistant-calendar-oauth/start" className={`rounded-full px-2 py-0.5 text-xs font-medium ${settings?.googleRefreshTokenEnc ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>
+              {settings?.googleRefreshTokenEnc ? "Conectado · trocar" : "Conectar"}
+            </a>
+          </li>
         </ul>
       </section>
 

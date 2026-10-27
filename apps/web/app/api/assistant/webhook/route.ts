@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { loadAssistant } from "@/lib/assistant/agent";
+import { assistantAgencyId } from "@/lib/assistant/calendar";
 import { notifyPartners } from "@/lib/assistant/notify";
 import { handleLeadButton, handlePartnerButton, replyAt } from "@/lib/assistant/process";
 import { verifyWhatsappSignature } from "@/lib/assistant/whatsapp";
@@ -57,7 +58,7 @@ function describe(m: WaMessage): { content: string; mediaId: string | null; medi
 export async function POST(request: Request) {
   const raw = await request.text();
   if (!verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"))) return new Response("invalid signature", { status: 401 });
-  const agencyId = process.env.ASSISTANT_AGENCY_ID;
+  const agencyId = assistantAgencyId();
   if (!agencyId) return NextResponse.json({ ok: true });
   const { enabled, config } = await loadAssistant(agencyId);
   const partners = new Set(config.notifications.partnerPhones.map((p) => p.replace(/\D/g, "")));

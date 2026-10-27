@@ -3049,6 +3049,9 @@ model AssistantSettings {
   agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   enabled   Boolean  @default(false)
   config    Json
+  /// Conta Google com edição nas agendas dos sócios (refresh token cifrado com crypto-secrets).
+  googleRefreshTokenEnc String?
+  googleAccountEmail    String?
   updatedAt DateTime @updatedAt
 
   @@map("assistant_settings")
