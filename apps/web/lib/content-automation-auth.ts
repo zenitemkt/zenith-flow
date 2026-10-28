@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "./session";
 import { decryptSecret } from "./crypto-secrets";
+import { isClientRole } from "./rbac";
 
 export interface ContentAutomationActor {
   agencyId: string;
@@ -34,6 +35,7 @@ export async function resolveContentAutomationActor(request: Request): Promise<C
     return null;
   }
   const { session, membership } = await requireSessionAndMembership();
-  if (!session || !membership) return null;
+  // Login do portal do cliente não é equipe da agência — não vê nem mexe em rascunho.
+  if (!session || !membership || isClientRole(membership.role)) return null;
   return { agencyId: membership.agencyId, actor: "admin" };
 }

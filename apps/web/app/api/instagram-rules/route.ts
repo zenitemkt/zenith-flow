@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
+import { isSafeHttpUrl, isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
 import { Prisma } from "@zenite-mkt/db";
 
 function text(value: unknown, maxLength = 1000): string | null {
@@ -19,7 +19,7 @@ function parseButtons(value: unknown): Array<{ text: string; url: string }> {
   return value
     .filter((b): b is { text?: unknown; url?: unknown } => typeof b === "object" && b !== null)
     .map((b) => ({ text: text(b.text, 20), url: text(b.url, 500) }))
-    .filter((b): b is { text: string; url: string } => Boolean(b.text && b.url))
+    .filter((b): b is { text: string; url: string } => Boolean(b.text && b.url && isSafeHttpUrl(b.url)))
     .slice(0, MAX_BUTTONS);
 }
 

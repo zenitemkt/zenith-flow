@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
+import { isSafeHttpUrl } from "@/lib/instagram-flow-model";
 
 interface RouteParams {
   params: { id: string; index: string };
@@ -15,7 +16,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   const log = await prisma.instagramAutomationLog.findUnique({ where: { id: params.id }, select: { buttonUrls: true, clickedAt: true, readAt: true } });
   const urls = Array.isArray(log?.buttonUrls) ? (log!.buttonUrls as string[]) : [];
   const target = urls[index];
-  if (!target) return new NextResponse("Not found", { status: 404 });
+  if (!target || !isSafeHttpUrl(target)) return new NextResponse("Not found", { status: 404 });
   if (!log!.clickedAt) {
     // Clique implica leitura — cobre quem desativou a confirmação de leitura no Instagram.
     const now = new Date();

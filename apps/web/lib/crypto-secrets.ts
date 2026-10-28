@@ -52,7 +52,9 @@ export function decryptSecret(stored: string): string {
   const iv = Buffer.from(ivB64!, "base64");
   const authTag = Buffer.from(authTagB64!, "base64");
   const ciphertext = Buffer.from(ciphertextB64!, "base64");
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  // Tag fixa em 16 bytes: sem isso o Node aceita tag curta, o que enfraquece a autenticação do GCM.
+  if (authTag.length !== 16) throw new Error("Credencial criptografada com tag de autenticação inválida.");
+  const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: 16 });
   decipher.setAuthTag(authTag);
   const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   return plaintext.toString("utf8");

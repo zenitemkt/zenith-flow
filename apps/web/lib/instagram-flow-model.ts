@@ -71,6 +71,16 @@ export const FLOW_LIMITS = {
 
 export const MESSAGING_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+/** Só http(s) — botão com `javascript:`/`data:` viraria redirecionamento perigoso no nosso rastreador de clique. */
+export function isSafeHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function str(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -135,7 +145,7 @@ export function parseFlow(value: unknown): FlowStep[] | null {
       if (!text) continue;
       const buttons = (Array.isArray(item.buttons) ? item.buttons : [])
         .map((b: { text?: unknown; url?: unknown }) => ({ text: str(b?.text, 20), url: str(b?.url, 500) }))
-        .filter((b): b is FlowButton => Boolean(b.text && b.url))
+        .filter((b): b is FlowButton => Boolean(b.text && b.url && isSafeHttpUrl(b.url)))
         .slice(0, FLOW_LIMITS.buttons);
       const quickReplies =
         buttons.length > 0
