@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import type { AssistantConfig } from "@/lib/assistant/config";
 
 export interface ConnectionStatus {
@@ -67,6 +68,7 @@ function Toggle({ checked, onChange, label, description }: { checked: boolean; o
 
 /** Painel da assistente: status, conexões e regras em abas. Tudo vale na próxima mensagem que ela responder. */
 export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars, connections }: Props) {
+  const router = useRouter();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [config, setConfig] = useState(initialConfig);
   const [tab, setTab] = useState<TabId>("triagem");
@@ -89,7 +91,10 @@ export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars
     setStatus("saving");
     const response = await fetch("/api/admin/assistant-settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: nextEnabled, config }) });
     setStatus(response.ok ? "saved" : "error");
-    if (response.ok) setDirty(false);
+    if (response.ok) {
+      setDirty(false);
+      router.refresh(); // atualiza o checklist de conexões, calculado no servidor
+    }
     return response.ok;
   }
 
