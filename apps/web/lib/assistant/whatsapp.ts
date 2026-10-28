@@ -15,7 +15,7 @@ function phoneNumberId() {
 }
 
 export function verifyWhatsappSignature(rawBody: string, header: string | null): boolean {
-  const secret = process.env.ASSISTANT_WA_APP_SECRET;
+  const secret = process.env.ASSISTANT_WA_APP_SECRET ?? process.env.META_APP_SECRET;
   if (!secret || !header?.startsWith("sha256=")) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest();
   const provided = Buffer.from(header.slice(7), "hex");

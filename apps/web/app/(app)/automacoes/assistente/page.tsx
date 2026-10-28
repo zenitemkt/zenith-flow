@@ -24,7 +24,7 @@ export default async function AssistantPage() {
   ]);
   const config = mergeAssistantConfig(settings?.config);
   const calendars = settings?.googleRefreshTokenEnc ? await listCalendars().catch(() => []) : [];
-  const whatsappOk = hasEnv("ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_APP_SECRET", "ASSISTANT_WA_VERIFY_TOKEN");
+  const whatsappOk = hasEnv("ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_VERIFY_TOKEN");
 
   const connections: ConnectionStatus[] = [
     { label: "WhatsApp", detail: whatsappOk ? "Número conectado em coexistência" : "Falta conectar o número", ok: whatsappOk },
