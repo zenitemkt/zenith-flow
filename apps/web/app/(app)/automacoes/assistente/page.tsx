@@ -3,15 +3,10 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { mergeAssistantConfig } from "@/lib/assistant/config";
 import { listCalendars } from "@/lib/assistant/calendar";
-import { AssistantSettingsForm } from "./AssistantSettingsForm";
+import { AssistantSettingsForm, type ConnectionStatus } from "./AssistantSettingsForm";
 import { HumanConversations } from "./HumanConversations";
 
-const CONNECTIONS: [string, string[]][] = [
-  ["WhatsApp (coexistência)", ["ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_APP_SECRET", "ASSISTANT_WA_VERIFY_TOKEN"]],
-  ["Claude (respostas)", ["ANTHROPIC_API_KEY"]],
-  ["OpenAI (transcrição de áudio)", ["OPENAI_API_KEY"]],
-  ["Agendador de 1 minuto", ["ASSISTANT_CRON_SECRET"]],
-];
+const hasEnv = (...keys: string[]) => keys.every((key) => Boolean(process.env[key]));
 
 export default async function AssistantPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -29,49 +24,46 @@ export default async function AssistantPage() {
   ]);
   const config = mergeAssistantConfig(settings?.config);
   const calendars = settings?.googleRefreshTokenEnc ? await listCalendars().catch(() => []) : [];
+  const whatsappOk = hasEnv("ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_APP_SECRET", "ASSISTANT_WA_VERIFY_TOKEN");
+
+  const connections: ConnectionStatus[] = [
+    { label: "WhatsApp", detail: whatsappOk ? "Número conectado em coexistência" : "Falta conectar o número", ok: whatsappOk },
+    {
+      label: "Google Agenda",
+      detail: settings?.googleRefreshTokenEnc ? `${settings.googleAccountEmail ?? "Conta conectada"} · clique para trocar` : "Clique para conectar",
+      ok: Boolean(settings?.googleRefreshTokenEnc) && config.meeting.calendarIds.length > 0,
+      href: "/api/admin/assistant-calendar-oauth/start",
+    },
+    { label: "Inteligência (Claude)", detail: hasEnv("ANTHROPIC_API_KEY") ? "Chave configurada" : "Falta a chave", ok: hasEnv("ANTHROPIC_API_KEY") },
+    { label: "Transcrição de áudio", detail: hasEnv("OPENAI_API_KEY") ? "Chave configurada" : "Falta a chave", ok: hasEnv("OPENAI_API_KEY") },
+    { label: "Agendador", detail: hasEnv("ASSISTANT_CRON_SECRET") ? "Rodando a cada minuto" : "Falta configurar", ok: hasEnv("ASSISTANT_CRON_SECRET") },
+    {
+      label: "Avisos aos sócios",
+      detail: config.notifications.partnerPhones.length ? `${config.notifications.partnerPhones.length} número(s) cadastrado(s)` : "Cadastre na aba Avisos",
+      ok: config.notifications.partnerPhones.length > 0 || Boolean(config.notifications.groupId),
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold text-[#101828]">Assistente virtual</h1>
-        <p className="mt-1 text-sm text-[#667085]">Painel da {config.name}: atendimento do WhatsApp comercial com triagem, agendamento e avisos aos sócios.</p>
-      </header>
-
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[#101828]">Conexões</h2>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {CONNECTIONS.map(([label, keys]) => {
-            const ok = keys.every((key) => Boolean(process.env[key]));
-            return (
-              <li key={label} className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm">
-                <span className="text-[#344054]">{label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ok ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>{ok ? "Conectado" : "Pendente"}</span>
-              </li>
-            );
-          })}
-          <li className="flex items-center justify-between rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm">
-            <span className="text-[#344054]">Google Agenda{settings?.googleAccountEmail ? ` (${settings.googleAccountEmail})` : ""}</span>
-            <a href="/api/admin/assistant-calendar-oauth/start" className={`rounded-full px-2 py-0.5 text-xs font-medium ${settings?.googleRefreshTokenEnc ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>
-              {settings?.googleRefreshTokenEnc ? "Conectado · trocar" : "Conectar"}
-            </a>
-          </li>
-        </ul>
-      </section>
-
-      <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} calendars={calendars} />
+      <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} calendars={calendars} connections={connections} />
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Próximas reuniões</h2>
+        <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+          <h2 className="text-sm font-semibold text-[#101828]">Próximas reuniões</h2>
+          <p className="mb-3 text-xs text-[#667085]">Agendadas pela {config.name}.</p>
           {bookings.length === 0 ? (
-            <p className="py-4 text-center text-sm text-[#667085]">Nenhuma reunião agendada pela assistente.</p>
+            <p className="rounded-lg bg-[#F9FAFB] py-6 text-center text-sm text-[#667085]">Nenhuma reunião agendada ainda.</p>
           ) : (
             <ul className="divide-y divide-[#EEF0F3] text-sm">
               {bookings.map((b) => (
-                <li key={b.id} className="flex justify-between py-2">
-                  <span>{b.conversation.profileName ?? `+${b.conversation.phone}`}</span>
-                  <span className="text-[#667085]">
-                    {b.startsAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })} · {b.status}
+                <li key={b.id} className="flex items-center justify-between py-2.5">
+                  <span className="font-medium text-[#101828]">{b.conversation.profileName ?? `+${b.conversation.phone}`}</span>
+                  <span className="flex items-center gap-2 text-[#667085]">
+                    {b.startsAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${b.status === "confirmed" ? "bg-[#ECFDF3] text-[#027A48]" : b.status === "pending_partner" ? "bg-[#FFFAEB] text-[#B54708]" : "bg-[#F2F4F7] text-[#344054]"}`}>
+                      {b.status === "confirmed" ? "Confirmada" : b.status === "pending_partner" ? "Aguardando sócios" : "Agendada"}
+                    </span>
                   </span>
                 </li>
               ))}

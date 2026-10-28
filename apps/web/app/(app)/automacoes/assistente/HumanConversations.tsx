@@ -16,11 +16,11 @@ export function HumanConversations({ conversations }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+    <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
       <h2 className="text-sm font-semibold text-[#101828]">Em atendimento humano</h2>
       <p className="mb-3 text-xs text-[#667085]">A assistente para quando alguém pede um humano ou quando a equipe responde pelo celular.</p>
       {list.length === 0 ? (
-        <p className="py-4 text-center text-sm text-[#667085]">Nenhuma conversa pausada.</p>
+        <p className="rounded-lg bg-[#F9FAFB] py-6 text-center text-sm text-[#667085]">Nenhuma conversa pausada.</p>
       ) : (
         <ul className="divide-y divide-[#EEF0F3] text-sm">
           {list.map((c) => (
