@@ -5,6 +5,7 @@ import { mergeAssistantConfig } from "@/lib/assistant/config";
 import { listCalendars } from "@/lib/assistant/calendar";
 import { AssistantSettingsForm, type ConnectionStatus } from "./AssistantSettingsForm";
 import { HumanConversations } from "./HumanConversations";
+import { MetaReviewCard } from "./MetaReviewCard";
 
 const hasEnv = (...keys: string[]) => keys.every((key) => Boolean(process.env[key]));
 
@@ -72,6 +73,7 @@ export default async function AssistantPage() {
         </div>
         <HumanConversations conversations={humanConversations.map((c) => ({ id: c.id, name: c.profileName ?? `+${c.phone}`, updatedAt: c.updatedAt.toISOString() }))} />
       </section>
+      {!whatsappOk && <MetaReviewCard />}
     </div>
   );
 }
