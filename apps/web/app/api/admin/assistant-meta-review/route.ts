@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       name: String(body.templateName || "aviso_milena"),
       language: "pt_BR",
       category: "UTILITY",
-      components: [{ type: "BODY", text: "Aviso da assistente Milena: {{1}}", example: { body_text: [["novo contato no WhatsApp"]] } }],
+      components: [{ type: "BODY", text: "Aviso da assistente Milena: {{1}}. Abra o WhatsApp comercial para acompanhar.", example: { body_text: [["novo contato no WhatsApp"]] } }],
     };
   } else {
     return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
