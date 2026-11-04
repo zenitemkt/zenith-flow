@@ -11,6 +11,7 @@ import { getDeliveryQualityStats } from "@/lib/tracking-quality";
 import { RotateWriteKeyButton } from "./RotateWriteKeyButton";
 import { SendTestEventButton } from "./SendTestEventButton";
 import { SiteLeadIntegrationActions } from "./SiteLeadIntegrationActions";
+import { MetaLeadsIntegration } from "./MetaLeadsIntegration";
 import { ConnectMetaButton } from "./ConnectMetaButton";
 import { DisconnectMetaButton } from "./DisconnectMetaButton";
 import { MetaOAuthResultToast } from "./MetaOAuthResultToast";
@@ -55,6 +56,33 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
   }
 
   const canManage = canManageIntegrations(membership.role);
+
+  const facebookPages = await prisma.socialConnection.findMany({
+    where: { agencyId: membership.agencyId, platform: "FACEBOOK" },
+    select: { id: true, clientId: true, name: true, leadsEnabled: true, leadsLastError: true, client: { select: { name: true } } },
+    orderBy: { name: "asc" },
+  });
+  const leadEventStats = await prisma.metaLeadEvent.groupBy({
+    by: ["connectionId", "status"],
+    where: { agencyId: membership.agencyId },
+    _count: { _all: true },
+    _max: { createdAt: true },
+  });
+  const metaLeadPages = facebookPages.map((page) => {
+    const stats = leadEventStats.filter((row) => row.connectionId === page.id);
+    const imported = stats.find((row) => row.status === "imported");
+    return {
+      connectionId: page.id,
+      clientId: page.clientId,
+      clientName: page.client.name,
+      pageName: page.name,
+      enabled: page.leadsEnabled,
+      lastError: page.leadsLastError,
+      imported: imported?._count._all ?? 0,
+      failed: stats.find((row) => row.status === "failed")?._count._all ?? 0,
+      lastLeadAt: imported?._max.createdAt?.toISOString() ?? null,
+    };
+  });
 
   let writeKey = membership.agency.trackingWriteKey;
   if (!writeKey) {
@@ -207,6 +235,18 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
           <span>A credencial fica protegida na Vercel e nunca é exibida nesta tela.</span>
           <span>Desconectar não apaga leads já recebidos.</span>
         </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+        <div className="border-b border-[#EEF0F3] p-4">
+          <h2 className="text-sm font-semibold text-[#101828]">Formulários nativos da Meta (Lead Ads)</h2>
+          <p className="mt-1 max-w-2xl text-sm text-[#667085]">
+            Cada resposta de formulário de anúncio de lead entra em <span className="font-medium text-[#344054]">Comercial → Leads</span> com uma
+            oportunidade no pipeline, origem &ldquo;Meta Lead Ads&rdquo;, formulário, campanha e respostas. Ative só a Página da própria agência: os leads vão
+            para o CRM da agência.
+          </p>
+        </div>
+        <MetaLeadsIntegration pages={metaLeadPages} canManage={canManage} />
       </section>
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

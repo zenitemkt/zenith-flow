@@ -40,12 +40,12 @@ function requireEnv(name: "META_APP_ID"): string {
   return value;
 }
 
-export function buildMetaSocialAuthorizeUrl(state: string): string {
+export function buildMetaSocialAuthorizeUrl(state: string, extraScopes: readonly string[] = []): string {
   const url = new URL(`https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth`);
   url.searchParams.set("client_id", requireEnv("META_APP_ID"));
   url.searchParams.set("redirect_uri", getMetaOAuthRedirectUri());
   url.searchParams.set("state", state);
-  url.searchParams.set("scope", META_SOCIAL_SCOPES.join(","));
+  url.searchParams.set("scope", [...META_SOCIAL_SCOPES, ...extraScopes].join(","));
   url.searchParams.set("response_type", "code");
   // Sempre mostra a tela de escolha de Páginas, mesmo que já tenha autorizado antes (pra incluir Páginas novas).
   url.searchParams.set("auth_type", "rerequest");

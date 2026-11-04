@@ -150,6 +150,7 @@ model Agency {
   instagramAutomationLogs      InstagramAutomationLog[]
   instagramContacts            InstagramContact[]
   instagramFlowSessions        InstagramFlowSession[]
+  metaLeadEvents               MetaLeadEvent[]
   socialPosts                  SocialPost[]
   onboardingTemplates          OnboardingTemplate[]
   projects                     Project[]
@@ -2921,7 +2922,13 @@ model SocialConnection {
   /// `entry[].id` nos webhooks de mensageria.
   messagingAccountId      String?
 
-  posts SocialPost[]
+  /// Lead Ads (formulário nativo): leads da Página entram no CRM da agência. Só faz sentido pra Página da própria agência.
+  leadsEnabled      Boolean   @default(false)
+  leadsSubscribedAt DateTime?
+  leadsLastError    String?
+
+  posts      SocialPost[]
+  leadEvents MetaLeadEvent[]
 
   @@unique([clientId, platform])
   @@index([agencyId])
@@ -3174,4 +3181,34 @@ model AssistantBooking {
 
   @@index([agencyId, startsAt])
   @@map("assistant_booking")
+}
+
+/// Cada resposta de formulário nativo da Meta (Lead Ads) — o `leadgenId` único impede lead duplicado quando a Meta reenvia o webhook ou a importação manual roda de novo.
+model MetaLeadEvent {
+  id           String           @id @default(cuid())
+  agencyId     String
+  agency       Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  connectionId String
+  connection   SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  leadgenId     String    @unique
+  pageId        String
+  formId        String?
+  formName      String?
+  adId          String?
+  campaignName  String?
+  /// 'pending' | 'imported' | 'failed'
+  status        String
+  error         String?
+  leadId        String?
+  submissionId  String?
+  /// 'webhook' | 'import'
+  origin        String
+  leadCreatedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([agencyId, createdAt])
+  @@index([connectionId, status])
+  @@map("meta_lead_event")
 }
