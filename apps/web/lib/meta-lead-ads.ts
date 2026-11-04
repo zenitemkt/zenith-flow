@@ -143,6 +143,10 @@ export async function ingestMetaLead(input: {
         phone: fields.phone,
         company: fields.company,
         city: fields.city,
+        service: fields.service,
+        investment: fields.investment,
+        employees: fields.employees,
+        interest: fields.interest,
         source: META_LEAD_SOURCE,
         summary: summary || null,
         trackingContext: {
