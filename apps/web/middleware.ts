@@ -27,6 +27,7 @@ const PUBLIC_PATH_PREFIXES = [
   // sessão. Webhook protegido por assinatura (x-hub-signature-256) + verify token no handshake, não por login.
   "/api/instagram/webhook",
   "/api/assistant/webhook",
+  "/api/meta/leads/webhook",
   "/api/assistant/process",
   "/api/instagram/click",
   // Autenticação própria por chave (x-draft-agent-key, timingSafeEqual) pra
