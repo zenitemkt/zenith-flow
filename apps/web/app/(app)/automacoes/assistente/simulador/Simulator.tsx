@@ -95,7 +95,10 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
   }, [chats]);
 
   const chat = chats.find((c) => c.id === activeId);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [chat?.messages.length, loading]);
+  useEffect(() => {
+    // Chaves obrigatórias: no Chrome novo scrollIntoView devolve uma Promise, e o React tentaria chamá-la como limpeza.
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat?.messages.length, loading]);
 
   function patch(id: string, fn: (c: Chat) => Chat) {
     setChats((list) => list.map((c) => (c.id === id ? { ...fn(c), updatedAt: Date.now() } : c)));
