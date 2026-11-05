@@ -296,7 +296,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                   <button type="button" onClick={regenerate} className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-medium text-[#344054] hover:bg-[#F2F4F7]">
                     Gerar outra versão
                   </button>
-                  <span className="self-center text-xs text-[#667085]">Se você mudou o texto antes de enviar, clique em "editar" para a conversa ficar igual ao que o lead recebeu.</span>
+                  <span className="self-center text-xs text-[#667085]">Se você mudou o texto antes de enviar, clique em &quot;editar&quot; para a conversa ficar igual ao que o lead recebeu.</span>
                 </div>
               )}
 
@@ -361,7 +361,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
         <aside className="space-y-3 rounded-2xl border border-[#E4E7EC] bg-white p-4">
           <div>
             <h2 className="text-sm font-semibold text-[#101828]">Ajustes da {name}</h2>
-            <p className="text-xs text-[#667085]">Não gostou de uma resposta? Escreva a regra aqui, salve e clique em "Gerar outra versão". Vale também para o WhatsApp de verdade.</p>
+            <p className="text-xs text-[#667085]">Não gostou de uma resposta? Escreva a regra aqui, salve e clique em &quot;Gerar outra versão&quot;. Vale também para o WhatsApp de verdade.</p>
           </div>
           <textarea
             value={instructions}
