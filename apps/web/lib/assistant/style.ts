@@ -25,7 +25,5 @@ export function splitBubbles(text: string, maxChars = 320): string[] {
   }
   // Nunca descartar texto: além de 5 mensagens, o resto vai junto na última.
   if (out.length <= 5) return out;
-  return [...out.slice(0, 4), out.slice(4).join("
-
-")];
+  return [...out.slice(0, 4), out.slice(4).join(" ")];
 }
