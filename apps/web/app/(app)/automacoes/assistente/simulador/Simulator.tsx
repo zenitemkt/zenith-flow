@@ -22,6 +22,7 @@ interface Chat {
 }
 
 const STORAGE = "milena_simulator_v1";
+const lastAssistantIndex = (list: { role: string }[]) => list.map((m) => m.role).lastIndexOf("assistant");
 const uid = () => Math.random().toString(36).slice(2, 10);
 const newChat = (): Chat => ({ id: uid(), title: "Nova conversa", profileName: "", leadContext: "", messages: [], updatedAt: Date.now() });
 
@@ -42,16 +43,30 @@ function save(list: Chat[]) {
   } catch {}
 }
 
-function readImage(file: File): Promise<{ mediaType: string; data: string }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result);
-      resolve({ mediaType: file.type, data: result.slice(result.indexOf(",") + 1) });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+/** Reduz a imagem para no máximo 1568 px (o que o modelo enxerga) em JPEG: requisição pequena e menos tokens. */
+async function readImage(file: File): Promise<{ mediaType: string; data: string }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Não consegui abrir essa imagem."));
+      el.src = url;
+    });
+    const scale = Math.min(1, 1568 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Navegador sem suporte a imagem.");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    return { mediaType: "image/jpeg", data: dataUrl.slice(dataUrl.indexOf(",") + 1) };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function Simulator({ name, initialInstructions }: { name: string; initialInstructions: string }) {
@@ -93,10 +108,18 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
       const response = await fetch("/api/admin/assistant-simulator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messages.map(({ role, content, image }) => ({ role, content, image })), profileName: target.profileName, leadContext: target.leadContext }),
+        // Imagem só vai na rodada em que chegou (depois da última resposta); antes disso vira marcador no servidor.
+        body: JSON.stringify({
+          messages: messages.map(({ role, content, image }, i) => ({ role, content: content || (image ? "[imagem]" : ""), image: image && i > lastAssistantIndex(messages) ? image : undefined })),
+          profileName: target.profileName,
+          leadContext: target.leadContext,
+        }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error ?? "Falha ao gerar a resposta.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        const raw = data?.error;
+        throw new Error(typeof raw === "string" ? raw : raw?.message ? String(raw.message) : `Falha ao gerar a resposta (erro ${response.status}).`);
+      }
       const bubbles: string[] = data.bubbles ?? [];
       const actions: string[] = data.actions ?? [];
       const u = data.usage ?? {};
@@ -148,7 +171,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
     const response = await fetch("/api/admin/assistant-simulator", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ extraInstructions: instructions }) });
     setSavingInstructions(false);
     if (response.ok) setSavedInstructions(instructions);
-    else setError((await response.json().catch(() => null))?.error ?? "Não consegui salvar os ajustes.");
+    else setError(String((await response.json().catch(() => null))?.error ?? "Não consegui salvar os ajustes."));
   }
 
   function createChat() {
@@ -324,7 +347,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                     const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
                     if (file) {
                       e.preventDefault();
-                      setImage(await readImage(file));
+                      readImage(file).then(setImage).catch((err) => setError(err instanceof Error ? err.message : "Imagem inválida."));
                     }
                   }}
                   rows={3}
@@ -348,7 +371,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                     hidden
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
-                      if (file) setImage(await readImage(file));
+                      if (file) readImage(file).then(setImage).catch((err) => setError(err instanceof Error ? err.message : "Imagem inválida."));
                       e.target.value = "";
                     }}
                   />
