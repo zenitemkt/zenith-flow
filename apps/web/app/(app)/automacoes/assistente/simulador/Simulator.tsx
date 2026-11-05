@@ -126,7 +126,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
       const bubbles: string[] = data.bubbles ?? [];
       const actions: string[] = data.actions ?? [];
       const u = data.usage ?? {};
-      const usage = `${(u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)} tokens lidos (${u.cache_read_input_tokens ?? 0} do cache, mais baratos) · ${u.output_tokens ?? 0} escritos`;
+      const usage = `${(u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)} tokens lidos (${u.cache_read_input_tokens ?? 0} do cache, 90% mais baratos) · ${u.output_tokens ?? 0} escritos`;
       const replies: Msg[] = bubbles.map((content, i) => ({ id: uid(), role: "assistant", content, actions: i === bubbles.length - 1 && actions.length ? actions : undefined, usage: i === bubbles.length - 1 ? usage : undefined }));
       if (!replies.length && actions.length) replies.push({ id: uid(), role: "assistant", content: "(sem texto)", actions });
       patch(target.id, (c) => ({ ...c, messages: [...messages, ...replies] }));
@@ -255,24 +255,24 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                 )}
               </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto bg-[#EFEAE2] px-4 py-4">
+              <div className="flex-1 space-y-2 overflow-y-auto px-4 py-4" style={{ background: "#EFEAE2" }}>
                 {chat.messages.length === 0 && (
-                  <div className="mx-auto mt-10 max-w-sm rounded-xl bg-white/80 p-4 text-center text-sm text-[#475467]">
+                  <div className="mx-auto mt-10 max-w-sm rounded-xl p-4 text-center text-sm" style={{ background: "rgba(255,255,255,.85)", color: "#475467" }}>
                     Cole abaixo a primeira mensagem que o lead mandou. Se ele mandou várias, pode colar todas juntas.
                   </div>
                 )}
                 {chat.messages.map((m) =>
                   m.role === "user" ? (
                     <div key={m.id} className="flex justify-start">
-                      <div className="max-w-[80%] rounded-xl rounded-tl-sm bg-white px-3 py-2 text-sm text-[#101828] shadow-sm">
-                        <p className="mb-0.5 text-[11px] font-semibold text-[#027A48]">{chat.profileName || "Lead"}</p>
+                      <div className="max-w-[80%] rounded-xl rounded-tl-sm px-3 py-2 text-sm shadow-sm" style={{ background: "#FFFFFF", color: "#111B21" }}>
+                        <p className="mb-0.5 text-[11px] font-semibold" style={{ color: "#027A48" }}>{chat.profileName || "Lead"}</p>
                         {m.image && <img src={`data:${m.image.mediaType};base64,${m.image.data}`} alt="" className="mb-1 max-h-48 rounded-lg" />}
                         <p className="whitespace-pre-wrap">{m.content}</p>
                       </div>
                     </div>
                   ) : (
                     <div key={m.id} className="flex flex-col items-end gap-1">
-                      <div className="group relative max-w-[80%] rounded-xl rounded-tr-sm bg-[#D9FDD3] px-3 py-2 text-sm text-[#101828] shadow-sm">
+                      <div className="group relative max-w-[80%] rounded-xl rounded-tr-sm px-3 py-2 text-sm shadow-sm" style={{ background: "#D9FDD3", color: "#111B21" }}>
                         {editing === m.id ? (
                           <textarea
                             autoFocus
@@ -283,32 +283,32 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                               setEditing(null);
                             }}
                             rows={Math.max(2, Math.ceil(m.content.length / 40))}
-                            className="w-72 max-w-full rounded border border-[#A6F4C5] bg-white p-1 text-sm"
+                            className="w-72 max-w-full rounded border p-1 text-sm" style={{ background: "#FFFFFF", color: "#111B21", borderColor: "#A6F4C5" }}
                           />
                         ) : (
                           <p className="whitespace-pre-wrap">{m.content}</p>
                         )}
-                        <div className="mt-1 flex justify-end gap-2 text-[11px] text-[#475467]">
+                        <div className="mt-1 flex justify-end gap-2 text-[11px]" style={{ color: "#475467" }}>
                           <button type="button" onClick={() => setEditing(m.id)} className="hover:text-[#101828]">
                             editar
                           </button>
-                          <button type="button" onClick={() => copy(m.content, m.id)} className="font-medium text-[#027A48] hover:underline">
+                          <button type="button" onClick={() => copy(m.content, m.id)} className="font-medium hover:underline" style={{ color: "#027A48" }}>
                             {copied === m.id ? "copiado!" : "copiar"}
                           </button>
                         </div>
                       </div>
                       {m.actions?.map((a, i) => (
-                        <span key={i} className="max-w-[80%] rounded-full bg-[#FFFAEB] px-3 py-1 text-xs text-[#B54708] ring-1 ring-[#FEDF89]">
+                        <span key={i} className="max-w-[80%] rounded-full px-3 py-1 text-xs" style={{ background: "#FFFAEB", color: "#B54708", border: "1px solid #FEDF89" }}>
                           ⚙ {a}
                         </span>
                       ))}
-                      {m.usage && <span className="text-[10px] text-[#98A2B3]">{m.usage}</span>}
+                      {m.usage && <span className="text-[10px]" style={{ color: "#667085" }}>{m.usage}</span>}
                     </div>
                   ),
                 )}
                 {loading && (
                   <div className="flex justify-end">
-                    <span className="rounded-xl bg-[#D9FDD3] px-3 py-2 text-sm text-[#475467]">{name} está digitando…</span>
+                    <span className="rounded-xl px-3 py-2 text-sm" style={{ background: "#D9FDD3", color: "#475467" }}>{name} está digitando…</span>
                   </div>
                 )}
                 <div ref={bottom} />
