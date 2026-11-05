@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
@@ -47,6 +48,10 @@ export default async function AssistantPage() {
 
   return (
     <div className="space-y-6">
+      <Link href="/automacoes/assistente/simulador" className="flex items-center justify-between rounded-2xl border border-[#A6F4C5] bg-[#ECFDF3] px-5 py-3 text-sm text-[#05603A] hover:bg-[#D1FADF]">
+        <span><strong>Testar a {config.name} agora:</strong> cole a mensagem de um lead e veja o que ela responderia, sem enviar nada.</span>
+        <span className="font-semibold">Abrir simulador →</span>
+      </Link>
       <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} calendars={calendars} connections={connections} />
 
       <section className="grid gap-6 lg:grid-cols-2">

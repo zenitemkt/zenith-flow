@@ -48,7 +48,7 @@ async function leadSummary(leadId: string | null): Promise<string | null> {
   return lines.filter(Boolean).join("\n");
 }
 
-const TOOLS = [
+export const TOOLS = [
   { name: "check_availability", description: "Lista horários livres nas agendas dos dois sócios para a reunião rápida.", input_schema: { type: "object", properties: {}, required: [] } },
   {
     name: "book_meeting",
@@ -160,9 +160,9 @@ export async function cancelBooking(bookingId: string, config: AssistantConfig, 
   if (config.notifications.onCancellation) await notifyPartners(config, `${config.name}: ${booking.conversation.profileName ?? "contato"} (+${booking.conversation.phone}) desmarcou a reunião de ${formatSlot(booking.startsAt)} (${origin}).`);
 }
 
-type Block = Record<string, unknown>;
+export type Block = Record<string, unknown>;
 
-async function callClaude(config: AssistantConfig, system: string, messages: { role: string; content: Block[] }[]) {
+export async function callClaude(config: AssistantConfig, system: string, messages: { role: string; content: Block[] }[]) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY ausente.");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
