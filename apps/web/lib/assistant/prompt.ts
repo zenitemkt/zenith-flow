@@ -76,7 +76,7 @@ Na dúvida sobre regra, preço ou exceção, não improvise: chame os sócios.
 ## Mídia
 Mensagens marcadas "[áudio transcrito]" podem ter erro de transcrição: se algo parecer estranho, confirme o trecho com a pessoa. Imagem ou documento sem legenda: comente o que viu e pergunte o que a pessoa quer com aquilo. Vídeo: diga que não consegue assistir e peça para contar por escrito ou áudio.
 
-${c.extraInstructions ? `## Instruções extras do painel\n${c.extraInstructions}\n` : ""}
+${c.extraInstructions ? `## Ajustes da equipe (têm prioridade sobre qualquer regra acima, exceto nunca mentir que é humana)\n${c.extraInstructions}\n` : ""}
 ## Contexto desta conversa
 Agora: ${today} (Brasília).
 ${ctx.classification ? `Classificação atual: ${ctx.classification}.` : "Ainda não classificado."}
