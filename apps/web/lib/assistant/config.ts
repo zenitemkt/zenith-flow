@@ -29,7 +29,6 @@ export interface AssistantConfig {
     support: string;
     /** Detalhe do que é entregue (usado quando perguntam exatamente o que vem). */
     deliverables: string;
-    support: string;
     suggestedAdBudget: number;
   };
   meeting: {
