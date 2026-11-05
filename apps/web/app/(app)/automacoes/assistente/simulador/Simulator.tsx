@@ -126,7 +126,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
       const bubbles: string[] = data.bubbles ?? [];
       const actions: string[] = data.actions ?? [];
       const u = data.usage ?? {};
-      const usage = `${(u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)} tokens lidos (${u.cache_read_input_tokens ?? 0} do cache, 90% mais baratos) · ${u.output_tokens ?? 0} escritos`;
+      const usage = `${(u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)} tokens lidos (${u.cache_read_input_tokens ?? 0} do cache, 90% mais baratos; ${u.cache_creation_input_tokens ?? 0} guardados) · ${u.output_tokens ?? 0} escritos`;
       const replies: Msg[] = bubbles.map((content, i) => ({ id: uid(), role: "assistant", content, actions: i === bubbles.length - 1 && actions.length ? actions : undefined, usage: i === bubbles.length - 1 ? usage : undefined }));
       if (!replies.length && actions.length) replies.push({ id: uid(), role: "assistant", content: "(sem texto)", actions });
       patch(target.id, (c) => ({ ...c, messages: [...messages, ...replies] }));

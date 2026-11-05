@@ -23,5 +23,9 @@ export function splitBubbles(text: string, maxChars = 320): string[] {
     }
     for (const paragraph of part.split(/\n{2,}/)) if (paragraph.trim()) out.push(paragraph.trim());
   }
-  return out.slice(0, 4);
+  // Nunca descartar texto: além de 5 mensagens, o resto vai junto na última.
+  if (out.length <= 5) return out;
+  return [...out.slice(0, 4), out.slice(4).join("
+
+")];
 }

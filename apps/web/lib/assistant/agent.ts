@@ -183,14 +183,25 @@ function systemBlocks(system: string): Block[] {
 export async function callClaude(config: AssistantConfig, system: string, messages: { role: string; content: Block[] }[]) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY ausente.");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: config.model, max_tokens: 700, system: systemBlocks(system), messages, tools: TOOLS }),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(`Claude ${response.status}: ${JSON.stringify(data?.error ?? data).slice(0, 300)}`);
-  return data as { content: Block[]; stop_reason: string; usage?: Usage };
+  // O modelo pensa antes de responder e esse raciocínio conta no limite de saída. Com limite curto a resposta
+  // saía cortada no meio: limite folgado, esforço "low" (conversa de WhatsApp, gasta menos) e, se mesmo assim
+  // estourar, repete com mais espaço. Resposta cortada nunca é devolvida.
+  for (const maxTokens of [4000, 12000]) {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: config.model, max_tokens: maxTokens, output_config: { effort: "low" }, system: systemBlocks(system), messages, tools: TOOLS }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Claude ${response.status}: ${JSON.stringify(data?.error ?? data).slice(0, 300)}`);
+    if (data.stop_reason === "max_tokens") {
+      console.warn("assistant_max_tokens", maxTokens, data.usage);
+      continue;
+    }
+    if (data.stop_reason === "refusal") throw new Error("O modelo recusou responder.");
+    return data as { content: Block[]; stop_reason: string; usage?: Usage };
+  }
+  throw new Error("Resposta longa demais, tente de novo.");
 }
 
 /** Prepara a mídia ainda não lida (transcreve áudio, baixa imagem/PDF) das mensagens novas da pessoa. */
