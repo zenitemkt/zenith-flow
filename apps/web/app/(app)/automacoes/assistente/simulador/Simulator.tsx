@@ -9,6 +9,7 @@ interface Msg {
   content: string;
   image?: { mediaType: string; data: string };
   actions?: string[];
+  usage?: string;
 }
 
 interface Chat {
@@ -98,7 +99,9 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
       if (!response.ok) throw new Error(data?.error ?? "Falha ao gerar a resposta.");
       const bubbles: string[] = data.bubbles ?? [];
       const actions: string[] = data.actions ?? [];
-      const replies: Msg[] = bubbles.map((content, i) => ({ id: uid(), role: "assistant", content, actions: i === bubbles.length - 1 && actions.length ? actions : undefined }));
+      const u = data.usage ?? {};
+      const usage = `${(u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)} tokens lidos (${u.cache_read_input_tokens ?? 0} do cache, mais baratos) · ${u.output_tokens ?? 0} escritos`;
+      const replies: Msg[] = bubbles.map((content, i) => ({ id: uid(), role: "assistant", content, actions: i === bubbles.length - 1 && actions.length ? actions : undefined, usage: i === bubbles.length - 1 ? usage : undefined }));
       if (!replies.length && actions.length) replies.push({ id: uid(), role: "assistant", content: "(sem texto)", actions });
       patch(target.id, (c) => ({ ...c, messages: [...messages, ...replies] }));
     } catch (e) {
@@ -273,6 +276,7 @@ export function Simulator({ name, initialInstructions }: { name: string; initial
                           ⚙ {a}
                         </span>
                       ))}
+                      {m.usage && <span className="text-[10px] text-[#98A2B3]">{m.usage}</span>}
                     </div>
                   ),
                 )}

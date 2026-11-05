@@ -161,6 +161,24 @@ export async function cancelBooking(bookingId: string, config: AssistantConfig, 
 }
 
 export type Block = Record<string, unknown>;
+export interface Usage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
+// Economia: ferramentas + regras fixas vão em cache (lidas a 10% do preço nas chamadas seguintes).
+// O trecho que muda a cada mensagem (data/hora, card, reunião) fica depois do ponto de cache.
+const DYNAMIC_MARK = "## Contexto desta conversa";
+function systemBlocks(system: string): Block[] {
+  const cut = system.indexOf(DYNAMIC_MARK);
+  if (cut <= 0) return [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+  return [
+    { type: "text", text: system.slice(0, cut).trim(), cache_control: { type: "ephemeral" } },
+    { type: "text", text: system.slice(cut) },
+  ];
+}
 
 export async function callClaude(config: AssistantConfig, system: string, messages: { role: string; content: Block[] }[]) {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -168,11 +186,11 @@ export async function callClaude(config: AssistantConfig, system: string, messag
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({ model: config.model, max_tokens: 1024, system, messages, tools: TOOLS }),
+    body: JSON.stringify({ model: config.model, max_tokens: 700, system: systemBlocks(system), messages, tools: TOOLS }),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(`Claude ${response.status}: ${JSON.stringify(data?.error ?? data).slice(0, 300)}`);
-  return data as { content: Block[]; stop_reason: string };
+  return data as { content: Block[]; stop_reason: string; usage?: Usage };
 }
 
 /** Prepara a mídia ainda não lida (transcreve áudio, baixa imagem/PDF) das mensagens novas da pessoa. */
@@ -209,7 +227,7 @@ export async function runConversationTurn(conversationId: string): Promise<void>
 
   try {
     const leadId = await ensureLead(conv);
-    const history = await prisma.assistantMessage.findMany({ where: { conversationId }, orderBy: { createdAt: "desc" }, take: 40 });
+    const history = await prisma.assistantMessage.findMany({ where: { conversationId }, orderBy: { createdAt: "desc" }, take: 30 });
     history.reverse();
     const lastAssistant = history.map((m) => m.role).lastIndexOf("assistant");
     const fresh = history.slice(lastAssistant + 1).filter((m) => m.role === "user");

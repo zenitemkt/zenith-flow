@@ -1,6 +1,6 @@
 import { buildSystemPrompt } from "./prompt";
 import { splitBubbles } from "./style";
-import { callClaude, loadAssistant, type Block } from "./agent";
+import { callClaude, loadAssistant, type Block, type Usage } from "./agent";
 import { findFreeSlots, formatSlot } from "./calendar";
 import type { AssistantConfig } from "./config";
 
@@ -72,14 +72,18 @@ async function simulateTool(name: string, input: Record<string, unknown>, config
   }
 }
 
-export async function simulateTurn(agencyId: string, input: SimInput): Promise<{ bubbles: string[]; actions: string[] }> {
+export async function simulateTurn(agencyId: string, input: SimInput): Promise<{ bubbles: string[]; actions: string[]; usage: Usage }> {
   const { config } = await loadAssistant(agencyId);
   const now = new Date();
 
   const messages: { role: string; content: Block[] }[] = [];
-  for (const m of input.messages.slice(-40)) {
+  const recent = input.messages.slice(-30);
+  // Imagem só é mandada para o modelo na rodada em que chegou; nas seguintes vira um marcador (imagem custa caro).
+  const lastReply = recent.map((m) => m.role).lastIndexOf("assistant");
+  for (const [index, m] of recent.entries()) {
     const blocks: Block[] = [];
-    if (m.image && m.role === "user" && /^image\/(jpeg|png|gif|webp)$/.test(m.image.mediaType)) {
+    if (m.image && index < lastReply) blocks.push({ type: "text", text: "[imagem enviada antes]" });
+    else if (m.image && m.role === "user" && /^image\/(jpeg|png|gif|webp)$/.test(m.image.mediaType)) {
       blocks.push({ type: "image", source: { type: "base64", media_type: m.image.mediaType, data: m.image.data } });
     }
     if (m.content.trim()) blocks.push({ type: "text", text: m.content.trim() });
@@ -100,9 +104,11 @@ export async function simulateTurn(agencyId: string, input: SimInput): Promise<{
   });
 
   const actions: string[] = [];
+  const usage: Usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
   let reply = "";
   for (let round = 0; round < 6; round++) {
     const response = await callClaude(config, system, messages);
+    if (response.usage) for (const k of Object.keys(usage) as (keyof Usage)[]) usage[k] = (usage[k] ?? 0) + (response.usage[k] ?? 0);
     const toolUses = response.content.filter((b) => b.type === "tool_use");
     reply = response.content.filter((b) => b.type === "text").map((b) => String(b.text)).join("\n").trim();
     if (response.stop_reason !== "tool_use" || !toolUses.length) break;
@@ -115,5 +121,5 @@ export async function simulateTurn(agencyId: string, input: SimInput): Promise<{
     messages.push({ role: "user", content: results });
   }
 
-  return { bubbles: splitBubbles(reply), actions };
+  return { bubbles: splitBubbles(reply), actions, usage };
 }
