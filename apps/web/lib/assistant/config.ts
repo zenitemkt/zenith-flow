@@ -27,6 +27,9 @@ export interface AssistantConfig {
     includes: string;
     /** Suporte depois da entrega. */
     support: string;
+    /** Detalhe do que é entregue (usado quando perguntam exatamente o que vem). */
+    deliverables: string;
+    support: string;
     suggestedAdBudget: number;
   };
   meeting: {
@@ -97,6 +100,7 @@ export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
     suggestedAdBudget: 500,
     includes: "A configuração da conta de anúncios está inclusa na entrega, assim como a verificação da empresa junto ao Google ou à Meta.",
     support: "Depois da entrega e do treinamento, 30 dias de suporte num WhatsApp exclusivo, para erros e problemas que aparecerem ao subir novos anúncios ou campanhas.",
+    deliverables: "Instagram e Facebook: foto de perfil, descrição otimizada para SEO, capa, destaques e as três primeiras postagens do perfil, que podem ficar fixadas à escolha da pessoa. Perfil da Empresa no Google (Google Meu Negócio): 4 publicações, uma por semana ao longo de um mês. Anúncios: variações de imagens e vídeos para as campanhas. A campanha da Meta tem 5 anúncios em imagem e 3 em vídeo. Captação dos vídeos, duas opções: a própria empresa grava seguindo um roteiro que a Zenite envia, ou a Zenite manda um videomaker para gravar de forma profissional, com custo extra das horas do profissional. A edição dos vídeos fica por conta da Zenite e está inclusa no valor do pacote.",
   },
   meeting: {
     durationMinutes: 30,

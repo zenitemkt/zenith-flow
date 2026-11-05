@@ -235,6 +235,9 @@ export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars
                 <Field label="O que já vem incluso" wide>
                   <textarea className={inputClass} rows={2} value={p.includes} onChange={(e) => set("entryProduct", { includes: e.target.value })} />
                 </Field>
+                <Field label="O que é entregue, em detalhe (respondido quando perguntam)" wide>
+                  <textarea className={inputClass} rows={5} value={p.deliverables} onChange={(e) => set("entryProduct", { deliverables: e.target.value })} />
+                </Field>
                 <Field label="Suporte depois da entrega" wide>
                   <textarea className={inputClass} rows={2} value={p.support} onChange={(e) => set("entryProduct", { support: e.target.value })} />
                 </Field>
