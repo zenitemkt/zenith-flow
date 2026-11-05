@@ -15,7 +15,8 @@ export function mapLeadFields(fieldData: Array<{ name: string; values?: string[]
   let first: string | null = null;
   let last: string | null = null;
   for (const field of fieldData ?? []) {
-    const value = (field.values ?? []).join(", ").trim();
+    // Opções de múltipla escolha vêm como "ate_r$_800": troca "_" por espaço para ficar legível.
+    const value = (field.values ?? []).map((v) => (/\s/.test(v) ? v : v.replace(/_/g, " "))).join(", ").trim();
     if (!value) continue;
     const key = field.name.toLowerCase();
     if (key === "full_name" || key === "nome_completo") out.name = value;
@@ -28,6 +29,15 @@ export function mapLeadFields(fieldData: Array<{ name: string; values?: string[]
     else {
       // Pergunta personalizada: cai no mesmo campo do formulário do site pelo texto da pergunta.
       const plain = key.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      // Telefone ou e-mail pedidos como pergunta personalizada ("telefone", "whatsapp", "celular") também viram dado do contato.
+      if (/telefone|celular|whats|phone|fone|contato/.test(plain) && /\d{8,}/.test(value.replace(/\D/g, ""))) {
+        out.phone ??= value;
+        continue;
+      }
+      if (/e-?mail/.test(plain) && value.includes("@")) {
+        out.email ??= value;
+        continue;
+      }
       if (/servic/.test(plain)) out.service ??= value;
       else if (/invest|verba|orcamento|budget/.test(plain)) out.investment ??= value;
       else if (/funcionari|colaborador|equipe|employee/.test(plain)) out.employees ??= value;
