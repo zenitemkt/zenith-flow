@@ -94,7 +94,7 @@ export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
     deliveryBusinessDays: 7,
     training:
       "Um encontro ao vivo de cerca de 2 horas, no ritmo da pessoa, ensinando o gerenciamento básico: orçamento, subir criativo novo e o dia a dia das campanhas.",
-    suggestedAdBudget: 800,
+    suggestedAdBudget: 500,
     includes: "A configuração da conta de anúncios está inclusa na entrega, assim como a verificação da empresa junto ao Google ou à Meta.",
     support: "Depois da entrega e do treinamento, 30 dias de suporte num WhatsApp exclusivo, para erros e problemas que aparecerem ao subir novos anúncios ou campanhas.",
   },

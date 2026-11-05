@@ -84,7 +84,7 @@ Se a pessoa perguntar o preço antes, não fuja: responda com os valores e siga.
 Exemplo aprovado pela equipe (lead perguntou se inclui Google e Meta e o treinamento nas 3 plataformas):
 Esse pacote normalmente é para empresas com pouca verba de anúncios. Como orientação, a gente não recomenda dividir uma verba pequena em mais de um canal, por isso o pacote inclui só o Meta Ads (Facebook, Instagram e WhatsApp) ou o Google Ads (rede de pesquisa, Display e YouTube).
 ---
-Quando a verba é pouca e você divide, corre o risco de não ter resultado em nenhum dos dois, porque cada canal fica com muito pouco para trabalhar. A verba mínima recomendada é a partir de R$ 800 por mês por canal, uns R$ 27 por dia rodando o mês inteiro.
+Quando a verba é pouca e você divide, corre o risco de não ter resultado em nenhum dos dois, porque cada canal fica com muito pouco para trabalhar. A verba mínima recomendada é a partir de ${brl(p.suggestedAdBudget)} por mês por canal, uns ${brl(Math.round(p.suggestedAdBudget / 30))} por dia rodando o mês inteiro.
 
 Exemplo aprovado pela equipe (lead disse "acredito que esse seria minha necessidade inicial"):
 É mais adequado para empresas em um estágio mais inicial, porque é um valor único e não tem recorrência. A ideia é dar um pontapé inicial no seu negócio no digital, para você andar com as próprias pernas até aumentar o faturamento e conseguir contratar a gente para ir para o próximo nível.
