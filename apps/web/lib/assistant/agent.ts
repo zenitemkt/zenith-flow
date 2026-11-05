@@ -68,8 +68,8 @@ export const TOOLS = [
   },
   {
     name: "payment_instructions",
-    description: "Dados de pagamento do produto de entrada.",
-    input_schema: { type: "object", properties: { method: { type: "string", enum: ["cartao", "pix"] } }, required: ["method"] },
+    description: "Dados de pagamento do produto de entrada. discount=true só se a pessoa pediu desconto e você já ofereceu o valor com desconto à vista no Pix.",
+    input_schema: { type: "object", properties: { method: { type: "string", enum: ["cartao", "pix"] }, discount: { type: "boolean" } }, required: ["method"] },
   },
 ];
 
@@ -119,13 +119,14 @@ async function runTool(name: string, input: Record<string, unknown>, conv: Conve
     }
     case "payment_instructions": {
       const p = config.entryProduct;
+      const pix = input.discount === true ? p.pricePix : p.priceCard;
       if (input.method === "pix") {
         if (!config.payment.pixKey) {
-          await notifyPartners(config, `${config.name}: ${who} quer pagar o ${p.name} no Pix (${brl(p.pricePix)}). Chave Pix ainda não configurada no painel.`);
+          await notifyPartners(config, `${config.name}: ${who} quer pagar o ${p.name} no Pix (${brl(pix)}). Chave Pix ainda não configurada no painel.`);
           return "Chave Pix ainda não configurada. Diga que a equipe envia os dados de pagamento em instantes.";
         }
-        await notifyPartners(config, `${config.name}: ${who} vai pagar o ${p.name} no Pix (${brl(p.pricePix)}). Confiram o recebimento.`);
-        return `Chave Pix: ${config.payment.pixKey}. Valor ${brl(p.pricePix)}. Peça o comprovante. A equipe confirma o recebimento e o prazo de ${p.deliveryBusinessDays} dias úteis começa a partir daí.`;
+        await notifyPartners(config, `${config.name}: ${who} vai pagar o ${p.name} no Pix (${brl(pix)}). Confiram o recebimento.`);
+        return `Chave Pix: ${config.payment.pixKey}. Valor ${brl(pix)}. Peça o comprovante. A equipe confirma o recebimento e o prazo de ${p.deliveryBusinessDays} dias úteis começa a partir daí.`;
       }
       await notifyPartners(config, `${config.name}: ${who} quer pagar o ${p.name} no cartão (${brl(p.priceCard)} em até ${p.maxInstallments}x). Gerem o link de pagamento.`);
       return "Link de cartão ainda é gerado pela equipe. Diga que o link chega em instantes por aqui.";

@@ -59,10 +59,11 @@ async function simulateTool(name: string, input: Record<string, unknown>, config
       return "Sócios avisados. A assistente fica pausada nesta conversa.";
     case "payment_instructions": {
       const p = config.entryProduct;
+      const pix = input.discount === true ? p.pricePix : p.priceCard;
       if (input.method === "pix") {
-        actions.push(`Pagamento no Pix (${brl(p.pricePix)})${config.payment.pixKey ? "" : ". Chave Pix não configurada"}`);
+        actions.push(`Pagamento no Pix (${brl(pix)}${input.discount === true ? ", com desconto" : ""})${config.payment.pixKey ? "" : ". Chave Pix não configurada"}`);
         if (!config.payment.pixKey) return "Chave Pix ainda não configurada. Diga que a equipe envia os dados de pagamento em instantes.";
-        return `Chave Pix: ${config.payment.pixKey}. Valor ${brl(p.pricePix)}. Peça o comprovante. A equipe confirma o recebimento e o prazo de ${p.deliveryBusinessDays} dias úteis começa a partir daí.`;
+        return `Chave Pix: ${config.payment.pixKey}. Valor ${brl(pix)}. Peça o comprovante. A equipe confirma o recebimento e o prazo de ${p.deliveryBusinessDays} dias úteis começa a partir daí.`;
       }
       actions.push(`Pagamento no cartão (${brl(p.priceCard)} em até ${p.maxInstallments}x). Gere o link`);
       return "Link de cartão ainda é gerado pela equipe. Diga que o link chega em instantes por aqui.";

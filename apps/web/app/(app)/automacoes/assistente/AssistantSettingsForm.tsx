@@ -220,7 +220,7 @@ export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars
                 <Field label="Parcelas sem juros">
                   <input className={inputClass} type="number" min={1} max={12} value={p.maxInstallments} onChange={(e) => set("entryProduct", { maxInstallments: Number(e.target.value) || 1 })} />
                 </Field>
-                <Field label="Preço no Pix" hint={p.priceCard > 0 ? `Desconto de ${Math.round((1 - p.pricePix / p.priceCard) * 100)}% sobre o cartão.` : undefined}>
+                <Field label="Preço com desconto (só à vista no Pix, se pedirem)" hint={p.priceCard > 0 ? `${Math.round((1 - p.pricePix / p.priceCard) * 100)}% de desconto. Nunca oferecido por conta própria.` : undefined}>
                   <Money value={p.pricePix} onChange={(v) => set("entryProduct", { pricePix: v })} />
                 </Field>
                 <Field label="Verba de anúncio sugerida" hint="Só uma indicação: quem decide é o cliente.">
@@ -231,6 +231,12 @@ export function AssistantSettingsForm({ initialEnabled, initialConfig, calendars
                 </Field>
                 <Field label="Como funciona o ensino" wide>
                   <textarea className={inputClass} rows={2} value={p.training} onChange={(e) => set("entryProduct", { training: e.target.value })} />
+                </Field>
+                <Field label="O que já vem incluso" wide>
+                  <textarea className={inputClass} rows={2} value={p.includes} onChange={(e) => set("entryProduct", { includes: e.target.value })} />
+                </Field>
+                <Field label="Suporte depois da entrega" wide>
+                  <textarea className={inputClass} rows={2} value={p.support} onChange={(e) => set("entryProduct", { support: e.target.value })} />
                 </Field>
               </>
             )}
