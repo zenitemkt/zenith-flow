@@ -7,6 +7,7 @@ import { CalendarClock, ExternalLink, Facebook, Instagram, Send, Zap } from "luc
 import type { SocialPlatform, SocialPostFormat, SocialPostStatus } from "@zenite-mkt/db";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 import { PostPreview, type PreviewMedia, type PreviewProfile } from "@/components/PostPreview";
+import { RescheduleSocialPostButton } from "@/components/RescheduleSocialPostButton";
 
 export interface PanelConnection {
   platform: SocialPlatform;
@@ -185,6 +186,13 @@ export function SocialPublishPanel({
                 <button type="button" disabled={busy !== null} onClick={() => void act(post.id, "retry")} className="font-semibold text-[#FF2B00] hover:underline disabled:opacity-60">
                   {busy === post.id ? "Reenviando..." : "Tentar de novo agora"}
                 </button>
+              )}
+              {(post.status === "FAILED" || post.status === "SCHEDULED" || post.status === "CANCELED") && (
+                <RescheduleSocialPostButton
+                  postId={post.id}
+                  publishAtISO={post.publishAtISO}
+                  label={`${LABEL[post.platform]} · ${FORMAT_LABEL[post.format]} — estava para ${fmt(post.publishAtISO)}`}
+                />
               )}
             </div>
           </li>

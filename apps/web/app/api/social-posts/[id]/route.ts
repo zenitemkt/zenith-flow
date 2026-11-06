@@ -11,6 +11,33 @@ interface RouteParams {
 }
 
 /**
+ * Depois de reagendar: a peça vai para o dia da próxima publicação pendente
+ * (assim o cartão também muda de dia no Calendário) e volta a "Agendado" se
+ * tinha ficado em "Aprovado" (ex.: todas as redes canceladas antes).
+ */
+async function syncContentDate(contentItemId: string, userId: string) {
+  const next = await prisma.socialPost.findFirst({
+    where: { contentItemId, status: { in: ["SCHEDULED", "PUBLISHING", "PROCESSING"] } },
+    orderBy: { publishAt: "asc" },
+    select: { publishAt: true },
+  });
+  if (!next) return;
+  // scheduledDate é a data (meia-noite UTC) do dia em São Paulo.
+  const spDay = new Date(next.publishAt.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+  const item = await prisma.contentItem.findUnique({ where: { id: contentItemId }, select: { status: true } });
+  if (!item) return;
+  await prisma.contentItem.update({
+    where: { id: contentItemId },
+    data: { scheduledDate: new Date(`${spDay}T00:00:00.000Z`), ...(item.status === "APROVADO" ? { status: "AGENDADO" } : {}) },
+  });
+  if (item.status === "APROVADO") {
+    await prisma.contentStatusHistory.create({
+      data: { contentItemId, fromStatus: "APROVADO", toStatus: "AGENDADO", reason: "Publicação reagendada", actorUserId: userId },
+    });
+  }
+}
+
+/**
  * Ações num post: `cancel` (agendado → cancelado), `retry` (falhou → publica
  * agora) e `reschedule` (nova data, com `publishAt`).
  */
@@ -58,10 +85,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
     const result = await prisma.socialPost.updateMany({
       where: { id: post.id, status: { in: ["SCHEDULED", "FAILED", "CANCELED"] } },
-      data: { status: "SCHEDULED", publishAt, attempts: 0, nextAttemptAt: null, lastError: null },
+      // O container do Instagram expira em 24h: reagendado, recria a mídia na hora de publicar.
+      data: { status: "SCHEDULED", publishAt, attempts: 0, nextAttemptAt: null, lastError: null, externalContainerId: null },
     });
     if (result.count === 0) return NextResponse.json({ error: "Esta publicação não pode ser reagendada." }, { status: 409 });
-    await audit("rescheduled", { publishAt: publishAt.toISOString() });
+    await audit("rescheduled", { publishAt: publishAt.toISOString(), from: post.publishAt.toISOString() });
+    if (post.contentItemId) await syncContentDate(post.contentItemId, session.user.id);
     return NextResponse.json({ ok: true });
   }
 

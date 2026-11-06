@@ -4,6 +4,7 @@
 
 ### Adicionado
 
+- **Reagendar publicação**: botão "Reagendar" (nova data + hora de Brasília) em cada publicação que falhou, está agendada ou foi cancelada — no painel "Publicação nas redes" do cartão e na aba Publicação, que agora lista **todas** as que não foram publicadas (qualquer data) em "Não foram publicadas". Ao reagendar, o post volta para a fila zerado, o container antigo do Instagram é descartado (expira em 24h) e a peça muda para o dia da próxima publicação pendente — o cartão muda de dia no Calendário (Aprovado → Agendado se for o caso). Componente `components/RescheduleSocialPostButton.tsx`; ação `reschedule` de `PATCH /api/social-posts/[id]`.
 - **Operação > Publicação (publicar na hora)**: a aba saiu do "em breve". Escolhe o cliente, as redes, o formato, a arte e a legenda e publica imediatamente — sem data/hora e sem passar pelo Calendário. Mesmo fluxo da publicação direta (cria a peça já aprovada, com histórico e Kanban); depois de publicar dá pra abrir o cartão ou fazer outra. Embaixo, as últimas 15 publicações com status, erro e link do post. O formulário virou um componente só (`operacao/_components/QuickPostForm.tsx`), usado também pelo modal do Calendário; a busca dos clientes conectados foi para `lib/quick-post-clients.ts`.
 
 ### Alterado
