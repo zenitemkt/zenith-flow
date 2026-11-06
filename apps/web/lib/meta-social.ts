@@ -304,6 +304,35 @@ export async function publishToInstagram(input: {
   return finishInstagramContainer({ igUserId, token, containerId, budgetMs: remaining() });
 }
 
+/**
+ * "A mídia não está pronta para ser publicada" (code 9007 / subcode 2207027):
+ * a Meta às vezes ainda está finalizando o container mesmo com status
+ * FINISHED — comum logo após criar uma imagem. Não é falha da arte nem da
+ * conexão; basta esperar e publicar o MESMO container de novo.
+ */
+export function isIgMediaNotReadyError(error: unknown): boolean {
+  if (!(error instanceof MetaApiError)) return false;
+  const err = (error.body as { error?: { code?: number; error_subcode?: number } } | null)?.error;
+  return err?.code === 9007 || err?.error_subcode === 2207027;
+}
+
+const IG_NOT_READY_WAIT_MS = 5000;
+
+async function publishIgContainer(igUserId: string, token: string, containerId: string, deadline: number) {
+  for (;;) {
+    try {
+      return await graphPost<{ id: string }>(`/${igUserId}/media_publish`, { access_token: token, creation_id: containerId });
+    } catch (error) {
+      if (!isIgMediaNotReadyError(error)) throw error;
+      // Sem tempo nesta execução: guarda o container e o próximo ciclo do cron publica (sem recriar a mídia).
+      if (Date.now() + IG_NOT_READY_WAIT_MS >= deadline) {
+        throw new RetryableSocialError("Mídia ainda sendo preparada no Instagram.", containerId);
+      }
+      await new Promise((r) => setTimeout(r, IG_NOT_READY_WAIT_MS));
+    }
+  }
+}
+
 export async function finishInstagramContainer(input: {
   igUserId: string;
   token: string;
@@ -311,12 +340,13 @@ export async function finishInstagramContainer(input: {
   budgetMs: number;
 }): Promise<PublishResult> {
   const { igUserId, token, containerId, budgetMs } = input;
+  const deadline = Date.now() + budgetMs;
   const status = await waitForContainer(containerId, token, budgetMs);
   if (status === "IN_PROGRESS") throw new RetryableSocialError("Vídeo ainda processando no Instagram.", containerId);
   if (status === "EXPIRED") throw new Error("O preparo da mídia expirou no Instagram (24h). Agende de novo.");
   if (status !== "FINISHED") throw new Error(`O Instagram recusou a mídia (${status}). Confira formato e tamanho.`);
 
-  const published = await graphPost<{ id: string }>(`/${igUserId}/media_publish`, { access_token: token, creation_id: containerId });
+  const published = await publishIgContainer(igUserId, token, containerId, deadline);
   let permalink: string | null = null;
   try {
     permalink = (await graphGet<{ permalink?: string }>(`/${published.id}`, { access_token: token, fields: "permalink" })).permalink ?? null;

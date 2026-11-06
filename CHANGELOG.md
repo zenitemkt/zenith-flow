@@ -29,6 +29,7 @@
 
 ### Corrigido
 
+- **Instagram falhava com "A mídia não está pronta para ser publicada"** (code 9007 / subcode 2207027) mesmo com o Facebook publicando: a Meta às vezes ainda finaliza o container depois de responder FINISHED. Agora o `media_publish` espera 5 s e tenta de novo o **mesmo** container; se o tempo da função acabar, o post fica "Processando" com o container salvo e o cron publica no ciclo seguinte (antes virava erro e a nova tentativa recriava a mídia do zero). Testes em `lib/meta-social.test.ts` (+ `apps/web/vitest.config.ts` para o alias `@/`).
 - **Uso no celular**: o quadro de Operação deixava de rolar ao tocar num cartão (`touch-none`); agora o arraste exige toque longo e as colunas ocupam a tela com snap. Tabelas rolam na horizontal em vez de espremer colunas, campos usam 16px (sem zoom do iOS), o botão de excluir cliente aparece sem hover, o filtro de cliente ocupa a largura toda, o modal usa `dvh` e o viewport é explícito.
 
 - **Cartão de Operação (e cliente) criado em duplicata/triplicata**: a trava anterior só valia no navegador. Agora o servidor também é idempotente (lock + janela de 15s para o mesmo cliente/canal/título), e o formulário "Nova tarefa" fica bloqueado inteiro enquanto cria. O formulário passa a avisar quando há mais de um canal marcado (uma peça por canal).
