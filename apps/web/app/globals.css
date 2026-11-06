@@ -68,6 +68,26 @@ button {
 }
 
 /*
+ * Popups (Modal do @zenite-mkt/ui e o cartão aberto por cima do quadro).
+ * Rede de segurança para os ~40 modais: nada vaza da janela na horizontal.
+ * - campos encolhem com a coluna (input/select de data e hora têm largura
+ *   mínima própria e estouravam grids de 2 colunas);
+ * - link, e-mail, nome de arquivo e hashtag sem espaço quebram em vez de
+ *   empurrar a largura;
+ * - imagem/vídeo nunca passam da largura do painel.
+ */
+.zenite-modal :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.zenite-modal :is(p, a, li, dd, dt, h1, h2, h3, h4, label, td, th) {
+  overflow-wrap: anywhere;
+}
+.zenite-modal :is(img, video, iframe, canvas, svg:not([class*="lucide"])) {
+  max-width: 100%;
+}
+
+/*
  * Celular (<768px). Rede de segurança para as ~150 telas escritas só pensando
  * em desktop: tabelas rolam na horizontal em vez de espremer as colunas, e
  * campos usam 16px pra o iOS não dar zoom ao focar.

@@ -36,7 +36,7 @@ export function PlatformTimeFields({
             ? `Melhor horário do ${LABEL[platform]} (${WEEKDAY_NAMES[weekday]}): ${best}`
             : "Escolha uma data válida";
         return (
-          <label key={platform} className={`flex flex-col gap-1 ${labelClass}`}>
+          <label key={platform} className={`flex min-w-0 flex-col gap-1 ${labelClass}`}>
             <span className="flex items-center justify-between gap-1">
               <span className="flex items-center gap-1">
                 {Icon && <Icon size={12} aria-hidden />}
@@ -58,7 +58,7 @@ export function PlatformTimeFields({
               type="time"
               value={times[platform] ?? ""}
               onChange={(e) => onChange(platform, e.target.value)}
-              className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+              className="h-10 w-full min-w-0 rounded-lg border border-[#D0D5DD] bg-white px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
             />
           </label>
         );

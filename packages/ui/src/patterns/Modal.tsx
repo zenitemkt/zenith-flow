@@ -65,13 +65,19 @@ export function Modal({ open, onClose, title, description, size = "md", tone = "
 
   const dark = tone === "dark";
 
+  /*
+   * Layout (2026-11-06): no celular é uma "folha" que sobe de baixo, com a
+   * largura toda; do sm pra cima, painel centralizado. Cabeçalho fixo e só o
+   * corpo rola (vertical) — nada pode vazar na horizontal: o painel corta
+   * (overflow-hidden) e o corpo tem min-w-0 + quebra de palavras longas.
+   */
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="presentation">
       <button
         type="button"
         aria-label="Fechar"
         onClick={onClose}
-        className={`absolute inset-0 ${dark ? "bg-black/70 backdrop-blur-sm" : "bg-black/40"}`}
+        className={`absolute inset-0 ${dark ? "bg-black/70 backdrop-blur-sm" : "bg-[#101828]/50"}`}
       />
       <div
         ref={panelRef}
@@ -79,18 +85,18 @@ export function Modal({ open, onClose, title, description, size = "md", tone = "
         aria-modal="true"
         aria-labelledby="modal-title"
         onKeyDown={handleKeyDown}
-        className={`relative flex max-h-[90dvh] w-full flex-col shadow-xl ${
+        className={`zenite-modal relative flex max-h-[92dvh] w-full min-w-0 flex-col overflow-hidden shadow-xl sm:max-h-[calc(100dvh-3rem)] ${
           dark
-            ? "rounded-[22px] border border-white/10 bg-[#13141C] shadow-[0_40px_120px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]"
-            : "rounded-2xl bg-white"
-        } ${size === "full" ? "max-w-[1440px]" : size === "xl" ? "max-w-5xl" : size === "lg" ? "max-w-2xl" : "max-w-md"}`}
+            ? "rounded-t-[22px] border border-white/10 bg-[#13141C] shadow-[0_40px_120px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)] sm:rounded-[22px]"
+            : "rounded-t-2xl bg-white sm:rounded-2xl"
+        } ${size === "full" ? "sm:max-w-[1440px]" : size === "xl" ? "sm:max-w-5xl" : size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"}`}
       >
         <div
-          className={`flex items-start justify-between gap-3 border-b px-5 py-4 ${
+          className={`flex shrink-0 items-start justify-between gap-3 border-b px-5 py-4 sm:px-6 ${
             dark ? "border-white/[0.07]" : "border-[#EEF0F3]"
           }`}
         >
-          <div>
+          <div className="min-w-0">
             <h2
               id="modal-title"
               className={dark ? "font-display text-lg font-semibold tracking-[-0.01em] text-[#F5F2EE]" : "text-base font-semibold text-[#101828]"}
@@ -112,7 +118,9 @@ export function Modal({ open, onClose, title, description, size = "md", tone = "
             <X size={18} aria-hidden />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6">
+          {children}
+        </div>
       </div>
     </div>
   );

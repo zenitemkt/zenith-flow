@@ -253,6 +253,7 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
     <Modal
       open={open}
       onClose={close}
+      size="lg"
       title={mode === "create" ? "Novo cliente" : "Editar dados do cliente"}
       description="Só o nome fantasia é obrigatório — pode salvar assim e completar o resto depois."
     >

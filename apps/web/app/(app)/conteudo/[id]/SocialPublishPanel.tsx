@@ -274,12 +274,12 @@ export function SocialPublishPanel({
           rows={5}
           disabled={format === "STORY"}
           placeholder={format === "STORY" ? "Story não tem legenda." : "Legenda com hashtags..."}
-          className="resize-y rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] disabled:bg-[#F9FAFB]"
+          className="w-full min-w-0 resize-y rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] disabled:bg-[#F9FAFB]"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[#667085]">
           Data
           <input
             type="date"
@@ -289,13 +289,13 @@ export function SocialPublishPanel({
               setDate(e.target.value);
               setOverrides({});
             }}
-            className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+            className="h-10 w-full min-w-0 rounded-lg border border-[#D0D5DD] bg-white px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
           />
         </label>
         {platforms.length === 0 ? (
-          <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[#667085]">
             Hora (Brasília)
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-10 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-10 w-full min-w-0 rounded-lg border border-[#D0D5DD] px-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
           </label>
         ) : (
           <PlatformTimeFields

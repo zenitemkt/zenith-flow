@@ -131,8 +131,8 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
       )}
 
       {/* ---------- cabeçalho: de quem é, o quê, e em que etapa está ---------- */}
-      <header className="flex flex-col gap-4 pr-10">
-        <Link href={`/clientes/${item.client.id}`} className="flex w-fit items-center gap-2 text-sm font-medium text-[#475467] hover:text-[#101828]">
+      <header className="flex min-w-0 flex-col gap-4">
+        <Link href={`/clientes/${item.client.id}`} className="flex w-fit max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-[#475467] hover:text-[#101828]">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#3b3f4a] text-[10px] font-bold text-white">
             {item.client.avatarKey ? (
               // eslint-disable-next-line @next/next/no-img-element

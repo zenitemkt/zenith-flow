@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 
 /**
- * Cartão aberto por cima do quadro. No celular vira tela cheia (sem margens,
- * rola a página inteira); no desktop é um painel largo centralizado.
+ * Cartão aberto por cima do quadro. No celular vira tela cheia; no desktop é
+ * um painel largo centralizado que cabe na tela (só o miolo rola).
+ *
+ * 2026-11-06: a barra com o "Fechar" agora é uma faixa própria no topo
+ * (antes o X flutuava por cima do título e dos botões), e o painel não deixa
+ * nada vazar na horizontal.
  */
 export function ModalOverlay({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -27,23 +31,28 @@ export function ModalOverlay({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-[#101828]/50 sm:p-4 sm:pt-10"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-[#101828]/50 sm:items-center sm:p-6"
       onClick={(event) => {
         if (event.target === event.currentTarget) router.back();
       }}
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative min-h-[100dvh] w-full bg-white shadow-2xl sm:min-h-0 sm:max-w-5xl sm:rounded-2xl">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label="Fechar"
-          className="fixed right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#E4E7EC] bg-white/95 text-[#475467] shadow-sm backdrop-blur hover:bg-[#F6F7FB] sm:absolute sm:right-4 sm:top-4 sm:h-9 sm:w-9 sm:rounded-lg sm:border-0 sm:shadow-none"
-        >
-          <X className="h-5 w-5" />
-        </button>
-        <div className="p-4 pt-5 sm:max-h-[86vh] sm:overflow-y-auto sm:p-6">{children}</div>
+      <div className="zenite-modal relative flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-3rem)] sm:max-w-6xl sm:rounded-2xl">
+        <div className="flex h-12 shrink-0 items-center justify-end border-b border-[#EEF0F3] px-3 sm:px-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            aria-label="Fechar"
+            className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
+          >
+            <X className="h-4 w-4" aria-hidden />
+            Fechar
+          </button>
+        </div>
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+          {children}
+        </div>
       </div>
     </div>
   );

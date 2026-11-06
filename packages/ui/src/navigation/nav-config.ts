@@ -55,7 +55,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "operations-calendar", label: "Calendário", href: "/operacao/calendario", comingSoon: false },
           { id: "operations-library", label: "Biblioteca", href: "/operacao/biblioteca", comingSoon: false },
           { id: "operations-recurring", label: "Recorrências", href: "/operacao/recorrencias", comingSoon: false },
-          { id: "operations-publishing", label: "Publicação", href: "/operacao/publicacao", comingSoon: true },
+          { id: "operations-publishing", label: "Publicação", href: "/operacao/publicacao", comingSoon: false },
         ],
       },
       {

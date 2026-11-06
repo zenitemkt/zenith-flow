@@ -6,8 +6,8 @@ import { MONTH_LABELS, adjacentMonths, monthParam, parseMonth } from "@/lib/cont
 import { prisma } from "@zenite-mkt/db";
 import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { filterableClients } from "@/lib/clients";
+import { loadQuickPostClients } from "@/lib/quick-post-clients";
 import type { CalendarContentItem, CalendarSocialPost } from "./InteractiveContentCalendar";
-import type { QuickPostClient } from "./QuickPostModal";
 
 /** Code-split: framer-motion só baixa quando esta rota é visitada. */
 const InteractiveContentCalendar = dynamic(() =>
@@ -31,7 +31,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
   const rangeEnd = new Date(Date.UTC(year, month + 1, 1));
   const activeClientId = searchParams.clientId;
 
-  const [monthItems, pendingItems, clients, socialPosts, connectedClients] = await Promise.all([
+  const [monthItems, pendingItems, clients, socialPosts, quickPostClients] = await Promise.all([
     prisma.contentItem.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -74,46 +74,8 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       },
       orderBy: { publishAt: "asc" },
     }),
-    // Clientes com Instagram/Facebook conectado — os únicos que aparecem na publicação direta.
-    prisma.client.findMany({
-      where: {
-        agencyId: membership.agencyId,
-        socialConnections: { some: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } } },
-      },
-      select: {
-        id: true,
-        name: true,
-        defaultPublishTime: true,
-        avatarKey: true,
-        socialConnections: {
-          where: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
-          select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
-          orderBy: { platform: "desc" },
-        },
-      },
-      orderBy: { name: "asc" },
-    }),
+    loadQuickPostClients(membership.agencyId, activeClientId),
   ]);
-
-  const quickPostClients: QuickPostClient[] = connectedClients.map((c) => ({
-    id: c.id,
-    name: c.name,
-    defaultPublishTime: c.defaultPublishTime,
-    hasAvatar: Boolean(c.avatarKey),
-    connections: c.socialConnections.map((conn) => ({
-      platform: conn.platform,
-      name: conn.name,
-      username: conn.username,
-      pictureUrl: conn.pictureUrl,
-      active: conn.status === "ACTIVE",
-    })),
-  }));
-
-  // O cliente do filtro sempre entra no formulário (mesmo sem redes conectadas), para ele abrir já nesse cliente.
-  const filtered = clients.find((c) => c.id === activeClientId);
-  if (filtered && !quickPostClients.some((c) => c.id === filtered.id)) {
-    quickPostClients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", hasAvatar: false, connections: [] });
-  }
 
   const calendarPosts: CalendarSocialPost[] = socialPosts.map((p) => ({
     id: p.id,
