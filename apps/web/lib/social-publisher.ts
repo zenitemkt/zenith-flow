@@ -41,7 +41,8 @@ export interface PublishRunSummary {
 
 async function claim(postId: string): Promise<boolean> {
   const result = await prisma.socialPost.updateMany({
-    where: { id: postId, status: { in: ["SCHEDULED", "PROCESSING"] } },
+    // Sem peça (excluída) não publica: a exclusão já cancela, isto é a rede de segurança.
+    where: { id: postId, contentItemId: { not: null }, status: { in: ["SCHEDULED", "PROCESSING"] } },
     data: { status: "PUBLISHING", attempts: { increment: 1 } },
   });
   return result.count === 1;
@@ -219,6 +220,12 @@ export async function publishDueSocialPosts(budgetMs: number, now = new Date()):
   await prisma.socialPost.updateMany({
     where: { status: "PUBLISHING", updatedAt: { lt: new Date(now.getTime() - STALE_PUBLISHING_MS) } },
     data: { status: "FAILED", lastError: "A publicação foi interrompida. Confira na rede se o post saiu antes de reenviar." },
+  });
+
+  // Publicações cuja peça foi excluída (de antes da exclusão cancelar junto) viram canceladas.
+  await prisma.socialPost.updateMany({
+    where: { contentItemId: null, status: { in: ["SCHEDULED", "PROCESSING", "FAILED"] } },
+    data: { status: "CANCELED", nextAttemptAt: null, lastError: "A peça foi excluída." },
   });
 
   const due = await prisma.socialPost.findMany({

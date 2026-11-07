@@ -39,6 +39,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
         metadata: { title: item.title },
       },
     });
+    // Excluir a peça cancela o que ainda não saiu nas redes (sem isso o post
+    // ficava órfão: agendado, aparecendo no Calendário e ainda publicável).
+    await tx.socialPost.updateMany({
+      where: { contentItemId: item.id, status: { in: ["SCHEDULED", "PROCESSING", "FAILED"] } },
+      data: { status: "CANCELED", nextAttemptAt: null },
+    });
     await tx.contentItem.delete({ where: { id: item.id } });
   });
 

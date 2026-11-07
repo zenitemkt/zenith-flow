@@ -60,6 +60,8 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       where: {
         agencyId: membership.agencyId,
         status: { not: "CANCELED" },
+        // Peça excluída some do Calendário junto com as publicações dela.
+        contentItemId: { not: null },
         publishAt: { gte: new Date(rangeStart.getTime() + 3 * 3600_000), lt: new Date(rangeEnd.getTime() + 3 * 3600_000) },
         ...(activeClientId ? { clientId: activeClientId } : {}),
       },
