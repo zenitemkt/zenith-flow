@@ -7,13 +7,15 @@ import { resolvePipelinePeriod } from "@/lib/pipeline-period";
 import { resolveTouchpoint } from "@/lib/attribution";
 import { TrackingPeriodFilter } from "./TrackingPeriodFilter";
 import { BotTrafficToggle } from "./BotTrafficToggle";
+import { TrackingSegmentFilter } from "./TrackingSegmentFilter";
+import { applySegmentFilters, readSegmentFilters } from "@/lib/tracking-segments";
 
 const BarsChart = dynamic(() =>
   import("@/app/_components/charts/BarsChart").then((module) => module.BarsChart),
 );
 
 interface PageProps {
-  searchParams: { period?: string; year?: string; month?: string; from?: string; to?: string; excludeBots?: string };
+  searchParams: { period?: string; year?: string; month?: string; from?: string; to?: string; excludeBots?: string; [key: string]: string | undefined };
 }
 
 export default async function TrackingOverviewPage({ searchParams }: PageProps) {
@@ -32,7 +34,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
       prisma.trackingSession.findMany({
         where: { visitor: { agencyId }, ...(range ? { startedAt: range } : {}) },
-        include: { visitor: { select: { firstSeenAt: true } } },
+        include: { visitor: { select: { firstSeenAt: true, leadId: true } } },
       }),
       prisma.campaign.findMany({ where: { agencyId } }),
       prisma.lead.count({ where: { agencyId, ...(range ? { createdAt: range } : {}) } }),
@@ -67,9 +69,36 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
   const botSessionsCount = sessions.filter((trackingSession) => trackingSession.isBot).length;
   const botTrafficPercentage = sessions.length > 0 ? Math.round((botSessionsCount / sessions.length) * 100) : 0;
-  const effectiveSessions = excludeBots ? sessions.filter((trackingSession) => !trackingSession.isBot) : sessions;
+  const baseSessions = excludeBots ? sessions.filter((trackingSession) => !trackingSession.isBot) : sessions;
 
-  const eventCounts = new Map(eventGroups.map((group) => [group.eventName, group._count._all]));
+  // Filtros de segmento (origem, UTM, página, local, aparelho), por primeiro toque do visitante ou por sessão.
+  const { scope: segmentScope, filters: segmentFilters } = readSegmentFilters(searchParams);
+  const segmentActive = Object.keys(segmentFilters).length > 0;
+  const baseVisitorIds = Array.from(new Set(baseSessions.map((s) => s.visitorId)));
+  const firstSessions =
+    segmentScope === "primeiro" && baseVisitorIds.length
+      ? await prisma.trackingSession.findMany({ where: { visitorId: { in: baseVisitorIds } }, orderBy: { startedAt: "asc" }, distinct: ["visitorId"] })
+      : [];
+  const segment = applySegmentFilters(baseSessions, new Map(firstSessions.map((s) => [s.visitorId, s])), campaigns, segmentScope, segmentFilters);
+  const effectiveSessions = segment.sessions;
+  const segmentSessionIds = Array.from(new Set(effectiveSessions.map((s) => s.id)));
+  const segmentVisitorIds = new Set(effectiveSessions.map((s) => s.visitorId));
+  const [segmentEventGroups, segmentTotalEvents] = segmentActive
+    ? await Promise.all([
+        prisma.trackingEvent.groupBy({ by: ["eventName"], where: { agencyId, sessionId: { in: segmentSessionIds }, ...(range ? { occurredAt: range } : {}) }, _count: { _all: true } }),
+        prisma.trackingEvent.count({ where: { agencyId, sessionId: { in: segmentSessionIds }, ...(range ? { occurredAt: range } : {}) } }),
+      ])
+    : [eventGroups, totalEventsCount];
+  const segmentIdSet = new Set(segmentSessionIds);
+  const segmentPageViews = segmentActive ? pageViews.filter((e) => e.sessionId && segmentIdSet.has(e.sessionId)) : pageViews;
+  const segmentScrollEvents = segmentActive ? scrollDepthEvents.filter((e) => e.sessionId && segmentIdSet.has(e.sessionId)) : scrollDepthEvents;
+  const segmentConsents = segmentActive ? consentDecisions.filter((c) => segmentVisitorIds.has(c.visitorId)) : consentDecisions;
+  const segmentVisitorsCount = segmentActive
+    ? new Set(effectiveSessions.filter((s) => !range || ((!range.gte || s.visitor.firstSeenAt >= range.gte) && (!range.lt || s.visitor.firstSeenAt < range.lt))).map((s) => s.visitorId)).size
+    : visitorsCount;
+  const segmentLeadsCount = segmentActive ? new Set(effectiveSessions.map((s) => s.visitor.leadId).filter(Boolean)).size : leadsCount;
+
+  const eventCounts = new Map(segmentEventGroups.map((group) => [group.eventName, group._count._all]));
   const countEvent = (name: string) => eventCounts.get(name) ?? 0;
   const engagedSessions = countEvent("engaged_session");
   const serviceViews = countEvent("service_view");
@@ -83,7 +112,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
   const sessions50 = new Set<string>();
   const sessions90 = new Set<string>();
-  for (const event of scrollDepthEvents) {
+  for (const event of segmentScrollEvents) {
     const percent = typeof (event.properties as Record<string, unknown> | null)?.percent === "number"
       ? ((event.properties as Record<string, unknown>).percent as number)
       : null;
@@ -117,7 +146,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
   };
   const pageCounts = new Map<string, number>();
   const sessionsWithPageView = new Set<string>();
-  for (const pageView of pageViews) {
+  for (const pageView of segmentPageViews) {
     if (pageView.sessionId) sessionsWithPageView.add(pageView.sessionId);
     const path = pagePath(pageView.url);
     pageCounts.set(path, (pageCounts.get(path) ?? 0) + 1);
@@ -202,10 +231,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       recorrentes: bucket.recorrentes.size,
     }));
 
-  const allAcceptedConsents = consentDecisions.filter((decision) => decision.categories.length > 0);
+  const allAcceptedConsents = segmentConsents.filter((decision) => decision.categories.length > 0);
   const acceptedConsents = allAcceptedConsents.slice(0, 50);
-  const rejectedConsentsCount = consentDecisions.length - allAcceptedConsents.length;
-  const acceptedConsentsRatePct = consentDecisions.length > 0 ? Math.round((allAcceptedConsents.length / consentDecisions.length) * 100) : 0;
+  const rejectedConsentsCount = segmentConsents.length - allAcceptedConsents.length;
+  const acceptedConsentsRatePct = segmentConsents.length > 0 ? Math.round((allAcceptedConsents.length / segmentConsents.length) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -229,6 +258,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         <BotTrafficToggle active={excludeBots} />
       </div>
 
+      <TrackingSegmentFilter scope={segmentScope} active={segmentFilters} options={segment.options} />
+
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-[#101828]">Visão geral de acessos</h2>
@@ -236,7 +267,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{visitorsCount}</p>
+            <p className="text-xl font-semibold text-[#101828]">{segmentVisitorsCount}</p>
             <p className="text-xs text-[#667085]">visitantes únicos</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
@@ -248,11 +279,11 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
             <p className="text-xs text-[#667085]">sessões</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{totalEventsCount}</p>
+            <p className="text-xl font-semibold text-[#101828]">{segmentTotalEvents}</p>
             <p className="text-xs text-[#667085]">eventos registrados</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{leadsCount}</p>
+            <p className="text-xl font-semibold text-[#101828]">{segmentLeadsCount}</p>
             <p className="text-xs text-[#667085]">leads no período</p>
           </div>
           <div className="rounded-lg border border-[#EEF0F3] p-3">
@@ -417,7 +448,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
       <section className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
           <p className="text-xl font-semibold text-[#101828]">{acceptedConsentsRatePct}%</p>
-          <p className="mb-2 text-xs text-[#667085]">aceitaram cookies ({allAcceptedConsents.length} de {consentDecisions.length})</p>
+          <p className="mb-2 text-xs text-[#667085]">aceitaram cookies ({allAcceptedConsents.length} de {segmentConsents.length})</p>
           <div className="h-1.5 overflow-hidden rounded-full bg-[#F2F4F7]">
             <div className="h-full rounded-full bg-[#17B26A]" style={{ width: `${acceptedConsentsRatePct}%` }} />
           </div>

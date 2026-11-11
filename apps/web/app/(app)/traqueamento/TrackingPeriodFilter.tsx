@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { PipelinePeriod } from "@/lib/pipeline-period";
 
 interface Props {
@@ -27,6 +27,7 @@ const OPTIONS: Array<{ value: PipelinePeriod; label: string }> = [
 /** Mesmo filtro de período de `PipelinePeriodFilter` (Comercial → Pipeline), reaproveitando `lib/pipeline-period.ts` — a lógica de resolução de datas é genérica, não específica de oportunidade. */
 export function TrackingPeriodFilter({ initialPeriod, initialYear, initialMonth, initialFrom, initialTo }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const now = new Date();
   const [period, setPeriod] = useState<PipelinePeriod>(initialPeriod);
   const [year, setYear] = useState(initialYear ?? String(now.getFullYear()));
@@ -35,7 +36,10 @@ export function TrackingPeriodFilter({ initialPeriod, initialYear, initialMonth,
   const [to, setTo] = useState(initialTo ?? "");
 
   function apply() {
-    const query = new URLSearchParams({ period });
+    // Mantém os outros filtros (segmento, robôs) e troca só o período.
+    const query = new URLSearchParams(searchParams.toString());
+    for (const key of ["period", "year", "month", "from", "to"]) query.delete(key);
+    query.set("period", period);
     if (period === "year") query.set("year", year);
     if (period === "month") query.set("month", month);
     if (period === "custom") {
