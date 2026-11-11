@@ -256,9 +256,8 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
           initialTo={searchParams.to}
         />
         <BotTrafficToggle active={excludeBots} />
+        <TrackingSegmentFilter scope={segmentScope} active={segmentFilters} options={segment.options} />
       </div>
-
-      <TrackingSegmentFilter scope={segmentScope} active={segmentFilters} options={segment.options} />
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-4">
