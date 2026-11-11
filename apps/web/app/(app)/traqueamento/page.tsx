@@ -167,25 +167,37 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
     desconhecido: "Desconhecido",
   };
 
-  /** Segunda-feira (UTC) da semana de `date` — mesma semana = mesmo rótulo no gráfico abaixo. */
-  function weekStartKey(date: Date): string {
-    const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-    const isoDay = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() - isoDay + 1);
-    return d.toISOString().slice(0, 10);
+  // Visitantes por dia (ou por semana em períodos longos), com todos os dias do filtro no eixo, mesmo os sem visita.
+  // Os limites do filtro são dias UTC (resolvePipelinePeriod), então os baldes também usam o dia UTC.
+  const DAY_MS = 86_400_000;
+  const utcDay = (date: Date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const sessionDays = effectiveSessions.map((s) => utcDay(s.startedAt));
+  const rangeStart = range?.gte ? utcDay(range.gte) : sessionDays.length ? Math.min(...sessionDays) : utcDay(new Date());
+  const rangeEnd = Math.min(range?.lt ? utcDay(range.lt) - DAY_MS : utcDay(new Date()), utcDay(new Date()));
+  const weekly = (rangeEnd - rangeStart) / DAY_MS > 62;
+  const bucketKey = (date: Date): number => {
+    const day = utcDay(date);
+    if (!weekly) return day;
+    const isoDay = new Date(day).getUTCDay() || 7;
+    return day - (isoDay - 1) * DAY_MS;
+  };
+  const visitorBuckets = new Map<number, { novos: Set<string>; recorrentes: Set<string> }>();
+  for (let key = bucketKey(new Date(rangeStart)); key <= rangeEnd; key += weekly ? 7 * DAY_MS : DAY_MS) {
+    visitorBuckets.set(key, { novos: new Set<string>(), recorrentes: new Set<string>() });
   }
-  const weekBuckets = new Map<string, { novos: Set<string>; recorrentes: Set<string> }>();
   for (const trackingSession of effectiveSessions) {
-    const weekKey = weekStartKey(trackingSession.startedAt);
-    const bucket = weekBuckets.get(weekKey) ?? { novos: new Set<string>(), recorrentes: new Set<string>() };
-    const isNewThisWeek = weekStartKey(trackingSession.visitor.firstSeenAt) === weekKey;
-    (isNewThisWeek ? bucket.novos : bucket.recorrentes).add(trackingSession.visitorId);
-    weekBuckets.set(weekKey, bucket);
+    const key = bucketKey(trackingSession.startedAt);
+    const bucket = visitorBuckets.get(key) ?? { novos: new Set<string>(), recorrentes: new Set<string>() };
+    const isNew = bucketKey(trackingSession.visitor.firstSeenAt) === key;
+    (isNew ? bucket.novos : bucket.recorrentes).add(trackingSession.visitorId);
+    visitorBuckets.set(key, bucket);
   }
-  const weeklyVisitorsData = Array.from(weekBuckets.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([weekKey, bucket]) => ({
-      label: new Date(`${weekKey}T00:00:00Z`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }),
+  // Quem é novo e volta no mesmo dia conta só como novo.
+  for (const bucket of visitorBuckets.values()) for (const id of bucket.novos) bucket.recorrentes.delete(id);
+  const weeklyVisitorsData = Array.from(visitorBuckets.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([key, bucket]) => ({
+      label: (weekly ? "sem. " : "") + new Date(key).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }),
       novos: bucket.novos.size,
       recorrentes: bucket.recorrentes.size,
     }));
@@ -418,10 +430,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-[#101828]">Visitantes rastreados: novos vs. recorrentes por semana</h2>
+          <h2 className="text-sm font-semibold text-[#101828]">Visitantes rastreados: novos vs. recorrentes por {weekly ? "semana" : "dia"}</h2>
           <p className="text-xs text-[#667085]">
             Novo rastreado = primeira visita registrada em toda a história. Recorrente rastreado = já havia uma
-            visita registrada antes da semana.
+            visita registrada antes {weekly ? "da semana" : "do dia"}.
           </p>
         </div>
         <BarsChart
