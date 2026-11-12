@@ -6,6 +6,7 @@ import { formatCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
 import { NewCampaignModal } from "./NewCampaignModal";
 import { SyncMetaCampaignsButton } from "./SyncMetaCampaignsButton";
+import { CampaignClientSelect } from "./CampaignClientSelect";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam, canManageIntegrations } from "@/lib/rbac";
 import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
@@ -99,7 +100,9 @@ export default async function CampaignsPage() {
                       <span className="ml-2 text-xs text-[#98A2B3]">utm_campaign={campaign.utmCampaign}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[#475467]">{campaign.client?.name ?? "Própria agência"}</td>
+                  <td className="px-4 py-3 text-[#475467]">
+                    <CampaignClientSelect campaignId={campaign.id} clientId={campaign.client?.id ?? null} clients={clients} />
+                  </td>
                   <td className="px-4 py-3 text-[#475467]">{campaign.channel}</td>
                   <td className="px-4 py-3 text-[#475467]">
                     {campaign.startDate ? campaign.startDate.toLocaleDateString("pt-BR") : "—"}

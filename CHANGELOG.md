@@ -11,6 +11,7 @@
 
 ### Corrigido
 
+- **Campanhas da Meta sem cliente**: as campanhas sincronizadas entravam como "Própria agência" e não apareciam no filtro do cliente (Raio-X). A coluna Cliente da lista de Campanhas virou um seletor; a sincronização nunca troca o cliente escolhido, e campanhas novas herdam o cliente das outras campanhas da Meta quando todas são do mesmo.
 - **Traqueamento: "visitantes únicos" ignorava o filtro de tráfego não humano**: o cartão contava todos os visitantes do período; com o filtro ligado, agora só conta quem teve ao menos uma sessão humana (sessões, eventos e páginas já eram filtrados). As fontes de tráfego ganharam nomes legíveis: os códigos que a Meta preenche sozinha (`an`, `fb`, `ig`, `msg`) viram "Meta Ads — Audience Network (an)" etc., e visitas vindas de buscador aparecem como "Busca orgânica (Google)".
 - **"Atualizar da Meta" dizia sucesso sem trazer nada**: agora informa qual conta de anúncios consultou e quantas campanhas a Meta devolveu; se vier zero, avisa para conferir em Integrações se a conta conectada é a certa. A tela de Campanhas mostra a conta conectada.
 - **"Atualizar da Meta" não trazia campanhas desativadas**: só importava campanha nova que estivesse ativa ou tivesse veiculado nos últimos 30 dias. Agora traz todas as campanhas da conta (ativas, pausadas e arquivadas), cada uma com o status real.

@@ -68,7 +68,7 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
   const infoById = new Map<string, MetaCampaignInfo>();
   const known = await prisma.campaign.findMany({
     where: { agencyId, externalId: { not: null } },
-    select: { id: true, externalId: true, name: true, status: true, channel: true },
+    select: { id: true, externalId: true, name: true, status: true, channel: true, clientId: true },
   });
   try {
     const accessToken = decryptSecret(connection.accessTokenEnc);
@@ -97,6 +97,9 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
   const knownByExternalId = new Map(known.map((c) => [c.externalId as string, c]));
   const campaignIdByExternalId = new Map<string, string>(known.map((c) => [c.externalId as string, c.id]));
   const nameFromInsights = new Map(rows.map((row) => [row.campaignId, row.campaignName]));
+  // Campanha nova herda o cliente das campanhas da Meta já ligadas a um cliente, se todas forem do mesmo (a conta é de um cliente só).
+  const metaClientIds = new Set(known.filter((c) => c.channel === META_CAMPAIGN_CHANNEL && c.clientId).map((c) => c.clientId as string));
+  const inheritedClientId = metaClientIds.size === 1 ? [...metaClientIds][0]! : null;
   let campaignsCreated = 0;
   let campaignsUpdated = 0;
 
@@ -118,7 +121,7 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
     }
 
     const created = await prisma.campaign.create({
-      data: { agencyId, name, channel: META_CAMPAIGN_CHANNEL, externalId, ...(status ? { status } : {}), ...dates },
+      data: { agencyId, clientId: inheritedClientId, name, channel: META_CAMPAIGN_CHANNEL, externalId, ...(status ? { status } : {}), ...dates },
     });
     campaignIdByExternalId.set(externalId, created.id);
     campaignsCreated += 1;
