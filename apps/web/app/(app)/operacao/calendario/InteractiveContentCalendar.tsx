@@ -33,6 +33,8 @@ export interface CalendarSocialPost {
   platform: "INSTAGRAM" | "FACEBOOK" | "GOOGLE_BUSINESS";
   status: "SCHEDULED" | "PUBLISHING" | "PROCESSING" | "PUBLISHED" | "FAILED" | "CANCELED";
   publishAtISO: string;
+  /** Agendado cujo horário já passou e ainda não saiu (agendador atrasado ou parado). */
+  late?: boolean;
 }
 
 const POST_STATUS_CLASS: Record<CalendarSocialPost["status"], string> = {
@@ -283,7 +285,9 @@ export function InteractiveContentCalendar({
                             })}
                             {(postsByDay.get(day) ?? []).map((post) => {
                               const PostIcon = post.platform === "INSTAGRAM" ? Instagram : Facebook;
-                              const className = `flex items-center gap-1 truncate rounded border px-1.5 py-1 text-[11px] font-medium ${POST_STATUS_CLASS[post.status]}`;
+                              const className = `flex items-center gap-1 truncate rounded border px-1.5 py-1 text-[11px] font-medium ${
+                                post.late ? "border-[#F79009]/40 bg-[#FEF3C7] text-[#92600A]" : POST_STATUS_CLASS[post.status]
+                              }`;
                               const content = (
                                 <>
                                   <span className="shrink-0 font-semibold tabular-nums">{post.time}</span>
@@ -291,7 +295,7 @@ export function InteractiveContentCalendar({
                                   <span className="truncate">{post.title}</span>
                                 </>
                               );
-                              const title = `${post.time} · ${post.platform === "INSTAGRAM" ? "Instagram" : "Facebook"} · ${post.title} · ${post.clientName} · ${POST_STATUS_LABEL[post.status]}`;
+                              const title = `${post.time} · ${post.platform === "INSTAGRAM" ? "Instagram" : "Facebook"} · ${post.title} · ${post.clientName} · ${post.late ? "atrasado — ainda não saiu" : POST_STATUS_LABEL[post.status]}`;
                               return post.contentItemId ? (
                                 <Link key={post.id} href={`/conteudo/${post.contentItemId}`} className={className} title={title}>
                                   {content}

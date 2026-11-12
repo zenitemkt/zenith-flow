@@ -212,24 +212,75 @@ export async function publishPostsNow(ids: string[], budgetMs = 55_000): Promise
   return outcomes;
 }
 
-/** Um ciclo do cron: publica o que venceu e confere vídeos em processamento, dentro do tempo disponível. */
-export async function publishDueSocialPosts(budgetMs: number, now = new Date()): Promise<PublishRunSummary> {
+/**
+ * Agendado que nunca foi tentado e passou disto do horário (agendador parado)
+ * não sai sozinho: publicar um post velho de surpresa é pior do que pedir um
+ * clique, então vira FAILED com aviso. Novas tentativas e vídeo em
+ * processamento seguem a fila normal.
+ */
+export const MAX_LATE_MS = 6 * 60 * 60_000;
+export const MISSED_SCHEDULE_ERROR =
+  "Não saiu no horário porque o agendador estava parado. Use Reenviar para publicar agora ou Reagendar para outra data.";
+
+/**
+ * Um ciclo do agendador: publica o que venceu e confere vídeos em
+ * processamento, dentro do tempo disponível. Chamado pelo cron externo (todas
+ * as agências) e pelo sistema aberto no navegador (`agencyId` da sessão).
+ */
+export async function publishDueSocialPosts(
+  budgetMs: number,
+  now = new Date(),
+  options: { agencyId?: string } = {},
+): Promise<PublishRunSummary> {
   const started = Date.now();
   const summary: PublishRunSummary = { published: 0, processing: 0, retried: 0, failed: 0, skipped: 0 };
+  const scope = options.agencyId ? { agencyId: options.agencyId } : {};
 
   await prisma.socialPost.updateMany({
-    where: { status: "PUBLISHING", updatedAt: { lt: new Date(now.getTime() - STALE_PUBLISHING_MS) } },
+    where: { ...scope, status: "PUBLISHING", updatedAt: { lt: new Date(now.getTime() - STALE_PUBLISHING_MS) } },
     data: { status: "FAILED", lastError: "A publicação foi interrompida. Confira na rede se o post saiu antes de reenviar." },
   });
 
   // Publicações cuja peça foi excluída (de antes da exclusão cancelar junto) viram canceladas.
   await prisma.socialPost.updateMany({
-    where: { contentItemId: null, status: { in: ["SCHEDULED", "PROCESSING", "FAILED"] } },
+    where: { ...scope, contentItemId: null, status: { in: ["SCHEDULED", "PROCESSING", "FAILED"] } },
     data: { status: "CANCELED", nextAttemptAt: null, lastError: "A peça foi excluída." },
   });
 
+  // Perdeu o horário por mais de MAX_LATE_MS: falha com aviso em vez de publicar atrasado.
+  const missed = await prisma.socialPost.findMany({
+    where: {
+      ...scope,
+      status: "SCHEDULED",
+      attempts: 0,
+      nextAttemptAt: null,
+      publishAt: { lt: new Date(now.getTime() - MAX_LATE_MS) },
+    },
+    select: { id: true, agencyId: true, platform: true, publishAt: true },
+    take: 50,
+  });
+  for (const post of missed) {
+    const flagged = await prisma.socialPost.updateMany({
+      where: { id: post.id, status: "SCHEDULED", attempts: 0 },
+      data: { status: "FAILED", lastError: MISSED_SCHEDULE_ERROR },
+    });
+    if (flagged.count === 0) continue;
+    summary.failed++;
+    await prisma.auditLog.create({
+      data: {
+        agencyId: post.agencyId,
+        actorType: "system",
+        action: "social_post.missed_schedule",
+        resourceType: "social_post",
+        resourceId: post.id,
+        metadata: { platform: post.platform, publishAt: post.publishAt.toISOString() },
+      },
+    });
+  }
+
   const due = await prisma.socialPost.findMany({
     where: {
+      ...scope,
       OR: [
         { status: "SCHEDULED", publishAt: { lte: now }, OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
         { status: "PROCESSING", nextAttemptAt: { lte: now } },

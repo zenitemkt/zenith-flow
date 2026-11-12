@@ -9,6 +9,7 @@
 
 ### Corrigido
 
+- **Publicações agendadas não saíam**: nada chamava `/api/cron/social-publish` — o agendador externo (cron-job.org) nunca foi cadastrado e o plano Hobby da Vercel não roda cron por minuto (conferido nos logs de produção em 2026-11-12: zero chamadas). "Publicar agora" funcionava porque publica dentro da própria requisição. Agora o sistema aberto no navegador de qualquer pessoa da equipe dispara o ciclo a cada minuto (`SocialPublishTicker` → `POST /api/social/publish-due`, só a agência da sessão). Publicação agendada que passou mais de 6h do horário sem nunca ter sido tentada não sai sozinha: vira "falhou" com aviso, para Reenviar ou Reagendar. O Calendário mostra em amarelo ("atrasado") o agendado cujo horário já passou. **O cron-job.org continua necessário** para publicar com o sistema fechado.
 - **Excluir peça cancela as publicações**: excluir um cartão deixava os posts agendados órfãos (`contentItemId` nulo) — continuavam no Calendário e na fila do cron. Agora o `DELETE /api/content/[id]` cancela, na mesma transação, tudo que ainda não saiu (agendado, processando, falhou); o publicador nunca publica post sem peça e cancela os órfãos antigos a cada ciclo; o Calendário não mostra publicação de peça excluída.
 
 ### Alterado

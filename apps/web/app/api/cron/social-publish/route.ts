@@ -10,6 +10,11 @@ export const dynamic = "force-dynamic";
  * Chamado a cada minuto por um agendador externo (cron-job.org) — o plano
  * Hobby da Vercel só roda cron 1x/dia. Protegido por `CRON_SECRET` no header
  * `Authorization: Bearer <segredo>` (mesmo formato que a Vercel Cron usa).
+ *
+ * Sem esse agendador externo configurado, NADA chama esta rota (foi o que
+ * aconteceu até 2026-11-12: agendados não saíam). A rede de segurança é o
+ * sistema aberto no navegador (`/api/social/publish-due`), que não cobre
+ * horários em que ninguém está com o sistema aberto.
  */
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;

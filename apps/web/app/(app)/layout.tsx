@@ -3,6 +3,7 @@ import { requireSessionAndMembership, getUserThemePreference, getActiveMembershi
 import { ROLE_LABELS, isClientRole } from "@/lib/rbac";
 import { Shell } from "../_components/Shell";
 import { getCommercialPendencies } from "@/lib/commercial-pendencies";
+import { SocialPublishTicker } from "@/components/SocialPublishTicker";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -41,6 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       currentAgencyId={membership.agencyId}
       notifications={{ count: commercialPendencies.summary.total, items: commercialPendencies.items.slice(0, 6).map(({ id, title, detail, href, priority }) => ({ id, title, detail, href, priority })) }}
     >
+      <SocialPublishTicker />
       {children}
     </Shell>
   );

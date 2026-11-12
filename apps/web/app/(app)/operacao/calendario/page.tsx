@@ -87,6 +87,8 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     platform: p.platform,
     status: p.status,
     publishAtISO: p.publishAt.toISOString(),
+    // Mais de 5 min além do horário e ainda "agendado": o agendador não passou por ele.
+    late: p.status === "SCHEDULED" && p.publishAt.getTime() < Date.now() - 5 * 60_000,
   }));
 
   const toCalendarItem = (item: (typeof monthItems)[number]): CalendarContentItem => ({

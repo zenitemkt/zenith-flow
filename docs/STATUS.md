@@ -1,8 +1,17 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-10-22.
+Última atualização: 2026-11-12.
 
 ## Implementado
+
+- **Agendador de redes — conserto do agendamento (2026-11-12)**: agendados não saíam porque nada chamava o cron (ver
+  `docs/DECISIONS.md`, 2026-11-12). Agora o sistema aberto no navegador dispara o ciclo a cada minuto
+  (`components/SocialPublishTicker.tsx` → `POST /api/social/publish-due`); agendado com mais de 6h de atraso vira
+  "falhou" com aviso em vez de sair sozinho; Calendário marca "atrasado".
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (`lib/social-publisher.test.ts` novo), `build` de `apps/web`.
+  - **Não testado ao vivo**: o disparo pelo navegador em produção (depende do deploy).
+  - **Pendência do Kevin**: cron-job.org (1x/min, `Authorization: Bearer <CRON_SECRET>`). Sem ele, publicação
+    agendada para horário em que ninguém está com o sistema aberto só sai quando alguém abrir (ou falha, se passar de 6h).
 
 - **Sequências do mini-chat de Instagram (2026-10-27)**: passos em `InstagramAutomationRule.flow` (formato e validação em
   `lib/instagram-flow-model.ts`, motor em `lib/instagram-flow.ts`), contatos em `InstagramContact`, progresso em

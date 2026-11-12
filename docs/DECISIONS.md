@@ -1,3 +1,17 @@
+## 2026-11-12 — Agendados não saíam: o cron externo nunca foi cadastrado
+
+**Diagnóstico**: o caminho Agendar grava certo (`SocialPost` SCHEDULED, `publishAt` em UTC a partir da hora de Brasília) e o motor publica certo ("Publicar agora" usa o mesmo `runPublish`). O que faltava era o gatilho: `vercel logs requests` mostrou zero chamadas a `/api/cron/social-publish` em 11h (só os testes do agente, 401). O cron-job.org era pendência do Kevin desde 2026-10-21 e o projeto está no plano Hobby (cron da Vercel só 1x/dia).
+
+**Decisão 1 — rede de segurança dentro do sistema, sem serviço novo**: `SocialPublishTicker` no layout do app chama `POST /api/social/publish-due` a cada minuto enquanto a aba está visível; a rota exige sessão da equipe e roda `publishDueSocialPosts` só na agência da sessão (`options.agencyId`). A reivindicação por UPDATE condicional já impede publicação em dobro com várias abas ou com o cron. **Limite real**: sem ninguém com o sistema aberto, nada sai — o cron externo continua sendo o que garante o horário.
+
+**Decisão 2 — post muito atrasado não sai sozinho**: SCHEDULED nunca tentado, com mais de 6h além do horário (`MAX_LATE_MS`), vira FAILED com `MISSED_SCHEDULE_ERROR` e AuditLog `social_post.missed_schedule`. Publicar de surpresa um post de dias atrás é irreversível; um clique em Reenviar/Reagendar não é. Novas tentativas (`nextAttemptAt`) e PROCESSING não entram nessa regra.
+
+**Descartado**: cron da Vercel (Hobby: 1x/dia); GitHub Actions agendado (mínimo de 5 min, atrasa e some sem aviso, e o token do `gh` local não tem escopo `workflow`); migrar para Vercel Workflow/Queues (exige subir de versão do Next, fora do tamanho deste conserto).
+
+**Pendência do Kevin (continua)**: cadastrar no cron-job.org um job de 1 em 1 minuto para `https://portal.hubzenite.com.br/api/cron/social-publish` com o header `Authorization: Bearer <CRON_SECRET da Vercel>`.
+
+**Ambiente local**: a pasta foi renomeada de `projetos/zenith-flow` para `projetos/Zenite - Sistema` e os links dos workspaces em `node_modules/@zenite-mkt` ficaram apontando para o caminho antigo (typecheck com centenas de erros falsos). `npm install` na raiz refaz os links.
+
 ## 2026-10-27 — Sequências do mini-chat de Instagram
 
 **Decisão 1 — passos em JSON na própria regra**, não tabela por passo: a sequência é editada e salva inteira, sempre lida junto com a regra, e `parseFlow` limpa tudo no servidor (referência solta vira "encerrar"). O passo 0 é sempre mensagem e espelha `responseText`/`buttons`, então a lista e o caminho antigo (regra sem sequência) seguem iguais.
