@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm run build --workspace=apps/web",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then npm run migrate:deploy --workspace=packages/db; fi && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/.next",
   "regions": [
     "gru1"

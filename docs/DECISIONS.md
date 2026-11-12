@@ -1,3 +1,9 @@
+## 2026-11-12 — Migrations aplicadas pelo deploy de produção (autorizado pelo Kevin)
+
+**Contexto**: `DATABASE_URL`/`DIRECT_URL` são "Secret" na Vercel (ninguém lê o valor) e `packages/db/.env` não existe mais nesta máquina; as migrations dos sócios precisavam ir para produção antes do código.
+
+**Decisão** (Kevin autorizou em 2026-11-12): o `buildCommand` (`vercel.json`) roda `prisma migrate deploy` antes do `next build`, **só quando `VERCEL_ENV=production`** (preview não tem `DIRECT_URL`). `migrate deploy` só aplica migrations pendentes do histórico — nunca reseta, nunca usa banco sombra (regra do incidente de 2026-10-21 continua valendo: nada de `migrate dev`/`reset`/`db push`). Se a migration falhar, o build falha e a versão anterior continua no ar. **Consequência**: toda migration commitada na `main` vai para o banco no próximo deploy — revisar o SQL antes do merge (só adições, sem DROP).
+
 ## 2026-11-12 — Zenite × particular, privacidade e repasse do mês
 
 **Pedido**: dividido entre os sócios = Zenite, em qualquer proporção; de um sócio só = particular, "não contabiliza nada para a Zenite". Cada login vê a Zenite e o próprio particular, nunca o do outro. No fechamento, ver em Contas a receber quanto cada sócio tem a receber da agência e marcar Pendente → Pago.
