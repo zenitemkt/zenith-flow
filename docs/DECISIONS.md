@@ -1,3 +1,9 @@
+## 2026-11-12 — Estilo "Zenite Originals"
+
+**Pedido**: novo tema inspirado numa referência de dashboard financeiro escuro com laranja (imagem enviada pelo Kevin).
+
+**Decisão**: terceiro valor de `UiStyle` (`ORIGINALS`), mesma estratégia do Minimalista — o layout raiz põe `dark` + `ui-originals` no <html> e `app/ui-originals.css` repinta a paleta fixa das telas dentro de `.zenite-app`, por cima da ponte do tema escuro. Sempre escuro (o alternador claro/escuro some). Cores escritas inline (`style={{ backgroundColor: "#FF2B00" }}`) e traços do Recharts (`stroke="#FF2B00"`) também são cobertos por seletor de atributo. Verificado com prints locais (painel, Visão geral, Contas a receber, Aparência).
+
 ## 2026-11-12 — Migrations aplicadas pelo deploy de produção (autorizado pelo Kevin)
 
 **Contexto**: `DATABASE_URL`/`DIRECT_URL` são "Secret" na Vercel (ninguém lê o valor) e `packages/db/.env` não existe mais nesta máquina; as migrations dos sócios precisavam ir para produção antes do código.

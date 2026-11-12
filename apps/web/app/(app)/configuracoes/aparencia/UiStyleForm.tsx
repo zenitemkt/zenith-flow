@@ -11,7 +11,21 @@ const OPTIONS: { value: UiStyle; label: string; description: string }[] = [
     label: "Minimalista",
     description: "Layout claro e limpo, com cartões arredondados e sombras suaves. Sempre claro.",
   },
+  {
+    value: "ORIGINALS",
+    label: "Zenite Originals",
+    description: "Fundo preto, cartões grafite e destaques em laranja. Sempre escuro.",
+  },
 ];
+
+/** Troca as classes na hora (o servidor confirma no refresh). Originals é sempre escuro; Minimalista, sempre claro. */
+function applyStyleClasses(style: UiStyle) {
+  const root = document.documentElement;
+  root.classList.toggle("ui-minimal", style === "MINIMALISTA");
+  root.classList.toggle("ui-originals", style === "ORIGINALS");
+  if (style === "ORIGINALS") root.classList.add("dark");
+  if (style === "MINIMALISTA") root.classList.remove("dark");
+}
 
 export function UiStyleForm({ initialStyle }: { initialStyle: UiStyle }) {
   const router = useRouter();
@@ -26,7 +40,7 @@ export function UiStyleForm({ initialStyle }: { initialStyle: UiStyle }) {
 
     const previous = style;
     setStyle(next);
-    document.documentElement.classList.toggle("ui-minimal", next === "MINIMALISTA");
+    applyStyleClasses(next);
 
     const response = await fetch("/api/me/ui-style", {
       method: "PATCH",
@@ -37,12 +51,12 @@ export function UiStyleForm({ initialStyle }: { initialStyle: UiStyle }) {
     setLoading(false);
     if (!response.ok) {
       setStyle(previous);
-      document.documentElement.classList.toggle("ui-minimal", previous === "MINIMALISTA");
+      applyStyleClasses(previous);
       setError("Não foi possível salvar o estilo. Tente de novo.");
       return;
     }
 
-    // O layout raiz decide `dark`/`ui-minimal` no servidor — recarrega pra refletir os dois.
+    // O layout raiz decide `dark`/`ui-minimal`/`ui-originals` no servidor — recarrega pra refletir.
     router.refresh();
   }
 
@@ -52,7 +66,7 @@ export function UiStyleForm({ initialStyle }: { initialStyle: UiStyle }) {
       <p className="mb-3 text-sm text-[#667085] dark:text-[#AEB4C5]">
         Vale só para a sua conta — os outros usuários continuam com o estilo que escolheram.
       </p>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-3">
         {OPTIONS.map((option) => (
           <button
             key={option.value}

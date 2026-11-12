@@ -4,6 +4,7 @@ import { getServerSession, getUserAppearance } from "@/lib/session";
 import "./globals.css";
 import "./zenite-theme.css";
 import "./ui-minimal.css";
+import "./ui-originals.css";
 
 /** Auto-hospedada pelo Next (baixada no build, sem request ao Google em runtime). */
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -24,12 +25,13 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
   const appearance = session ? await getUserAppearance(session.user.id) : null;
-  // O estilo Minimalista é claro por definição: ignora a preferência de tema escuro.
+  // Minimalista é sempre claro e Zenite Originals sempre escuro: os dois ignoram a preferência claro/escuro.
   const isMinimal = appearance?.uiStyle === "MINIMALISTA";
-  const isDark = !isMinimal && appearance?.themePreference === "DARK";
+  const isOriginals = appearance?.uiStyle === "ORIGINALS";
+  const isDark = isOriginals || (!isMinimal && appearance?.themePreference === "DARK");
 
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${display.variable}${isDark ? " dark" : ""}${isMinimal ? " ui-minimal" : ""}`}>
+    <html lang="pt-BR" className={`${inter.variable} ${display.variable}${isDark ? " dark" : ""}${isMinimal ? " ui-minimal" : ""}${isOriginals ? " ui-originals" : ""}`}>
       <body>{children}</body>
     </html>
   );

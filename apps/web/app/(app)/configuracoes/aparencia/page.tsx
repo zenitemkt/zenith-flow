@@ -22,7 +22,7 @@ export default async function AparenciaPage() {
         <p className="text-sm text-[#667085] dark:text-[#AEB4C5]">Estilo e tema da interface para a sua conta.</p>
       </div>
       <UiStyleForm initialStyle={user?.uiStyle ?? "ZENITE"} />
-      {user?.uiStyle !== "MINIMALISTA" && <ThemeToggleForm initialTheme={user?.themePreference ?? "LIGHT"} />}
+      {(user?.uiStyle ?? "ZENITE") === "ZENITE" && <ThemeToggleForm initialTheme={user?.themePreference ?? "LIGHT"} />}
     </div>
   );
 }

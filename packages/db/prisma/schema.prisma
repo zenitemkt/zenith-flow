@@ -25,10 +25,12 @@ enum ThemePreference {
 }
 
 /// Estilo visual da interface, independente de claro/escuro. ZENITE é o padrão
-/// atual; MINIMALISTA é o layout claro de cartões (pedido do usuário, 2026-10-20).
+/// atual; MINIMALISTA é o layout claro de cartões (pedido do usuário, 2026-10-20);
+/// ORIGINALS é o "Zenite Originals", sempre escuro, laranja e grafite (2026-11-12).
 enum UiStyle {
   ZENITE
   MINIMALISTA
+  ORIGINALS
 }
 
 model User {

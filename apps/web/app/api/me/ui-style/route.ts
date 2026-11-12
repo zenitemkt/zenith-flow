@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/session";
 import { prisma, type UiStyle } from "@zenite-mkt/db";
 
-const VALID_STYLES: UiStyle[] = ["ZENITE", "MINIMALISTA"];
+const VALID_STYLES: UiStyle[] = ["ZENITE", "MINIMALISTA", "ORIGINALS"];
 
 /** Salva o estilo visual na conta do usuário — só afeta quem escolheu, em qualquer dispositivo. */
 export async function PATCH(request: Request) {

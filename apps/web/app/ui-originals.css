@@ -1,0 +1,120 @@
+/*
+ * Estilo "Zenite Originals" (Configurações > Aparência, 2026-11-12).
+ *
+ * Sempre escuro: o layout raiz põe `dark` + `ui-originals` no <html>, então
+ * toda a ponte de zenite-theme.css e as classes `dark:` continuam valendo e
+ * este arquivo só troca a paleta por cima, dentro do shell interno
+ * (`.zenite-app`). Referência enviada pelo Kevin: fundo quase preto, cartões
+ * grafite com borda sutil e cantos de 16px, laranja vivo como única cor de
+ * destaque (botão primário em degradê, item ativo do menu preenchido) e
+ * verde para o que é positivo.
+ *
+ * Tokens: fundo #0B0B0D · superfície #141416 · elevada #1B1B1F ·
+ * borda #26262B · texto #F4F4F5 / #A1A1AA · laranja #FF7A1A→#FF5C00 ·
+ * verde #4ADE80 · vermelho #F87171.
+ */
+
+.ui-originals body,
+.ui-originals .zenite-app { background-color: #0b0b0d; color: #f4f4f5; }
+
+/* sem o arco e o granulado do tema Zênite */
+.ui-originals .zenite-app > .pointer-events-none { display: none; }
+
+/* ---------- superfícies ---------- */
+.ui-originals .zenite-app .bg-white { background-color: #141416; }
+.ui-originals .zenite-app :is(.bg-\[\#F9FAFB\], .bg-\[\#F6F7FB\], .bg-\[\#FAFAFB\]) { background-color: #1b1b1f; }
+.ui-originals .zenite-app :is(.bg-\[\#F2F4F7\], .bg-\[\#E4E7EC\]) { background-color: rgba(255, 255, 255, 0.06); }
+.ui-originals .zenite-app .bg-\[\#101828\] { background-color: #26262b; }
+.ui-originals .zenite-app :is(.bg-\[\#FFF1EC\], .bg-\[\#EDE9FE\]) { background-color: rgba(255, 106, 19, 0.14); }
+.ui-originals .zenite-app :is(.bg-\[\#FFF9F7\], .bg-\[\#FFF7F5\]) { background-color: rgba(255, 106, 19, 0.07); }
+.ui-originals .zenite-app .bg-\[\#DCFCE7\] { background-color: rgba(34, 197, 94, 0.14); }
+
+/* cartões: cantos de 16px, borda sutil, leve brilho no topo */
+.ui-originals .zenite-app .rounded-xl { border-radius: 16px; }
+.ui-originals .zenite-app .rounded-xl.bg-white {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0) 40%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- bordas ---------- */
+.ui-originals .zenite-app :is(.border-\[\#E4E7EC\], .border-\[\#EEF0F3\], .border-\[\#F2F4F7\]) { border-color: #232327; }
+.ui-originals .zenite-app .border-\[\#D0D5DD\] { border-color: #2e2e34; }
+.ui-originals .zenite-app .border-\[\#F9C7B4\] { border-color: rgba(255, 106, 19, 0.4); }
+
+/* ---------- texto ---------- */
+.ui-originals .zenite-app .text-\[\#101828\] { color: #f4f4f5; }
+.ui-originals .zenite-app .text-\[\#344054\] { color: #d4d4d8; }
+.ui-originals .zenite-app .text-\[\#475467\] { color: #b4b4bb; }
+.ui-originals .zenite-app .text-\[\#667085\] { color: #a1a1aa; }
+.ui-originals .zenite-app .text-\[\#98A2B3\] { color: #7c7c85; }
+.ui-originals .zenite-app :is(.text-\[\#FF2B00\], .text-\[\#C2270A\]) { color: #ff8a3d; }
+.ui-originals .zenite-app :is(.text-\[\#166534\], .text-\[\#0B6B43\], .text-\[\#16A36A\]) { color: #4ade80; }
+.ui-originals .zenite-app :is(.text-\[\#B42318\], .text-\[\#A11D1D\], .text-\[\#D94343\]) { color: #f87171; }
+
+/* ---------- ação primária: laranja em degradê ---------- */
+.ui-originals .zenite-app [style*="rgb(255, 43, 0)"],
+.ui-originals .zenite-app [style*="#FF2B00" i],
+.ui-originals .zenite-app :is(a, button).bg-\[\#FF2B00\] {
+  background: linear-gradient(180deg, #ff8a1f 0%, #ff5c00 100%) !important;
+  color: #fff;
+  box-shadow: 0 6px 18px -8px rgba(255, 106, 19, 0.7);
+}
+.ui-originals .zenite-app .bg-\[\#FF2B00\] { background-color: #ff6a13; }
+.ui-originals .zenite-app .hover\:text-\[\#FF2B00\]:hover { color: #ffa057; }
+.ui-originals .zenite-app .hover\:border-\[\#FF2B00\]:hover { border-color: #ff6a13; }
+
+/* ---------- estados ---------- */
+.ui-originals .zenite-app :is(.hover\:bg-\[\#F6F7FB\], .hover\:bg-\[\#F9FAFB\], .hover\:bg-white):hover { background-color: rgba(255, 255, 255, 0.05); }
+.ui-originals .zenite-app .hover\:bg-\[\#F2F4F7\]:hover { background-color: rgba(255, 255, 255, 0.08); }
+
+/* ---------- campos ---------- */
+.ui-originals .zenite-app :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), textarea, select) {
+  background-color: #111113;
+  border-color: #2a2a2f;
+  border-radius: 10px;
+}
+.ui-originals .zenite-app :is(input, textarea, select):focus {
+  border-color: #ff6a13;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 106, 19, 0.18);
+}
+.ui-originals .zenite-app ::placeholder { color: #6b6b74; }
+.ui-originals .zenite-app ::selection { background: rgba(255, 106, 19, 0.45); color: #fff; }
+
+/* ---------- tabelas ---------- */
+.ui-originals .zenite-app thead { background-color: #18181b; }
+
+/* ---------- menu lateral e cabeçalho ---------- */
+.ui-originals .zenite-app [data-expanded] {
+  background-color: #111113;
+  border-color: #222226;
+}
+.ui-originals .zenite-app [data-expanded] :is(.border-\[\#303343\]) { border-color: #222226; }
+.ui-originals .zenite-app [data-expanded] :is(.hover\:bg-\[\#232532\]):hover { background-color: rgba(255, 255, 255, 0.06); }
+.ui-originals .zenite-app [data-expanded] [aria-current="page"] {
+  background: linear-gradient(180deg, #ff8a1f 0%, #ff5c00 100%);
+  box-shadow: 0 8px 20px -10px rgba(255, 106, 19, 0.8);
+  color: #fff;
+}
+.ui-originals .zenite-app [data-expanded] [aria-current="page"] svg { color: #fff; }
+.ui-originals .zenite-app > header,
+.ui-originals .zenite-app header.sticky {
+  background-color: rgba(11, 11, 13, 0.8);
+  border-color: #1d1d21;
+}
+
+/* títulos */
+.ui-originals .zenite-app main h1 {
+  font-family: var(--font-display), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+}
+
+/* Sempre escuro: some o botão de alternar claro/escuro. */
+.ui-originals .zenite-app [data-theme-toggle] { display: none; }
+
+/* gráficos (Recharts grava a cor da marca direto no SVG) */
+.ui-originals .zenite-app [stroke="#FF2B00" i] { stroke: #ff6a13; }
+.ui-originals .zenite-app [fill="#FF2B00" i] { fill: #ff6a13; }
+.ui-originals .zenite-app stop[stop-color="#FF2B00" i] { stop-color: #ff6a13; }
