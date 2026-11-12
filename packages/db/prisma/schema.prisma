@@ -48,6 +48,7 @@ model User {
   sessions             Session[]
   accounts             Account[]
   memberships          Membership[]
+  financePartners      FinancePartner[]
   employee             Employee?
   adAccountConnections AdAccountConnection[]
 
@@ -1472,6 +1473,10 @@ model FinancePartner {
   agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name      String
   active    Boolean  @default(true)
+  /// Login deste sócio. Com o vínculo, os lançamentos particulares dele (de um
+  /// sócio só) ficam visíveis apenas para esse usuário; sem vínculo, todos veem.
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1479,6 +1484,7 @@ model FinancePartner {
   clientShares ClientPartnerShare[]
 
   @@unique([agencyId, name])
+  @@unique([agencyId, userId])
   @@index([agencyId])
   @@map("finance_partner")
 }
