@@ -4,6 +4,9 @@ import { FinanceEntryActions } from "./FinanceEntryActions";
 import { AttachBoletoButton } from "./AttachBoletoButton";
 import { EditFinanceEntryButton } from "./EditFinanceEntryButton";
 import { FINANCE_STATUS_TRANSITIONS } from "@/lib/finance";
+import type { ShareInput } from "@/lib/finance-shares";
+import { EntrySharesButton } from "./EntrySharesButton";
+import type { PartnerChoice } from "./PartnerSplitFields";
 
 export interface FinanceEntryRow {
   id: string;
@@ -19,6 +22,7 @@ export interface FinanceEntryRow {
   reversalOfId: string | null;
   reversedBy: { id: string } | null;
   boletoAsset: { id: string; fileName: string } | null;
+  partnerShares: ShareInput[];
 }
 
 const STATUS_BADGE_CLASS: Record<FinanceEntryStatus, string> = {
@@ -29,7 +33,19 @@ const STATUS_BADGE_CLASS: Record<FinanceEntryStatus, string> = {
   CANCELADO: "bg-[#F2F4F7] text-[#98A2B3]",
 };
 
-export function FinanceEntryTable({ entries, showBoleto = false }: { entries: FinanceEntryRow[]; showBoleto?: boolean }) {
+export function FinanceEntryTable({
+  entries,
+  showBoleto = false,
+  partners = [],
+  highlightPartnerId,
+}: {
+  entries: FinanceEntryRow[];
+  showBoleto?: boolean;
+  partners?: PartnerChoice[];
+  /** Lista filtrada por um sócio: a coluna Valor mostra a parte dele. */
+  highlightPartnerId?: string;
+}) {
+  const showPartners = partners.length > 0;
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
@@ -48,6 +64,7 @@ export function FinanceEntryTable({ entries, showBoleto = false }: { entries: Fi
             <th className="px-4 py-3">Categoria</th>
             <th className="px-4 py-3">Vencimento</th>
             <th className="px-4 py-3">Valor</th>
+            {showPartners && <th className="px-4 py-3">Sócios</th>}
             <th className="px-4 py-3">Status</th>
             {showBoleto && <th className="px-4 py-3">Boleto</th>}
             <th className="px-4 py-3">Ação</th>
@@ -58,6 +75,8 @@ export function FinanceEntryTable({ entries, showBoleto = false }: { entries: Fi
             const overdue = isOverdue(entry);
             const displayStatus = overdue ? "VENCIDO" : entry.status;
             const isReversal = Boolean(entry.reversalOfId);
+            const partnerPart = highlightPartnerId ? entry.partnerShares.find((s) => s.partnerId === highlightPartnerId) : undefined;
+            const shownCents = partnerPart ? partnerPart.amountCents : entry.amountCents;
             return (
               <tr key={entry.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
                 <td className="px-4 py-3 font-medium text-[#101828]">
@@ -76,8 +95,23 @@ export function FinanceEntryTable({ entries, showBoleto = false }: { entries: Fi
                 <td
                   className={`px-4 py-3 font-medium ${entry.amountCents < 0 ? "text-[#B42318]" : "text-[#101828]"}`}
                 >
-                  {formatCents(entry.amountCents)}
+                  {formatCents(shownCents)}
+                  {partnerPart && partnerPart.amountCents !== entry.amountCents && (
+                    <span className="block text-xs font-normal text-[#98A2B3]">de {formatCents(entry.amountCents)}</span>
+                  )}
                 </td>
+                {showPartners && (
+                  <td className="px-4 py-3">
+                    <EntrySharesButton
+                      entryId={entry.id}
+                      type={entry.type}
+                      amountCents={entry.amountCents}
+                      shares={entry.partnerShares}
+                      partners={partners}
+                      readOnly={isReversal}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[displayStatus]}`}>
                     {FINANCE_STATUS_LABELS[entry.type][displayStatus]}

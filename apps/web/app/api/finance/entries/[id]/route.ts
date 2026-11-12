@@ -5,6 +5,8 @@ import { isClientRole } from "@/lib/rbac";
 import { isFinanceEntryEditable, reaisToCents } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma } from "@zenite-mkt/db";
+import { splitProportionally } from "@/lib/finance-shares";
+import { replaceEntryShares } from "@/lib/finance-partners";
 
 interface RouteParams {
   params: { id: string };
@@ -50,9 +52,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Data de vencimento inválida." }, { status: 400 });
   }
 
-  await prisma.financeEntry.update({
-    where: { id: entry.id },
-    data: { description, amountCents: reaisToCents(amount), dueDate },
+  const amountCents = reaisToCents(amount);
+  await prisma.$transaction(async (tx) => {
+    await tx.financeEntry.update({ where: { id: entry.id }, data: { description, amountCents, dueDate } });
+    // Valor mudou: a divisão entre sócios acompanha na mesma proporção, para a soma continuar fechando.
+    if (amountCents !== entry.amountCents) {
+      const current = await tx.financeEntryShare.findMany({
+        where: { financeEntryId: entry.id },
+        select: { partnerId: true, amountCents: true },
+        orderBy: { createdAt: "asc" },
+      });
+      if (current.length > 0) await replaceEntryShares(tx, entry.id, splitProportionally(amountCents, current));
+    }
   });
 
   revalidateTag(financeEntriesCacheTag(membership.agencyId));

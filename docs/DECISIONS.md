@@ -1,3 +1,25 @@
+## 2026-11-12 — Financeiro dividido entre os sócios
+
+**Pedido**: há projetos de um sócio só e projetos divididos em valores (não percentuais): de R$ 1.500, 1.000 do Gabriel e 500 do Kevin. Vale para receber e para pagar (assinatura que só um sócio usa não é despesa compartilhada). Precisa dar a visão de cada um e dos dois juntos.
+
+**Decisão 1 — sócio é uma lista própria (`FinancePartner`), não um usuário**: sócio não precisa ter login, e o papel de quem acessa o sistema não tem relação com quem é dono do dinheiro. Nunca é excluído depois de usado, só desativado (FK `Restrict`): desativado some das opções novas e continua no histórico.
+
+**Decisão 2 — a divisão é uma tabela de partes em centavos (`FinanceEntryShare`), não um campo no lançamento**: um sócio só = uma linha com o valor inteiro; dividido = uma linha por sócio. Invariante validada no servidor (`lib/finance-shares.ts`, pura e testada): ou não há linha nenhuma ("Não definido") ou a soma é exatamente `amountCents`. Lançamentos antigos ficam "Não definido" até alguém atribuir — nada foi inferido nem migrado.
+
+**Decisão 3 — o padrão do cliente guarda valores de referência (`ClientPartnerShare`), aplicados por proporção**: o cliente não tem valor de contrato no sistema, então "1.000 / 500" é a proporção; um recebimento de outro valor é dividido igual (3.000 → 2.000/1.000), com os centavos de arredondamento indo para a maior fração. Sócio único é peso 1. O formulário pré-preenche e deixa trocar; se o campo não vem (ex.: proposta aceita), o servidor aplica o padrão.
+
+**Decisão 4 — atribuir sócio não é "editar valor"**: a seção 22 do manual trava valor e datas depois de liquidado; a divisão pode ser definida ou trocada em qualquer status (`PUT /api/finance/entries/:id/shares`, com AuditLog), porque todo o histórico existente nasceu sem sócio. O estorno copia a divisão com sinal trocado e acompanha se a do original mudar. Editar o valor de um lançamento em aberto reescala as partes na mesma proporção.
+
+**Decisão 5 — todos da equipe veem tudo**: o filtro por sócio organiza, não esconde. Só administradores cadastram sócios. Privacidade entre sócios não foi pedida.
+
+**Fora desta fatia**: Fluxo de caixa, DRE e Indicadores ainda não abrem por sócio; não há recorrência (a mensalidade do cliente continua sendo lançada à mão, já vindo dividida).
+
+**Banco**: migration `20261112160000_finance_partner_shares` só cria três tabelas. Gerada com `migrate diff` entre schemas (sem banco) e aplicada num Postgres embutido local com as 78 migrations. **Produção**: este computador não tem a URL do banco; a migration precisa ser aplicada (`prisma migrate deploy` com `DIRECT_URL`) antes de subir o código, senão as telas do Financeiro quebram.
+
+**Defeito antigo achado no teste**: marcar como recebido/pago com a data de hoje era recusado ("A data não pode ser no futuro") — `endOfDayUTC(data) > agora` é sempre verdade para hoje. Trocado por `startOfDayUTC`.
+
+**Ambiente local de teste**: `apps/web/.env.local` (ignorado pelo git) aponta para um Postgres embutido em `localhost:5433` (pacote `embedded-postgres`, fora do repositório). Precisa de `initdb --encoding=UTF8 --locale=C`: no Windows o padrão é WIN1252 e nomes com acento quebram.
+
 ## 2026-11-12 — Campanhas da Meta: status real e atualização ao abrir
 
 **Problema**: `Campaign.status` nunca vinha da Meta. A sincronização lia só `/insights` dos últimos 30 dias e criava a campanha com o padrão ATIVA; "3 ativas" no sistema não queria dizer 3 ativas no Gerenciador.

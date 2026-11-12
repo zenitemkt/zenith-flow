@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { ShareError } from "@/lib/finance-shares";
+import { readClientShares, replaceClientShares } from "@/lib/finance-partners";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
 import { readDriveUrl, readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
@@ -44,6 +46,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const segmentId = await resolveSegmentId(membership.agencyId, body?.segmentName);
+
+  // Divisão padrão entre os sócios: só mexe se o campo veio no corpo.
+  let partnerShares;
+  try {
+    partnerShares = await readClientShares(prisma, membership.agencyId, body?.partnerShares);
+  } catch (error) {
+    if (error instanceof ShareError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
+  if (partnerShares) await replaceClientShares(prisma, client.id, partnerShares);
 
   await prisma.client.update({
     where: { id: client.id },

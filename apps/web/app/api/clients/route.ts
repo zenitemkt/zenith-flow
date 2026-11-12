@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { ShareError } from "@/lib/finance-shares";
+import { readClientShares, replaceClientShares } from "@/lib/finance-partners";
 import { auth } from "@/lib/auth";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
@@ -82,6 +84,15 @@ export async function POST(request: Request) {
   const segmentId = await resolveSegmentId(membership.agencyId, body?.segmentName);
   const socialLinks = readSocialLinks(body?.socialLinks);
 
+  // Quem recebe deste cliente (um sócio ou a divisão padrão) — opcional.
+  let partnerShares;
+  try {
+    partnerShares = await readClientShares(prisma, membership.agencyId, body?.partnerShares);
+  } catch (error) {
+    if (error instanceof ShareError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
+
   const client = await prisma.$transaction(async (tx) => {
     // Idempotência: reenvio do mesmo cadastro em poucos segundos devolve o cliente já criado.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`client:${membership.agencyId}:${name}`}))`;
@@ -93,6 +104,7 @@ export async function POST(request: Request) {
     const created = await tx.client.create({
       data: { agencyId: membership.agencyId, name, document, email, phone, whatsapp, segmentId, socialLinks, driveUrl: driveUrl ?? null },
     });
+    if (partnerShares && partnerShares.length > 0) await replaceClientShares(tx, created.id, partnerShares);
     await tx.clientStatusHistory.create({
       data: { clientId: created.id, toStatus: "PROSPECT", actorUserId: session.user.id },
     });

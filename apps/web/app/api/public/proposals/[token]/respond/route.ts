@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clientDefaultShares } from "@/lib/finance-partners";
 import { isProposalExpired } from "@/lib/proposals";
 import { prisma } from "@zenite-mkt/db";
 
@@ -63,6 +64,10 @@ export async function POST(request: Request, { params }: RouteParams) {
             createdByUserId: proposal.createdByUserId,
           },
         });
+        const shares = await clientDefaultShares(tx, proposal.clientId, proposal.valueCents);
+        if (shares.length > 0) {
+          await tx.financeEntryShare.createMany({ data: shares.map((s) => ({ financeEntryId: receivable.id, ...s })) });
+        }
         await tx.financeEntryStatusHistory.create({
           data: {
             financeEntryId: receivable.id,

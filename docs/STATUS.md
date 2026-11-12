@@ -4,6 +4,16 @@
 
 ## Implementado
 
+- **Financeiro dividido entre os sócios (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12, "Financeiro dividido").
+  Modelos `FinancePartner`, `FinanceEntryShare`, `ClientPartnerShare`; regras em `lib/finance-shares.ts`; APIs
+  `/api/finance/partners` e `/api/finance/entries/:id/shares`; campo "de quem é" em nova receita/despesa, coluna e
+  filtro por sócio em Contas a receber/pagar, quadro "Por sócio" (listas e Visão geral), padrão no cadastro do cliente.
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (`lib/finance-shares.test.ts`, 14 testes) e roteiro de ponta a ponta
+    contra o ambiente local (cliente dividido e de um sócio, proporção, validação, edição, liquidação, estorno, páginas).
+  - **Não feito**: `next build` desta fatia (o servidor local estava usando a pasta `.next`); conferência visual no navegador.
+  - **Pendente antes do deploy**: aplicar a migration `20261112160000_finance_partner_shares` em produção. O commit
+    desta fatia fica só local até lá.
+  - Limitações: Caixa, DRE e Indicadores ainda não abrem por sócio; sem recorrência de mensalidade.
 - **Campanhas da Meta com status real + filtro de cliente em caixa de seleção (2026-11-12)**: ver `docs/DECISIONS.md`
   (2026-11-12, "Campanhas da Meta"). `lib/meta-campaign-sync.ts` traz nome, situação e métricas; Campanhas e Raio-X
   atualizam ao abrir (30 min). Raio-X e Arquivos usam `ClientFilterSelect`.

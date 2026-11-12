@@ -7,6 +7,16 @@ import { FormField } from "@/app/_components/FormField";
 import { FINANCE_CATEGORY_NATURE_LABELS, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
 import type { FinanceEntryType, FinanceCategoryNature } from "@zenite-mkt/db";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
+import {
+  EMPTY_SPLIT,
+  amountInputToCents,
+  splitProportionally,
+  splitValueFromShares,
+  splitValueToBody,
+  type ShareInput,
+  type SplitFormValue,
+} from "@/lib/finance-shares";
+import { PartnerSplitFields, type PartnerChoice } from "./PartnerSplitFields";
 
 interface Option {
   id: string;
@@ -20,11 +30,16 @@ export function NewFinanceEntryModal({
   categories,
   clients,
   projects,
+  partners = [],
+  clientShares = {},
 }: {
   type: FinanceEntryType;
   categories: Option[];
   clients: Option[];
   projects: Option[];
+  partners?: PartnerChoice[];
+  /** Padrão de divisão de cada cliente (id → partes), para pré-preencher receitas. */
+  clientShares?: Record<string, ShareInput[]>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -37,11 +52,25 @@ export function NewFinanceEntryModal({
   const [newCategoryNature, setNewCategoryNature] = useState<FinanceCategoryNature>("DESPESA_OPERACIONAL");
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [split, setSplit] = useState<SplitFormValue>(EMPTY_SPLIT);
+  /** Enquanto a pessoa não mexe na divisão, ela segue o padrão do cliente escolhido. */
+  const [splitTouched, setSplitTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const guardSubmit = useSubmitGuard();
 
   const label = type === "RECEITA" ? "Nova receita" : "Nova despesa";
+  const totalCents = amountInputToCents(amount);
+
+  /** Receita de cliente com padrão cadastrado: já vem dividida como no cadastro dele. */
+  function followClientDefault(nextClientId: string, nextAmount: string) {
+    if (type !== "RECEITA" || splitTouched) return;
+    const weights = clientShares[nextClientId] ?? [];
+    if (weights.length === 0) return setSplit(EMPTY_SPLIT);
+    if (weights.length === 1) return setSplit({ choice: weights[0]!.partnerId, amounts: {} });
+    const cents = amountInputToCents(nextAmount);
+    setSplit(cents && cents > 0 ? splitValueFromShares(splitProportionally(cents, weights)) : { choice: "split", amounts: {} });
+  }
 
   function close() {
     setDescription("");
@@ -52,6 +81,8 @@ export function NewFinanceEntryModal({
     setNewCategoryNature("DESPESA_OPERACIONAL");
     setClientId("");
     setProjectId("");
+    setSplit(EMPTY_SPLIT);
+    setSplitTouched(false);
     setError(null);
     setOpen(false);
   }
@@ -76,6 +107,7 @@ export function NewFinanceEntryModal({
           categoryNature: categoryId === NEW_CATEGORY && type === "DESPESA" ? newCategoryNature : null,
           clientId: clientId || null,
           projectId: projectId || null,
+          shares: splitValueToBody(split),
         }),
       });
 
@@ -119,7 +151,10 @@ export function NewFinanceEntryModal({
               inputMode="decimal"
               required
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                followClientDefault(clientId, e.target.value);
+              }}
               placeholder="1500,00"
             />
             <FormField
@@ -191,7 +226,10 @@ export function NewFinanceEntryModal({
               <select
                 id="finance-client"
                 value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                onChange={(e) => {
+                  setClientId(e.target.value);
+                  followClientDefault(e.target.value, amount);
+                }}
                 className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
               >
                 <option value="">Nenhum</option>
@@ -221,6 +259,19 @@ export function NewFinanceEntryModal({
               </select>
             </div>
           </div>
+
+          <PartnerSplitFields
+            partners={partners}
+            value={split}
+            onChange={(next) => {
+              setSplitTouched(true);
+              setSplit(next);
+            }}
+            totalCents={totalCents}
+            label={type === "RECEITA" ? "Quem recebe" : "De quem é a despesa"}
+            hint={type === "RECEITA" ? "Ao escolher o cliente, vem a divisão cadastrada nele; dá para trocar aqui." : undefined}
+            idPrefix="new-entry"
+          />
 
           {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 

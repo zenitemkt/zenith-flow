@@ -5,13 +5,14 @@ import { parseFinancePeriod } from "@/lib/finance";
 export default function ContasAPagarPage({
   searchParams,
 }: {
-  searchParams: { page?: string; period?: string };
+  searchParams: { page?: string; period?: string; partner?: string };
 }) {
   return (
     <FinanceListPageContent
       type="DESPESA"
       page={parsePage(searchParams.page)}
       period={parseFinancePeriod(searchParams.period)}
+      partner={searchParams.partner}
     />
   );
 }

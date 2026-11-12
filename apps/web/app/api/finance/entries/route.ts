@@ -5,6 +5,8 @@ import { isClientRole } from "@/lib/rbac";
 import { reaisToCents, DESPESA_CATEGORY_NATURES } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenite-mkt/db";
+import { ShareError } from "@/lib/finance-shares";
+import { clientDefaultShares, readEntryShares, replaceEntryShares } from "@/lib/finance-partners";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -65,6 +67,18 @@ export async function POST(request: Request) {
     }
   }
 
+  // De quem é: o que veio no formulário; se não veio nada, receita de cliente segue o padrão do cliente.
+  const amountCents = reaisToCents(amount);
+  let shares;
+  try {
+    shares =
+      (await readEntryShares(prisma, membership.agencyId, body?.shares, amountCents)) ??
+      (type === "RECEITA" ? await clientDefaultShares(prisma, clientId, amountCents) : []);
+  } catch (error) {
+    if (error instanceof ShareError) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
+
   const entry = await prisma.$transaction(async (tx) => {
     let finalCategoryId = categoryId;
     if (!finalCategoryId && categoryName) {
@@ -87,7 +101,7 @@ export async function POST(request: Request) {
         agencyId: membership.agencyId,
         type,
         description,
-        amountCents: reaisToCents(amount),
+        amountCents,
         categoryId: finalCategoryId,
         clientId,
         projectId,
@@ -96,6 +110,7 @@ export async function POST(request: Request) {
         createdByUserId: session.user.id,
       },
     });
+    await replaceEntryShares(tx, created.id, shares);
     await tx.financeEntryStatusHistory.create({
       data: { financeEntryId: created.id, toStatus: "PREVISTO", actorUserId: session.user.id },
     });
@@ -107,7 +122,7 @@ export async function POST(request: Request) {
         action: "finance_entry.created",
         resourceType: "finance_entry",
         resourceId: created.id,
-        metadata: { type, amountCents: created.amountCents },
+        metadata: { type, amountCents: created.amountCents, shares: shares.map((s) => ({ ...s })) },
       },
     });
     return created;

@@ -4,6 +4,11 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { formatCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
 import { TrendAreaChart } from "@/app/_components/charts/TrendAreaChart";
+import { canManageTeam } from "@/lib/rbac";
+import { listFinancePartners } from "@/lib/finance-partners";
+import { partnerTotals } from "@/lib/finance-partner-totals";
+import { ManagePartnersButton } from "../ManagePartnersButton";
+import { PartnerTotalsTable } from "../PartnerTotalsTable";
 
 const MONTH_LABELS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -66,6 +71,20 @@ export default async function VisaoGeralPage() {
     }),
   ]);
 
+  // Mesmos quatro números dos cartões, abertos por sócio (some se não houver sócio cadastrado).
+  const partners = await listFinancePartners(membership.agencyId);
+  const OPEN = { in: ["PREVISTO", "PENDENTE", "VENCIDO"] as ("PREVISTO" | "PENDENTE" | "VENCIDO")[] };
+  const settledThisMonth = { status: "LIQUIDADO" as const, settledDate: { gte: monthStart, lt: monthEnd } };
+  const byPartner =
+    partners.length > 0
+      ? await partnerTotals(membership.agencyId, [
+          { type: "RECEITA", status: OPEN },
+          { type: "RECEITA", ...settledThisMonth },
+          { type: "DESPESA", status: OPEN },
+          { type: "DESPESA", ...settledThisMonth },
+        ])
+      : null;
+
   const aReceberTotal = aReceber._sum.amountCents ?? 0;
   const aPagarTotal = aPagar._sum.amountCents ?? 0;
   const recebidoTotal = recebidoMes._sum.amountCents ?? 0;
@@ -107,7 +126,8 @@ export default async function VisaoGeralPage() {
           <h1 className="text-lg font-semibold text-[#101828]">Financeiro — Visão geral</h1>
           <p className="text-sm text-[#667085]">{membership.agency.name}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ManagePartnersButton partners={partners} canManage={canManageTeam(membership.role)} />
           <Link
             href="/financeiro/caixa"
             className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
@@ -149,6 +169,16 @@ export default async function VisaoGeralPage() {
           <p className="text-xs text-[#667085]">saldo do mês (recebido − pago)</p>
         </div>
       </div>
+
+      {byPartner && (
+        <PartnerTotalsTable
+          title="Por sócio"
+          columns={["A receber", "Recebido no mês", "A pagar", "Pago no mês"]}
+          rows={byPartner.rows}
+          totals={byPartner.totals}
+          balance={{ label: "Saldo do mês", plus: 1, minus: 3 }}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">

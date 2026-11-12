@@ -67,6 +67,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         createdByUserId: session.user.id,
       },
     });
+    const shares = await tx.financeEntryShare.findMany({ where: { financeEntryId: entry.id }, select: { partnerId: true, amountCents: true } });
+    if (shares.length > 0) {
+      await tx.financeEntryShare.createMany({
+        data: shares.map((s) => ({ financeEntryId: created.id, partnerId: s.partnerId, amountCents: -s.amountCents })),
+      });
+    }
     await tx.financeEntryStatusHistory.create({
       data: { financeEntryId: created.id, toStatus: "LIQUIDADO", reason, actorUserId: session.user.id },
     });

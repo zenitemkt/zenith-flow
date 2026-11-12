@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { SOCIAL_NETWORKS, type SocialNetworkId } from "@/lib/clients";
+import { EMPTY_SPLIT, splitValueFromShares, splitValueToBody, type SplitFormValue } from "@/lib/finance-shares";
+import { PartnerSplitFields, type PartnerChoice } from "@/app/(app)/financeiro/PartnerSplitFields";
 
 export interface ClientFormValues {
   name: string;
@@ -124,6 +126,10 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
   const router = useRouter();
   const [values, setValues] = useState<ClientFormValues>({ ...EMPTY_VALUES, ...initialValues });
   const [segments, setSegments] = useState<string[]>([]);
+  const [partners, setPartners] = useState<PartnerChoice[]>([]);
+  const [split, setSplit] = useState<SplitFormValue>(EMPTY_SPLIT);
+  /** Só envia a divisão se a lista de sócios carregou — senão um erro de rede apagaria o padrão salvo. */
+  const [splitLoaded, setSplitLoaded] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [avatarRemoved, setAvatarRemoved] = useState(false);
@@ -145,6 +151,25 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
   function updateSocial(network: SocialNetworkId, value: string) {
     setValues((prev) => ({ ...prev, socials: { ...prev.socials, [network]: value } }));
   }
+
+  // Sócios e a divisão padrão deste cliente (modo edição): carrega quando o modal abre.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setSplitLoaded(false);
+    fetch(`/api/finance/partners${mode === "edit" && clientId ? `?clientId=${clientId}` : ""}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !Array.isArray(body?.partners)) return;
+        setPartners(body.partners);
+        setSplit(splitValueFromShares(Array.isArray(body.clientShares) ? body.clientShares : []));
+        setSplitLoaded(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mode, clientId]);
 
   // Sugestões de ramo: carrega só quando o modal abre (lista pequena, por agência).
   useEffect(() => {
@@ -200,7 +225,7 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
 
     const url = mode === "create" ? "/api/clients" : `/api/clients/${clientId}`;
     const { socials, ...baseValues } = values;
-    const common = { ...baseValues, socialLinks: socials };
+    const common = { ...baseValues, socialLinks: socials, ...(splitLoaded ? { partnerShares: splitValueToBody(split) } : {}) };
     const payload =
       mode === "create"
         ? {
@@ -325,6 +350,16 @@ export function ClientFormModal({ open, onClose, mode, clientId, initialValues, 
           onChange={(e) => update("driveUrl", e.target.value)}
           placeholder="https://drive.google.com/drive/folders/..."
         />
+        {partners.length > 0 && (
+          <PartnerSplitFields
+            partners={partners}
+            value={split}
+            onChange={setSplit}
+            label="Quem recebe deste cliente"
+            hint="Um sócio só, ou dividido: informe quanto fica com cada um (ex.: de R$ 1.500, 1.000 e 500). Os recebimentos deste cliente já vêm divididos nessa proporção."
+            idPrefix="client-split"
+          />
+        )}
         <FormField
           label="CNPJ / documento"
           name="document"

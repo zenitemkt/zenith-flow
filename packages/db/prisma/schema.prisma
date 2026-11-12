@@ -167,6 +167,7 @@ model Agency {
   timeEntries                  TimeEntry[]
   financeCategories            FinanceCategory[]
   financeEntries               FinanceEntry[]
+  financePartners              FinancePartner[]
   mediaAssets                  MediaAsset[]
   healthScoreSnapshots         HealthScoreSnapshot[]
   churnRiskSnapshots           ChurnRiskSnapshot[]
@@ -348,6 +349,7 @@ model Client {
   instagramContacts        InstagramContact[]
   instagramFlowSessions    InstagramFlowSession[]
   financeEntries           FinanceEntry[]
+  partnerShares            ClientPartnerShare[]
   mediaAssets              MediaAsset[]
   healthScoreSnapshots     HealthScoreSnapshot[]
   churnRiskSnapshots       ChurnRiskSnapshot[]
@@ -1449,6 +1451,7 @@ model FinanceEntry {
   updatedAt        DateTime           @updatedAt
 
   statusHistory FinanceEntryStatusHistory[]
+  partnerShares FinanceEntryShare[]
 
   @@index([agencyId])
   @@index([agencyId, status, dueDate])
@@ -1457,6 +1460,63 @@ model FinanceEntry {
   @@index([opportunityId])
   @@index([proposalId])
   @@map("finance_entry")
+}
+
+/// Sócio da agência para a divisão do financeiro (2026-11-12). É uma lista
+/// própria (nome), não um usuário: sócio não precisa ter login. Nunca é
+/// apagado depois de usado — só desativado (`active`), para o histórico
+/// continuar dizendo de quem era cada valor.
+model FinancePartner {
+  id        String   @id @default(cuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entryShares  FinanceEntryShare[]
+  clientShares ClientPartnerShare[]
+
+  @@unique([agencyId, name])
+  @@index([agencyId])
+  @@map("finance_partner")
+}
+
+/// Parte de um lançamento que pertence a um sócio. Regra: ou o lançamento não
+/// tem nenhuma linha ("sem divisão") ou a soma das linhas é exatamente
+/// `FinanceEntry.amountCents` (estorno: partes negativas). Um sócio só = uma
+/// linha com o valor inteiro.
+model FinanceEntryShare {
+  id             String         @id @default(cuid())
+  financeEntryId String
+  financeEntry   FinanceEntry   @relation(fields: [financeEntryId], references: [id], onDelete: Cascade)
+  partnerId      String
+  partner        FinancePartner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  amountCents    Int
+  createdAt      DateTime       @default(now())
+
+  @@unique([financeEntryId, partnerId])
+  @@index([partnerId])
+  @@map("finance_entry_share")
+}
+
+/// Divisão padrão dos recebimentos de um cliente. `amountCents` é o valor de
+/// referência de cada sócio (ex.: 1000 e 500 de um contrato de 1500); um
+/// recebimento de outro valor é dividido na mesma proporção. Um sócio só =
+/// uma linha.
+model ClientPartnerShare {
+  id          String         @id @default(cuid())
+  clientId    String
+  client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  partnerId   String
+  partner     FinancePartner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  amountCents Int
+  createdAt   DateTime       @default(now())
+
+  @@unique([clientId, partnerId])
+  @@index([partnerId])
+  @@map("client_partner_share")
 }
 
 /// Append-only, mesmo padrão das demais *StatusHistory.
