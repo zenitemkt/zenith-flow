@@ -31,7 +31,10 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
 
   const [visitorsCount, sessions, campaigns, leadsCount, totalEventsCount, pageViews, eventGroups, consentDecisions, scrollDepthEvents] =
     await Promise.all([
-      prisma.trackingVisitor.count({ where: { agencyId, ...(range ? { firstSeenAt: range } : {}) } }),
+      // Com o filtro ligado, visitante só conta se tiver ao menos uma sessão humana (antes contava todos).
+      prisma.trackingVisitor.count({
+        where: { agencyId, ...(range ? { firstSeenAt: range } : {}), ...(excludeBots ? { sessions: { some: { isBot: false } } } : {}) },
+      }),
       prisma.trackingSession.findMany({
         where: { visitor: { agencyId }, ...(range ? { startedAt: range } : {}) },
         include: { visitor: { select: { firstSeenAt: true, leadId: true } } },

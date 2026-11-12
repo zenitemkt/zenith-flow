@@ -37,6 +37,41 @@ export type TouchpointSessionInput = Pick<TrackingSession, "id" | "startedAt" | 
  * Sem casamento: `utmSource` sozinho vira o canal ("google", "meta"); com
  * referrer de outra origem vira "Orgânico"; sem nenhum dos dois é "Direto".
  */
+/**
+ * `utm_source` curto que a Meta preenche sozinha nos anúncios
+ * ({{site_source_name}}): fb, ig, an (Audience Network — apps e sites
+ * parceiros da Meta), msg (Messenger). Vira um nome legível, com o código
+ * entre parênteses para ainda dar para achar no Gerenciador.
+ */
+const SOURCE_LABELS: Record<string, string> = {
+  fb: "Meta Ads — Facebook (fb)",
+  facebook: "Meta Ads — Facebook",
+  ig: "Meta Ads — Instagram (ig)",
+  instagram: "Meta Ads — Instagram",
+  an: "Meta Ads — Audience Network (an)",
+  msg: "Meta Ads — Messenger (msg)",
+  th: "Meta Ads — Threads (th)",
+};
+
+export function sourceLabel(utmSource: string): string {
+  return SOURCE_LABELS[utmSource.toLowerCase().trim()] ?? utmSource;
+}
+
+const SEARCH_ENGINES: [RegExp, string][] = [
+  [/(^|\.)google\./, "Google"],
+  [/(^|\.)bing\.com$/, "Bing"],
+  [/(^|\.)search\.yahoo\.com$/, "Yahoo"],
+  [/(^|\.)duckduckgo\.com$/, "DuckDuckGo"],
+  [/(^|\.)ecosia\.org$/, "Ecosia"],
+];
+
+/** Referência de outro site → canal. Buscador vira "Busca orgânica (Google)"; o resto, "Orgânico (site)". */
+export function referrerChannel(host: string): string {
+  const h = host.toLowerCase().replace(/^www\./, "");
+  const engine = SEARCH_ENGINES.find(([re]) => re.test(h));
+  return engine ? `Busca orgânica (${engine[1]})` : `Orgânico (${h})`;
+}
+
 export function resolveTouchpoint(session: TouchpointSessionInput, campaigns: Campaign[]): Touchpoint {
   const sessionCampaign = session.utmCampaign?.toLowerCase().trim();
   const sessionSource = session.utmSource?.toLowerCase().trim();
@@ -54,7 +89,7 @@ export function resolveTouchpoint(session: TouchpointSessionInput, campaigns: Ca
     return { sessionId: session.id, occurredAt: session.startedAt, channel: matched.name, campaignId: matched.id, isDirect: false };
   }
   if (session.utmSource) {
-    return { sessionId: session.id, occurredAt: session.startedAt, channel: session.utmSource, campaignId: null, isDirect: false };
+    return { sessionId: session.id, occurredAt: session.startedAt, channel: sourceLabel(session.utmSource), campaignId: null, isDirect: false };
   }
   if (session.referrer) {
     let host = session.referrer;
@@ -63,7 +98,7 @@ export function resolveTouchpoint(session: TouchpointSessionInput, campaigns: Ca
     } catch {
       // referrer já normalizado no coletor; se ainda assim não parsear, usa o valor bruto
     }
-    return { sessionId: session.id, occurredAt: session.startedAt, channel: `Orgânico (${host})`, campaignId: null, isDirect: false };
+    return { sessionId: session.id, occurredAt: session.startedAt, channel: referrerChannel(host), campaignId: null, isDirect: false };
   }
   return { sessionId: session.id, occurredAt: session.startedAt, channel: "Direto", campaignId: null, isDirect: true };
 }

@@ -11,6 +11,7 @@
 
 ### Corrigido
 
+- **Traqueamento: "visitantes únicos" ignorava o filtro de tráfego não humano**: o cartão contava todos os visitantes do período; com o filtro ligado, agora só conta quem teve ao menos uma sessão humana (sessões, eventos e páginas já eram filtrados). As fontes de tráfego ganharam nomes legíveis: os códigos que a Meta preenche sozinha (`an`, `fb`, `ig`, `msg`) viram "Meta Ads — Audience Network (an)" etc., e visitas vindas de buscador aparecem como "Busca orgânica (Google)".
 - **"Atualizar da Meta" dizia sucesso sem trazer nada**: agora informa qual conta de anúncios consultou e quantas campanhas a Meta devolveu; se vier zero, avisa para conferir em Integrações se a conta conectada é a certa. A tela de Campanhas mostra a conta conectada.
 - **"Atualizar da Meta" não trazia campanhas desativadas**: só importava campanha nova que estivesse ativa ou tivesse veiculado nos últimos 30 dias. Agora traz todas as campanhas da conta (ativas, pausadas e arquivadas), cada uma com o status real.
 - **Marcar como recebido/pago com a data de hoje**: o servidor respondia "A data não pode ser no futuro" para a data de hoje (comparava o fim do dia informado com a hora atual). Agora só recusa dia que ainda não começou.
