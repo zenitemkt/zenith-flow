@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Plug,
   Settings,
+  BellRing,
 } from "lucide-react";
 import type { NavigationGroup } from "./types";
 
@@ -159,6 +160,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "system",
     label: "Sistema",
     items: [
+      { id: "alerts", label: "Central de alertas", icon: BellRing, href: "/alertas", comingSoon: false },
       { id: "integrations", label: "Integrações", icon: Plug, href: "/integracoes", comingSoon: false },
       {
         id: "settings",

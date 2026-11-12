@@ -6,6 +6,7 @@ import { splitBubbles } from "./style";
 import { downloadMedia, sendText, transcribeAudio } from "./whatsapp";
 import { askPartnersApproval, notifyPartners } from "./notify";
 import { cancelMeeting, createMeeting, findFreeSlots, formatSlot } from "./calendar";
+import { raiseSystemAlert } from "@/lib/system-alerts";
 
 const brl = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -302,6 +303,15 @@ export async function runConversationTurn(conversationId: string): Promise<void>
     if (failures >= 2) {
       await notifyPartners(config, `${config.name}: falhei duas vezes seguidas com ${conv.profileName ?? "contato"} (+${conv.phone}). Assumam a conversa, por favor.`).catch(() => null);
       await prisma.assistantConversation.update({ where: { id: conversationId }, data: { failures: 0, mode: "human" } });
+      await raiseSystemAlert({
+        agencyId: conv.agencyId,
+        key: `assistant:failed:${conversationId}`,
+        category: "AUTOMATION",
+        severity: "WARNING",
+        title: `${config.name} falhou e passou a conversa para vocês`,
+        detail: `${conv.profileName ?? "Contato"} (+${conv.phone}). Erro: ${error instanceof Error ? error.message : "desconhecido"}`,
+        href: "/automacoes/assistente",
+      });
     } else {
       await prisma.assistantConversation.update({ where: { id: conversationId }, data: { failures } });
     }

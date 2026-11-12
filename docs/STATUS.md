@@ -4,6 +4,7 @@
 
 ## Implementado
 
+- **Central de alertas** (2026-11-12): `SystemAlert` + `lib/system-alerts.ts`, sino com abas por categoria (`packages/ui/src/shell/NotificationCenter.tsx`), página `/alertas` (resolver, ignorar, reabrir, histórico), monitor do site 2x/dia (`lib/site-monitor.ts`, `/api/cron/site-monitor`) e alertas por evento em blog, publicação social, conexão social, mini-chat do Instagram, Lead Ads e Milena.
 - **Zenite × particular, privacidade entre sócios e repasse do mês (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12,
   "Zenite × particular"). Regras em `lib/finance-scope.ts`; repasse em `lib/partner-payouts.ts` + `PUT /api/finance/payouts`;
   vínculo sócio ↔ login no botão "Sócios". Repasse com valor digitado (`POST /api/finance/payouts`, `DELETE /api/finance/payouts/:id`, quadro `PayoutTable`), testado ponta a ponta no ambiente local.

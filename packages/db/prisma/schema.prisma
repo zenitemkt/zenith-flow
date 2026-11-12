@@ -182,6 +182,7 @@ model Agency {
   enpsSnapshots                EnpsSnapshot[]
   leads                        Lead[]
   commercialAlerts             CommercialAlert[]
+  systemAlerts                 SystemAlert[]
   leadEmails                   LeadEmail[]
   leadPhones                   LeadPhone[]
   leadSubmissions              LeadSubmission[]
@@ -3305,4 +3306,52 @@ model MetaLeadEvent {
   @@index([agencyId, createdAt])
   @@index([connectionId, status])
   @@map("meta_lead_event")
+}
+
+/// Alertas de sistema (site, traqueamento, blog, redes sociais, automações, integrações).
+/// Os alertas comerciais continuam em CommercialAlert. `key` deduplica: a mesma falha
+/// repetida só aumenta `occurrences`; quando a checagem volta a passar, vira RESOLVED sozinho.
+enum SystemAlertCategory {
+  SITE
+  TRACKING
+  BLOG
+  SOCIAL
+  AUTOMATION
+  INTEGRATION
+}
+
+enum SystemAlertSeverity {
+  CRITICAL
+  WARNING
+  INFO
+}
+
+enum SystemAlertStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
+model SystemAlert {
+  id          String              @id @default(cuid())
+  agencyId    String
+  agency      Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  key         String
+  category    SystemAlertCategory
+  severity    SystemAlertSeverity
+  status      SystemAlertStatus   @default(OPEN)
+  title       String
+  detail      String
+  href        String?
+  occurrences Int                 @default(1)
+  firstSeenAt DateTime            @default(now())
+  lastSeenAt  DateTime            @default(now())
+  resolvedAt  DateTime?
+  autoResolved Boolean            @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([agencyId, key])
+  @@index([agencyId, status, lastSeenAt])
+  @@map("system_alert")
 }

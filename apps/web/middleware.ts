@@ -23,6 +23,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/public/blog-views",
   // Agendador de redes: chamado pelo cron externo, protegido por CRON_SECRET na própria rota.
   "/api/cron/social-publish",
+  "/api/cron/site-monitor",
   // Mini-chat de Instagram: chamado pela Meta (webhook) e por quem clica no botão da DM, nunca com cookie de
   // sessão. Webhook protegido por assinatura (x-hub-signature-256) + verify token no handshake, não por login.
   "/api/instagram/webhook",

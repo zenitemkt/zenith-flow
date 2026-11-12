@@ -6,6 +6,7 @@ export { navigationGroups, findNavigationItemByHref } from "./navigation/nav-con
 export type { NavigationItem, NavigationGroup, IconComponent } from "./navigation/types";
 export { AppShell } from "./shell/AppShell";
 export type { AppShellProps, ThemeMode } from "./shell/AppShell";
+export type { AppNotifications } from "./shell/NotificationCenter";
 export { SectionTabs, findTabbedItemForPath } from "./shell/SectionTabs";
 export type { SectionTabsProps } from "./shell/SectionTabs";
 export { ZenithArc, ZenithGrain } from "./shell/ZenithArc";

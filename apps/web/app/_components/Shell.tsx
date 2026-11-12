@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { AppShell, navigationGroups, type ThemeMode } from "@zenite-mkt/ui";
+import { AppShell, navigationGroups, type AppNotifications, type ThemeMode } from "@zenite-mkt/ui";
 import { authClient } from "@/lib/auth-client";
 
 interface ShellProps {
@@ -11,7 +11,7 @@ interface ShellProps {
   initialTheme?: ThemeMode;
   agencies: { id: string; name: string }[];
   currentAgencyId: string;
-  notifications?: { count: number; items: { id: string; title: string; detail: string; href: string; priority: "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW" }[] };
+  notifications?: AppNotifications;
   children: ReactNode;
 }
 

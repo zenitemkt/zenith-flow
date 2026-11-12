@@ -1,4 +1,5 @@
 import { prisma, Prisma } from "@zenite-mkt/db";
+import { raiseSystemAlert } from "@/lib/system-alerts";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { getAppBaseUrl } from "@/lib/meta-ads";
 import {
@@ -163,6 +164,15 @@ async function sendMessageStep(ctx: RunContext, step: Extract<FlowStep, { type: 
     const message = error instanceof Error ? error.message : "Erro desconhecido.";
     await prisma.instagramAutomationLog.update({ where: { id: logId }, data: { status: "failed", error: message, ruleId: ctx.ruleId } });
     await setSession(ctx.sessionId, { status: "failed", error: message, resumeAt: null });
+    await raiseSystemAlert({
+      agencyId: ctx.target.agencyId,
+      key: `instagram:send:${ctx.ruleId ?? "sem-regra"}`,
+      category: "SOCIAL",
+      severity: "WARNING",
+      title: "Mini-chat do Instagram falhou ao responder",
+      detail: message,
+      href: "/automacoes/instagram",
+    });
     return false;
   }
 }

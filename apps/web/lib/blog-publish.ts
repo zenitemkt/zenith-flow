@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import type { BlogDraft } from "@zenite-mkt/db";
+import { raiseSystemAlert, resolveSystemAlert } from "./system-alerts";
 import { githubCommitFiles, githubGetFile, githubListDir, githubPutFile, type GithubRepoRef } from "./github-content";
 import { findAndDownloadCommonsPhoto } from "./commons-photo";
 
@@ -57,6 +58,26 @@ function buildMjsSource(input: PublishBlogDraftInput, preservedDate?: string): s
  * de fato mudou.
  */
 export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDraftInput): Promise<{ commitPaths: string[] }> {
+  const key = `blog:publish:${input.draft.slug}`;
+  try {
+    const result = await publishBlogDraftInner(ref, input);
+    await resolveSystemAlert(input.draft.agencyId, key);
+    return result;
+  } catch (error) {
+    await raiseSystemAlert({
+      agencyId: input.draft.agencyId,
+      key,
+      category: "BLOG",
+      severity: "CRITICAL",
+      title: `Artigo não publicado: ${input.draft.title}`,
+      detail: error instanceof Error ? error.message : "Falha ao publicar.",
+      href: "/automacoes/blog",
+    });
+    throw error;
+  }
+}
+
+async function publishBlogDraftInner(ref: GithubRepoRef, input: PublishBlogDraftInput): Promise<{ commitPaths: string[] }> {
   const workDir = mkdtempSync(path.join(tmpdir(), "blog-publish-"));
   try {
     const contentBlogDir = path.join(workDir, "content", "blog");

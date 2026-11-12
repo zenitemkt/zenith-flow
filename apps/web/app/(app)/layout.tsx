@@ -4,6 +4,7 @@ import { ROLE_LABELS, isClientRole } from "@/lib/rbac";
 import { Shell } from "../_components/Shell";
 import { getCommercialPendencies } from "@/lib/commercial-pendencies";
 import { SocialPublishTicker } from "@/components/SocialPublishTicker";
+import { getSystemAlertSummary } from "@/lib/system-alerts";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -26,10 +27,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     workspace: membership.agency.name,
   };
 
-  const [themePreference, memberships, commercialPendencies] = await Promise.all([
+  const [themePreference, memberships, commercialPendencies, systemAlerts] = await Promise.all([
     getUserThemePreference(session.user.id),
     getActiveMemberships(session.user.id),
     getCommercialPendencies(membership.agencyId),
+    getSystemAlertSummary(membership.agencyId),
   ]);
 
   const agencies = memberships.map((m) => ({ id: m.agencyId, name: m.agency.name }));
@@ -40,7 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       initialTheme={themePreference}
       agencies={agencies}
       currentAgencyId={membership.agencyId}
-      notifications={{ count: commercialPendencies.summary.total, items: commercialPendencies.items.slice(0, 6).map(({ id, title, detail, href, priority }) => ({ id, title, detail, href, priority })) }}
+      notifications={{ count: commercialPendencies.summary.total, items: commercialPendencies.items.slice(0, 6).map(({ id, title, detail, href, priority }) => ({ id, title, detail, href, priority })), system: systemAlerts }}
     >
       <SocialPublishTicker />
       {children}

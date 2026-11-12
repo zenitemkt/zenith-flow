@@ -4,6 +4,7 @@ import { decryptSecret } from "@/lib/crypto-secrets";
 import { META_GRAPH_API_VERSION, MetaApiError, getAppBaseUrl } from "@/lib/meta-ads";
 import { LeadIdentityConflictError, upsertLeadSubmission } from "@/lib/lead-contact";
 import { mapLeadFields } from "@/lib/meta-lead-fields";
+import { raiseSystemAlert } from "@/lib/system-alerts";
 
 /**
  * Lead Ads (formulário nativo da Meta) → CRM. O app da Meta assina o campo
@@ -183,6 +184,15 @@ export async function ingestMetaLead(input: {
           ? error.message
           : "Erro desconhecido.";
     await prisma.metaLeadEvent.update({ where: { id: event.id }, data: { status: "failed", error: message.slice(0, 500) } });
+    await raiseSystemAlert({
+      agencyId: connection.agencyId,
+      key: `meta-leads:${input.leadgenId}`,
+      category: "TRACKING",
+      severity: "WARNING",
+      title: "Lead do formulário da Meta não entrou no CRM",
+      detail: message,
+      href: "/comercial/leads",
+    });
     return "failed";
   }
 }

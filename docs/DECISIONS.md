@@ -1233,3 +1233,12 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 
 **Consequência**: a mesma peça pode sair em horários diferentes em cada rede, cada uma cancelável e reenviável por conta própria. Sexta a domingo no Facebook têm pouca evidência nas fontes (baixa confiança). O agendamento automático ao aprovar continua com um horário único (o padrão do cliente).
 
+
+
+## 2026-11-12 — Central de alertas de sistema separada dos alertas comerciais
+
+**Contexto**: em 12/11/2026 os artigos do blog deram 404 para quem entrava em `/blog` sem barra, e ninguém foi avisado. Falhas de publicação nas redes, do mini-chat do Instagram e da Milena também só apareciam em logs.
+
+**Decisão**: tabela `SystemAlert` própria (não reaproveita `CommercialAlert`, que é presa a um lead), com chave única por agência para deduplicar e resolução automática. Alertas por evento nascem no próprio código que já registra a falha. O site é checado só 2x por dia pelo cron da Vercel (plano Hobby permite 1x/dia por job; são dois jobs), cerca de 170 requisições por varredura, para não pesar no plano gratuito. Aviso por WhatsApp/e-mail ficou de fora por decisão do usuário.
+
+**Consequência**: queda do site causada por fator externo no meio do dia só aparece na varredura seguinte. Alvo do monitor vem de `SITE_MONITOR_URL` (padrão hubzenite.com.br) e `SITE_MONITOR_AGENCY_ID`/`SITE_LEADS_AGENCY_ID`; para monitorar sites de clientes, o próximo passo é guardar o alvo por agência.

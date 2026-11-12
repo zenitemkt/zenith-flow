@@ -1,4 +1,5 @@
 import { prisma, type SocialPost } from "@zenite-mkt/db";
+import { raiseSystemAlert } from "@/lib/system-alerts";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { MetaApiError } from "@/lib/meta-ads";
 import {
@@ -157,6 +158,15 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
         where: { id: full.connectionId },
         data: { status: "ERROR", lastError: "Acesso expirado ou removido. Reconecte no perfil do cliente." },
       });
+      await raiseSystemAlert({
+        agencyId: full.agencyId,
+        key: `social:connection:${full.connectionId}`,
+        category: "INTEGRATION",
+        severity: "CRITICAL",
+        title: "Conexão com rede social expirou",
+        detail: "O acesso ao perfil expirou ou foi removido. Publicações agendadas desse perfil não saem até reconectar no perfil do cliente.",
+        href: "/clientes",
+      });
     }
     // Erros de validação nossos (Error comum) não adiantam repetir; erros da Meta/rede sim.
     const retryable = (error instanceof MetaApiError || error instanceof RetryableSocialError) && !isTokenError(error);
@@ -172,6 +182,15 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
     await prisma.socialPost.update({
       where: { id: full.id },
       data: { status: "FAILED", lastError: message, nextAttemptAt: null },
+    });
+    await raiseSystemAlert({
+      agencyId: full.agencyId,
+      key: `social:post:${full.id}`,
+      category: "SOCIAL",
+      severity: "CRITICAL",
+      title: "Publicação agendada falhou",
+      detail: message,
+      href: "/conteudo",
     });
     await prisma.auditLog.create({
       data: {
