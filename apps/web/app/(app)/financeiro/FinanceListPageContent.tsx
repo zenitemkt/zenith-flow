@@ -14,13 +14,13 @@ import { canManageTeam } from "@/lib/rbac";
 import { clientSharesByClient } from "@/lib/finance-partners";
 import { scopeTotals } from "@/lib/finance-partner-totals";
 import { loadFinanceViewer, parseScope, scopeEntryWhere, scopeOptions } from "@/lib/finance-scope";
-import { monthKey, payoutsOfMonth } from "@/lib/partner-payouts";
+import { monthKey, payoutPaymentsOfMonth, summarizePayout } from "@/lib/partner-payouts";
 import { prisma, type FinanceEntryType, type Prisma } from "@zenite-mkt/db";
 import { NewFinanceEntryModal } from "./NewFinanceEntryModal";
 import { FinanceEntryTable } from "./FinanceEntryTable";
 import { ManagePartnersButton } from "./ManagePartnersButton";
 import { PartnerTotalsTable } from "./PartnerTotalsTable";
-import { PayoutButton } from "./PayoutButton";
+import { PayoutTable, type PayoutRow } from "./PayoutTable";
 import { ScopePills } from "./ScopePills";
 import { partnerChoices, loadPartnerLogins } from "./partner-choices";
 
@@ -94,7 +94,7 @@ export async function FinanceListPageContent({
           { ...periodWhere, status: "LIQUIDADO" },
         ])
       : null,
-    closingMonth ? payoutsOfMonth(membership.agencyId, closingMonth) : null,
+    closingMonth ? payoutPaymentsOfMonth(membership.agencyId, closingMonth) : null,
     canManage ? loadPartnerLogins(membership.agencyId) : [],
   ]);
 
@@ -116,32 +116,20 @@ export async function FinanceListPageContent({
     return qs ? `${basePath}?${qs}` : basePath;
   }
 
-  // Coluna "Repasse" do quadro: uma linha por sócio dentro da Zenite, sobre o que já foi recebido no mês.
-  const payoutActions =
+  // Fechamento: por sócio, a parte dele nas receitas da Zenite do mês (em aberto + recebido) e o que já foi repassado.
+  const payoutRows: PayoutRow[] =
     totals && closingMonth && payouts
-      ? Object.fromEntries(
-          totals.rows
-            .filter((row) => row.kind === "part")
-            .map((row) => {
-              const partner = viewer.partners.find((p) => p.id === row.partnerId)!;
-              const state = payouts[partner.id];
-              return [
-                row.key,
-                <PayoutButton
-                  key={row.key}
-                  partnerId={partner.id}
-                  partnerName={partner.name}
-                  month={monthKey(closingMonth)}
-                  dueCents={row.cents[1] ?? 0}
-                  paid={Boolean(state?.paid)}
-                  paidCents={state?.paidCents ?? null}
-                  paidAtISO={state?.paidAtISO ?? null}
-                  canManage={canManage}
-                />,
-              ];
-            }),
-        )
-      : undefined;
+      ? totals.rows
+          .filter((row) => row.kind === "part")
+          .map((row) => {
+            const partner = viewer.partners.find((p) => p.id === row.partnerId)!;
+            const payments = payouts[partner.id] ?? [];
+            const paid = payments.reduce((acc, p) => acc + p.amountCents, 0);
+            return { partnerId: partner.id, name: partner.name, summary: summarizePayout(row.cents[0] ?? 0, row.cents[1] ?? 0, paid), payments };
+          })
+          .filter((row) => row.summary.status !== "nothing")
+      : [];
+  const closingLabel = closingMonth ? closingMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,16 +171,12 @@ export async function FinanceListPageContent({
           columns={["Em aberto", type === "RECEITA" ? "Recebido" : "Pago"]}
           rows={totals.rows}
           totals={totals.totals}
-          actions={payoutActions}
-          actionLabel="Repasse ao sócio"
-          footnote={
-            type !== "RECEITA"
-              ? undefined
-              : closingMonth
-                ? "Repasse: a parte de cada sócio no que a Zenite já recebeu neste mês. Marque Pago quando a transferência for feita."
-                : "Para registrar o repasse do fechamento, escolha Este mês ou Mês passado."
-          }
+          footnote={type === "RECEITA" && !closingMonth ? "Para o repasse aos sócios do fechamento, escolha Este mês ou Mês passado." : undefined}
         />
+      )}
+
+      {closingMonth && !scope && (
+        <PayoutTable month={monthKey(closingMonth)} monthLabel={closingLabel} rows={payoutRows} canManage={canManage} />
       )}
 
       <FinanceEntryTable entries={entries} showBoleto={type === "RECEITA"} partners={partners} />

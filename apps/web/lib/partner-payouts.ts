@@ -1,11 +1,12 @@
-import { prisma, type Prisma } from "@zenite-mkt/db";
-import { SCOPE_ZENITE, scopeEntryWhere, type FinanceViewer } from "@/lib/finance-scope";
+import { prisma } from "@zenite-mkt/db";
 
 /**
- * Repasse do fechamento do mês (2026-11-12): o que a agência deve a cada
- * sócio é a parte dele das receitas da Zenite (divididas) já recebidas com
- * vencimento naquele mês — a mesma conta da coluna "Recebido" do quadro em
- * Contas a receber, para o número do botão ser o que está na tela.
+ * Repasse do fechamento do mês (2026-11-12). Para cada sócio, no mês:
+ * - parte no mês: a parte dele nas receitas da Zenite (divididas) que vencem
+ *   no mês — o que a agência deve a ele quando tudo for recebido;
+ * - em aberto: a parte que os clientes ainda não pagaram;
+ * - repassado: a soma dos pagamentos digitados (`PartnerPayout`);
+ * - pendente: o que a Zenite já recebeu da parte dele e ainda não foi repassado.
  */
 export function parseMonthKey(value: unknown): Date | null {
   if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return null;
@@ -17,33 +18,37 @@ export function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-export function monthRange(monthStart: Date): { gte: Date; lt: Date } {
-  return { gte: monthStart, lt: new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1)) };
+export interface PayoutPayment {
+  id: string;
+  amountCents: number;
+  paidAtISO: string;
+  note: string | null;
 }
 
-/** Receitas da Zenite recebidas, com vencimento no mês. */
-export function payoutBaseWhere(viewer: FinanceViewer, monthStart: Date): Prisma.FinanceEntryWhereInput {
-  return { AND: [scopeEntryWhere(viewer, SCOPE_ZENITE)], type: "RECEITA", status: "LIQUIDADO", dueDate: monthRange(monthStart) };
+export interface PayoutSummary {
+  totalCents: number;
+  openCents: number;
+  receivedCents: number;
+  paidCents: number;
+  pendingCents: number;
+  status: "nothing" | "pending" | "partial" | "paid";
 }
 
-/** Parte de um sócio a receber da agência naquele mês (centavos). */
-export async function partnerPayoutDue(agencyId: string, viewer: FinanceViewer, partnerId: string, monthStart: Date): Promise<number> {
-  const sum = await prisma.financeEntryShare.aggregate({
-    where: { partnerId, financeEntry: { ...payoutBaseWhere(viewer, monthStart), agencyId } },
-    _sum: { amountCents: true },
-  });
-  return sum._sum.amountCents ?? 0;
+/** Conta pura do repasse de um sócio no mês (testada). */
+export function summarizePayout(openCents: number, receivedCents: number, paidCents: number): PayoutSummary {
+  const totalCents = openCents + receivedCents;
+  const pendingCents = receivedCents - paidCents;
+  const status =
+    totalCents <= 0 && paidCents <= 0 ? "nothing" : paidCents >= totalCents && totalCents > 0 ? "paid" : paidCents > 0 ? "partial" : "pending";
+  return { totalCents, openCents, receivedCents, paidCents, pendingCents, status };
 }
 
-export interface PayoutState {
-  paid: boolean;
-  /** Valor registrado na baixa. */
-  paidCents: number | null;
-  paidAtISO: string | null;
-}
-
-/** Repasses já baixados do mês, por sócio. */
-export async function payoutsOfMonth(agencyId: string, monthStart: Date): Promise<Record<string, PayoutState>> {
-  const rows = await prisma.partnerPayout.findMany({ where: { agencyId, month: monthStart } });
-  return Object.fromEntries(rows.map((r) => [r.partnerId, { paid: true, paidCents: r.amountCents, paidAtISO: r.paidAt.toISOString() }]));
+/** Pagamentos de repasse do mês, por sócio (mais antigos primeiro). */
+export async function payoutPaymentsOfMonth(agencyId: string, monthStart: Date): Promise<Record<string, PayoutPayment[]>> {
+  const rows = await prisma.partnerPayout.findMany({ where: { agencyId, month: monthStart }, orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }] });
+  const out: Record<string, PayoutPayment[]> = {};
+  for (const r of rows) {
+    (out[r.partnerId] ??= []).push({ id: r.id, amountCents: r.amountCents, paidAtISO: r.paidAt.toISOString(), note: r.note });
+  }
+  return out;
 }

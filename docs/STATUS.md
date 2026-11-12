@@ -6,7 +6,7 @@
 
 - **Zenite × particular, privacidade entre sócios e repasse do mês (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12,
   "Zenite × particular"). Regras em `lib/finance-scope.ts`; repasse em `lib/partner-payouts.ts` + `PUT /api/finance/payouts`;
-  vínculo sócio ↔ login no botão "Sócios".
+  vínculo sócio ↔ login no botão "Sócios". Repasse com valor digitado (`POST /api/finance/payouts`, `DELETE /api/finance/payouts/:id`, quadro `PayoutTable`), testado ponta a ponta no ambiente local.
   - Testado: `tsc --noEmit`, `lint`, `vitest` (78, com `lib/finance-scope.test.ts`) e roteiro de ponta a ponta com dois
     logins no ambiente local (30 verificações: o que cada um vê, URL forçada, ações bloqueadas, recorte Zenite, Visão
     geral, repasse pago/pendente, páginas de negócio).

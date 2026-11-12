@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam } from "@/lib/rbac";
-import { loadFinanceViewer } from "@/lib/finance-scope";
-import { monthKey, parseMonthKey, partnerPayoutDue } from "@/lib/partner-payouts";
+import { reaisToCents } from "@/lib/finance";
+import { startOfDayUTC } from "@/lib/dates";
+import { monthKey, parseMonthKey } from "@/lib/partner-payouts";
 
 /**
- * Repasse do fechamento: marca como pago (ou volta a pendente) o que a
- * agência deve a um sócio no mês. O valor é calculado aqui, nunca vem do
- * navegador. Só administradores.
- * Body: { partnerId, month: "AAAA-MM", paid: boolean }
+ * Registra um pagamento de repasse ao sócio (valor digitado por quem fez a
+ * transferência). Pode haver vários no mesmo mês. Só administradores.
+ * Body: { partnerId, month: "AAAA-MM", amount (reais), paidAt: "AAAA-MM-DD", note? }
  */
-export async function PUT(request: Request) {
+export async function POST(request: Request) {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const membership = await getCurrentMembership(session.user.id);
@@ -22,43 +22,37 @@ export async function PUT(request: Request) {
   const body = await request.json().catch(() => null);
   const monthStart = parseMonthKey(body?.month);
   const partnerId = typeof body?.partnerId === "string" ? body.partnerId : "";
-  const paid = body?.paid === true;
+  const amount = Number(body?.amount);
+  const paidAt = typeof body?.paidAt === "string" ? new Date(body.paidAt) : null;
+  const note = typeof body?.note === "string" && body.note.trim() ? body.note.trim().slice(0, 200) : null;
+
   if (!monthStart) return NextResponse.json({ error: "Mês inválido." }, { status: 400 });
+  if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: "Digite o valor que foi transferido." }, { status: 400 });
+  if (!paidAt || isNaN(paidAt.getTime())) return NextResponse.json({ error: "Informe a data da transferência." }, { status: 400 });
+  if (startOfDayUTC(paidAt) > new Date()) return NextResponse.json({ error: "A data não pode ser no futuro." }, { status: 400 });
+
   const partner = await prisma.financePartner.findUnique({ where: { id: partnerId } });
   if (!partner || partner.agencyId !== membership.agencyId) {
     return NextResponse.json({ error: "Sócio não encontrado." }, { status: 404 });
   }
 
-  const audit = (action: string, metadata: Record<string, unknown>) =>
-    prisma.auditLog.create({
+  const amountCents = reaisToCents(amount);
+  const payout = await prisma.$transaction(async (tx) => {
+    const created = await tx.partnerPayout.create({
+      data: { agencyId: membership.agencyId, partnerId: partner.id, month: monthStart, amountCents, paidAt, note, paidByUserId: session.user.id },
+    });
+    await tx.auditLog.create({
       data: {
         agencyId: membership.agencyId,
         actorUserId: session.user.id,
         actorType: "user",
-        action,
-        resourceType: "finance_partner",
-        resourceId: partner.id,
-        metadata: { month: monthKey(monthStart), ...metadata },
+        action: "partner_payout.paid",
+        resourceType: "partner_payout",
+        resourceId: created.id,
+        metadata: { partnerId: partner.id, month: monthKey(monthStart), amountCents },
       },
     });
-
-  if (!paid) {
-    await prisma.partnerPayout.deleteMany({ where: { partnerId: partner.id, month: monthStart } });
-    await audit("partner_payout.reopened", {});
-    return NextResponse.json({ ok: true, paid: false });
-  }
-
-  const viewer = await loadFinanceViewer(membership.agencyId, session.user.id);
-  const amountCents = await partnerPayoutDue(membership.agencyId, viewer, partner.id, monthStart);
-  if (amountCents <= 0) {
-    return NextResponse.json({ error: "Não há valor recebido da Zenite para repassar neste mês." }, { status: 400 });
-  }
-  // upsert: clicar de novo em "Pago" atualiza o valor registrado (entrou recebimento depois da baixa).
-  await prisma.partnerPayout.upsert({
-    where: { partnerId_month: { partnerId: partner.id, month: monthStart } },
-    create: { agencyId: membership.agencyId, partnerId: partner.id, month: monthStart, amountCents, paidByUserId: session.user.id },
-    update: { amountCents, paidAt: new Date(), paidByUserId: session.user.id },
+    return created;
   });
-  await audit("partner_payout.paid", { amountCents });
-  return NextResponse.json({ ok: true, paid: true, amountCents });
+  return NextResponse.json({ id: payout.id }, { status: 201 });
 }

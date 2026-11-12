@@ -1491,24 +1491,27 @@ model FinancePartner {
   @@map("finance_partner")
 }
 
-/// Repasse do fechamento do mês: a agência transferiu ao sócio a parte dele
-/// do que a Zenite recebeu naquele mês. A linha existir = "Pago"; apagar =
-/// volta a "Pendente". `amountCents` é o valor na hora da baixa, para avisar
-/// se entrou recebimento novo depois.
+/// Pagamento de repasse ao sócio no fechamento do mês: a agência transferiu
+/// `amountCents` para o sócio, referente à parte dele no que a Zenite recebeu
+/// em `month`. Pode haver vários no mesmo mês (pagamento parcial); a soma é
+/// o "repassado". Apagar um pagamento desfaz o registro (lançado por engano).
 model PartnerPayout {
   id           String         @id @default(cuid())
   agencyId     String
   agency       Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   partnerId    String
   partner      FinancePartner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
-  /// Primeiro dia do mês (UTC).
+  /// Primeiro dia do mês de referência (UTC).
   month        DateTime
   amountCents  Int
-  paidAt       DateTime       @default(now())
+  /// Dia da transferência, informado por quem registrou.
+  paidAt       DateTime
+  note         String?
   paidByUserId String?
+  createdAt    DateTime       @default(now())
 
-  @@unique([partnerId, month])
   @@index([agencyId])
+  @@index([partnerId, month])
   @@map("partner_payout")
 }
 

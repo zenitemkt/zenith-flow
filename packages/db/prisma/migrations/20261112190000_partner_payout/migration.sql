@@ -1,4 +1,4 @@
--- Repasse mensal ao sócio (fechamento): pendente/pago.
+-- Pagamentos de repasse ao sócio no fechamento do mês (vários por mês, valor digitado).
 
 -- CreateTable
 CREATE TABLE "partner_payout" (
@@ -7,8 +7,10 @@ CREATE TABLE "partner_payout" (
     "partnerId" TEXT NOT NULL,
     "month" TIMESTAMP(3) NOT NULL,
     "amountCents" INTEGER NOT NULL,
-    "paidAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "paidAt" TIMESTAMP(3) NOT NULL,
+    "note" TEXT,
     "paidByUserId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "partner_payout_pkey" PRIMARY KEY ("id")
 );
@@ -17,7 +19,7 @@ CREATE TABLE "partner_payout" (
 CREATE INDEX "partner_payout_agencyId_idx" ON "partner_payout"("agencyId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "partner_payout_partnerId_month_key" ON "partner_payout"("partnerId", "month");
+CREATE INDEX "partner_payout_partnerId_month_idx" ON "partner_payout"("partnerId", "month");
 
 -- AddForeignKey
 ALTER TABLE "partner_payout" ADD CONSTRAINT "partner_payout_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
