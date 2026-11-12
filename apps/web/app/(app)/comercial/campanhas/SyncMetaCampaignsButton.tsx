@@ -26,8 +26,13 @@ export function SyncMetaCampaignsButton({ autoSync = false }: { autoSync?: boole
         toast.error(data?.error ?? "Não foi possível sincronizar com a Meta.");
         return;
       }
-      if (!silent) {
+      const account = `${data.accountName ?? "conta"} (${data.accountId})`;
+      if (data.campaignsFound === 0) {
+        // Sempre avisa, mesmo na atualização automática: costuma ser a conta errada conectada.
+        toast.error(`A Meta não devolveu nenhuma campanha da conta ${account}. Confira em Integrações se é a conta de anúncios certa.`);
+      } else if (!silent) {
         toast.success(
+          `${account}: ${plural(data.campaignsFound, "campanha encontrada", "campanhas encontradas")}. ` +
           `Sincronizado: ${plural(data.campaignsCreated, "campanha nova", "campanhas novas")}, ${plural(
             data.campaignsUpdated,
             "com status ou nome atualizado",

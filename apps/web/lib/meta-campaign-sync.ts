@@ -19,6 +19,10 @@ export interface MetaCampaignSyncResult {
   campaignsUpdated: number;
   metricsUpserted: number;
   periodDays: number;
+  /** Conta de anúncios consultada e quantas campanhas a Meta devolveu nela (para o aviso na tela). */
+  accountId: string;
+  accountName: string | null;
+  campaignsFound: number;
 }
 
 export class MetaSyncError extends Error {}
@@ -145,5 +149,13 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
     data: { lastValidatedAt: new Date(), lastError: null },
   });
 
-  return { campaignsCreated, campaignsUpdated, metricsUpserted, periodDays: PERIOD_DAYS };
+  return {
+    campaignsCreated,
+    campaignsUpdated,
+    metricsUpserted,
+    periodDays: PERIOD_DAYS,
+    accountId: connection.externalAccountId,
+    accountName: connection.externalAccountName,
+    campaignsFound: infoById.size,
+  };
 }

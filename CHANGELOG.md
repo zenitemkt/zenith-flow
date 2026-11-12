@@ -11,6 +11,7 @@
 
 ### Corrigido
 
+- **"Atualizar da Meta" dizia sucesso sem trazer nada**: agora informa qual conta de anúncios consultou e quantas campanhas a Meta devolveu; se vier zero, avisa para conferir em Integrações se a conta conectada é a certa. A tela de Campanhas mostra a conta conectada.
 - **"Atualizar da Meta" não trazia campanhas desativadas**: só importava campanha nova que estivesse ativa ou tivesse veiculado nos últimos 30 dias. Agora traz todas as campanhas da conta (ativas, pausadas e arquivadas), cada uma com o status real.
 - **Marcar como recebido/pago com a data de hoje**: o servidor respondia "A data não pode ser no futuro" para a data de hoje (comparava o fim do dia informado com a hora atual). Agora só recusa dia que ainda não começou.
 - **Campanhas da Meta com status real**: "Atualizar da Meta" só trazia métricas — toda campanha com entrega nos últimos 30 dias entrava como "Ativa" e ficava assim para sempre, mesmo pausada ou encerrada no Gerenciador. Agora traz também o nome e a situação de cada campanha (ativa, pausada, encerrada; ligada com data de término vencida conta como encerrada), cria campanha ativa que ainda não teve entrega, confere pelo ID as arquivadas/excluídas e pagina as métricas (antes cortava em 500 linhas). Campanhas e Raio-X atualizam sozinhas ao abrir quando a última sincronização tem mais de 30 minutos; o Raio-X ganhou o botão "Atualizar da Meta".

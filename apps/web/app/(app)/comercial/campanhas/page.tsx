@@ -29,7 +29,7 @@ export default async function CampaignsPage() {
     }),
     prisma.adAccountConnection.findUnique({
       where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
-      select: { status: true, lastValidatedAt: true },
+      select: { status: true, lastValidatedAt: true, externalAccountId: true, externalAccountName: true },
     }),
   ]);
 
@@ -47,6 +47,19 @@ export default async function CampaignsPage() {
               ? " — campanhas da Meta (nome, status e métricas) atualizam sozinhas ao abrir esta tela; outros canais continuam manuais."
               : " — cadastro e métricas manuais (conecte a Meta em Traqueamento → Conexões pra sincronizar automaticamente)."}
           </p>
+          {metaConnection?.status === "ACTIVE" && (
+            <p className="text-xs text-[#667085]">
+              Conta de anúncios da Meta conectada:{" "}
+              <span className="font-medium text-[#344054]">
+                {metaConnection.externalAccountName ?? "sem nome"} ({metaConnection.externalAccountId})
+              </span>{" "}
+              — para trocar, reconecte em{" "}
+              <Link href="/integracoes" className="font-medium text-[#FF2B00] hover:underline">
+                Integrações
+              </Link>
+              .
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {canSyncMeta && <SyncMetaCampaignsButton autoSync={isMetaSyncStale(metaConnection?.lastValidatedAt ?? null)} />}
