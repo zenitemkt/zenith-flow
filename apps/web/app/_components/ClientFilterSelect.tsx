@@ -12,7 +12,7 @@ interface ClientOption {
 /**
  * Filtro por cliente em caixa de seleção (pedido do usuário, 2026-10-20): no
  * lugar de uma fileira de botões, que não escala com muitos clientes. Abre pra
- * baixo, com busca, e navega por `basePath?clientId=` como o `ClientFilterPills` fazia.
+ * baixo, com busca, e navega por `basePath?clientId=`.
  */
 export function ClientFilterSelect({
   clients,

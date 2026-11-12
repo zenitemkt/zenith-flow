@@ -162,6 +162,101 @@ function sumActionValues(actions: RawMetaAction[] | undefined): number {
     .reduce((sum, action) => sum + Number(action.value || 0), 0);
 }
 
+interface GraphPage<T> {
+  data: T[];
+  paging?: { next?: string };
+}
+
+/** Segue `paging.next` até acabar (ou até `maxPages`, para nunca ficar preso numa conta enorme). */
+async function graphGetAll<T>(path: string, params: Record<string, string>, maxPages = 20): Promise<T[]> {
+  const out: T[] = [];
+  let page = await graphGet<GraphPage<T>>(path, params);
+  for (let i = 1; ; i++) {
+    out.push(...(page.data ?? []));
+    const next = page.paging?.next;
+    if (!next || i >= maxPages) break;
+    const response = await fetch(next, { method: "GET" });
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = (body as { error?: { message?: string } } | null)?.error?.message ?? "Erro na Graph API da Meta.";
+      throw new MetaApiError(message, response.status, body);
+    }
+    page = body as GraphPage<T>;
+  }
+  return out;
+}
+
+/** Campanha como está na Meta agora (nome e situação), independente de ter tido entrega. */
+export interface MetaCampaignInfo {
+  id: string;
+  name: string;
+  /** ACTIVE, PAUSED, ARCHIVED, DELETED, IN_PROCESS, WITH_ISSUES... */
+  effectiveStatus: string;
+  startTime: string | null;
+  stopTime: string | null;
+}
+
+interface RawMetaCampaign {
+  id: string;
+  name: string;
+  effective_status?: string;
+  start_time?: string;
+  stop_time?: string;
+}
+
+const CAMPAIGN_FIELDS = "id,name,effective_status,start_time,stop_time";
+
+function toCampaignInfo(raw: RawMetaCampaign): MetaCampaignInfo {
+  return {
+    id: raw.id,
+    name: raw.name,
+    effectiveStatus: raw.effective_status ?? "",
+    startTime: raw.start_time ?? null,
+    stopTime: raw.stop_time ?? null,
+  };
+}
+
+/** Campanhas da conta (a Meta não lista aqui as arquivadas/excluídas — ver `fetchMetaCampaignById`). */
+export async function fetchMetaCampaigns(accessToken: string, adAccountId: string): Promise<MetaCampaignInfo[]> {
+  const rows = await graphGetAll<RawMetaCampaign>(`/${adAccountId}/campaigns`, {
+    access_token: accessToken,
+    fields: CAMPAIGN_FIELDS,
+    limit: "200",
+  });
+  return rows.map(toCampaignInfo);
+}
+
+/** Uma campanha pelo ID — também devolve arquivadas e excluídas. `null` se a conta conectada não a enxerga. */
+export async function fetchMetaCampaignById(accessToken: string, campaignId: string): Promise<MetaCampaignInfo | null> {
+  try {
+    const raw = await graphGet<RawMetaCampaign>(`/${campaignId}`, { access_token: accessToken, fields: CAMPAIGN_FIELDS });
+    return raw?.id ? toCampaignInfo(raw) : null;
+  } catch (error) {
+    if (error instanceof MetaApiError) return null;
+    throw error;
+  }
+}
+
+/**
+ * Situação da Meta → status do sistema. Campanha ligada cuja data de término
+ * já passou aparece como "Concluída" no Gerenciador: aqui é Encerrada.
+ * Situação desconhecida devolve `null` (não mexe no que está salvo).
+ */
+export function campaignStatusFromMeta(
+  effectiveStatus: string,
+  stopTime: string | null,
+  now = new Date(),
+): "ATIVA" | "PAUSADA" | "ENCERRADA" | null {
+  const status = effectiveStatus.toUpperCase();
+  if (status === "ARCHIVED" || status === "DELETED") return "ENCERRADA";
+  if (status === "PAUSED") return "PAUSADA";
+  if (status === "ACTIVE" || status === "IN_PROCESS" || status === "WITH_ISSUES") {
+    const stop = stopTime ? new Date(stopTime) : null;
+    return stop && !Number.isNaN(stop.getTime()) && stop.getTime() < now.getTime() ? "ENCERRADA" : "ATIVA";
+  }
+  return null;
+}
+
 /** Métricas diárias por campanha (seção 36/38) — `time_increment: "1"` já devolve uma linha por campanha por dia, sem precisar agregar manualmente. */
 export async function fetchMetaCampaignInsights(
   accessToken: string,
@@ -169,7 +264,8 @@ export async function fetchMetaCampaignInsights(
   since: string,
   until: string,
 ): Promise<MetaCampaignInsightRow[]> {
-  const result = await graphGet<{ data: RawMetaInsightRow[] }>(`/${adAccountId}/insights`, {
+  // Paginado: 30 dias × campanhas passa fácil de uma página (antes cortava em 500 linhas).
+  const data = await graphGetAll<RawMetaInsightRow>(`/${adAccountId}/insights`, {
     access_token: accessToken,
     level: "campaign",
     fields: "campaign_id,campaign_name,spend,impressions,clicks,reach,actions,action_values",
@@ -177,7 +273,7 @@ export async function fetchMetaCampaignInsights(
     time_increment: "1",
     limit: "500",
   });
-  return result.data.map((row) => ({
+  return data.map((row) => ({
     campaignId: row.campaign_id,
     campaignName: row.campaign_name,
     date: row.date_start,

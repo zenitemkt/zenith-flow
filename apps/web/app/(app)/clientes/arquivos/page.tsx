@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { prisma } from "@zenite-mkt/db";
-import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
+import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
 import { DriveFolderCard } from "../../operacao/biblioteca/DriveFolderCard";
@@ -46,10 +46,10 @@ export default async function ArquivosPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <ClientFilterPills
-        clients={clients}
+      <ClientFilterSelect
+        clients={clients.map(({ id, name }) => ({ id, name }))}
         activeClientId={activeClientId}
-        buildHref={(clientId) => (clientId ? `/clientes/arquivos?clientId=${clientId}` : "/clientes/arquivos")}
+        basePath="/clientes/arquivos"
       />
 
       {activeClient && (

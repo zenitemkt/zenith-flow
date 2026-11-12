@@ -4,11 +4,14 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { CAMPAIGN_STATUS_LABELS, CAMPAIGN_STATUS_BADGE_CLASS } from "@/lib/campaigns";
 import { computeCampaignTotals } from "@/lib/campaign-xray";
 import { formatCents } from "@/lib/finance";
-import { ClientFilterPills } from "@/app/_components/ClientFilterPills";
+import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { prisma } from "@zenite-mkt/db";
 import type { CampaignStatus } from "@zenite-mkt/db";
 import { CampaignXrayTree } from "./CampaignXrayTree";
 import { TrafficMap } from "./TrafficMap";
+import { SyncMetaCampaignsButton } from "../comercial/campanhas/SyncMetaCampaignsButton";
+import { canManageIntegrations } from "@/lib/rbac";
+import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
 
 interface PageProps {
   searchParams: { clientId?: string; status?: string; days?: string };
@@ -39,7 +42,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   periodStart.setUTCDate(periodStart.getUTCDate() - days);
   periodStart.setUTCHours(0, 0, 0, 0);
 
-  const [campaigns, clients] = await Promise.all([
+  const [campaigns, clients, metaConnection] = await Promise.all([
     prisma.campaign.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -59,7 +62,12 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.adAccountConnection.findUnique({
+      where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
+      select: { status: true, lastValidatedAt: true },
+    }),
   ]);
+  const canSyncMeta = canManageIntegrations(membership.role) && metaConnection?.status === "ACTIVE";
 
   const rows = campaigns.map((campaign) => ({
     campaign,
@@ -71,29 +79,38 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
     c.geoTargets.map((g) => ({ ...g, campaignName: c.name, campaignId: c.id })),
   );
 
-  function buildHref(overrides: { clientId?: string; status?: string; days?: number }) {
+  /** Status e período fora do padrão: mantidos na URL ao trocar qualquer filtro. */
+  function filterParams(nextStatus: string, nextDays: number): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (nextStatus !== "ATIVA") params.status = nextStatus;
+    if (nextDays !== 30) params.days = String(nextDays);
+    return params;
+  }
+
+  function buildHref(overrides: { status?: string; days?: number }) {
     const params = new URLSearchParams();
-    const nextClientId = overrides.clientId !== undefined ? overrides.clientId : activeClientId;
     const nextStatus = overrides.status !== undefined ? overrides.status : statusFilter;
     const nextDays = overrides.days !== undefined ? overrides.days : days;
-    if (nextClientId) params.set("clientId", nextClientId);
-    if (nextStatus !== "ATIVA") params.set("status", nextStatus);
-    if (nextDays !== 30) params.set("days", String(nextDays));
+    if (activeClientId) params.set("clientId", activeClientId);
+    for (const [key, value] of Object.entries(filterParams(nextStatus, nextDays))) params.set(key, value);
     const qs = params.toString();
     return qs ? `/trafego-raio-x?${qs}` : "/trafego-raio-x";
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
         <h1 className="text-lg font-semibold text-[#101828]">Tráfego - Raio X</h1>
         <p className="text-sm text-[#667085]">
           Espelho das campanhas de mídia paga (Meta, Google e outros canais) sem precisar abrir o painel de cada
-          plataforma — dados digitados à mão nesta fatia, sem conector real ainda (seção 38 do manual).{" "}
+          plataforma — campanhas da Meta vêm da conta conectada (nome, status e métricas); os outros canais são digitados à mão (seção 38 do manual).{" "}
           <Link href="/comercial/campanhas" className="font-medium text-[#FF2B00] hover:underline">
             Gerenciar campanhas
           </Link>
         </p>
+        </div>
+        {canSyncMeta && <SyncMetaCampaignsButton autoSync={isMetaSyncStale(metaConnection?.lastValidatedAt ?? null)} />}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -128,10 +145,11 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <ClientFilterPills
+      <ClientFilterSelect
         clients={clients}
         activeClientId={activeClientId}
-        buildHref={(clientId) => buildHref({ clientId })}
+        basePath="/trafego-raio-x"
+        params={filterParams(statusFilter, days)}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

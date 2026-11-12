@@ -1,3 +1,17 @@
+## 2026-11-12 — Campanhas da Meta: status real e atualização ao abrir
+
+**Problema**: `Campaign.status` nunca vinha da Meta. A sincronização lia só `/insights` dos últimos 30 dias e criava a campanha com o padrão ATIVA; "3 ativas" no sistema não queria dizer 3 ativas no Gerenciador.
+
+**Decisão 1 — a Meta manda no nome, status e datas de campanha sincronizada** (`lib/meta-campaign-sync.ts`): `/act_x/campaigns` (`effective_status`, `start_time`, `stop_time`) + `/insights`. Mapa em `campaignStatusFromMeta`: ACTIVE/IN_PROCESS/WITH_ISSUES → ATIVA (ENCERRADA se `stop_time` já passou); PAUSED → PAUSADA; ARCHIVED/DELETED → ENCERRADA; desconhecido não altera. Mudança manual de status numa campanha da Meta é sobrescrita na próxima sincronização — as transições de `CAMPAIGN_STATUS_TRANSITIONS` valem só para a ação manual.
+
+**Decisão 2 — nunca "encerrar por ausência"**: a lista da conta não traz arquivadas/excluídas. As que já temos (canal "Meta Ads") ou que tiveram entrega são consultadas pelo ID; se a Meta não devolve (ex.: campanha de outra conta de anúncios), não mexemos. Campanha nova só entra se está ativa ou teve entrega em 30 dias, para não despejar o histórico inteiro da conta.
+
+**Decisão 3 — atualiza ao abrir a tela, não pelo cron**: Campanhas e Raio-X disparam a sincronização uma vez ao abrir quando `lastValidatedAt` tem mais de 30 min (`isMetaSyncStale`). O cron de minuto em minuto ficou de fora de propósito: a sincronização faz um upsert por dia de métrica e pode levar dezenas de segundos, o que disputaria os 60 s da função com a publicação nas redes. Só admin dispara (mesma regra do botão).
+
+**Limite conhecido**: o filtro "Ativas" do Gerenciador olha a veiculação (campanha ligada com todos os conjuntos pausados aparece lá como inativa); aqui o status é o da campanha. Não testado ao vivo contra a conta real.
+
+**Filtro de cliente**: Raio-X e Arquivos passaram a usar `ClientFilterSelect`; no Raio-X, `buildHref({ clientId: undefined })` caía no cliente atual e "Todos os clientes" não funcionava.
+
 ## 2026-11-12 — Agendados não saíam: o cron externo nunca foi cadastrado
 
 **Diagnóstico**: o caminho Agendar grava certo (`SocialPost` SCHEDULED, `publishAt` em UTC a partir da hora de Brasília) e o motor publica certo ("Publicar agora" usa o mesmo `runPublish`). O que faltava era o gatilho: `vercel logs requests` mostrou zero chamadas a `/api/cron/social-publish` em 11h (só os testes do agente, 401). O cron-job.org era pendência do Kevin desde 2026-10-21 e o projeto está no plano Hobby (cron da Vercel só 1x/dia).

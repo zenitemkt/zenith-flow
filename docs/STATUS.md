@@ -4,6 +4,13 @@
 
 ## Implementado
 
+- **Campanhas da Meta com status real + filtro de cliente em caixa de seleção (2026-11-12)**: ver `docs/DECISIONS.md`
+  (2026-11-12, "Campanhas da Meta"). `lib/meta-campaign-sync.ts` traz nome, situação e métricas; Campanhas e Raio-X
+  atualizam ao abrir (30 min). Raio-X e Arquivos usam `ClientFilterSelect`.
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (`lib/meta-campaign-status.test.ts` novo), `build` de `apps/web`.
+  - **Não testado ao vivo**: a leitura de `/campaigns` na conta real (nomes de campo conferidos só contra a documentação
+    que o agente conhece) e o filtro no navegador.
+  - Limitação: status é o da campanha, não o da veiculação (conjuntos/anúncios pausados não contam).
 - **Agendador de redes — conserto do agendamento (2026-11-12)**: agendados não saíam porque nada chamava o cron (ver
   `docs/DECISIONS.md`, 2026-11-12). Agora o sistema aberto no navegador dispara o ciclo a cada minuto
   (`components/SocialPublishTicker.tsx` → `POST /api/social/publish-due`); agendado com mais de 6h de atraso vira

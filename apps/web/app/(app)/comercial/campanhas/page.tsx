@@ -8,6 +8,7 @@ import { NewCampaignModal } from "./NewCampaignModal";
 import { SyncMetaCampaignsButton } from "./SyncMetaCampaignsButton";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam, canManageIntegrations } from "@/lib/rbac";
+import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
 
 export default async function CampaignsPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -28,7 +29,7 @@ export default async function CampaignsPage() {
     }),
     prisma.adAccountConnection.findUnique({
       where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
-      select: { status: true },
+      select: { status: true, lastValidatedAt: true },
     }),
   ]);
 
@@ -43,12 +44,12 @@ export default async function CampaignsPage() {
           <p className="text-sm text-[#667085]">
             {campaigns.length} campanha{campaigns.length === 1 ? "" : "s"} em {membership.agency.name} (seção 36 do
             manual){canSyncMeta
-              ? " — campanhas da Meta já sincronizam automaticamente; outros canais continuam manuais."
+              ? " — campanhas da Meta (nome, status e métricas) atualizam sozinhas ao abrir esta tela; outros canais continuam manuais."
               : " — cadastro e métricas manuais (conecte a Meta em Traqueamento → Conexões pra sincronizar automaticamente)."}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {canSyncMeta && <SyncMetaCampaignsButton />}
+          {canSyncMeta && <SyncMetaCampaignsButton autoSync={isMetaSyncStale(metaConnection?.lastValidatedAt ?? null)} />}
           <NewCampaignModal clients={clients} />
         </div>
       </div>
