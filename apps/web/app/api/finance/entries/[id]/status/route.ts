@@ -6,7 +6,7 @@ import { canTransitionFinanceEntry } from "@/lib/finance";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { settleCommercialReceivable } from "@/lib/commercial-settlement";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
-import { endOfDayUTC } from "@/lib/dates";
+import { startOfDayUTC } from "@/lib/dates";
 import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 import { prisma, type FinanceEntryStatus } from "@zenite-mkt/db";
 
@@ -58,7 +58,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!raw || isNaN(raw.getTime())) {
       return NextResponse.json({ error: "Informe a data em que o valor foi recebido/pago." }, { status: 400 });
     }
-    if (endOfDayUTC(raw) > new Date()) {
+    // Hoje vale: só recusa dia que ainda não começou (antes comparava o FIM do dia e recusava a data de hoje).
+    if (startOfDayUTC(raw) > new Date()) {
       return NextResponse.json({ error: "A data não pode ser no futuro." }, { status: 400 });
     }
     settledDate = raw;
