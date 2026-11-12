@@ -42,8 +42,8 @@ function parseDate(value: string | null): Date | null {
  * cada campanha (ativa, pausada, encerrada) e as métricas diárias dos
  * últimos 30 dias, casando por `Campaign.externalId`.
  *
- * - Campanha nova entra se está ativa agora ou teve entrega no período
- *   (campanhas antigas paradas não enchem a lista).
+ * - Toda campanha da conta entra, em qualquer situação (ativa, pausada,
+ *   arquivada), para a lista bater com o Gerenciador.
  * - Arquivada/excluída não vem na lista da conta: as que já temos são
  *   consultadas uma a uma pelo ID.
  * - O que a Meta não devolve (ex.: campanha de outra conta) não é alterado.
@@ -113,7 +113,6 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
       continue;
     }
 
-    if (status !== "ATIVA" && !nameFromInsights.has(externalId)) continue;
     const created = await prisma.campaign.create({
       data: { agencyId, name, channel: META_CAMPAIGN_CHANNEL, externalId, ...(status ? { status } : {}), ...dates },
     });

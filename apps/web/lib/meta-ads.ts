@@ -216,8 +216,25 @@ function toCampaignInfo(raw: RawMetaCampaign): MetaCampaignInfo {
   };
 }
 
-/** Campanhas da conta (a Meta não lista aqui as arquivadas/excluídas — ver `fetchMetaCampaignById`). */
+/**
+ * Todas as campanhas da conta, inclusive pausadas e arquivadas (sem o filtro,
+ * a Meta deixa as arquivadas de fora). Se a Meta recusar o filtro, busca sem
+ * ele — melhor trazer as ativas/pausadas do que falhar a sincronização.
+ */
+const ALL_CAMPAIGN_STATUSES = JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]);
+
 export async function fetchMetaCampaigns(accessToken: string, adAccountId: string): Promise<MetaCampaignInfo[]> {
+  try {
+    const rows = await graphGetAll<RawMetaCampaign>(`/${adAccountId}/campaigns`, {
+      access_token: accessToken,
+      fields: CAMPAIGN_FIELDS,
+      effective_status: ALL_CAMPAIGN_STATUSES,
+      limit: "200",
+    });
+    return rows.map(toCampaignInfo);
+  } catch (error) {
+    if (!(error instanceof MetaApiError) || error.status !== 400) throw error;
+  }
   const rows = await graphGetAll<RawMetaCampaign>(`/${adAccountId}/campaigns`, {
     access_token: accessToken,
     fields: CAMPAIGN_FIELDS,
