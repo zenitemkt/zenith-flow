@@ -1,44 +1,76 @@
 import { prisma, type Prisma } from "@zenite-mkt/db";
+import { entryScopeOf, visibleEntryWhere, type FinanceViewer } from "@/lib/finance-scope";
 
-export interface PartnerTotalRow {
-  /** `null` = lançamentos sem divisão definida. */
-  partnerId: string | null;
-  name: string;
+export interface ScopeTotalRow {
+  /** `zenite` (total dividido), `part:<id>` (parte do sócio na Zenite), `particular:<id>`, `none`. */
+  key: string;
+  kind: "zenite" | "part" | "particular" | "none";
+  partnerId?: string;
+  label: string;
   /** Um valor por coluna pedida, na mesma ordem. */
   cents: number[];
 }
 
+interface EntryForTotals {
+  amountCents: number;
+  partnerShares: { partnerId: string; amountCents: number }[];
+}
+
 /**
- * Soma por sócio de vários recortes de lançamentos (uma coluna por `where`).
- * A linha "Não definido" é o que não tem divisão; a soma das linhas de cada
- * coluna é sempre o total dos lançamentos daquele recorte.
+ * Regra pura do quadro "Zenite e sócios": soma cada coluna em
+ * Zenite (lançamentos divididos) → parte de cada sócio dentro dela →
+ * particular de cada sócio → não definido. `entriesByColumn` já vem só com o
+ * que o login pode ver. Zenite + particulares + não definido = total.
  */
-export async function partnerTotals(
-  agencyId: string,
-  columns: Prisma.FinanceEntryWhereInput[],
-): Promise<{ rows: PartnerTotalRow[]; totals: number[] }> {
-  const [partners, perColumn] = await Promise.all([
-    prisma.financePartner.findMany({ where: { agencyId }, select: { id: true, name: true, active: true }, orderBy: { name: "asc" } }),
-    Promise.all(
-      columns.map(async (where) => {
-        const scoped = { ...where, agencyId };
-        const [byPartner, total] = await Promise.all([
-          prisma.financeEntryShare.groupBy({ by: ["partnerId"], where: { financeEntry: scoped }, _sum: { amountCents: true } }),
-          prisma.financeEntry.aggregate({ where: scoped, _sum: { amountCents: true } }),
-        ]);
-        return { byPartner: new Map(byPartner.map((g) => [g.partnerId, g._sum.amountCents ?? 0])), total: total._sum.amountCents ?? 0 };
+export function buildScopeTotals(viewer: FinanceViewer, entriesByColumn: EntryForTotals[][]): { rows: ScopeTotalRow[]; totals: number[] } {
+  const n = entriesByColumn.length;
+  const zero = () => Array.from({ length: n }, () => 0);
+  const zenite = zero();
+  const none = zero();
+  const totals = zero();
+  const parts = new Map<string, number[]>();
+  const particular = new Map<string, number[]>();
+  const bucket = (map: Map<string, number[]>, id: string) => map.get(id) ?? (map.set(id, zero()), map.get(id)!);
+
+  entriesByColumn.forEach((entries, col) => {
+    for (const entry of entries) {
+      totals[col]! += entry.amountCents;
+      const scope = entryScopeOf(entry.partnerShares);
+      if (scope.kind === "none") none[col]! += entry.amountCents;
+      else if (scope.kind === "particular") bucket(particular, scope.partnerId!)[col]! += entry.amountCents;
+      else {
+        zenite[col]! += entry.amountCents;
+        for (const share of entry.partnerShares) bucket(parts, share.partnerId)[col]! += share.amountCents;
+      }
+    }
+  });
+
+  const nonZero = (cents: number[] | undefined) => Boolean(cents?.some((c) => c !== 0));
+  const rows: ScopeTotalRow[] = [{ key: "zenite", kind: "zenite", label: "Zenite (dividido entre os sócios)", cents: zenite }];
+  for (const p of viewer.partners) {
+    if (p.active || nonZero(parts.get(p.id))) {
+      rows.push({ key: `part:${p.id}`, kind: "part", partnerId: p.id, label: `Parte de ${p.name}`, cents: parts.get(p.id) ?? zero() });
+    }
+  }
+  for (const p of viewer.partners) {
+    if (viewer.hiddenPartnerIds.includes(p.id)) continue;
+    if ((p.active && p.id === viewer.myPartnerId) || nonZero(particular.get(p.id)) || (p.active && !p.userId)) {
+      rows.push({ key: `particular:${p.id}`, kind: "particular", partnerId: p.id, label: `${p.name} (particular)`, cents: particular.get(p.id) ?? zero() });
+    }
+  }
+  if (nonZero(none)) rows.push({ key: "none", kind: "none", label: "Não definido", cents: none });
+  return { rows, totals };
+}
+
+/** Quadro "Zenite e sócios" para vários recortes de lançamentos (uma coluna por `where`), só com o que o login vê. */
+export async function scopeTotals(agencyId: string, viewer: FinanceViewer, columns: Prisma.FinanceEntryWhereInput[]) {
+  const entriesByColumn = await Promise.all(
+    columns.map((where) =>
+      prisma.financeEntry.findMany({
+        where: { AND: [where, visibleEntryWhere(viewer)], agencyId },
+        select: { amountCents: true, partnerShares: { select: { partnerId: true, amountCents: true } } },
       }),
     ),
-  ]);
-
-  const rows: PartnerTotalRow[] = partners
-    .map((p) => ({ partnerId: p.id as string | null, name: p.name, active: p.active, cents: perColumn.map((c) => c.byPartner.get(p.id) ?? 0) }))
-    // Sócio desativado só aparece se ainda tiver valor em alguma coluna.
-    .filter((row) => row.active || row.cents.some((c) => c !== 0))
-    .map(({ partnerId, name, cents }) => ({ partnerId, name, cents }));
-
-  const totals = perColumn.map((c) => c.total);
-  const undefinedCents = perColumn.map((c) => c.total - [...c.byPartner.values()].reduce((acc, n) => acc + n, 0));
-  if (undefinedCents.some((c) => c !== 0)) rows.push({ partnerId: null, name: "Não definido", cents: undefinedCents });
-  return { rows, totals };
+  );
+  return buildScopeTotals(viewer, entriesByColumn);
 }

@@ -11,36 +11,39 @@ import {
 } from "@/lib/finance";
 import { DEFAULT_PAGE_SIZE, pageCountFor } from "@/lib/pagination";
 import { canManageTeam } from "@/lib/rbac";
-import { clientSharesByClient, listFinancePartners } from "@/lib/finance-partners";
-import { partnerTotals } from "@/lib/finance-partner-totals";
+import { clientSharesByClient } from "@/lib/finance-partners";
+import { scopeTotals } from "@/lib/finance-partner-totals";
+import { loadFinanceViewer, parseScope, scopeEntryWhere, scopeOptions } from "@/lib/finance-scope";
+import { monthKey, payoutsOfMonth } from "@/lib/partner-payouts";
 import { prisma, type FinanceEntryType, type Prisma } from "@zenite-mkt/db";
 import { NewFinanceEntryModal } from "./NewFinanceEntryModal";
 import { FinanceEntryTable } from "./FinanceEntryTable";
 import { ManagePartnersButton } from "./ManagePartnersButton";
 import { PartnerTotalsTable } from "./PartnerTotalsTable";
-
-/** `?partner=` da lista: id de um sócio, "none" (sem divisão) ou vazio (todos). */
-export const PARTNER_FILTER_NONE = "none";
+import { PayoutButton } from "./PayoutButton";
+import { ScopePills } from "./ScopePills";
+import { partnerChoices, loadPartnerLogins } from "./partner-choices";
 
 export async function FinanceListPageContent({
   type,
   page,
   period,
-  partner,
+  scope: rawScope,
 }: {
   type: FinanceEntryType;
   page: number;
   period: FinancePeriod;
-  partner?: string;
+  /** `?scope=`: "" (tudo que vejo), "zenite", "none" ou o id de um sócio (particular dele). */
+  scope?: string;
 }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
 
-  const partners = await listFinancePartners(membership.agencyId);
-  const activePartner = partners.find((p) => p.id === partner);
-  const partnerFilter = activePartner ? activePartner.id : partner === PARTNER_FILTER_NONE ? PARTNER_FILTER_NONE : "";
+  const viewer = await loadFinanceViewer(membership.agencyId, session.user.id);
+  const scope = parseScope(viewer, rawScope);
+  const canManage = canManageTeam(membership.role);
 
   const dueDateRange = financePeriodRange(period);
   const periodWhere: Prisma.FinanceEntryWhereInput = {
@@ -48,16 +51,13 @@ export async function FinanceListPageContent({
     type,
     ...(dueDateRange ? { dueDate: dueDateRange } : {}),
   };
-  const where: Prisma.FinanceEntryWhereInput = {
-    ...periodWhere,
-    ...(partnerFilter === PARTNER_FILTER_NONE
-      ? { partnerShares: { none: {} } }
-      : partnerFilter
-        ? { partnerShares: { some: { partnerId: partnerFilter } } }
-        : {}),
-  };
+  // Sempre dentro do que este login pode ver (particular de outro sócio nunca entra).
+  const where: Prisma.FinanceEntryWhereInput = { ...periodWhere, AND: [scopeEntryWhere(viewer, scope)] };
 
-  const [total, entries, categories, clients, projects, clientShares, totals] = await Promise.all([
+  // Fechamento: o repasse só faz sentido olhando um mês fechado em si (este mês ou o passado), nas receitas.
+  const closingMonth = type === "RECEITA" && dueDateRange && (period === "this_month" || period === "last_month") ? dueDateRange.gte : null;
+
+  const [total, entries, categories, clients, projects, clientShares, totals, payouts, logins] = await Promise.all([
     prisma.financeEntry.count({ where }),
     prisma.financeEntry.findMany({
       where,
@@ -88,34 +88,60 @@ export async function FinanceListPageContent({
       orderBy: { name: "asc" },
     }),
     clientSharesByClient(membership.agencyId),
-    partners.length > 0
-      ? partnerTotals(membership.agencyId, [
+    viewer.partners.length > 0
+      ? scopeTotals(membership.agencyId, viewer, [
           { ...periodWhere, status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
           { ...periodWhere, status: "LIQUIDADO" },
         ])
       : null,
+    closingMonth ? payoutsOfMonth(membership.agencyId, closingMonth) : null,
+    canManage ? loadPartnerLogins(membership.agencyId) : [],
   ]);
 
   const typeLabel = FINANCE_TYPE_LABELS[type];
   const plural = type === "RECEITA" ? "Contas a receber" : "Contas a pagar";
   const pageCount = pageCountFor(total);
   const basePath = type === "RECEITA" ? "/financeiro/receber" : "/financeiro/pagar";
+  const partners = partnerChoices(viewer);
+  const scopeLabel = scopeOptions(viewer).find((o) => o.value === scope)?.label;
 
-  function listHref(next: { period?: FinancePeriod; partner?: string; page?: number }) {
+  function listHref(next: { period?: FinancePeriod; scope?: string; page?: number }) {
     const params = new URLSearchParams();
     const nextPeriod = next.period ?? period;
-    const nextPartner = next.partner ?? partnerFilter;
+    const nextScope = next.scope ?? scope;
     if (next.page && next.page > 1) params.set("page", String(next.page));
     if (nextPeriod !== "all") params.set("period", nextPeriod);
-    if (nextPartner) params.set("partner", nextPartner);
+    if (nextScope) params.set("scope", nextScope);
     const qs = params.toString();
     return qs ? `${basePath}?${qs}` : basePath;
   }
 
-  const pill = (on: boolean) =>
-    `rounded-full px-3 py-1.5 text-sm font-medium ${
-      on ? "bg-[#FF2B00] text-white" : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
-    }`;
+  // Coluna "Repasse" do quadro: uma linha por sócio dentro da Zenite, sobre o que já foi recebido no mês.
+  const payoutActions =
+    totals && closingMonth && payouts
+      ? Object.fromEntries(
+          totals.rows
+            .filter((row) => row.kind === "part")
+            .map((row) => {
+              const partner = viewer.partners.find((p) => p.id === row.partnerId)!;
+              const state = payouts[partner.id];
+              return [
+                row.key,
+                <PayoutButton
+                  key={row.key}
+                  partnerId={partner.id}
+                  partnerName={partner.name}
+                  month={monthKey(closingMonth)}
+                  dueCents={row.cents[1] ?? 0}
+                  paid={Boolean(state?.paid)}
+                  paidCents={state?.paidCents ?? null}
+                  paidAtISO={state?.paidAtISO ?? null}
+                  canManage={canManage}
+                />,
+              ];
+            }),
+        )
+      : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -125,11 +151,11 @@ export async function FinanceListPageContent({
           <p className="text-sm text-[#667085]">
             {total} {typeLabel.toLowerCase()}
             {total === 1 ? "" : "s"}
-            {activePartner ? ` de ${activePartner.name}` : partnerFilter === PARTNER_FILTER_NONE ? " sem sócio definido" : ""} em {membership.agency.name}.
+            {scope && scopeLabel ? ` — ${scopeLabel}` : ""} em {membership.agency.name}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ManagePartnersButton partners={partners} canManage={canManageTeam(membership.role)} />
+          <ManagePartnersButton partners={partners} canManage={canManage} logins={logins} />
           <NewFinanceEntryModal type={type} categories={categories} clients={clients} projects={projects} partners={partners} clientShares={clientShares} />
         </div>
       </div>
@@ -137,41 +163,39 @@ export async function FinanceListPageContent({
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap gap-1.5">
           {FINANCE_PERIODS.map((option) => (
-            <Link key={option} href={listHref({ period: option })} className={pill(period === option)}>
+            <Link
+              key={option}
+              href={listHref({ period: option })}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                period === option ? "bg-[#FF2B00] text-white" : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
+              }`}
+            >
               {FINANCE_PERIOD_LABELS[option]}
             </Link>
           ))}
         </div>
-        {partners.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-[#667085]">Sócio</span>
-            <Link href={listHref({ partner: "" })} className={pill(!partnerFilter)}>
-              Todos
-            </Link>
-            {partners
-              .filter((p) => p.active || p.id === partnerFilter)
-              .map((p) => (
-                <Link key={p.id} href={listHref({ partner: p.id })} className={pill(partnerFilter === p.id)}>
-                  {p.name}
-                </Link>
-              ))}
-            <Link href={listHref({ partner: PARTNER_FILTER_NONE })} className={pill(partnerFilter === PARTNER_FILTER_NONE)}>
-              Não definido
-            </Link>
-          </div>
-        )}
+        <ScopePills options={scopeOptions(viewer)} active={scope} hrefFor={(value) => listHref({ scope: value })} />
       </div>
 
-      {totals && (
+      {totals && !scope && (
         <PartnerTotalsTable
-          title={`Por sócio — ${FINANCE_PERIOD_LABELS[period].toLowerCase()}`}
+          title={`Zenite e sócios — ${FINANCE_PERIOD_LABELS[period].toLowerCase()}`}
           columns={["Em aberto", type === "RECEITA" ? "Recebido" : "Pago"]}
           rows={totals.rows}
           totals={totals.totals}
+          actions={payoutActions}
+          actionLabel="Repasse ao sócio"
+          footnote={
+            type !== "RECEITA"
+              ? undefined
+              : closingMonth
+                ? "Repasse: a parte de cada sócio no que a Zenite já recebeu neste mês. Marque Pago quando a transferência for feita."
+                : "Para registrar o repasse do fechamento, escolha Este mês ou Mês passado."
+          }
         />
       )}
 
-      <FinanceEntryTable entries={entries} showBoleto={type === "RECEITA"} partners={partners} highlightPartnerId={activePartner?.id} />
+      <FinanceEntryTable entries={entries} showBoleto={type === "RECEITA"} partners={partners} />
       <Pagination page={page} pageCount={pageCount} hrefForPage={(p) => listHref({ page: p })} linkComponent={Link} />
     </div>
   );

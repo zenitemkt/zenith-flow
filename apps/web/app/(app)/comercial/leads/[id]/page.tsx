@@ -1,3 +1,4 @@
+import { loadFinanceViewer, visibleEntryWhere } from "@/lib/finance-scope";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
@@ -59,11 +60,13 @@ export default async function LeadDetailPage({ params }: PageProps) {
       select: { id: true, name: true },
     }),
   ]);
+  // Este login não vê lançamento particular de outro sócio.
+  const visibleOnly = visibleEntryWhere(await loadFinanceViewer(membership.agencyId, session.user.id));
   const opportunityIds = opportunities.map((opportunity) => opportunity.id);
   const proposalIds = proposals.map((proposal) => proposal.id);
   const financeEntries = opportunityIds.length > 0 || proposalIds.length > 0
     ? await prisma.financeEntry.findMany({
-        where: {
+        where: { AND: [visibleOnly],
           agencyId: membership.agencyId,
           OR: [
             ...(opportunityIds.length > 0 ? [{ opportunityId: { in: opportunityIds } }] : []),

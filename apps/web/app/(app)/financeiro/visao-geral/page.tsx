@@ -5,18 +5,26 @@ import { formatCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
 import { TrendAreaChart } from "@/app/_components/charts/TrendAreaChart";
 import { canManageTeam } from "@/lib/rbac";
-import { listFinancePartners } from "@/lib/finance-partners";
-import { partnerTotals } from "@/lib/finance-partner-totals";
+import { scopeTotals } from "@/lib/finance-partner-totals";
+import { loadFinanceViewer, parseScope, scopeEntryWhere, scopeOptions } from "@/lib/finance-scope";
+import { ScopePills } from "../ScopePills";
+import { partnerChoices, loadPartnerLogins } from "../partner-choices";
 import { ManagePartnersButton } from "../ManagePartnersButton";
 import { PartnerTotalsTable } from "../PartnerTotalsTable";
 
 const MONTH_LABELS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-export default async function VisaoGeralPage() {
+export default async function VisaoGeralPage({ searchParams }: { searchParams: { scope?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+
+  // O que este login vê (Zenite + o próprio particular) e o recorte escolhido em `?scope=`.
+  const viewer = await loadFinanceViewer(membership.agencyId, session.user.id);
+  const scope = parseScope(viewer, searchParams.scope);
+  const inScope = scopeEntryWhere(viewer, scope);
+  const scopeLabel = scopeOptions(viewer).find((o) => o.value === scope)?.label;
 
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -26,15 +34,15 @@ export default async function VisaoGeralPage() {
 
   const [aReceber, aPagar, recebidoMes, pagoMes, vencendo, settledLast12Months] = await Promise.all([
     prisma.financeEntry.aggregate({
-      where: { agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
+      where: { AND: [inScope], agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: { agencyId: membership.agencyId, type: "DESPESA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
+      where: { AND: [inScope], agencyId: membership.agencyId, type: "DESPESA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [inScope],
         agencyId: membership.agencyId,
         type: "RECEITA",
         status: "LIQUIDADO",
@@ -43,7 +51,7 @@ export default async function VisaoGeralPage() {
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [inScope],
         agencyId: membership.agencyId,
         type: "DESPESA",
         status: "LIQUIDADO",
@@ -52,7 +60,7 @@ export default async function VisaoGeralPage() {
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.findMany({
-      where: {
+      where: { AND: [inScope],
         agencyId: membership.agencyId,
         status: { in: ["PENDENTE", "VENCIDO"] },
         dueDate: { lte: in7Days },
@@ -62,7 +70,7 @@ export default async function VisaoGeralPage() {
       take: 8,
     }),
     prisma.financeEntry.findMany({
-      where: {
+      where: { AND: [inScope],
         agencyId: membership.agencyId,
         status: "LIQUIDADO",
         settledDate: { gte: twelveMonthsAgo, lt: monthEnd },
@@ -72,12 +80,13 @@ export default async function VisaoGeralPage() {
   ]);
 
   // Mesmos quatro números dos cartões, abertos por sócio (some se não houver sócio cadastrado).
-  const partners = await listFinancePartners(membership.agencyId);
+  const canManage = canManageTeam(membership.role);
+  const logins = canManage ? await loadPartnerLogins(membership.agencyId) : [];
   const OPEN = { in: ["PREVISTO", "PENDENTE", "VENCIDO"] as ("PREVISTO" | "PENDENTE" | "VENCIDO")[] };
   const settledThisMonth = { status: "LIQUIDADO" as const, settledDate: { gte: monthStart, lt: monthEnd } };
   const byPartner =
-    partners.length > 0
-      ? await partnerTotals(membership.agencyId, [
+    viewer.partners.length > 0 && !scope
+      ? await scopeTotals(membership.agencyId, viewer, [
           { type: "RECEITA", status: OPEN },
           { type: "RECEITA", ...settledThisMonth },
           { type: "DESPESA", status: OPEN },
@@ -124,10 +133,13 @@ export default async function VisaoGeralPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">Financeiro — Visão geral</h1>
-          <p className="text-sm text-[#667085]">{membership.agency.name}</p>
+          <p className="text-sm text-[#667085]">
+            {membership.agency.name}
+            {scope && scopeLabel ? ` — ${scopeLabel}` : ""}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ManagePartnersButton partners={partners} canManage={canManageTeam(membership.role)} />
+          <ManagePartnersButton partners={partnerChoices(viewer)} canManage={canManage} logins={logins} />
           <Link
             href="/financeiro/caixa"
             className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
@@ -148,6 +160,8 @@ export default async function VisaoGeralPage() {
           </Link>
         </div>
       </div>
+
+      <ScopePills options={scopeOptions(viewer)} active={scope} hrefFor={(value) => (value ? `/financeiro/visao-geral?scope=${value}` : "/financeiro/visao-geral")} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
@@ -172,7 +186,7 @@ export default async function VisaoGeralPage() {
 
       {byPartner && (
         <PartnerTotalsTable
-          title="Por sócio"
+          title="Zenite e sócios"
           columns={["A receber", "Recebido no mês", "A pagar", "Pago no mês"]}
           rows={byPartner.rows}
           totals={byPartner.totals}

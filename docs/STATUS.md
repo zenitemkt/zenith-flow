@@ -4,6 +4,16 @@
 
 ## Implementado
 
+- **Zenite × particular, privacidade entre sócios e repasse do mês (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12,
+  "Zenite × particular"). Regras em `lib/finance-scope.ts`; repasse em `lib/partner-payouts.ts` + `PUT /api/finance/payouts`;
+  vínculo sócio ↔ login no botão "Sócios".
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (78, com `lib/finance-scope.test.ts`) e roteiro de ponta a ponta com dois
+    logins no ambiente local (30 verificações: o que cada um vê, URL forçada, ações bloqueadas, recorte Zenite, Visão
+    geral, repasse pago/pendente, páginas de negócio).
+  - **Pendente antes do deploy**: aplicar em produção as três migrations do branch `financeiro-socios`
+    (`20261112160000_finance_partner_shares`, `20261112180000_finance_partner_user`, `20261112190000_partner_payout`);
+    depois, em produção, cadastrar Kevin e Gabriel e ligar cada um ao próprio login.
+  - Não feito: `next build` (o servidor local usa a pasta `.next`) e conferência visual no navegador.
 - **Financeiro dividido entre os sócios (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12, "Financeiro dividido").
   Modelos `FinancePartner`, `FinanceEntryShare`, `ClientPartnerShare`; regras em `lib/finance-shares.ts`; APIs
   `/api/finance/partners` e `/api/finance/entries/:id/shares`; campo "de quem é" em nova receita/despesa, coluna e

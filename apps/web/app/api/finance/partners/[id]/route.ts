@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam } from "@/lib/rbac";
@@ -27,6 +29,22 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim() : partner.name;
   const active = typeof body?.active === "boolean" ? body.active : partner.active;
+  // `userId`: string liga o sócio a um login da equipe; null desliga; ausente não mexe.
+  let userId = partner.userId;
+  if (body?.userId === null || body?.userId === "") userId = null;
+  else if (typeof body?.userId === "string") {
+    const member = await prisma.membership.findFirst({
+      where: { agencyId: membership.agencyId, userId: body.userId, status: "ACTIVE", role: { notIn: ["CLIENT_ADMIN", "CLIENT_VIEWER"] } },
+      select: { id: true },
+    });
+    if (!member) return NextResponse.json({ error: "Login inválido." }, { status: 400 });
+    const taken = await prisma.financePartner.findFirst({
+      where: { agencyId: membership.agencyId, userId: body.userId, id: { not: partner.id } },
+      select: { name: true },
+    });
+    if (taken) return NextResponse.json({ error: `Esse login já está ligado ao sócio ${taken.name}.` }, { status: 409 });
+    userId = body.userId;
+  }
   if (!name || name.length > 60) return NextResponse.json({ error: "Nome inválido." }, { status: 400 });
   if (name !== partner.name) {
     const clash = await prisma.financePartner.findFirst({
@@ -36,7 +54,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   await prisma.$transaction([
-    prisma.financePartner.update({ where: { id: partner.id }, data: { name, active } }),
+    prisma.financePartner.update({ where: { id: partner.id }, data: { name, active, userId } }),
     prisma.auditLog.create({
       data: {
         agencyId: membership.agencyId,
@@ -45,9 +63,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         action: "finance_partner.updated",
         resourceType: "finance_partner",
         resourceId: partner.id,
-        metadata: { from: { name: partner.name, active: partner.active }, to: { name, active } },
+        metadata: { from: { name: partner.name, active: partner.active, userId: partner.userId }, to: { name, active, userId } },
       },
     }),
   ]);
+  // O vínculo muda o que cada login enxerga: derruba o cache das leituras do financeiro.
+  revalidateTag(financeEntriesCacheTag(membership.agencyId));
   return NextResponse.json({ ok: true });
 }

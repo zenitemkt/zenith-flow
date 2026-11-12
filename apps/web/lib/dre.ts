@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import { unstable_cache } from "next/cache";
 import { prisma, type FinanceCategoryNature, type FinanceEntryType } from "@zenite-mkt/db";
 import { financeEntriesCacheTag } from "./finance-cache";
@@ -89,9 +90,11 @@ export function computeDre(entries: DreEntryInput[]): DreResult {
  */
 export function getCachedDreEntries(agencyId: string, rangeStart: Date, rangeEnd: Date) {
   return unstable_cache(
-    () =>
+    async () =>
       prisma.financeEntry.findMany({
         where: {
+          // Só a Zenite: lançamento particular de sócio não entra no DRE.
+          AND: [await businessEntryWhere(agencyId)],
           agencyId,
           status: { not: "CANCELADO" },
           competencyDate: { gte: rangeStart, lt: rangeEnd },

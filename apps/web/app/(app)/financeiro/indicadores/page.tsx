@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { computeDSO, computeLogoChurnRate, INDICATOR_WINDOW_DAYS } from "@/lib/finance-indicators";
@@ -13,13 +14,15 @@ export default async function IndicadoresPage() {
   const now = new Date();
   const periodStart = new Date(now.getTime() - INDICATOR_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
+  // Números do negócio: só a Zenite (lançamento particular de sócio não entra).
+  const zeniteOnly = await businessEntryWhere(membership.agencyId);
   const [arAggregate, creditSalesAggregate, clients] = await Promise.all([
     prisma.financeEntry.aggregate({
-      where: { agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
+      where: { AND: [zeniteOnly], agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId: membership.agencyId,
         type: "RECEITA",
         status: { not: "CANCELADO" },

@@ -7,6 +7,9 @@ export interface PartnerChoice {
   id: string;
   name: string;
   active: boolean;
+  userId?: string | null;
+  /** Sócio com login próprio que não é o usuário atual: entra na Zenite, mas não como "Só fulano". */
+  soloHidden?: boolean;
 }
 
 const SELECT = "h-11 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
@@ -74,12 +77,14 @@ export function PartnerSplitFields({
         className={SELECT}
       >
         <option value="">Não definido</option>
-        {options.map((p) => (
-          <option key={p.id} value={p.id}>
-            Só {p.name}
-          </option>
-        ))}
-        {options.length > 1 && <option value="split">Dividido entre os sócios</option>}
+        {options.length > 1 && <option value="split">Zenite (dividido entre os sócios)</option>}
+        {options
+          .filter((p) => !p.soloHidden || p.id === value.choice)
+          .map((p) => (
+            <option key={p.id} value={p.id}>
+              Só {p.name} (particular)
+            </option>
+          ))}
       </select>
 
       {value.choice === "split" && (

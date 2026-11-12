@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import { prisma, type CommercialGoal, type GoalMetric } from "@zenite-mkt/db";
 import { isClientActive } from "@/lib/clients";
 import { GOAL_METRIC_BY_ID, periodEnd } from "@/lib/goal-periods";
@@ -27,17 +28,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 async function computeActual(agencyId: string, metric: GoalMetric, start: Date, end: Date, asOf: Date): Promise<number> {
   const until = asOf < end ? asOf : end;
 
+  // Metas de receita contam só a Zenite (particular de sócio fica de fora).
+  const zeniteOnly = metric === "REVENUE" || metric === "RECEIVED" ? await businessEntryWhere(agencyId) : {};
   switch (metric) {
     case "REVENUE": {
       const agg = await prisma.financeEntry.aggregate({
-        where: { agencyId, type: "RECEITA", status: { not: "CANCELADO" }, competencyDate: { gte: start, lt: end } },
+        where: { AND: [zeniteOnly], agencyId, type: "RECEITA", status: { not: "CANCELADO" }, competencyDate: { gte: start, lt: end } },
         _sum: { amountCents: true },
       });
       return agg._sum.amountCents ?? 0;
     }
     case "RECEIVED": {
       const agg = await prisma.financeEntry.aggregate({
-        where: { agencyId, type: "RECEITA", status: "LIQUIDADO", settledDate: { gte: start, lt: until } },
+        where: { AND: [zeniteOnly], agencyId, type: "RECEITA", status: "LIQUIDADO", settledDate: { gte: start, lt: until } },
         _sum: { amountCents: true },
       });
       return agg._sum.amountCents ?? 0;

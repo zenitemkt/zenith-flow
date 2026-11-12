@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -79,6 +80,8 @@ export default async function HomePage() {
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   const todayStart = startOfDayUTC(now);
 
+  // Números do negócio: só a Zenite (lançamento particular de sócio não entra).
+  const zeniteOnly = await businessEntryWhere(membership.agencyId);
   const [
     activeRecurring,
     pendingApprovalsCount,
@@ -103,7 +106,7 @@ export default async function HomePage() {
     }),
     prisma.leaveRequest.count({ where: { agencyId: membership.agencyId, status: "SOLICITADA" } }),
     prisma.financeEntry.count({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId: membership.agencyId,
         OR: [{ status: "VENCIDO" }, { status: "PENDENTE", dueDate: { lt: todayStart } }],
       },
@@ -128,15 +131,15 @@ export default async function HomePage() {
     }),
     prisma.client.count({ where: { agencyId: membership.agencyId, status: "ATIVO" } }),
     prisma.financeEntry.aggregate({
-      where: { agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
+      where: { AND: [zeniteOnly], agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: { agencyId: membership.agencyId, type: "DESPESA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
+      where: { AND: [zeniteOnly], agencyId: membership.agencyId, type: "DESPESA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId: membership.agencyId,
         type: "RECEITA",
         status: "LIQUIDADO",
@@ -145,7 +148,7 @@ export default async function HomePage() {
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId: membership.agencyId,
         type: "DESPESA",
         status: "LIQUIDADO",

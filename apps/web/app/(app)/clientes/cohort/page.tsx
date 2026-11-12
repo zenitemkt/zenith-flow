@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { buildCohortRows, startOfMonthUTC, COHORT_MONTH_WINDOW } from "@/lib/cohort";
@@ -33,8 +34,10 @@ export default async function CohortPage() {
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
+  // Números do negócio: só a Zenite (lançamento particular de sócio não entra).
+  const zeniteOnly = await businessEntryWhere(membership.agencyId);
   const revenueEntries = await prisma.financeEntry.findMany({
-    where: {
+    where: { AND: [zeniteOnly],
       agencyId: membership.agencyId,
       type: "RECEITA",
       status: "LIQUIDADO",

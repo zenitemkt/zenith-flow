@@ -1,3 +1,4 @@
+import { loadFinanceViewer, visibleEntryWhere } from "@/lib/finance-scope";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
@@ -21,8 +22,10 @@ export default async function CobrancasPage() {
     redirect("/login");
   }
 
+  // Este login não vê lançamento particular de outro sócio.
+  const visibleOnly = visibleEntryWhere(await loadFinanceViewer(membership.agencyId, session.user.id));
   const entries = await prisma.financeEntry.findMany({
-    where: {
+    where: { AND: [visibleOnly],
       agencyId: membership.agencyId,
       type: "RECEITA",
       status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] },

@@ -1,3 +1,4 @@
+import { canActOnEntry } from "@/lib/finance-scope";
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
@@ -31,6 +32,10 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const entry = await prisma.financeEntry.findUnique({ where: { id: params.id } });
   if (!entry || entry.agencyId !== membership.agencyId) {
+    return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
+  }
+  // Particular de outro sócio: este login não vê nem altera.
+  if (!(await canActOnEntry(membership.agencyId, session.user.id, entry.id))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
 

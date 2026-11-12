@@ -37,8 +37,8 @@ export function EntrySharesButton({
     shares.length === 0
       ? "Definir"
       : shares.length === 1
-        ? nameOf(shares[0]!.partnerId)
-        : shares.map((s) => `${nameOf(s.partnerId)} ${formatCents(s.amountCents)}`).join(" · ");
+        ? `${nameOf(shares[0]!.partnerId)} (particular)`
+        : `Zenite · ${shares.map((s) => `${nameOf(s.partnerId)} ${formatCents(s.amountCents)}`).join(" · ")}`;
 
   if (readOnly || partners.length === 0) {
     return <span className="text-xs text-[#475467]">{shares.length === 0 ? "—" : summary}</span>;
@@ -76,7 +76,7 @@ export function EntrySharesButton({
         type="button"
         onClick={() => setOpen(true)}
         title="Definir de quem é este lançamento"
-        className={`max-w-[220px] truncate rounded-md px-1.5 py-1 text-left text-xs font-medium hover:bg-[#F2F4F7] ${
+        className={`max-w-[260px] truncate rounded-md px-1.5 py-1 text-left text-xs font-medium hover:bg-[#F2F4F7] ${
           shares.length === 0 ? "text-[#98A2B3] underline decoration-dotted" : "text-[#344054]"
         }`}
       >

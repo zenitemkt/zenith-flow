@@ -1,3 +1,15 @@
+## 2026-11-12 — Zenite × particular, privacidade e repasse do mês
+
+**Pedido**: dividido entre os sócios = Zenite, em qualquer proporção; de um sócio só = particular, "não contabiliza nada para a Zenite". Cada login vê a Zenite e o próprio particular, nunca o do outro. No fechamento, ver em Contas a receber quanto cada sócio tem a receber da agência e marcar Pendente → Pago.
+
+**Decisão 1 — a classificação sai das partes, sem campo novo** (`lib/finance-scope.ts`, testado): 2+ partes = Zenite; 1 parte = particular daquele sócio; 0 = não definido. Toda leitura de `FinanceEntry` nas telas passa por um de dois filtros: `visibleEntryWhere` (o que o login vê: tudo menos particular de sócio ligado a outro usuário) ou `businessEntryWhere` (números do negócio: sem particular de ninguém, igual para todos — DRE, Indicadores, painel, metas de receita, cohort, Raio-X do painel). O DRE continua cacheado por agência porque esse filtro não depende de quem olha.
+
+**Decisão 2 — privacidade pelo vínculo sócio ↔ login (`FinancePartner.userId`, único por agência)**: sem vínculo, o particular continua visível para a equipe (ninguém mais poderia ver). Quem não é sócio vê só a Zenite e o não definido. As rotas por id (editar, status, estorno, boleto, cobrança, divisão) devolvem 404 para particular de outro sócio. O formulário não oferece "Só fulano" de outro sócio com login (lançar na conta particular de outra pessoa).
+
+**Decisão 3 — "não definido" continua contando como negócio**: o histórico anterior nasceu sem sócio; tirá-lo dos números do negócio de uma vez zeraria o passado. Fica visível para todos até alguém classificar (recorte "Não definido").
+
+**Decisão 4 — repasse = parte do sócio nas receitas da Zenite LIQUIDADAS com vencimento no mês** (`lib/partner-payouts.ts`): é exatamente a coluna "Recebido" da linha "↳ Parte de fulano" no quadro do mês, para o botão bater com a tela. O mês segue o filtro da lista (vencimento), como o resto da tela. `PartnerPayout` (único por sócio+mês) guarda o valor na baixa; se entrar recebimento depois, a tela mostra "Faltam R$ x — atualizar". Voltar a Pendente apaga a baixa. Valor sempre calculado no servidor; só administradores marcam. Despesas da Zenite não são abatidas do repasse (não foi pedido) — o saldo do mês por sócio está na Visão geral.
+
 ## 2026-11-12 — Financeiro dividido entre os sócios
 
 **Pedido**: há projetos de um sócio só e projetos divididos em valores (não percentuais): de R$ 1.500, 1.000 do Gabriel e 500 do Kevin. Vale para receber e para pagar (assinatura que só um sócio usa não é despesa compartilhada). Precisa dar a visão de cada um e dos dois juntos.

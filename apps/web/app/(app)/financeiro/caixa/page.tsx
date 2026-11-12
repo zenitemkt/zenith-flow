@@ -1,3 +1,4 @@
+import { loadFinanceViewer, visibleEntryWhere } from "@/lib/finance-scope";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
@@ -31,8 +32,10 @@ export default async function FluxoDeCaixaPage({ searchParams }: { searchParams:
   const rangeStart = months[0]!.start;
   const rangeEnd = months[months.length - 1]!.end;
 
+  // Este login não vê lançamento particular de outro sócio.
+  const visibleOnly = visibleEntryWhere(await loadFinanceViewer(membership.agencyId, session.user.id));
   const entries = await prisma.financeEntry.findMany({
-    where: {
+    where: { AND: [visibleOnly],
       agencyId: membership.agencyId,
       OR: [
         { competencyDate: { gte: rangeStart, lt: rangeEnd } },

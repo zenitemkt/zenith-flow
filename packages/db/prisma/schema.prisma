@@ -169,6 +169,7 @@ model Agency {
   financeCategories            FinanceCategory[]
   financeEntries               FinanceEntry[]
   financePartners              FinancePartner[]
+  partnerPayouts               PartnerPayout[]
   mediaAssets                  MediaAsset[]
   healthScoreSnapshots         HealthScoreSnapshot[]
   churnRiskSnapshots           ChurnRiskSnapshot[]
@@ -1482,11 +1483,33 @@ model FinancePartner {
 
   entryShares  FinanceEntryShare[]
   clientShares ClientPartnerShare[]
+  payouts      PartnerPayout[]
 
   @@unique([agencyId, name])
   @@unique([agencyId, userId])
   @@index([agencyId])
   @@map("finance_partner")
+}
+
+/// Repasse do fechamento do mês: a agência transferiu ao sócio a parte dele
+/// do que a Zenite recebeu naquele mês. A linha existir = "Pago"; apagar =
+/// volta a "Pendente". `amountCents` é o valor na hora da baixa, para avisar
+/// se entrou recebimento novo depois.
+model PartnerPayout {
+  id           String         @id @default(cuid())
+  agencyId     String
+  agency       Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  partnerId    String
+  partner      FinancePartner @relation(fields: [partnerId], references: [id], onDelete: Restrict)
+  /// Primeiro dia do mês (UTC).
+  month        DateTime
+  amountCents  Int
+  paidAt       DateTime       @default(now())
+  paidByUserId String?
+
+  @@unique([partnerId, month])
+  @@index([agencyId])
+  @@map("partner_payout")
 }
 
 /// Parte de um lançamento que pertence a um sócio. Regra: ou o lançamento não

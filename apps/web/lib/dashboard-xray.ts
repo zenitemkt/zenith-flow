@@ -1,3 +1,4 @@
+import { businessEntryWhere } from "@/lib/finance-scope";
 import { prisma } from "@zenite-mkt/db";
 import { bandForScore, HEALTH_BAND_LABELS, type HealthBand } from "./health-score";
 import { CHURN_BAND_LABELS, type ChurnBand } from "./churn-risk";
@@ -75,6 +76,8 @@ export async function getXrayDashboard(agencyId: string) {
   const indicatorPeriodStart = new Date(now.getTime() - INDICATOR_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const weekStart = startOfWeekUTC(now);
 
+  // Números do negócio: só a Zenite (lançamento particular de sócio não entra).
+  const zeniteOnly = await businessEntryWhere(agencyId);
   const [
     clientsByStatus,
     latestHealthSnapshots,
@@ -132,11 +135,11 @@ export async function getXrayDashboard(agencyId: string) {
       select: { status: true, assigneeUserId: true },
     }),
     prisma.financeEntry.findMany({
-      where: { agencyId, type: "DESPESA", status: "LIQUIDADO", settledDate: { gte: monthStart, lt: monthEnd } },
+      where: { AND: [zeniteOnly], agencyId, type: "DESPESA", status: "LIQUIDADO", settledDate: { gte: monthStart, lt: monthEnd } },
       select: { amountCents: true, category: { select: { name: true } } },
     }),
     prisma.financeEntry.findMany({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId,
         type: "RECEITA",
         OR: [
@@ -147,15 +150,15 @@ export async function getXrayDashboard(agencyId: string) {
       select: { status: true, amountCents: true, competencyDate: true, settledDate: true },
     }),
     prisma.financeEntry.findMany({
-      where: { agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
+      where: { AND: [zeniteOnly], agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
       select: { dueDate: true, amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: { agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
+      where: { AND: [zeniteOnly], agencyId, type: "RECEITA", status: { in: ["PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
     }),
     prisma.financeEntry.aggregate({
-      where: {
+      where: { AND: [zeniteOnly],
         agencyId,
         type: "RECEITA",
         status: { not: "CANCELADO" },
