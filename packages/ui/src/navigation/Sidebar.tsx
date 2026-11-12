@@ -3,7 +3,6 @@
 import { Fragment, useId, useRef, type ElementType, type KeyboardEvent } from "react";
 import {
   HelpCircle,
-  Bell,
   Pin,
   PinOff,
   LogOut,
@@ -322,7 +321,6 @@ function SidebarFooter({
 }) {
   const footerButtons = [
     { id: "help", label: "Ajuda", icon: HelpCircle, onClick: undefined },
-    { id: "notifications", label: "Notificações", icon: Bell, onClick: undefined },
     ...(onSignOut ? [{ id: "sign-out", label: "Sair", icon: LogOut, onClick: onSignOut }] : []),
   ];
 
