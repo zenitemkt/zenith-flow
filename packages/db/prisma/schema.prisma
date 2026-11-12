@@ -183,6 +183,7 @@ model Agency {
   leads                        Lead[]
   commercialAlerts             CommercialAlert[]
   systemAlerts                 SystemAlert[]
+  systemAlertSettings          SystemAlertSettings?
   leadEmails                   LeadEmail[]
   leadPhones                   LeadPhone[]
   leadSubmissions              LeadSubmission[]
@@ -3354,4 +3355,15 @@ model SystemAlert {
   @@unique([agencyId, key])
   @@index([agencyId, status, lastSeenAt])
   @@map("system_alert")
+}
+
+/// Tipos de alerta desligados pela agência (ids de SYSTEM_ALERT_TYPES em lib/system-alerts.ts).
+model SystemAlertSettings {
+  id            String   @id @default(cuid())
+  agencyId      String   @unique
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  disabledTypes String[] @default([])
+  updatedAt     DateTime @updatedAt
+
+  @@map("system_alert_settings")
 }

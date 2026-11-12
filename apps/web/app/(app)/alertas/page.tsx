@@ -4,8 +4,9 @@ import { prisma } from "@zenite-mkt/db";
 import type { SystemAlertCategory, SystemAlertStatus } from "@prisma/client";
 import { requireSessionAndMembership } from "@/lib/session";
 import { getCommercialPendencies } from "@/lib/commercial-pendencies";
-import { SYSTEM_ALERT_CATEGORY_LABEL } from "@/lib/system-alerts";
+import { SYSTEM_ALERT_CATEGORY_LABEL, SYSTEM_ALERT_TYPES, alertTypeOfKey, getDisabledAlertTypes } from "@/lib/system-alerts";
 import { AlertActions } from "./AlertActions";
+import { AlertTypeSettings } from "./AlertTypeSettings";
 
 const CATEGORIES = Object.keys(SYSTEM_ALERT_CATEGORY_LABEL) as SystemAlertCategory[];
 const STATUS_LABEL: Record<SystemAlertStatus, string> = { OPEN: "Abertos", RESOLVED: "Resolvidos", IGNORED: "Ignorados" };
@@ -33,12 +34,19 @@ export default async function AlertsPage({ searchParams }: { searchParams: { cat
   const category = CATEGORIES.includes(searchParams.categoria as SystemAlertCategory) ? (searchParams.categoria as SystemAlertCategory) : undefined;
   const status: SystemAlertStatus = searchParams.status === "RESOLVED" || searchParams.status === "IGNORED" ? searchParams.status : "OPEN";
 
-  const [alerts, counts, commercial] = await Promise.all([
+  const [allAlerts, openAll, commercial, disabled] = await Promise.all([
     prisma.systemAlert.findMany({ where: { agencyId, status, ...(category ? { category } : {}) }, orderBy: { lastSeenAt: "desc" }, take: 200 }),
-    prisma.systemAlert.groupBy({ by: ["category"], where: { agencyId, status: "OPEN" }, _count: { _all: true } }),
+    prisma.systemAlert.findMany({ where: { agencyId, status: "OPEN" }, select: { key: true, category: true }, take: 500 }),
     getCommercialPendencies(agencyId),
+    getDisabledAlertTypes(agencyId),
   ]);
-  const openBy = new Map(counts.map((c) => [c.category, c._count._all]));
+  const enabled = (key: string) => {
+    const type = alertTypeOfKey(key);
+    return !type || !disabled.has(type);
+  };
+  const alerts = allAlerts.filter((a) => enabled(a.key));
+  const openBy = new Map<string, number>();
+  for (const a of openAll) if (enabled(a.key)) openBy.set(a.category, (openBy.get(a.category) ?? 0) + 1);
   const order = { CRITICAL: 0, WARNING: 1, INFO: 2 } as const;
   if (status === "OPEN") alerts.sort((a, b) => order[a.severity] - order[b.severity] || b.lastSeenAt.getTime() - a.lastSeenAt.getTime());
 
@@ -62,7 +70,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: { cat
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <Link href="/comercial/pendencias" className="rounded-xl border border-[#E4E7EC] bg-white p-3 hover:border-[#FF2B00]">
           <p className="text-xs text-[#667085]">Comercial</p>
-          <p className="text-xl font-semibold text-[#101828]">{commercial.summary.total}</p>
+          <p className="text-xl font-semibold text-[#101828]">{disabled.has("commercial") ? "–" : commercial.summary.total}</p>
         </Link>
         {CATEGORIES.map((c) => (
           <Link key={c} href={link({ categoria: category === c ? undefined : c, status: undefined })} className={`rounded-xl border bg-white p-3 hover:border-[#FF2B00] ${category === c ? "border-[#FF2B00]" : "border-[#E4E7EC]"}`}>
@@ -71,6 +79,8 @@ export default async function AlertsPage({ searchParams }: { searchParams: { cat
           </Link>
         ))}
       </div>
+
+      <AlertTypeSettings types={SYSTEM_ALERT_TYPES.map(({ id, category: c, label, description }) => ({ id, category: c, label, description }))} initialDisabled={Array.from(disabled)} />
 
       <div className="flex flex-wrap items-center gap-2">
         {(["OPEN", "RESOLVED", "IGNORED"] as const).map((s) => (
