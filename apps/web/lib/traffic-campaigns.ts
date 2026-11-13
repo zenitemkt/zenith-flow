@@ -1,6 +1,7 @@
 import { prisma, Prisma } from "@zenite-mkt/db";
 import { decryptSecret } from "@/lib/crypto-secrets";
-import { downloadDriveFile } from "@/lib/google-drive";
+import { downloadDriveFile, renameDriveFile } from "@/lib/google-drive";
+import { groupCreativesIntoAds, standardCreativeName } from "@/lib/creative-pairing";
 import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
 import { OBJECTIVE_CODES, nextCampaignNumber, withCampaignCode } from "@/lib/campaign-naming";
@@ -157,11 +158,13 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
       if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
     } else if (!/^https?:\/\//i.test(a.destinationUrl)) issues.push(`${label}: informe o link da página do site (com o formulário).`);
     if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
-    for (const id of a.creativeIds) {
-      const c = creatives.find((x) => x.id === id);
-      if (!c) issues.push(`${label}: um criativo escolhido não existe mais.`);
-      else if (!c.primaryText || !c.headline) issues.push(`${label}: o criativo "${c.name}" está sem texto principal ou título.`);
-      else if (c.missingInDrive && !c.metaImageHash && !c.metaVideoId) issues.push(`${label}: o arquivo do criativo "${c.name}" não está mais no Drive.`);
+    const chosen = a.creativeIds.map((id) => creatives.find((x) => x.id === id));
+    if (chosen.some((c) => !c)) issues.push(`${label}: um criativo escolhido não existe mais.`);
+    for (const [adIndex, g] of groupCreativesIntoAds(chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
+      const pair = [g.feed, g.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
+      const adLabel = `${label} AD${String(adIndex + 1).padStart(2, "0")}`;
+      if (!pair.some((c) => c.primaryText && c.headline)) issues.push(`${adLabel}: preencha o texto principal e o título ("${pair.map((c) => c.name).join(" + ")}").`);
+      for (const c of pair) if (c.missingInDrive && !c.metaImageHash && !c.metaVideoId) issues.push(`${adLabel}: o arquivo "${c.name}" não está mais no Drive.`);
     }
   }
   return Array.from(new Set(issues));
@@ -280,52 +283,71 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
         await save();
       }
 
-      // 5. Anúncios (sobe o arquivo do criativo uma vez só e reaproveita).
-      for (const creativeId of a.creativeIds) {
-        const adState = (state.ads[creativeId] ??= {});
+      // 5. Anúncios: Feed + Stories da mesma imagem viram um anúncio; nome AD01, AD02... no conjunto.
+      const groups = groupCreativesIntoAds(a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is (typeof creatives)[number] => Boolean(c)));
+      for (const [adIndex, group] of groups.entries()) {
+        const adState = (state.ads[group.key] ??= {});
         if (adState.adId) continue;
         if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${setName})` };
-        let creative = creatives.find((c) => c.id === creativeId)!;
-        if (!creative.metaImageHash && !creative.metaVideoId) {
-          if (creative.status !== "UPLOADING") await setCreativeStatus(creative.id, "UPLOADING");
-          try {
-            const file = Buffer.from(await (await downloadDriveFile(creative.driveFileId)).arrayBuffer());
-            const data =
-              creative.kind === "IMAGE"
-                ? { metaImageHash: await uploadAdImage(adsToken, adAccountId, file, creative.fileName) }
-                : { metaVideoId: await uploadAdVideo(adsToken, adAccountId, file, creative.fileName, creative.mimeType) };
-            creative = await prisma.adCreative.update({ where: { id: creative.id }, data: { ...data, uploadedAt: new Date(), lastError: null } });
-          } catch (error) {
-            await setCreativeStatus(creative.id, "FAILED", error instanceof Error ? error.message : "Falha no envio.");
-            throw error;
+        const adName = `AD${String(adIndex + 1).padStart(2, "0")}`;
+        const parts = [group.feed, group.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
+        for (const original of parts) {
+          let creative = creatives.find((c) => c.id === original.id)!;
+          if (!creative.metaImageHash && !creative.metaVideoId) {
+            if (creative.status !== "UPLOADING") await setCreativeStatus(creative.id, "UPLOADING");
+            try {
+              const file = Buffer.from(await (await downloadDriveFile(creative.driveFileId)).arrayBuffer());
+              const data =
+                creative.kind === "IMAGE"
+                  ? { metaImageHash: await uploadAdImage(adsToken, adAccountId, file, creative.fileName) }
+                  : { metaVideoId: await uploadAdVideo(adsToken, adAccountId, file, creative.fileName, creative.mimeType) };
+              creative = await prisma.adCreative.update({ where: { id: creative.id }, data: { ...data, uploadedAt: new Date(), lastError: null } });
+              creatives.splice(creatives.findIndex((c) => c.id === creative.id), 1, creative);
+            } catch (error) {
+              await setCreativeStatus(creative.id, "FAILED", error instanceof Error ? error.message : "Falha no envio.");
+              throw error;
+            }
           }
         }
+        const feed = group.feed ? creatives.find((c) => c.id === group.feed!.id)! : null;
+        const stories = group.stories ? creatives.find((c) => c.id === group.stories!.id)! : null;
+        const main = feed ?? stories!;
+        const texts = [feed, stories].find((c) => c?.primaryText && c?.headline) ?? main;
         let thumb: string | null = null;
-        if (creative.metaVideoId) {
-          thumb = await videoReadyThumbnail(adsToken, creative.metaVideoId);
-          if (!thumb) return { done: false, message: `Vídeo "${creative.name}" ainda processando na Meta…` };
+        if (main.metaVideoId) {
+          thumb = await videoReadyThumbnail(adsToken, main.metaVideoId);
+          if (!thumb) return { done: false, message: `Vídeo "${main.name}" ainda processando na Meta…` };
         }
         if (!adState.creativeId) {
           adState.creativeId = await createAdCreative(adsToken, adAccountId, {
-            name: `${setName} | ${creative.name}`.slice(0, 200),
+            name: `${setName} | ${adName}`.slice(0, 200),
             pageId,
             instagramUserId: progress.instagramUserId,
             formId: plan.conversion === "FORM" ? state.formId : null,
             linkUrl: plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl,
-            message: creative.primaryText!,
-            headline: creative.headline!,
-            description: creative.description,
-            callToAction: creative.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
-            imageHash: creative.metaImageHash,
-            videoId: creative.metaVideoId,
+            message: texts.primaryText!,
+            headline: texts.headline!,
+            description: texts.description,
+            callToAction: texts.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
+            imageHash: main.metaImageHash,
+            storiesImageHash: feed && stories ? stories.metaImageHash : null,
+            videoId: main.metaVideoId,
             videoThumbUrl: thumb,
           });
           await save();
         }
-        adState.adId = await createAd(adsToken, adAccountId, `${setName} | ${creative.name}`.slice(0, 200), state.adSetId, adState.creativeId);
-        await prisma.adCreative.update({ where: { id: creative.id }, data: { metaCreativeId: adState.creativeId, metaAdId: adState.adId } });
-        if (creative.status === "DRAFT" || creative.status === "UPLOADING" || creative.status === "FAILED") await setCreativeStatus(creative.id, "PAUSED");
-        progress.log.push(`Anúncio ${setName} | ${creative.name} criado.`);
+        adState.adId = await createAd(adsToken, adAccountId, adName, state.adSetId, adState.creativeId);
+        // Padrão de nome no Drive e na biblioteca: "03-01-AD01-F" (campanha-conjunto-anúncio-posicionamento).
+        const campaignNo = Number(plan.name.match(/^\[[A-Z]+(\d+)\]/)?.[1] ?? "1");
+        for (const [role, c] of [["F", feed], ["S", stories]] as const) {
+          if (!c) continue;
+          const newName = standardCreativeName(campaignNo, index + 1, adIndex + 1, c.kind === "VIDEO" ? null : role);
+          const ext = c.fileName.match(/\.[a-z0-9]{2,4}$/i)?.[0] ?? "";
+          await renameDriveFile(c.driveFileId, `${newName}${ext}`).catch((renameError) => console.error("ad_creative_rename_failed", c.id, renameError));
+          await prisma.adCreative.update({ where: { id: c.id }, data: { name: newName, fileName: `${newName}${ext}`, metaCreativeId: adState.creativeId, metaAdId: adState.adId } });
+          if (c.status === "DRAFT" || c.status === "UPLOADING" || c.status === "FAILED") await setCreativeStatus(c.id, "PAUSED");
+        }
+        progress.log.push(`Anúncio ${setName} | ${adName} criado${feed && stories ? " (Feed + Stories)" : ""}.`);
         await save();
       }
     }

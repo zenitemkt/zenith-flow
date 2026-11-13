@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS, zeniteFormTemplate } from "@/lib/traffic-niches";
 import { adSetName } from "@/lib/traffic-naming";
+import { creativeRole, groupCreativesIntoAds } from "@/lib/creative-pairing";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
@@ -12,6 +13,8 @@ interface CreativeOption {
   name: string;
   fileName: string;
   kind: "IMAGE" | "VIDEO";
+  width?: number | null;
+  height?: number | null;
   status: string;
   primaryText: string | null;
   headline: string | null;
@@ -259,7 +262,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={`/api/ad-creatives/${c.id}/thumbnail`} alt="" className="h-12 w-12 rounded object-cover" />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate font-medium text-[#101828]">{c.name}</span>
+                            <span className="block truncate font-medium text-[#101828]">{c.name}{c.kind === "IMAGE" ? ` · ${creativeRole(c) === "S" ? "Stories" : "Feed"}` : ""}</span>
                             <button type="button" onClick={() => setEditingCreative(c)} className={`text-xs font-semibold ${isReady(c) ? "text-[#027A48]" : "text-[#B54708]"}`}>
                               {isReady(c) ? "Textos ok · editar" : "Preencher textos"}
                             </button>
@@ -268,6 +271,18 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                         </div>
                       ))}
                     </div>
+                  )}
+                  {selected.length > 0 && (
+                    <ul className="mt-3 space-y-1 rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#344054]">
+                      <li className="font-semibold">Como os anúncios vão subir:</li>
+                      {groupCreativesIntoAds(selected).map((g, i) => (
+                        <li key={g.key}>
+                          <strong>AD{String(i + 1).padStart(2, "0")}</strong>:{" "}
+                          {g.feed && g.stories ? `Feed "${g.feed.name}" + Stories "${g.stories.name}" (cada um no seu posicionamento)` : g.feed?.kind === "VIDEO" ? `vídeo "${g.feed.name}"` : `"${(g.feed ?? g.stories)!.name}" em todos os posicionamentos`}
+                        </li>
+                      ))}
+                      <li className="text-[#667085]">Par Feed/Stories reconhecido pelo fim do nome (-F/-S, -FD/-ST) ou pela proporção. Ao subir, os arquivos são renomeados para o padrão 01-01-AD01-F.</li>
+                    </ul>
                   )}
                   {others.length > 0 && (
                     <details className="mt-3">

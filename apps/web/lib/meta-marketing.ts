@@ -233,6 +233,8 @@ export interface AdCreativeSpec {
   description?: string | null;
   callToAction: string;
   imageHash?: string | null;
+  /** Versão vertical: com ela, o anúncio usa a imagem de Stories em Stories/Status/Reels e a de Feed no resto. */
+  storiesImageHash?: string | null;
   videoId?: string | null;
   videoThumbUrl?: string | null;
 }
@@ -241,6 +243,38 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
   const cta = spec.formId ? { type: spec.callToAction || "SIGN_UP", value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || "LEARN_MORE", value: { link: spec.linkUrl } };
   const story: Record<string, unknown> = { page_id: spec.pageId };
   if (spec.instagramUserId) story.instagram_user_id = spec.instagramUserId;
+  if (spec.imageHash && spec.storiesImageHash && !spec.videoId) {
+    const feedRule = {
+      publisher_platforms: ["facebook", "instagram", "audience_network", "messenger"],
+      facebook_positions: ["feed", "marketplace", "video_feeds", "search", "instream_video"],
+      instagram_positions: ["stream", "explore", "explore_home", "profile_feed", "ig_search"],
+      audience_network_positions: ["classic"],
+      messenger_positions: ["messenger_home"],
+    };
+    const storyRule = {
+      publisher_platforms: ["facebook", "instagram", "messenger"],
+      facebook_positions: ["story", "facebook_reels"],
+      instagram_positions: ["story", "reels"],
+      messenger_positions: ["story"],
+    };
+    const assetFeed: Record<string, unknown> = {
+      images: [{ hash: spec.imageHash, adlabels: [{ name: "feed" }] }, { hash: spec.storiesImageHash, adlabels: [{ name: "stories" }] }],
+      bodies: [{ text: spec.message }],
+      titles: [{ text: spec.headline }],
+      ...(spec.description ? { descriptions: [{ text: spec.description }] } : {}),
+      link_urls: [{ website_url: spec.linkUrl }],
+      call_to_action_types: [cta.type],
+      ...(spec.formId ? { call_to_actions: [cta] } : {}),
+      ad_formats: ["SINGLE_IMAGE"],
+      optimization_type: "PLACEMENT",
+      asset_customization_rules: [
+        { customization_spec: storyRule, image_label: { name: "stories" }, priority: 1 },
+        { customization_spec: feedRule, image_label: { name: "feed" }, priority: 2 },
+      ],
+    };
+    const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, { name: spec.name, object_story_spec: story, asset_feed_spec: assetFeed }, `criar criativo "${spec.name}"`);
+    return data.id;
+  }
   if (spec.videoId) {
     story.video_data = { video_id: spec.videoId, image_url: spec.videoThumbUrl ?? undefined, message: spec.message, title: spec.headline, link_description: spec.description ?? undefined, call_to_action: cta };
   } else {

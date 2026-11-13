@@ -133,6 +133,10 @@ export function createDriveFolder(name: string, parentId: string) {
   return drive<DriveFile>(`/files?supportsAllDrives=true&fields=${encodeURIComponent(FILE_FIELDS)}`, { method: "POST", body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parentId] }) });
 }
 
+export function renameDriveFile(fileId: string, name: string) {
+  return drive<DriveFile>(`/files/${fileId}?supportsAllDrives=true&fields=id,name`, { method: "PATCH", body: JSON.stringify({ name }) });
+}
+
 export function moveDriveFile(fileId: string, fromFolderId: string, toFolderId: string) {
   const query = new URLSearchParams({ addParents: toFolderId, removeParents: fromFolderId, supportsAllDrives: "true", fields: "id,parents" });
   return drive<DriveFile>(`/files/${fileId}?${query.toString()}`, { method: "PATCH", body: "{}" });
