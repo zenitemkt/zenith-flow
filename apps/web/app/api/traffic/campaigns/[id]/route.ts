@@ -2,6 +2,23 @@ import { NextResponse } from "next/server";
 import { prisma, Prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { parsePlan } from "@/lib/traffic-campaigns";
+import { decryptSecret } from "@/lib/crypto-secrets";
+import { MetaWriteError, metaGet } from "@/lib/meta-marketing";
+
+/** A campanha ainda existe na Meta? (apagada ou não encontrada = false; sem como checar = true). */
+async function stillOnMeta(agencyId: string, metaCampaignId: string): Promise<boolean> {
+  const ads = await prisma.adAccountConnection.findUnique({ where: { agencyId_platform: { agencyId, platform: "META" } }, select: { accessTokenEnc: true, status: true } });
+  if (!ads || ads.status !== "ACTIVE") return true;
+  try {
+    const data = await metaGet<{ effective_status?: string; status?: string }>(`/${metaCampaignId}`, decryptSecret(ads.accessTokenEnc), { fields: "effective_status,status" });
+    return !["DELETED", "ARCHIVED"].includes(data.effective_status ?? data.status ?? "");
+  } catch (error) {
+    // A Meta responde erro (objeto inexistente) quando a campanha foi apagada.
+    if (error instanceof MetaWriteError && error.code === 100) return false;
+    const message = error instanceof Error ? error.message : "";
+    return !/does not exist|cannot be loaded|nonexisting|n[aã]o existe|Unsupported get request|deleted/i.test(message);
+  }
+}
 
 /** Andamento do envio (a tela consulta enquanto sobe). */
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
@@ -32,7 +49,10 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   if (!session || !membership) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const row = await prisma.trafficCampaign.findFirst({ where: { id: params.id, agencyId: membership.agencyId } });
   if (!row) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
-  if (row.metaCampaignId) return NextResponse.json({ error: "Essa campanha já tem partes na Meta. Pause ou apague pelo Gerenciador de Anúncios." }, { status: 409 });
+  // Só some daqui depois de apagada na Meta (o Gerenciador é quem apaga de verdade).
+  if (row.metaCampaignId && (await stillOnMeta(membership.agencyId, row.metaCampaignId))) {
+    return NextResponse.json({ error: "Essa campanha ainda existe na Meta. Apague pelo Gerenciador de Anúncios e tente de novo." }, { status: 409 });
+  }
   await prisma.trafficCampaign.delete({ where: { id: row.id } });
   return NextResponse.json({ ok: true });
 }
