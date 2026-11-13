@@ -46,6 +46,7 @@ const STATUS: Record<Status, { label: string; cls: string }> = {
 const ORDER: Status[] = ["DRAFT", "UPLOADING", "IN_REVIEW", "ACTIVE", "PAUSED", "REJECTED", "FAILED"];
 const CTAS: [string, string][] = [
   ["", "Sem botão"],
+  ["GET_DETAILS", "Ver detalhes"],
   ["LEARN_MORE", "Saiba mais"],
   ["WHATSAPP_MESSAGE", "Enviar mensagem no WhatsApp"],
   ["SEND_MESSAGE", "Enviar mensagem"],

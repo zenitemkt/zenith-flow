@@ -246,24 +246,31 @@ export interface AdCreativeSpec {
   advantageCreative: boolean;
 }
 
-/** Melhorias do Advantage+ de criativo (todas ligadas quando o anúncio pede). */
+/** Botão padrão: "Ver detalhes" (GET_DETAILS na API). */
+export const DEFAULT_CTA = "GET_DETAILS";
+
+/**
+ * Melhorias do Advantage+ de criativo, todas ligadas (nomes da referência AdCreativeFeaturesSpec, v27).
+ * O pacote "standard_enhancements" foi descontinuado na v22: mandar ele derrubava o pedido inteiro.
+ * As que não valem para o formato a Meta descarta sozinha; as que ela recusar saem uma a uma.
+ */
 const CREATIVE_FEATURES = [
-  "standard_enhancements",
   "image_touchups",
-  "image_uncrop",
-  "image_animation",
-  "image_brightness_and_contrast",
-  "text_optimizations",
-  "enhance_cta",
-  "inline_comment",
   "adapt_to_placement",
   "add_text_overlay",
-  "music",
-  "product_extensions",
+  "image_animation",
+  "image_templates",
+  "text_optimizations",
+  "inline_comment",
+  "description_automation",
+  "reveal_details_over_time",
+  "generate_cta",
+  "show_summary",
+  "image_background_gen",
 ];
 
 export async function createAdCreative(token: string, adAccountId: string, spec: AdCreativeSpec): Promise<string> {
-  const cta = spec.formId ? { type: spec.callToAction || "SIGN_UP", value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || "LEARN_MORE", value: { link: spec.linkUrl } };
+  const cta = spec.formId ? { type: spec.callToAction || DEFAULT_CTA, value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || DEFAULT_CTA, value: { link: spec.linkUrl } };
   const story: Record<string, unknown> = { page_id: spec.pageId };
   if (spec.instagramUserId) story.instagram_user_id = spec.instagramUserId;
   const messages = spec.messages.map((t) => t.trim()).filter(Boolean).slice(0, 5);
@@ -337,23 +344,23 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
 }
 
 async function postCreative(token: string, adAccountId: string, spec: AdCreativeSpec, params: Record<string, string | object>): Promise<string> {
-  if (spec.advantageCreative) {
-    params.degrees_of_freedom_spec = { creative_features_spec: Object.fromEntries(CREATIVE_FEATURES.map((f) => [f, { enroll_status: "OPT_IN" }])) };
-  }
-  try {
-    return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
-  } catch (error) {
-    // Alguma melhoria pode não valer para esse formato/conta: tenta de novo só com as que a Meta sempre aceita.
-    if (!spec.advantageCreative) throw error;
-    console.warn("adcreative_features_retry", error instanceof Error ? error.message : error);
-    params.degrees_of_freedom_spec = { creative_features_spec: { standard_enhancements: { enroll_status: "OPT_IN" } } };
+  const post = () => metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`).then((r) => r.id);
+  if (!spec.advantageCreative) return post();
+  let features = [...CREATIVE_FEATURES];
+  for (let attempt = 0; attempt < 8 && features.length; attempt++) {
+    params.degrees_of_freedom_spec = { creative_features_spec: Object.fromEntries(features.map((f) => [f, { enroll_status: "OPT_IN" }])) };
     try {
-      return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
-    } catch {
-      delete params.degrees_of_freedom_spec;
-      return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
+      return await post();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn("adcreative_features_retry", features.join(","), message);
+      // Tira a melhoria citada no erro; sem citação, tira as menos comuns primeiro (do fim da lista).
+      const named = features.filter((f) => message.includes(f));
+      features = named.length ? features.filter((f) => !named.includes(f)) : features.slice(0, -2);
     }
   }
+  delete params.degrees_of_freedom_spec;
+  return post();
 }
 
 /** Anúncio pausado, com rastreamento dos eventos do site (pixel) e offline (conjunto de dados). */

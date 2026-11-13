@@ -9,6 +9,7 @@ import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
 import { OBJECTIVE_CODES, nextCampaignNumber, withCampaignCode } from "@/lib/campaign-naming";
 import {
+  DEFAULT_CTA,
   createAd,
   createAdCreative,
   createAdSet,
@@ -386,7 +387,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
             descriptions,
             urlTags: plan.urlTags || null,
             advantageCreative: plan.advantageCreative,
-            callToAction: texts.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
+            callToAction: texts.callToAction || DEFAULT_CTA,
             imageHash: main.metaImageHash,
             storiesImageHash: feed && stories ? stories.metaImageHash : null,
             videoId: main.metaVideoId,
