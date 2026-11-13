@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
@@ -136,7 +137,7 @@ export function InstagramRulesClient({
   }
 
   async function deleteRule(rule: Rule) {
-    if (!confirm(`Apagar a regra "${rule.keyword || "pega-tudo"}" (${TRIGGER_LABELS[rule.triggerType]})?`)) return;
+    if (!await confirmDialog(`Apagar a regra "${rule.keyword || "pega-tudo"}" (${TRIGGER_LABELS[rule.triggerType]})?`, { danger: true })) return;
     const response = await fetch(`/api/instagram-rules/${rule.id}`, { method: "DELETE" });
     if (response.ok) setRules((prev) => prev.filter((r) => r.id !== rule.id));
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
@@ -165,7 +166,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
 
   /** Apaga o rascunho (os criativos enviados continuam na biblioteca e no Drive) e começa do zero. */
   async function discard() {
-    if (!window.confirm("Descartar este rascunho? Os criativos enviados continuam na biblioteca.")) return;
+    if (!await confirmDialog("Descartar este rascunho? Os criativos enviados continuam na biblioteca.", { danger: true })) return;
     if (campaignId) {
       const res = await fetch(`/api/traffic/campaigns/${campaignId}`, { method: "DELETE" });
       if (!res.ok) {
@@ -180,7 +181,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   async function submit() {
     const id = await save();
     if (!id) return;
-    if (!window.confirm(`Subir "${plan.name}" para a Meta? Tudo vai pausado: ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`)) return;
+    if (!await confirmDialog(`Subir "${plan.name}" para a Meta? Tudo vai pausado: ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`, { title: "Subir para a Meta", confirmLabel: "Subir campanha" })) return;
     setSubmitting(true);
     setSubmitError(null);
     setSubmitLog([]);

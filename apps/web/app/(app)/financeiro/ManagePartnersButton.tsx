@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Users } from "lucide-react";
@@ -54,7 +55,7 @@ export function ManagePartnersButton({
     const question = userId
       ? `Ligar ${partner.name} ao login ${login?.label ?? ""}? Os lançamentos particulares de ${partner.name} passam a aparecer só para esse login.`
       : `Desligar o login de ${partner.name}? Os lançamentos particulares dele voltam a aparecer para toda a equipe.`;
-    if (!window.confirm(question)) return;
+    if (!await confirmDialog(question)) return;
     await call(`/api/finance/partners/${partner.id}`, "PATCH", { userId: userId || null });
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Instagram } from "lucide-react";
@@ -96,7 +97,7 @@ export function DisconnectSocialButton({ connectionId, label }: { connectionId: 
   const [loading, setLoading] = useState(false);
 
   async function disconnect() {
-    if (!window.confirm(`Desconectar ${label}? Agendamentos pendentes nesta conta serão cancelados.`)) return;
+    if (!await confirmDialog(`Desconectar ${label}? Agendamentos pendentes nesta conta serão cancelados.`, { danger: true })) return;
     setLoading(true);
     await fetch(`/api/social/connections/${connectionId}`, { method: "DELETE" });
     setLoading(false);

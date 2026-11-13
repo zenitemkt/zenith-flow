@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -244,7 +245,7 @@ export function GoalActions({
   }
 
   async function remove() {
-    if (!window.confirm("Excluir esta meta? O histórico dela deixa de aparecer.")) return;
+    if (!await confirmDialog("Excluir esta meta? O histórico dela deixa de aparecer.", { danger: true })) return;
     setLoading(true);
     const res = await fetch(`/api/commercial-goals/${goalId}`, { method: "DELETE" });
     setLoading(false);

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -182,7 +183,7 @@ export function QuickPostForm({
     const question = now
       ? `Publicar agora no ${networks} de ${client.name}? Vai ao ar imediatamente.`
       : `Agendar para ${date.split("-").reverse().join("/")} — ${platforms.map((p) => `${LABEL[p]} às ${timeOf(p)}`).join(" e ")} (${client.name})?`;
-    if (!window.confirm(question)) return;
+    if (!await confirmDialog(question)) return;
 
     setBusy(now ? "now" : "schedule");
     const payload = {

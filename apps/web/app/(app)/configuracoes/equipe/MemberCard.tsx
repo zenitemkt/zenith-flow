@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
@@ -89,7 +90,7 @@ export function MemberCard({
 
   async function remove() {
     const isPendingInvite = member.status === "INVITED" || member.status === "EXPIRED";
-    const confirmed = window.confirm(
+    const confirmed = await confirmDialog(
       isPendingInvite
         ? "Cancelar este convite? Não será possível desfazer."
         : "Excluir este cadastro? A pessoa perde o acesso ao sistema e isso não pode ser desfeito.",

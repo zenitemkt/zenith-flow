@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -107,8 +108,8 @@ export function SocialPublishPanel({
       return;
     }
     const when = platforms.map((p) => `${LABEL[p]} às ${timeOf(p)}`).join(" e ");
-    if (!now && !window.confirm(`Agendar para ${date.split("-").reverse().join("/")} — ${when}?`)) return;
-    if (now && !window.confirm("Publicar agora nas redes marcadas? Isso vai ao ar imediatamente.")) return;
+    if (!now && !await confirmDialog(`Agendar para ${date.split("-").reverse().join("/")} — ${when}?`)) return;
+    if (now && !await confirmDialog("Publicar agora nas redes marcadas? Isso vai ao ar imediatamente.")) return;
     setBusy(now ? "now" : "schedule");
     // publishAt = o mais cedo (padrão); cada rede segue o próprio horário em publishAtByPlatform.
     const earliest = Math.min(...Object.values(instants).map((d) => d.getTime()));
@@ -141,7 +142,7 @@ export function SocialPublishPanel({
 
   async function act(postId: string, action: "cancel" | "retry") {
     if (busy) return;
-    if (action === "cancel" && !window.confirm("Cancelar este agendamento?")) return;
+    if (action === "cancel" && !await confirmDialog("Cancelar este agendamento?", { danger: true })) return;
     setBusy(postId);
     const res = await fetch(`/api/social-posts/${postId}`, {
       method: "PATCH",

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
@@ -80,7 +81,7 @@ export function PayoutButton({
   }
 
   async function remove(payment: PayoutPayment) {
-    if (busy || !window.confirm(`Remover o pagamento de ${formatCents(payment.amountCents)}?`)) return;
+    if (busy || !await confirmDialog(`Remover o pagamento de ${formatCents(payment.amountCents)}?`, { danger: true })) return;
     setBusy(true);
     setError(null);
     const response = await fetch(`/api/finance/payouts/${payment.id}`, { method: "DELETE" });

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog, alertDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,11 +33,11 @@ export function CampaignsList({ campaigns, adAccountId }: { campaigns: Row[]; ad
   const [busy, setBusy] = useState<string | null>(null);
 
   async function remove(id: string) {
-    if (!window.confirm("Apagar este rascunho?")) return;
+    if (!await confirmDialog("Apagar este rascunho?", { danger: true })) return;
     setBusy(id);
     const response = await fetch(`/api/traffic/campaigns/${id}`, { method: "DELETE" });
     setBusy(null);
-    if (!response.ok) window.alert((await response.json().catch(() => null))?.error ?? "Não consegui apagar.");
+    if (!response.ok) void alertDialog((await response.json().catch(() => null))?.error ?? "Não consegui apagar.");
     router.refresh();
   }
 

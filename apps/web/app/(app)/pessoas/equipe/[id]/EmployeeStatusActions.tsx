@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EmployeeStatus } from "@zenite-mkt/db";
@@ -18,7 +19,7 @@ export function EmployeeStatusActions({
 
   async function move(toStatus: EmployeeStatus) {
     if (toStatus === "DESLIGADO") {
-      const confirmed = window.confirm(
+      const confirmed = await confirmDialog(
         "Desligar esta pessoa revoga o acesso dela ao sistema agora mesmo. Confirmar?",
       );
       if (!confirmed) return;

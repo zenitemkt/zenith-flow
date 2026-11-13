@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmDialog } from "@/lib/dialogs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SurveyStatus } from "@zenite-mkt/db";
@@ -24,7 +25,7 @@ export function CampaignActions({
     if (key === "send") {
       const n = pendingCount;
       const who = `${n} destinatário${n === 1 ? "" : "s"} pendente${n === 1 ? "" : "s"}`;
-      const confirmed = window.confirm(
+      const confirmed = await confirmDialog(
         emailConfigured
           ? `Isso vai mandar e-mail de verdade pra ${who}. Confirma?`
           : `Isso vai marcar ${who} como enviado (sem e-mail real — Resend não configurado). Confirma?`,
