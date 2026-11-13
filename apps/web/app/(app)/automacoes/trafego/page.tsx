@@ -4,7 +4,7 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { driveServiceAccountEmail } from "@/lib/google-drive";
 import { creativeWarnings } from "@/lib/ad-creatives";
-import { DEFAULT_CITIES, emptyPlan, parsePlan } from "@/lib/traffic-campaigns";
+import { DEFAULT_CITIES, emptyPlan, parsePlan, planDailyTotal } from "@/lib/traffic-campaigns";
 import { CreativeLibrary } from "./CreativeLibrary";
 import { CampaignWizard } from "./CampaignWizard";
 import { TrafficSettingsForm } from "./TrafficSettingsForm";
@@ -109,7 +109,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
               submittedAt: c.submittedAt?.toISOString() ?? null,
               adsets: plan.adsets.length,
               ads: plan.adsets.reduce((n, a) => n + a.creativeIds.length, 0),
-              dailyBudget: plan.adsets.reduce((n, a) => n + a.dailyBudget, 0),
+              dailyBudget: planDailyTotal(plan),
             };
           })}
         />

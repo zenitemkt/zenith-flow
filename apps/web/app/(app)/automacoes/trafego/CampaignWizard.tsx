@@ -7,6 +7,7 @@ import { NICHE_PRESETS, zeniteFormTemplate } from "@/lib/traffic-niches";
 import { adSetName } from "@/lib/traffic-naming";
 import { creativeRole, groupCreativesIntoAds } from "@/lib/creative-pairing";
 import { DEFAULT_URL_TAGS, splitLines, splitPrimaryTexts } from "@/lib/copy-split";
+import { adCopyKey, copyForAd, emptyCopy, planDailyTotal, type PlanCopy } from "@/lib/traffic-copy";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
@@ -79,7 +80,13 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [pasteTexts, setPasteTexts] = useState("");
   const [pasteHeadlines, setPasteHeadlines] = useState("");
   const [pasteDescriptions, setPasteDescriptions] = useState("");
-  const setCopy = (patch: Partial<TrafficPlan["copy"]>) => setPlan((p) => ({ ...p, copy: { ...p.copy, ...patch } }));
+  const [copyTab, setCopyTab] = useState(0);
+  const groupCount = plan.splitCopy ? plan.copyGroups.length + 1 : 1;
+  const tab = Math.min(copyTab, groupCount - 1);
+  const activeCopy: PlanCopy = tab === 0 ? plan.copy : plan.copyGroups[tab - 1] ?? emptyCopy();
+  const setCopy = (patch: Partial<PlanCopy>) =>
+    setPlan((p) => (tab === 0 ? { ...p, copy: { ...p.copy, ...patch } } : { ...p, copyGroups: p.copyGroups.map((g, i) => (i === tab - 1 ? { ...g, ...patch } : g)) }));
+  const hasCopy = (c: PlanCopy) => c.primaryTexts.length > 0 && c.headlines.length > 0;
   useEffect(() => {
     fetch("/api/traffic/next-code?objective=OUTCOME_LEADS")
       .then((res) => res.json())
@@ -96,12 +103,13 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     if (!rows.length) return;
     setCreatives((list) => [...rows.filter((row) => !list.some((c) => c.id === row.id)), ...list]);
     setPlan((p) => ({ ...p, adsets: p.adsets.map((a) => (a.key === adsetKey ? { ...a, creativeIds: Array.from(new Set([...a.creativeIds, ...rows.map((row) => row.id)])) } : a)) }));
+    // Só pede os textos no criativo quando a campanha não tem textos próprios.
     const missing = rows.find((row) => !isReady(row));
-    if (missing) setEditingCreative(missing);
+    if (missing && !hasCopy(plan.copy)) setEditingCreative(missing);
   }
 
   const update = (key: string, fn: (a: PlanAdSet) => PlanAdSet) => setPlan((p) => ({ ...p, adsets: p.adsets.map((a) => (a.key === key ? fn(a) : a)) }));
-  const total = plan.adsets.reduce((n, a) => n + (Number(a.dailyBudget) || 0), 0);
+  const total = planDailyTotal(plan);
 
   async function save(): Promise<string | null> {
     setSaving(true);
@@ -205,7 +213,25 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                   </button>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-[#667085]">A verba fica em cada conjunto, para cada um ter o próprio controle.</p>
+            </div>
+            <div>
+              <p className="mb-1 text-sm font-medium text-[#344054]">Orçamento</p>
+              <div className="flex flex-wrap gap-2">
+                {([["CAMPAIGN", "Orçamento da campanha (Advantage+)"], ["ADSET", "Orçamento por conjunto"]] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setPlan((p) => ({ ...p, budgetMode: value }))} className={`rounded-lg px-3 py-2 text-sm font-medium ${plan.budgetMode === value ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {plan.budgetMode === "CAMPAIGN" ? (
+                <label className={`${LABEL} mt-2 max-w-xs`}>
+                  Verba diária da campanha (R$)
+                  <input type="number" value={plan.campaignDailyBudget} onChange={(e) => setPlan((p) => ({ ...p, campaignDailyBudget: Number(e.target.value) }))} className={INPUT} />
+                  <span className="text-xs font-normal text-[#667085]">A Meta distribui a verba entre os conjuntos e anúncios com mais chance de resultado.</span>
+                </label>
+              ) : (
+                <p className="mt-1 text-xs text-[#667085]">A verba fica em cada conjunto (etapa 2), para cada um ter o próprio controle.</p>
+              )}
             </div>
             {budgetCap === null && <p className="rounded-lg bg-[#FFFAEB] px-3 py-2 text-sm text-[#B54708]">O teto de verba ainda não foi definido em Configurações. Dá para montar o rascunho, mas só sobe depois de definir.</p>}
           </div>
@@ -224,10 +250,10 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             </div>
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Nenhum conjunto ainda.</p>}
             {plan.adsets.map((a, index) => (
-              <AdSetCard key={a.key} adset={a} index={index} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
+              <AdSetCard key={a.key} adset={a} index={index} budgetPerAdSet={plan.budgetMode === "ADSET"} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
             ))}
             <p className={`text-sm font-medium ${budgetCap !== null && total > budgetCap ? "text-[#B42318]" : "text-[#344054]"}`}>
-              Total: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês){budgetCap !== null ? ` · teto R$ ${budgetCap.toFixed(2)}/dia` : ""}
+              {plan.budgetMode === "CAMPAIGN" ? "Orçamento da campanha" : "Total"}: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês){budgetCap !== null ? ` · teto R$ ${budgetCap.toFixed(2)}/dia` : ""}
             </p>
           </div>
         )}
@@ -250,14 +276,61 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         {step === 3 && (
           <div className="flex flex-col gap-4">
             <div className="rounded-xl border border-[#EEF0F3] p-4">
-              <p className="text-sm font-semibold text-[#101828]">Textos de todos os anúncios</p>
-              <p className="mb-3 text-xs text-[#667085]">Cole tudo de uma vez: até 5 de cada. Separe os textos principais com uma linha &quot;---&quot;, com numeração (1., 2., 3.) ou com duas linhas em branco. Títulos e descrições: um por linha. Vazio = usa os textos de cada criativo.</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-[#101828]">{plan.splitCopy ? "Grupos de textos" : "Textos de todos os anúncios"}</p>
+                <label className="flex items-center gap-2 text-xs text-[#344054]">
+                  <input
+                    type="checkbox"
+                    checked={plan.splitCopy}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setPlan((p) => ({ ...p, splitCopy: on, copyGroups: on && !p.copyGroups.length ? [emptyCopy()] : p.copyGroups }));
+                      setCopyTab(0);
+                    }}
+                    className="accent-[#FF2B00]"
+                  />
+                  Separar os anúncios em grupos de textos
+                </label>
+              </div>
+              <p className="mb-3 text-xs text-[#667085]">Cole tudo de uma vez: até 5 de cada. Os textos principais podem vir separados por rótulos (LEGENDA 1, Texto 2...), por uma linha &quot;---&quot;, por numeração (1., 2.) ou por duas linhas em branco; os rótulos saem sozinhos. Títulos e descrições: um por linha.{plan.splitCopy ? " Cada anúncio escolhe o grupo logo abaixo, no conjunto." : " Valem para todos os anúncios."}</p>
+              {plan.splitCopy && (
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  {Array.from({ length: groupCount }, (_, i) => (
+                    <button key={i} type="button" onClick={() => setCopyTab(i)} className={`rounded-full px-3 py-1 text-xs font-semibold ${tab === i ? "bg-[#FF2B00] text-white" : "bg-white text-[#475467] ring-1 ring-[#E4E7EC]"}`}>
+                      Grupo {i + 1}
+                    </button>
+                  ))}
+                  {groupCount < 10 && (
+                    <button type="button" onClick={() => { setPlan((p) => ({ ...p, copyGroups: [...p.copyGroups, emptyCopy()] })); setCopyTab(groupCount); }} className="rounded-full px-3 py-1 text-xs font-semibold text-[#FF2B00] ring-1 ring-[#FF2B00]">
+                      + Grupo
+                    </button>
+                  )}
+                  {tab > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const removed = tab;
+                        setPlan((p) => {
+                          const copyByAd: Record<string, number> = {};
+                          for (const [k, n] of Object.entries(p.copyByAd)) copyByAd[k] = n === removed ? 0 : n > removed ? n - 1 : n;
+                          const copyGroups = p.copyGroups.filter((_, i) => i !== removed - 1);
+                          return { ...p, copyGroups, copyByAd, splitCopy: copyGroups.length > 0 };
+                        });
+                        setCopyTab(0);
+                      }}
+                      className="text-xs font-semibold text-[#B42318]"
+                    >
+                      Remover grupo {tab + 1}
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="grid gap-4 lg:grid-cols-3">
                 {(
                   [
-                    { label: "Textos principais", raw: pasteTexts, setRaw: setPasteTexts, items: plan.copy.primaryTexts, field: "primaryTexts", split: splitPrimaryTexts, rows: 8 },
-                    { label: "Títulos", raw: pasteHeadlines, setRaw: setPasteHeadlines, items: plan.copy.headlines, field: "headlines", split: splitLines, rows: 5 },
-                    { label: "Descrições (opcional)", raw: pasteDescriptions, setRaw: setPasteDescriptions, items: plan.copy.descriptions, field: "descriptions", split: splitLines, rows: 5 },
+                    { label: "Textos principais", raw: pasteTexts, setRaw: setPasteTexts, items: activeCopy.primaryTexts, field: "primaryTexts", split: splitPrimaryTexts, rows: 8 },
+                    { label: "Títulos", raw: pasteHeadlines, setRaw: setPasteHeadlines, items: activeCopy.headlines, field: "headlines", split: splitLines, rows: 5 },
+                    { label: "Descrições (opcional)", raw: pasteDescriptions, setRaw: setPasteDescriptions, items: activeCopy.descriptions, field: "descriptions", split: splitLines, rows: 5 },
                   ] as const
                 ).map((box) => (
                   <div key={box.field} className="flex flex-col gap-2">
@@ -337,9 +410,13 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                           <img src={`/api/ad-creatives/${c.id}/thumbnail`} alt="" className="h-12 w-12 rounded object-cover" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-[#101828]">{c.name}{c.kind === "IMAGE" ? ` · ${creativeRole(c) === "S" ? "Stories" : "Feed"}` : ""}</span>
-                            <button type="button" onClick={() => setEditingCreative(c)} className={`text-xs font-semibold ${isReady(c) ? "text-[#027A48]" : "text-[#B54708]"}`}>
-                              {isReady(c) ? "Textos ok · editar" : "Preencher textos"}
-                            </button>
+                            {hasCopy(copyForAd(plan, a.key, c.id)) ? (
+                              <span className="text-xs font-semibold text-[#027A48]">Usa os textos da campanha</span>
+                            ) : (
+                              <button type="button" onClick={() => setEditingCreative(c)} className={`text-xs font-semibold ${isReady(c) ? "text-[#027A48]" : "text-[#B54708]"}`}>
+                                {isReady(c) ? "Textos ok · editar" : "Preencher textos"}
+                              </button>
+                            )}
                           </span>
                           <button type="button" onClick={() => toggle(c.id)} aria-label="Tirar do conjunto" className="text-[#B42318]">×</button>
                         </div>
@@ -350,9 +427,26 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                     <ul className="mt-3 space-y-1 rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#344054]">
                       <li className="font-semibold">Como os anúncios vão subir:</li>
                       {groupCreativesIntoAds(selected).map((g, i) => (
-                        <li key={g.key}>
-                          <strong>AD{String(i + 1).padStart(2, "0")}</strong>:{" "}
-                          {g.feed && g.stories ? `Feed "${g.feed.name}" + Stories "${g.stories.name}" (cada um no seu posicionamento)` : g.feed?.kind === "VIDEO" ? `vídeo "${g.feed.name}"` : `"${(g.feed ?? g.stories)!.name}" em todos os posicionamentos`}
+                        <li key={g.key} className="flex flex-wrap items-center gap-2">
+                          <span>
+                            <strong>AD{String(i + 1).padStart(2, "0")}</strong>:{" "}
+                            {g.feed && g.stories ? `Feed "${g.feed.name}" + Stories "${g.stories.name}" (cada um no seu posicionamento)` : g.feed?.kind === "VIDEO" ? `vídeo "${g.feed.name}"` : `"${(g.feed ?? g.stories)!.name}" em todos os posicionamentos`}
+                          </span>
+                          {plan.splitCopy && (
+                            <select
+                              value={plan.copyByAd[adCopyKey(a.key, (g.feed ?? g.stories)!.id)] ?? 0}
+                              onChange={(e) => {
+                                const key = adCopyKey(a.key, (g.feed ?? g.stories)!.id);
+                                const n = Number(e.target.value);
+                                setPlan((p) => ({ ...p, copyByAd: { ...p.copyByAd, [key]: n } }));
+                              }}
+                              className="rounded border border-[#D0D5DD] bg-white px-1 py-0.5 text-xs"
+                            >
+                              {Array.from({ length: groupCount }, (_, n) => (
+                                <option key={n} value={n}>Textos do grupo {n + 1}</option>
+                              ))}
+                            </select>
+                          )}
                         </li>
                       ))}
                       <li className="text-[#667085]">Par Feed/Stories reconhecido pelo fim do nome (-F/-S, -FD/-ST) ou pela proporção. Ao subir, os arquivos são renomeados para o padrão 01-01-AD01-F.</li>
@@ -390,7 +484,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               <ul className="mt-2 space-y-2">
                 {plan.adsets.map((a, index) => (
                   <li key={a.key} className="border-l-2 border-[#FF2B00] pl-3">
-                    <p className="font-medium text-[#101828]">{adSetName(a, index)} · R$ {Number(a.dailyBudget).toFixed(2)}/dia</p>
+                    <p className="font-medium text-[#101828]">{adSetName(a, index)}{plan.budgetMode === "ADSET" ? ` · R$ ${Number(a.dailyBudget).toFixed(2)}/dia` : ""}</p>
                     <p className="text-xs text-[#667085]">
                       {a.geoMode === "RADIUS" ? `raio ${a.radiusKm} km` : "apenas a cidade"} · {a.advantage ? "Advantage+ com sugestão de " : ""}{a.ageMin}–{a.ageMax} anos{a.gender ? (a.gender === 1 ? ", homens" : ", mulheres") : ""} · {a.interests.length ? a.interests.map((i) => i.name).join(", ") : "sem interesses"}{a.temperature === "QUENTE" ? ` · remarketing: ${a.customAudiences.map((c) => c.name).join(", ") || "nenhum público"}` : ""}
                     </p>
@@ -399,7 +493,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 font-medium text-[#101828]">Total quando ativar: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês)</p>
+              <p className="mt-3 font-medium text-[#101828]">{plan.budgetMode === "CAMPAIGN" ? "Orçamento da campanha (Advantage+)" : "Total"} quando ativar: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês)</p>
             </div>
             {issues === null ? (
               <p className="text-sm text-[#667085]">Conferindo…</p>
@@ -461,7 +555,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   );
 }
 
-function AdSetCard({ adset: a, index, defaultCities, onChange, onRemove }: { adset: PlanAdSet; index: number; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
+function AdSetCard({ adset: a, index, budgetPerAdSet, defaultCities, onChange, onRemove }: { adset: PlanAdSet; index: number; budgetPerAdSet: boolean; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ id: string; name: string; audience?: number }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -539,10 +633,12 @@ function AdSetCard({ adset: a, index, defaultCities, onChange, onRemove }: { ads
               ))}
             </datalist>
           </label>
-          <label className={LABEL}>
-            Verba diária (R$)
-            <input type="number" value={a.dailyBudget} onChange={(e) => onChange((x) => ({ ...x, dailyBudget: Number(e.target.value) }))} className={INPUT} />
-          </label>
+          {budgetPerAdSet && (
+            <label className={LABEL}>
+              Verba diária (R$)
+              <input type="number" value={a.dailyBudget} onChange={(e) => onChange((x) => ({ ...x, dailyBudget: Number(e.target.value) }))} className={INPUT} />
+            </label>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">

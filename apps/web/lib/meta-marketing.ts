@@ -147,14 +147,16 @@ export async function createLeadForm(pageToken: string, pageId: string, spec: Le
   return data.id;
 }
 
-export async function createCampaign(token: string, adAccountId: string, name: string): Promise<string> {
+/** Com `dailyBudgetCents`: orçamento da campanha (Advantage+), a Meta distribui entre os conjuntos. */
+export async function createCampaign(token: string, adAccountId: string, name: string, dailyBudgetCents?: number | null): Promise<string> {
+  const budget = dailyBudgetCents ? { daily_budget: dailyBudgetCents, bid_strategy: "LOWEST_COST_WITHOUT_CAP" } : { is_adset_budget_sharing_enabled: false };
   const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/campaigns`, token, {
     name,
     objective: "OUTCOME_LEADS",
     status: "PAUSED",
     special_ad_categories: [],
     buying_type: "AUCTION",
-    is_adset_budget_sharing_enabled: false,
+    ...budget,
   }, "criar campanha");
   return data.id;
 }
@@ -163,7 +165,8 @@ export interface AdSetSpec {
   name: string;
   campaignId: string;
   pageId: string;
-  dailyBudgetCents: number;
+  /** null = orçamento fica na campanha (Advantage+). */
+  dailyBudgetCents: number | null;
   cityKeys: string[];
   /** "RADIUS" = cidade + raio; "CITY" = apenas a cidade (sem raio). */
   geoMode: "RADIUS" | "CITY";
@@ -206,9 +209,8 @@ export async function createAdSet(token: string, adAccountId: string, spec: AdSe
   const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/adsets`, token, {
     name: spec.name,
     campaign_id: spec.campaignId,
-    daily_budget: spec.dailyBudgetCents,
+    ...(spec.dailyBudgetCents ? { daily_budget: spec.dailyBudgetCents, bid_strategy: "LOWEST_COST_WITHOUT_CAP" } : {}),
     billing_event: "IMPRESSIONS",
-    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
     ...conversion,
     targeting,
     status: "PAUSED",
@@ -274,11 +276,14 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
   if (spec.urlTags) params.url_tags = spec.urlTags;
 
   if (pair || multi) {
+    // No par Feed/Stories a Meta só aplica nas regras de posicionamento os textos que a regra cita
+    // pelo rótulo; sem rótulo o anúncio sobe sem texto. Todos os textos levam o mesmo rótulo.
+    const label = (name: string) => (pair ? { adlabels: [{ name }] } : {});
     const assetFeed: Record<string, unknown> = {
-      bodies: messages.map((text) => ({ text })),
-      titles: headlines.map((text) => ({ text })),
-      ...(descriptions.length ? { descriptions: descriptions.map((text) => ({ text })) } : {}),
-      link_urls: [{ website_url: spec.linkUrl }],
+      bodies: messages.map((text) => ({ text, ...label("zf_body") })),
+      titles: headlines.map((text) => ({ text, ...label("zf_title") })),
+      ...(descriptions.length ? { descriptions: descriptions.map((text) => ({ text, ...label("zf_desc") })) } : {}),
+      link_urls: [{ website_url: spec.linkUrl, ...label("zf_link") }],
       call_to_action_types: [cta.type],
       ...(spec.formId ? { call_to_actions: [cta] } : {}),
     };
@@ -286,6 +291,7 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
       assetFeed.videos = [{ video_id: spec.videoId, thumbnail_url: spec.videoThumbUrl ?? undefined }];
       assetFeed.ad_formats = ["SINGLE_VIDEO"];
     } else if (pair) {
+      const textLabels = { body_label: { name: "zf_body" }, title_label: { name: "zf_title" }, link_url_label: { name: "zf_link" }, ...(descriptions.length ? { description_label: { name: "zf_desc" } } : {}) };
       assetFeed.images = [{ hash: spec.imageHash, adlabels: [{ name: "feed" }] }, { hash: spec.storiesImageHash, adlabels: [{ name: "stories" }] }];
       assetFeed.ad_formats = ["SINGLE_IMAGE"];
       assetFeed.optimization_type = "PLACEMENT";
@@ -293,6 +299,7 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
         {
           customization_spec: { publisher_platforms: ["facebook", "instagram", "messenger"], facebook_positions: ["story", "facebook_reels"], instagram_positions: ["story", "reels"], messenger_positions: ["story"] },
           image_label: { name: "stories" },
+          ...textLabels,
           priority: 1,
         },
         {
@@ -304,6 +311,7 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
             messenger_positions: ["messenger_home"],
           },
           image_label: { name: "feed" },
+          ...textLabels,
           priority: 2,
         },
       ];
@@ -318,6 +326,17 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
     story.link_data = { image_hash: spec.imageHash, link: spec.linkUrl, message: messages[0], name: headlines[0], description: descriptions[0], call_to_action: cta };
   }
 
+  const id = await postCreative(token, adAccountId, spec, params);
+  // Confere se a Meta guardou o texto (já aconteceu de aceitar o criativo e descartar os textos).
+  const saved = await metaGet<{ body?: string; title?: string; asset_feed_spec?: { bodies?: unknown[]; titles?: unknown[] }; object_story_spec?: { link_data?: { message?: string }; video_data?: { message?: string } } }>(`/${id}`, token, { fields: "body,title,asset_feed_spec,object_story_spec" }).catch(() => null);
+  if (saved && messages.length) {
+    const hasText = Boolean(saved.body || saved.asset_feed_spec?.bodies?.length || saved.object_story_spec?.link_data?.message || saved.object_story_spec?.video_data?.message);
+    if (!hasText) throw new MetaWriteError(`A Meta criou o criativo "${spec.name}" sem o texto principal. Nada foi publicado; me avise para ajustar o formato.`, 0);
+  }
+  return id;
+}
+
+async function postCreative(token: string, adAccountId: string, spec: AdCreativeSpec, params: Record<string, string | object>): Promise<string> {
   if (spec.advantageCreative) {
     params.degrees_of_freedom_spec = { creative_features_spec: Object.fromEntries(CREATIVE_FEATURES.map((f) => [f, { enroll_status: "OPT_IN" }])) };
   }

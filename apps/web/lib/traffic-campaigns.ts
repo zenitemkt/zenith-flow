@@ -3,6 +3,8 @@ import { decryptSecret } from "@/lib/crypto-secrets";
 import { downloadDriveFile, renameDriveFile } from "@/lib/google-drive";
 import { groupCreativesIntoAds, standardCreativeName } from "@/lib/creative-pairing";
 import { DEFAULT_URL_TAGS } from "@/lib/copy-split";
+import { copyForAd, planDailyTotal } from "@/lib/traffic-copy";
+export { adCopyKey, copyForAd, emptyCopy, planDailyTotal } from "@/lib/traffic-copy";
 import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
 import { OBJECTIVE_CODES, nextCampaignNumber, withCampaignCode } from "@/lib/campaign-naming";
@@ -58,15 +60,21 @@ export interface PlanAdSet {
   destinationUrl: string;
   creativeIds: string[];
 }
-export interface PlanCopy {
-  primaryTexts: string[];
-  headlines: string[];
-  descriptions: string[];
-}
+import type { PlanCopy } from "@/lib/traffic-copy";
+export type { PlanCopy } from "@/lib/traffic-copy";
 export interface TrafficPlan {
   name: string;
-  /** Textos de todos os anúncios (até 5 de cada). Vazio = usa os textos de cada criativo. */
+  /** "CAMPAIGN" = orçamento Advantage+ da campanha (padrão da Meta); "ADSET" = verba em cada conjunto. */
+  budgetMode: "CAMPAIGN" | "ADSET";
+  campaignDailyBudget: number;
+  /** Textos de todos os anúncios (grupo 1, até 5 de cada). Vazio = usa os textos de cada criativo. */
   copy: PlanCopy;
+  /** Liga os grupos de textos: cada anúncio escolhe o grupo em `copyByAd`. */
+  splitCopy: boolean;
+  /** Grupos 2, 3... (o grupo 1 é `copy`). */
+  copyGroups: PlanCopy[];
+  /** "chaveDoConjunto:idDoCriativoPrincipal" -> nº do grupo (0 = grupo 1). */
+  copyByAd: Record<string, number>;
   /** Advantage+ de criativo com todas as melhorias. */
   advantageCreative: boolean;
   trackSiteEvents: boolean;
@@ -92,7 +100,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Empresários | Região de Americana", conversion: "FORM", copy: { primaryTexts: [], headlines: [], descriptions: [] }, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
+  return { name: "Empresários | Região de Americana", conversion: "FORM", budgetMode: "CAMPAIGN", campaignDailyBudget: 30, copy: { primaryTexts: [], headlines: [], descriptions: [] }, splitCopy: false, copyGroups: [], copyByAd: {}, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -139,12 +147,26 @@ export function parsePlan(value: unknown): TrafficPlan {
       creativeIds: (Array.isArray(a?.creativeIds) ? a.creativeIds : []).filter((x) => typeof x === "string").slice(0, 20),
     };
   });
-  const c = (v.copy ?? {}) as Partial<PlanCopy>;
   const list = (x: unknown, max: number) => (Array.isArray(x) ? x : []).map((t) => str(t, max)).filter((t) => t.trim()).slice(0, 5);
+  const copyOf = (x: unknown): PlanCopy => {
+    const c = (x ?? {}) as Partial<PlanCopy>;
+    return { primaryTexts: list(c.primaryTexts, 2000), headlines: list(c.headlines, 255), descriptions: list(c.descriptions, 255) };
+  };
+  const copyGroups = (Array.isArray(v.copyGroups) ? v.copyGroups : []).slice(0, 9).map(copyOf);
+  const copyByAd: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v.copyByAd && typeof v.copyByAd === "object" ? v.copyByAd : {})) {
+    const i = Number(n);
+    if (k.length <= 100 && Number.isInteger(i) && i >= 0 && i <= copyGroups.length) copyByAd[k] = i;
+  }
   return {
     name: str(v.name, 200) || emptyPlan().name,
     conversion: v.conversion === "SITE" ? "SITE" : "FORM",
-    copy: { primaryTexts: list(c.primaryTexts, 2000), headlines: list(c.headlines, 255), descriptions: list(c.descriptions, 255) },
+    budgetMode: v.budgetMode === "ADSET" ? "ADSET" : "CAMPAIGN",
+    campaignDailyBudget: num(v.campaignDailyBudget, 0, 100000, 30),
+    copy: copyOf(v.copy),
+    splitCopy: v.splitCopy === true && copyGroups.length > 0,
+    copyGroups,
+    copyByAd,
     advantageCreative: v.advantageCreative !== false,
     trackSiteEvents: v.trackSiteEvents !== false,
     trackOfflineEvents: v.trackOfflineEvents !== false,
@@ -166,16 +188,19 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     if (!ads?.metaPixelId) issues.push("Campanha para o site precisa do Pixel da Meta configurado em Sistema → Integrações.");
   }
   if (!plan.adsets.length) issues.push("Adicione pelo menos um conjunto.");
-  const total = plan.adsets.reduce((sum, a) => sum + a.dailyBudget, 0);
+  const total = planDailyTotal(plan);
+  if (plan.budgetMode === "CAMPAIGN" && plan.adsets.length && plan.campaignDailyBudget < 6 * plan.adsets.length) {
+    issues.push(`Orçamento da campanha: mínimo de R$ 6/dia por conjunto (R$ ${(6 * plan.adsets.length).toFixed(2)}/dia para ${plan.adsets.length} conjunto(s)).`);
+  }
   if (settings?.dailyBudgetCapCents && Math.round(total * 100) > settings.dailyBudgetCapCents) {
-    issues.push(`A soma das verbas (R$ ${total.toFixed(2)}/dia) passa do teto de R$ ${(settings.dailyBudgetCapCents / 100).toFixed(2)}/dia.`);
+    issues.push(`A verba (R$ ${total.toFixed(2)}/dia) passa do teto de R$ ${(settings.dailyBudgetCapCents / 100).toFixed(2)}/dia.`);
   }
   const creativeIds = Array.from(new Set(plan.adsets.flatMap((a) => a.creativeIds)));
   const creatives = await prisma.adCreative.findMany({ where: { agencyId, id: { in: creativeIds } } });
   for (const [index, a] of plan.adsets.entries()) {
     const label = adSetName(a, index);
     if (!a.cities.length) issues.push(`${label}: escolha pelo menos uma cidade.`);
-    if (a.dailyBudget < 6) issues.push(`${label}: verba diária mínima de R$ 6.`);
+    if (plan.budgetMode === "ADSET" && a.dailyBudget < 6) issues.push(`${label}: verba diária mínima de R$ 6.`);
     if (a.ageMin > a.ageMax) issues.push(`${label}: idade mínima maior que a máxima.`);
     if (a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
     if (plan.conversion === "FORM") {
@@ -188,8 +213,9 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     for (const [adIndex, g] of groupCreativesIntoAds(chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
       const pair = [g.feed, g.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
       const adLabel = `${label} AD${String(adIndex + 1).padStart(2, "0")}`;
-      const campaignCopy = plan.copy.primaryTexts.length > 0 && plan.copy.headlines.length > 0;
-      if (!campaignCopy && !pair.some((c) => c.primaryText && c.headline)) issues.push(`${adLabel}: preencha o texto principal e o título ("${pair.map((c) => c.name).join(" + ")}").`);
+      const copy = copyForAd(plan, a.key, (g.feed ?? g.stories)!.id);
+      const campaignCopy = copy.primaryTexts.length > 0 && copy.headlines.length > 0;
+      if (!campaignCopy && !pair.some((c) => c.primaryText && c.headline)) issues.push(`${adLabel}: preencha o texto principal e o título${plan.splitCopy ? " do grupo de textos escolhido" : ""} ("${pair.map((c) => c.name).join(" + ")}").`);
       for (const c of pair) if (c.missingInDrive && !c.metaImageHash && !c.metaVideoId) issues.push(`${adLabel}: o arquivo "${c.name}" não está mais no Drive.`);
     }
   }
@@ -251,7 +277,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
       const number = await nextCampaignNumber(adsToken, adAccountId, OBJECTIVE_CODES.OUTCOME_LEADS);
       plan.name = withCampaignCode(OBJECTIVE_CODES.OUTCOME_LEADS, number, plan.name);
       await prisma.trafficCampaign.update({ where: { id: row.id }, data: { name: plan.name, plan: plan as unknown as Prisma.InputJsonValue } });
-      progress.campaignId = await createCampaign(adsToken, adAccountId, plan.name);
+      progress.campaignId = await createCampaign(adsToken, adAccountId, plan.name, plan.budgetMode === "CAMPAIGN" ? Math.round(plan.campaignDailyBudget * 100) : null);
       progress.log.push(`Campanha criada (${progress.campaignId}).`);
       await save({ metaCampaignId: progress.campaignId });
     }
@@ -292,7 +318,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           name: setName,
           campaignId: progress.campaignId,
           pageId,
-          dailyBudgetCents: Math.round(a.dailyBudget * 100),
+          dailyBudgetCents: plan.budgetMode === "ADSET" ? Math.round(a.dailyBudget * 100) : null,
           cityKeys: a.cities.map((c) => progress.cityKeys![c]!),
           geoMode: a.geoMode,
           radiusKm: a.radiusKm,
@@ -339,6 +365,10 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
         const stories = group.stories ? creatives.find((c) => c.id === group.stories!.id)! : null;
         const main = feed ?? stories!;
         const texts = [feed, stories].find((c) => c?.primaryText && c?.headline) ?? main;
+        const copy = copyForAd(plan, a.key, main.id);
+        const messages = copy.primaryTexts.length ? copy.primaryTexts : [texts.primaryText ?? ""];
+        const headlines = copy.headlines.length ? copy.headlines : [texts.headline ?? ""];
+        const descriptions = copy.descriptions.length ? copy.descriptions : texts.description ? [texts.description] : [];
         let thumb: string | null = null;
         if (main.metaVideoId) {
           thumb = await videoReadyThumbnail(adsToken, main.metaVideoId);
@@ -351,9 +381,9 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
             instagramUserId: progress.instagramUserId,
             formId: plan.conversion === "FORM" ? state.formId : null,
             linkUrl: plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl,
-            messages: plan.copy.primaryTexts.length ? plan.copy.primaryTexts : [texts.primaryText ?? ""],
-            headlines: plan.copy.headlines.length ? plan.copy.headlines : [texts.headline ?? ""],
-            descriptions: plan.copy.descriptions.length ? plan.copy.descriptions : texts.description ? [texts.description] : [],
+            messages,
+            headlines,
+            descriptions,
             urlTags: plan.urlTags || null,
             advantageCreative: plan.advantageCreative,
             callToAction: texts.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
@@ -375,7 +405,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           const newName = standardCreativeName(campaignNo, index + 1, adIndex + 1, c.kind === "VIDEO" ? null : role);
           const ext = c.fileName.match(/\.[a-z0-9]{2,4}$/i)?.[0] ?? "";
           await renameDriveFile(c.driveFileId, `${newName}${ext}`).catch((renameError) => console.error("ad_creative_rename_failed", c.id, renameError));
-          await prisma.adCreative.update({ where: { id: c.id }, data: { name: newName, fileName: `${newName}${ext}`, metaCreativeId: adState.creativeId, metaAdId: adState.adId } });
+          await prisma.adCreative.update({ where: { id: c.id }, data: { name: newName, fileName: `${newName}${ext}`, primaryText: messages[0] || null, headline: headlines[0] || null, description: descriptions[0] || null, linkUrl: c.linkUrl || (plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl), metaCreativeId: adState.creativeId, metaAdId: adState.adId } });
           if (c.status === "DRAFT" || c.status === "UPLOADING" || c.status === "FAILED") await setCreativeStatus(c.id, "PAUSED");
         }
         progress.log.push(`Anúncio ${setName} | ${adName} criado${feed && stories ? " (Feed + Stories)" : ""}.`);
