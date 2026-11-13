@@ -238,7 +238,7 @@ async function loadTokens(agencyId: string) {
  * e, numa nova chamada, pula o que já existe. Para dentro do orçamento de tempo e devolve
  * `done: false` para a tela chamar de novo.
  */
-export async function submitTrafficCampaign(campaignId: string, agencyId: string, budgetMs = 45_000): Promise<{ done: boolean; message: string }> {
+export async function submitTrafficCampaign(campaignId: string, agencyId: string, budgetMs = 45_000): Promise<{ done: boolean; message: string; ok?: boolean }> {
   const started = Date.now();
   const timeLeft = () => budgetMs - (Date.now() - started);
   const row = await prisma.trafficCampaign.findFirstOrThrow({ where: { id: campaignId, agencyId } });
@@ -415,7 +415,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
 
     await save({ status: "SUBMITTED", submittedAt: new Date(), lastError: null });
     await resolveSystemAlert(agencyId, `ads:campaign:${row.id}`);
-    return { done: true, message: "Campanha enviada para a Meta, pausada. Ative no Gerenciador ou aqui quando quiser." };
+    return { done: true, ok: true, message: "Campanha enviada para a Meta, pausada. Ative no Gerenciador ou aqui quando quiser." };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha no envio.";
     await save({ status: "FAILED", lastError: message });

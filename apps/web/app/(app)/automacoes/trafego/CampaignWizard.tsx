@@ -73,6 +73,14 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [issues, setIssues] = useState<string[] | null>(null);
   const [submitLog, setSubmitLog] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!submitting) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [submitting]);
   const [creatives, setCreatives] = useState<CreativeOption[]>(initialCreatives);
   const [editingCreative, setEditingCreative] = useState<CreativeOption | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
@@ -169,17 +177,46 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     if (!id) return;
     if (!window.confirm(`Subir "${plan.name}" para a Meta? Tudo vai pausado: ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`)) return;
     setSubmitting(true);
-    setSubmitLog(["Enviando para a Meta…"]);
+    setSubmitError(null);
+    setSubmitLog([]);
+    setStartedAt(Date.now());
+    // Enquanto cada rodada roda no servidor (até 45 s), consulta o andamento para mostrar cada etapa criada.
+    let polling = true;
+    const poll = async () => {
+      while (polling) {
+        const r = await fetch(`/api/traffic/campaigns/${id}`).then((x) => x.json()).catch(() => null);
+        if (polling && Array.isArray(r?.log)) setSubmitLog(r.log);
+        await sleep(2500);
+      }
+    };
+    void poll();
+    let ok = false;
+    let lastMessage = "";
     for (let round = 0; round < 40; round++) {
       const res = await fetch(`/api/traffic/campaigns/${id}/submit`, { method: "POST" });
-      const data = (await res.json().catch(() => null)) as { done?: boolean; message?: string; error?: string } | null;
-      setSubmitLog((log) => [...log, data?.message ?? data?.error ?? "Erro desconhecido."]);
-      if (!res.ok || data?.done) break;
+      const data = (await res.json().catch(() => null)) as { done?: boolean; ok?: boolean; message?: string; error?: string } | null;
+      lastMessage = data?.message ?? data?.error ?? "Erro desconhecido.";
+      if (!res.ok || data?.done) {
+        ok = res.ok && data?.ok === true;
+        break;
+      }
       await sleep(data?.message?.includes("processando") ? 10_000 : 500);
     }
+    polling = false;
+    if (ok) {
+      router.push(`/automacoes/trafego?aba=campanhas&enviada=${id}`);
+      router.refresh();
+      return;
+    }
     setSubmitting(false);
+    setSubmitError(lastMessage);
     router.refresh();
   }
+
+  const expectedSteps = 1 + plan.adsets.reduce((n, a) => n + (plan.conversion === "FORM" ? 1 : 0) + 1 + groupCreativesIntoAds(a.creativeIds.map((cid) => creatives.find((c) => c.id === cid)).filter((c): c is CreativeOption => Boolean(c))).length, 0);
+  const doneSteps = submitLog.filter((l) => /criad[oa]/i.test(l)).length;
+  const percent = Math.min(100, Math.round((doneSteps / Math.max(1, expectedSteps)) * 100));
+  const elapsed = startedAt ? Math.max(0, Math.round((now - startedAt) / 1000)) : 0;
 
   return (
     <section className="flex flex-col gap-4">
@@ -506,11 +543,31 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             ) : (
               <p className="rounded-lg bg-[#ECFDF3] px-3 py-2 text-sm text-[#027A48]">Tudo certo para subir. A campanha, os conjuntos e os anúncios vão pausados.</p>
             )}
-            {submitLog.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded-lg bg-[#101828] p-3 font-mono text-xs text-[#D0D5DD]">
-                {submitLog.map((l, i) => (
-                  <p key={i}>{l}</p>
-                ))}
+            {submitting && (
+              <div className="rounded-xl border border-[#FF2B00]/40 bg-[#FFF4ED] p-4" aria-live="polite">
+                <div className="flex items-center gap-3">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#FF2B00] border-t-transparent" />
+                  <p className="text-sm font-semibold text-[#101828]">Subindo para a Meta… {doneSteps} de {expectedSteps} etapas</p>
+                  <span className="ml-auto text-xs text-[#667085]">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                  <div className="h-full rounded-full bg-[#FF2B00] transition-all duration-700" style={{ width: `${Math.max(4, percent)}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-[#667085]">Não feche esta página. Envio de imagens e vídeos pode levar alguns minutos.</p>
+                {submitLog.length > 0 && (
+                  <ul className="mt-2 space-y-0.5 text-xs text-[#344054]">
+                    {submitLog.map((l, i) => (
+                      <li key={i}>✓ {l}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {!submitting && submitError && (
+              <div className="rounded-xl border border-[#FECDCA] bg-[#FEF3F2] p-4 text-sm text-[#B42318]">
+                <p className="font-semibold">A campanha não terminou de subir.</p>
+                <p className="mt-1">{submitError}</p>
+                {submitLog.length > 0 && <p className="mt-2 text-xs">Já criado na Meta: {submitLog.join(" · ")}</p>}
               </div>
             )}
             <div>

@@ -3,6 +3,16 @@ import { prisma, Prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { parsePlan } from "@/lib/traffic-campaigns";
 
+/** Andamento do envio (a tela consulta enquanto sobe). */
+export async function GET(_request: Request, { params }: { params: { id: string } }) {
+  const { session, membership } = await requireSessionAndMembership();
+  if (!session || !membership) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const row = await prisma.trafficCampaign.findFirst({ where: { id: params.id, agencyId: membership.agencyId }, select: { status: true, progress: true, lastError: true } });
+  if (!row) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
+  const log = ((row.progress ?? {}) as { log?: unknown }).log;
+  return NextResponse.json({ status: row.status, lastError: row.lastError, log: Array.isArray(log) ? log.filter((l) => typeof l === "string") : [] });
+}
+
 /** Salva o plano do rascunho. Campanha já enviada não muda por aqui. */
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const { session, membership } = await requireSessionAndMembership();

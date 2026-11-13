@@ -17,7 +17,7 @@ const TABS = [
   { id: "configuracoes", label: "Configurações" },
 ] as const;
 
-export default async function TrafficManagerPage({ searchParams }: { searchParams: { aba?: string; campanha?: string; novo?: string } }) {
+export default async function TrafficManagerPage({ searchParams }: { searchParams: { aba?: string; campanha?: string; novo?: string; enviada?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   const agencyId = membership.agencyId;
@@ -94,6 +94,12 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
         />
       )}
 
+      {tab === "campanhas" && searchParams.enviada && campaigns.some((c) => c.id === searchParams.enviada && c.status === "SUBMITTED") && (
+        <div className="rounded-xl border border-[#ABEFC6] bg-[#ECFDF3] px-4 py-3 text-sm text-[#027A48]">
+          <p className="font-semibold">Campanha &quot;{campaigns.find((c) => c.id === searchParams.enviada)?.name}&quot; subiu para a Meta.</p>
+          <p>Campanha, conjuntos e anúncios estão pausados. Confira no Gerenciador de Anúncios e ative quando quiser.</p>
+        </div>
+      )}
       {tab === "campanhas" && (
         <CampaignsList
           adAccountId={metaConnection?.externalAccountId ?? null}
