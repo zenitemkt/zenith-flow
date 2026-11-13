@@ -117,7 +117,32 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
   let campaignsCreated = 0;
   let campaignsUpdated = 0;
 
+  // Excluída ou arquivada na Meta e que nunca gastou nada (teste): não entra e, se já estava, sai do portal.
+  const spentInPeriod = new Set(rows.filter((row) => row.spendCents > 0).map((row) => row.campaignId));
+  const removable = new Set<string>();
+  for (const [externalId, info] of infoById) {
+    const s = info.effectiveStatus.toUpperCase();
+    if ((s === "ARCHIVED" || s === "DELETED") && !spentInPeriod.has(externalId)) removable.add(externalId);
+  }
+  if (removable.size) {
+    const candidates = await prisma.campaign.findMany({
+      where: { agencyId, channel: META_CAMPAIGN_CHANNEL, externalId: { in: Array.from(removable) } },
+      select: { id: true, externalId: true, dailyMetrics: { where: { spendCents: { gt: 0 } }, select: { id: true }, take: 1 } },
+    });
+    for (const c of candidates) if (c.dailyMetrics.length) removable.delete(c.externalId as string);
+    const ids = Array.from(removable);
+    await prisma.$transaction([
+      prisma.campaign.deleteMany({ where: { agencyId, channel: META_CAMPAIGN_CHANNEL, externalId: { in: ids } } }),
+      prisma.trafficCampaign.deleteMany({ where: { agencyId, metaCampaignId: { in: ids } } }),
+    ]);
+    for (const id of ids) {
+      knownByExternalId.delete(id);
+      campaignIdByExternalId.delete(id);
+    }
+  }
+
   for (const externalId of new Set([...infoById.keys(), ...nameFromInsights.keys()])) {
+    if (removable.has(externalId)) continue;
     const info = infoById.get(externalId);
     const status: CampaignStatus | null = info ? campaignStatusFromMeta(info.effectiveStatus, info.stopTime, now) : null;
     const name = info?.name || nameFromInsights.get(externalId) || "Campanha da Meta";
