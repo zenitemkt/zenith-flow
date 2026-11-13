@@ -30,20 +30,37 @@ export interface PlanForm {
 }
 export interface PlanAdSet {
   key: string;
+  /** Opcional: campanha para empresários em geral fica sem nicho. */
   niche: string;
   cities: string[];
+  /** "RADIUS" = cidade + raio; "CITY" = apenas a cidade. */
+  geoMode: "RADIUS" | "CITY";
   radiusKm: number;
+  /** "FRIO" = público aberto; "QUENTE" = remarketing (públicos personalizados). */
+  temperature: "FRIO" | "QUENTE";
+  customAudiences: { id: string; name: string }[];
+  /** Advantage+ de público ([AUTO]); idade, gênero e interesses viram sugestões. */
+  advantage: boolean;
   ageMin: number;
   ageMax: number;
+  /** 0 = todos, 1 = homens, 2 = mulheres. */
+  gender: 0 | 1 | 2;
   interests: { id: string; name: string }[];
   dailyBudget: number;
   form: PlanForm;
+  /** Destino quando a campanha é para o site (conversão no pixel). */
+  destinationUrl: string;
   creativeIds: string[];
 }
 export interface TrafficPlan {
   name: string;
+  /** "FORM" = formulário instantâneo da Meta; "SITE" = formulário no site com conversão no pixel. */
+  conversion: "FORM" | "SITE";
   adsets: PlanAdSet[];
 }
+
+export { adSetName } from "@/lib/traffic-naming";
+import { adSetName } from "@/lib/traffic-naming";
 
 interface Progress {
   cityKeys?: Record<string, string>;
@@ -56,7 +73,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Nichos locais | Formulário instantâneo", adsets: [] };
+  return { name: "Empresários | Região de Americana", conversion: "FORM", adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -73,9 +90,14 @@ export function parsePlan(value: unknown): TrafficPlan {
       key: str(a?.key, 40) || `c${i + 1}`,
       niche: str(a?.niche, 80),
       cities: (Array.isArray(a?.cities) ? a.cities : []).map((c) => str(c, 80)).filter(Boolean).slice(0, 25),
-      radiusKm: num(a?.radiusKm, 1, 80, 15),
+      geoMode: a?.geoMode === "RADIUS" ? ("RADIUS" as const) : ("CITY" as const),
+      radiusKm: num(a?.radiusKm, 17, 80, 17),
+      temperature: a?.temperature === "QUENTE" ? ("QUENTE" as const) : ("FRIO" as const),
+      customAudiences: (Array.isArray(a?.customAudiences) ? a.customAudiences : []).filter((x) => x && typeof x.id === "string").map((x) => ({ id: str(x.id, 40), name: str(x.name, 200) })).slice(0, 20),
+      advantage: a?.advantage !== false,
       ageMin: num(a?.ageMin, 18, 65, 25),
-      ageMax: num(a?.ageMax, 18, 65, 60),
+      ageMax: num(a?.ageMax, 18, 65, 55),
+      gender: (a?.gender === 1 || a?.gender === 2 ? a.gender : 0) as 0 | 1 | 2,
       interests: (Array.isArray(a?.interests) ? a.interests : []).filter((x) => x && typeof x.id === "string").map((x) => ({ id: str(x.id, 40), name: str(x.name, 120) })).slice(0, 25),
       dailyBudget: num(a?.dailyBudget, 0, 100000, 30),
       form: {
@@ -91,10 +113,11 @@ export function parsePlan(value: unknown): TrafficPlan {
         buttonText: str(f.buttonText, 30),
         buttonUrl: str(f.buttonUrl, 500),
       },
+      destinationUrl: str(a?.destinationUrl, 500),
       creativeIds: (Array.isArray(a?.creativeIds) ? a.creativeIds : []).filter((x) => typeof x === "string").slice(0, 20),
     };
   });
-  return { name: str(v.name, 200) || emptyPlan().name, adsets };
+  return { name: str(v.name, 200) || emptyPlan().name, conversion: v.conversion === "SITE" ? "SITE" : "FORM", adsets };
 }
 
 /** Problemas que impedem subir (mostrados na revisão). */
@@ -104,22 +127,28 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
   if (!settings?.dailyBudgetCapCents) issues.push("Defina o teto de verba diária em Configurações antes de subir.");
   if (settings?.killSwitch) issues.push("O botão de emergência está ligado em Configurações: nada sobe para a Meta.");
   if (!settings?.pageConnectionId) issues.push("Escolha em Configurações a página do Facebook que assina os anúncios.");
-  if (!settings?.privacyPolicyUrl) issues.push("Informe o link da política de privacidade em Configurações (a Meta exige no formulário).");
-  if (!plan.adsets.length) issues.push("Adicione pelo menos um conjunto (nicho).");
+  if (plan.conversion === "FORM" && !settings?.privacyPolicyUrl) issues.push("Informe o link da política de privacidade em Configurações (a Meta exige no formulário).");
+  if (plan.conversion === "SITE") {
+    const ads = await prisma.adAccountConnection.findUnique({ where: { agencyId_platform: { agencyId, platform: "META" } }, select: { metaPixelId: true } });
+    if (!ads?.metaPixelId) issues.push("Campanha para o site precisa do Pixel da Meta configurado em Sistema → Integrações.");
+  }
+  if (!plan.adsets.length) issues.push("Adicione pelo menos um conjunto.");
   const total = plan.adsets.reduce((sum, a) => sum + a.dailyBudget, 0);
   if (settings?.dailyBudgetCapCents && Math.round(total * 100) > settings.dailyBudgetCapCents) {
     issues.push(`A soma das verbas (R$ ${total.toFixed(2)}/dia) passa do teto de R$ ${(settings.dailyBudgetCapCents / 100).toFixed(2)}/dia.`);
   }
   const creativeIds = Array.from(new Set(plan.adsets.flatMap((a) => a.creativeIds)));
   const creatives = await prisma.adCreative.findMany({ where: { agencyId, id: { in: creativeIds } } });
-  for (const a of plan.adsets) {
-    const label = a.niche || "Conjunto sem nome";
-    if (!a.niche) issues.push("Um conjunto está sem nome de nicho.");
+  for (const [index, a] of plan.adsets.entries()) {
+    const label = adSetName(a, index);
     if (!a.cities.length) issues.push(`${label}: escolha pelo menos uma cidade.`);
     if (a.dailyBudget < 6) issues.push(`${label}: verba diária mínima de R$ 6.`);
     if (a.ageMin > a.ageMax) issues.push(`${label}: idade mínima maior que a máxima.`);
-    if (!a.form.introTitle || !a.form.introText) issues.push(`${label}: preencha o título e o texto de abertura do formulário.`);
-    if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
+    if (a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
+    if (plan.conversion === "FORM") {
+      if (!a.form.introTitle || !a.form.introText) issues.push(`${label}: preencha o título e o texto de abertura do formulário.`);
+      if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
+    } else if (!/^https?:\/\//i.test(a.destinationUrl)) issues.push(`${label}: informe o link da página do site (com o formulário).`);
     if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
     for (const id of a.creativeIds) {
       const c = creatives.find((x) => x.id === id);
@@ -139,7 +168,7 @@ async function loadTokens(agencyId: string) {
   if (!ads || ads.status !== "ACTIVE") throw new Error("Conta de anúncios da Meta não conectada.");
   const page = settings.pageConnectionId ? await prisma.socialConnection.findFirst({ where: { id: settings.pageConnectionId, agencyId } }) : null;
   if (!page) throw new Error("Página do Facebook dos anúncios não encontrada. Escolha de novo em Configurações.");
-  return { settings, adAccountId: ads.externalAccountId, adsToken: decryptSecret(ads.accessTokenEnc), pageId: page.externalId, pageToken: decryptSecret(page.accessTokenEnc) };
+  return { settings, adAccountId: ads.externalAccountId, adsToken: decryptSecret(ads.accessTokenEnc), pageId: page.externalId, pageToken: decryptSecret(page.accessTokenEnc), pixelId: ads.metaPixelId };
 }
 
 /**
@@ -166,7 +195,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
   }
 
   try {
-    const { settings, adAccountId, adsToken, pageId, pageToken } = await loadTokens(agencyId);
+    const { settings, adAccountId, adsToken, pageId, pageToken, pixelId } = await loadTokens(agencyId);
     if (settings.killSwitch) throw new Error("Botão de emergência ligado: envio interrompido.");
 
     // 1. Cidades → chaves da Meta.
@@ -194,15 +223,16 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
     const creatives = await prisma.adCreative.findMany({ where: { agencyId, id: { in: plan.adsets.flatMap((a) => a.creativeIds) } } });
     const today = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    for (const a of plan.adsets) {
+    for (const [index, a] of plan.adsets.entries()) {
+      const setName = adSetName(a, index);
       const state = (progress.adsets[a.key] ??= { ads: {} });
       state.ads ??= {};
-      if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${a.niche})` };
+      if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${setName})` };
 
       // 3. Formulário instantâneo do conjunto.
-      if (!state.formId) {
+      if (plan.conversion === "FORM" && !state.formId) {
         state.formId = await createLeadForm(pageToken, pageId, {
-          name: `${plan.name} | ${a.niche} | ${today}`,
+          name: `${plan.name} | ${setName} | ${today}`.slice(0, 200),
           introTitle: a.form.introTitle,
           introText: a.form.introText,
           cityOptions: a.form.askCity ? a.cities : [],
@@ -213,24 +243,30 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           buttonUrl: a.form.buttonUrl,
           privacyUrl: settings.privacyPolicyUrl!,
         });
-        progress.log.push(`Formulário de ${a.niche} criado.`);
+        progress.log.push(`Formulário de ${setName} criado.`);
         await save();
       }
 
       // 4. Conjunto.
       if (!state.adSetId) {
         state.adSetId = await createAdSet(adsToken, adAccountId, {
-          name: `${a.niche} | ${a.cities.join(", ")}`.slice(0, 200),
+          name: setName,
           campaignId: progress.campaignId,
           pageId,
           dailyBudgetCents: Math.round(a.dailyBudget * 100),
           cityKeys: a.cities.map((c) => progress.cityKeys![c]!),
+          geoMode: a.geoMode,
           radiusKm: a.radiusKm,
           ageMin: a.ageMin,
           ageMax: a.ageMax,
+          gender: a.gender,
+          advantage: a.advantage,
           interests: a.interests,
+          customAudienceIds: a.temperature === "QUENTE" ? a.customAudiences.map((c) => c.id) : [],
+          conversion: plan.conversion,
+          pixelId,
         });
-        progress.log.push(`Conjunto ${a.niche} criado.`);
+        progress.log.push(`Conjunto ${setName} criado.`);
         await save();
       }
 
@@ -238,7 +274,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
       for (const creativeId of a.creativeIds) {
         const adState = (state.ads[creativeId] ??= {});
         if (adState.adId) continue;
-        if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${a.niche})` };
+        if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${setName})` };
         let creative = creatives.find((c) => c.id === creativeId)!;
         if (!creative.metaImageHash && !creative.metaVideoId) {
           if (creative.status !== "UPLOADING") await setCreativeStatus(creative.id, "UPLOADING");
@@ -261,25 +297,25 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
         }
         if (!adState.creativeId) {
           adState.creativeId = await createAdCreative(adsToken, adAccountId, {
-            name: `${a.niche} | ${creative.name}`,
+            name: `${setName} | ${creative.name}`.slice(0, 200),
             pageId,
             instagramUserId: progress.instagramUserId,
-            formId: state.formId,
-            linkUrl: settings.websiteUrl || a.form.buttonUrl,
+            formId: plan.conversion === "FORM" ? state.formId : null,
+            linkUrl: plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl,
             message: creative.primaryText!,
             headline: creative.headline!,
             description: creative.description,
-            callToAction: creative.callToAction || "SIGN_UP",
+            callToAction: creative.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
             imageHash: creative.metaImageHash,
             videoId: creative.metaVideoId,
             videoThumbUrl: thumb,
           });
           await save();
         }
-        adState.adId = await createAd(adsToken, adAccountId, `${a.niche} | ${creative.name}`, state.adSetId, adState.creativeId);
+        adState.adId = await createAd(adsToken, adAccountId, `${setName} | ${creative.name}`.slice(0, 200), state.adSetId, adState.creativeId);
         await prisma.adCreative.update({ where: { id: creative.id }, data: { metaCreativeId: adState.creativeId, metaAdId: adState.adId } });
         if (creative.status === "DRAFT" || creative.status === "UPLOADING" || creative.status === "FAILED") await setCreativeStatus(creative.id, "PAUSED");
-        progress.log.push(`Anúncio ${a.niche} | ${creative.name} criado.`);
+        progress.log.push(`Anúncio ${setName} | ${creative.name} criado.`);
         await save();
       }
     }

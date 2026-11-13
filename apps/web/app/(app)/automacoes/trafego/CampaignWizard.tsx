@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS } from "@/lib/traffic-niches";
+import { adSetName } from "@/lib/traffic-naming";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
@@ -30,7 +31,7 @@ interface Props {
   creatives: CreativeOption[];
 }
 
-const STEPS = ["Campanha", "Conjuntos", "Formulários", "Anúncios", "Revisão"];
+const STEPS = ["Campanha", "Conjuntos", "Formulário ou site", "Anúncios", "Revisão"];
 const INPUT = "w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
 const LABEL = "flex flex-col gap-1 text-sm font-medium text-[#344054]";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,24 +39,30 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 function newAdSet(niche: string, cities: string[], buttonUrl: string): PlanAdSet {
   const preset = NICHE_PRESETS.find((p) => p.niche === niche);
   return {
-    key: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+    key: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
     niche,
     cities: [...cities],
-    radiusKm: 15,
+    geoMode: "CITY",
+    radiusKm: 17,
+    temperature: "FRIO",
+    customAudiences: [],
+    advantage: true,
     ageMin: 25,
-    ageMax: 60,
+    ageMax: 55,
+    gender: 0,
     interests: [],
     dailyBudget: 30,
     form: {
-      introTitle: preset?.introTitle ?? "",
-      introText: preset?.introText ?? "",
+      introTitle: preset?.introTitle ?? "Mais clientes para a sua empresa",
+      introText: preset?.introText ?? "A Zenite cuida dos anúncios de empresas da região para trazer contatos de quem procura o que você vende. Responda 3 perguntas e a nossa equipe fala com você.",
       askCity: true,
-      questions: preset ? preset.questions.map((q) => ({ label: q.label, options: [...q.options] })) : [],
+      questions: preset ? preset.questions.map((q) => ({ label: q.label, options: [...q.options] })) : [{ label: "Qual o segmento da sua empresa?", options: [] }, { label: "Quanto você investe hoje por mês em anúncios?", options: ["Ainda não invisto", "Até R$ 500", "De R$ 500 a R$ 1.500", "Mais de R$ 1.500"] }],
       thankTitle: "Recebemos o seu cadastro",
       thankBody: "A equipe da Zenite vai falar com você pelo WhatsApp em breve.",
       buttonText: "Conhecer a Zenite",
       buttonUrl,
     },
+    destinationUrl: buttonUrl,
     creativeIds: [],
   };
 }
@@ -186,7 +193,17 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               Nome na Meta: <strong>{codeMatch ? plan.name : `[${nextCode ?? "LEAD??"}] ${plan.name}`}</strong>
               <span className="block text-xs text-[#667085]">O código do objetivo e o número entram sozinhos no envio, seguindo a sequência da conta (Reconhecimento REC, Tráfego TRAF, Engajamento ENG, Leads LEAD, Promoção do app APP, Vendas VEND).</span>
             </p>
-            <p className="text-sm text-[#475467]">Objetivo: <strong>Leads (cadastros)</strong>, com formulário instantâneo da Meta. A verba fica em cada conjunto (nicho), para cada um ter o próprio controle.</p>
+            <div>
+              <p className="mb-1 text-sm font-medium text-[#344054]">Objetivo: Leads. Onde o lead se cadastra?</p>
+              <div className="flex flex-wrap gap-2">
+                {([["FORM", "Formulário instantâneo da Meta"], ["SITE", "Formulário no site (conversão no pixel)"]] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setPlan((p) => ({ ...p, conversion: value }))} className={`rounded-lg px-3 py-2 text-sm font-medium ${plan.conversion === value ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-[#667085]">A verba fica em cada conjunto, para cada um ter o próprio controle.</p>
+            </div>
             {budgetCap === null && <p className="rounded-lg bg-[#FFFAEB] px-3 py-2 text-sm text-[#B54708]">O teto de verba ainda não foi definido em Configurações. Dá para montar o rascunho, mas só sobe depois de definir.</p>}
           </div>
         )}
@@ -194,19 +211,17 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         {step === 1 && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-[#344054]">Adicionar nicho:</span>
-              {NICHE_PRESETS.map((p) => (
-                <button key={p.niche} type="button" disabled={plan.adsets.some((a) => a.niche === p.niche)} onClick={() => setPlan((x) => ({ ...x, adsets: [...x.adsets, newAdSet(p.niche, defaultCities, defaultButtonUrl)] }))} className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-medium text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-40">
-                  + {p.niche}
-                </button>
-              ))}
-              <button type="button" onClick={() => setPlan((x) => ({ ...x, adsets: [...x.adsets, newAdSet("", defaultCities, defaultButtonUrl)] }))} className="rounded-lg border border-dashed border-[#D0D5DD] px-3 py-1.5 text-xs font-medium text-[#344054]">
-                + Outro nicho
+              <button type="button" onClick={() => setPlan((x) => ({ ...x, adsets: [...x.adsets, newAdSet("", ["Americana"], defaultButtonUrl)] }))} className="rounded-lg bg-[#101828] px-3 py-1.5 text-xs font-semibold text-white">
+                + Conjunto
               </button>
+              <button type="button" onClick={() => setPlan((x) => ({ ...x, adsets: [...x.adsets, ...defaultCities.map((city) => newAdSet("", [city], defaultButtonUrl))] }))} className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs font-semibold text-[#344054]">
+                + Um conjunto por cidade ({defaultCities.length})
+              </button>
+              <span className="text-xs text-[#667085]">Nome automático: [nº] [AUTO/MANUAL] [FRIO/QUENTE] cidade | nicho</span>
             </div>
-            {!plan.adsets.length && <p className="text-sm text-[#667085]">Nenhum conjunto ainda. Cada nicho vira um conjunto com verba e formulário próprios.</p>}
-            {plan.adsets.map((a) => (
-              <AdSetCard key={a.key} adset={a} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
+            {!plan.adsets.length && <p className="text-sm text-[#667085]">Nenhum conjunto ainda.</p>}
+            {plan.adsets.map((a, index) => (
+              <AdSetCard key={a.key} adset={a} index={index} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
             ))}
             <p className={`text-sm font-medium ${budgetCap !== null && total > budgetCap ? "text-[#B42318]" : "text-[#344054]"}`}>
               Total: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês){budgetCap !== null ? ` · teto R$ ${budgetCap.toFixed(2)}/dia` : ""}
@@ -217,9 +232,15 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         {step === 2 && (
           <div className="flex flex-col gap-4">
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
-            {plan.adsets.map((a) => (
-              <FormCard key={a.key} adset={a} onChange={(fn) => update(a.key, fn)} />
-            ))}
+            {plan.conversion === "FORM"
+              ? plan.adsets.map((a, index) => <FormCard key={a.key} adset={a} title={adSetName(a, index)} onChange={(fn) => update(a.key, fn)} />)
+              : plan.adsets.map((a, index) => (
+                  <label key={a.key} className={LABEL}>
+                    <span className="font-mono text-xs">{adSetName(a, index)}</span>
+                    Página do site com o formulário (a conversão é o evento Lead do pixel)
+                    <input value={a.destinationUrl} onChange={(e) => update(a.key, (x) => ({ ...x, destinationUrl: e.target.value }))} placeholder="https://hubzenite.com.br/..." className={INPUT} />
+                  </label>
+                ))}
           </div>
         )}
 
@@ -232,7 +253,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               const toggle = (id: string) => update(a.key, (x) => ({ ...x, creativeIds: x.creativeIds.includes(id) ? x.creativeIds.filter((y) => y !== id) : [...x.creativeIds, id] }));
               return (
                 <div key={a.key} className="rounded-xl border border-[#EEF0F3] p-4">
-                  <p className="mb-3 text-sm font-semibold text-[#101828]">{a.niche || "Conjunto sem nome"} · {selected.length} anúncio(s)</p>
+                  <p className="mb-3 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, plan.adsets.indexOf(a))} · {selected.length} anúncio(s)</p>
                   {driveUserEmail ? (
                     <CreativeUploader compact onDone={(ids) => attachUploaded(a.key, ids)} />
                   ) : (
@@ -288,13 +309,13 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             <div className="rounded-xl bg-[#F9FAFB] p-4 text-sm">
               <p className="font-semibold text-[#101828]">{plan.name}</p>
               <ul className="mt-2 space-y-2">
-                {plan.adsets.map((a) => (
+                {plan.adsets.map((a, index) => (
                   <li key={a.key} className="border-l-2 border-[#FF2B00] pl-3">
-                    <p className="font-medium text-[#101828]">{a.niche} · R$ {Number(a.dailyBudget).toFixed(2)}/dia</p>
+                    <p className="font-medium text-[#101828]">{adSetName(a, index)} · R$ {Number(a.dailyBudget).toFixed(2)}/dia</p>
                     <p className="text-xs text-[#667085]">
-                      {a.cities.join(", ")} (raio {a.radiusKm} km) · {a.ageMin}–{a.ageMax} anos · {a.interests.length ? a.interests.map((i) => i.name).join(", ") : "sem interesses"}
+                      {a.geoMode === "RADIUS" ? `raio ${a.radiusKm} km` : "apenas a cidade"} · {a.advantage ? "Advantage+ com sugestão de " : ""}{a.ageMin}–{a.ageMax} anos{a.gender ? (a.gender === 1 ? ", homens" : ", mulheres") : ""} · {a.interests.length ? a.interests.map((i) => i.name).join(", ") : "sem interesses"}{a.temperature === "QUENTE" ? ` · remarketing: ${a.customAudiences.map((c) => c.name).join(", ") || "nenhum público"}` : ""}
                     </p>
-                    <p className="text-xs text-[#667085]">Formulário: {a.form.introTitle || "(sem título)"} · {a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas</p>
+                    <p className="text-xs text-[#667085]">{plan.conversion === "FORM" ? `Formulário: ${a.form.introTitle || "(sem título)"} · ${a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas` : `Site: ${a.destinationUrl || "(sem link)"}`}</p>
                     <p className="text-xs text-[#667085]">{a.creativeIds.length} anúncio(s): {a.creativeIds.map((id) => creatives.find((c) => c.id === id)?.name ?? "?").join(", ")}</p>
                   </li>
                 ))}
@@ -361,14 +382,16 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   );
 }
 
-function AdSetCard({ adset: a, defaultCities, onChange, onRemove }: { adset: PlanAdSet; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
+function AdSetCard({ adset: a, index, defaultCities, onChange, onRemove }: { adset: PlanAdSet; index: number; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ id: string; name: string; audience?: number }[]>([]);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [extraCity, setExtraCity] = useState("");
+  const [audiences, setAudiences] = useState<{ id: string; name: string; size?: number }[] | null>(null);
   const preset = NICHE_PRESETS.find((p) => p.niche === a.niche);
   const allCities = Array.from(new Set([...defaultCities, ...a.cities]));
+  const toggleBtn = (on: boolean) => `rounded-lg px-3 py-1.5 text-xs font-semibold ${on ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#475467]"}`;
 
   async function search(term: string) {
     setQuery(term);
@@ -382,80 +405,156 @@ function AdSetCard({ adset: a, defaultCities, onChange, onRemove }: { adset: Pla
     else setResults(data.interests ?? []);
   }
 
+  async function loadAudiences() {
+    if (audiences) return;
+    const res = await fetch("/api/traffic/audiences");
+    const data = await res.json().catch(() => null);
+    if (!res.ok) setError(data?.error ?? "Não consegui listar os públicos.");
+    setAudiences(data?.audiences ?? []);
+  }
+
   return (
     <div className="rounded-xl border border-[#EEF0F3] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <input value={a.niche} onChange={(e) => onChange((x) => ({ ...x, niche: e.target.value }))} placeholder="Nome do nicho" className={`${INPUT} max-w-sm font-semibold`} />
+        <p className="rounded-lg bg-[#F9FAFB] px-3 py-1.5 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, index)}</p>
         <button type="button" onClick={onRemove} className="text-xs font-medium text-[#B42318]">Remover</button>
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div>
-          <p className="mb-1 text-sm font-medium text-[#344054]">Cidades</p>
-          <div className="flex flex-wrap gap-1.5">
-            {allCities.map((city) => {
-              const on = a.cities.includes(city);
-              return (
-                <button key={city} type="button" onClick={() => onChange((x) => ({ ...x, cities: on ? x.cities.filter((c) => c !== city) : [...x.cities, city] }))} className={`rounded-full px-2.5 py-1 text-xs font-medium ${on ? "bg-[#101828] text-white" : "bg-[#F2F4F7] text-[#475467]"}`}>
-                  {city}
-                </button>
-              );
-            })}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#344054]">Cidades</p>
+            <div className="flex flex-wrap gap-1.5">
+              {allCities.map((city) => {
+                const on = a.cities.includes(city);
+                return (
+                  <button key={city} type="button" onClick={() => onChange((x) => ({ ...x, cities: on ? x.cities.filter((c) => c !== city) : [...x.cities, city] }))} className={`rounded-full px-2.5 py-1 text-xs font-medium ${on ? "bg-[#101828] text-white" : "bg-[#F2F4F7] text-[#475467]"}`}>
+                    {city}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <input value={extraCity} onChange={(e) => setExtraCity(e.target.value)} placeholder="Outra cidade" className={INPUT} />
+              <button type="button" onClick={() => { if (extraCity.trim()) onChange((x) => ({ ...x, cities: [...x.cities, extraCity.trim()] })); setExtraCity(""); }} className="shrink-0 rounded-lg border border-[#D0D5DD] px-3 text-xs font-medium">Adicionar</button>
+            </div>
           </div>
-          <div className="mt-2 flex gap-2">
-            <input value={extraCity} onChange={(e) => setExtraCity(e.target.value)} placeholder="Outra cidade" className={INPUT} />
-            <button type="button" onClick={() => { if (extraCity.trim()) onChange((x) => ({ ...x, cities: [...x.cities, extraCity.trim()] })); setExtraCity(""); }} className="shrink-0 rounded-lg border border-[#D0D5DD] px-3 text-xs font-medium">Adicionar</button>
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#344054]">Localização</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => onChange((x) => ({ ...x, geoMode: "CITY" }))} className={toggleBtn(a.geoMode === "CITY")}>Apenas a cidade</button>
+              <button type="button" onClick={() => onChange((x) => ({ ...x, geoMode: "RADIUS" }))} className={toggleBtn(a.geoMode === "RADIUS")}>Cidade + raio</button>
+              {a.geoMode === "RADIUS" && (
+                <label className="flex items-center gap-1 text-xs text-[#475467]">
+                  <input type="number" min={17} max={80} value={a.radiusKm} onChange={(e) => onChange((x) => ({ ...x, radiusKm: Number(e.target.value) }))} className="w-20 rounded-lg border border-[#D0D5DD] px-2 py-1.5 text-sm" /> km (17 a 80)
+                </label>
+              )}
+            </div>
+          </div>
+          <label className={LABEL}>
+            Nicho (opcional)
+            <input value={a.niche} onChange={(e) => onChange((x) => ({ ...x, niche: e.target.value }))} list="traffic-niches" placeholder="Deixe vazio para empresários em geral" className={INPUT} />
+            <datalist id="traffic-niches">
+              {NICHE_PRESETS.map((p) => (
+                <option key={p.niche} value={p.niche} />
+              ))}
+            </datalist>
+          </label>
+          <label className={LABEL}>
+            Verba diária (R$)
+            <input type="number" value={a.dailyBudget} onChange={(e) => onChange((x) => ({ ...x, dailyBudget: Number(e.target.value) }))} className={INPUT} />
+          </label>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#344054]">Público</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => onChange((x) => ({ ...x, temperature: "FRIO" }))} className={toggleBtn(a.temperature === "FRIO")}>[FRIO] Público aberto</button>
+              <button type="button" onClick={() => { onChange((x) => ({ ...x, temperature: "QUENTE" })); loadAudiences(); }} className={toggleBtn(a.temperature === "QUENTE")}>[QUENTE] Remarketing</button>
+            </div>
+            {a.temperature === "QUENTE" && (
+              <div className="mt-2 rounded-lg bg-[#F9FAFB] p-2">
+                <p className="mb-1 text-xs text-[#667085]">Públicos personalizados da conta:</p>
+                {audiences === null ? (
+                  <button type="button" onClick={loadAudiences} className="text-xs font-semibold text-[#FF2B00]">Carregar públicos</button>
+                ) : audiences.length === 0 ? (
+                  <p className="text-xs text-[#B54708]">Nenhum público personalizado na conta. Crie no Gerenciador (visitantes do site, engajamento no Instagram etc.).</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {audiences.map((aud) => {
+                      const on = a.customAudiences.some((c) => c.id === aud.id);
+                      return (
+                        <button key={aud.id} type="button" onClick={() => onChange((x) => ({ ...x, customAudiences: on ? x.customAudiences.filter((c) => c.id !== aud.id) : [...x.customAudiences, { id: aud.id, name: aud.name }] }))} className={`rounded-full px-2.5 py-1 text-xs ${on ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}>
+                          {aud.name}{aud.size ? ` (${aud.size.toLocaleString("pt-BR")})` : ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-[#344054]">
+            <input type="checkbox" checked={a.advantage} onChange={(e) => onChange((x) => ({ ...x, advantage: e.target.checked }))} className="accent-[#FF2B00]" />
+            Advantage+ de público ligado <span className="text-xs text-[#667085]">(idade, gênero e interesses viram sugestões)</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <label className={LABEL}>{a.advantage ? "Idade sugerida de" : "Idade de"}<input type="number" value={a.ageMin} onChange={(e) => onChange((x) => ({ ...x, ageMin: Number(e.target.value) }))} className={INPUT} /></label>
+            <label className={LABEL}>até<input type="number" value={a.ageMax} onChange={(e) => onChange((x) => ({ ...x, ageMax: Number(e.target.value) }))} className={INPUT} /></label>
+            <label className={LABEL}>
+              {a.advantage ? "Gênero sugerido" : "Gênero"}
+              <select value={a.gender} onChange={(e) => onChange((x) => ({ ...x, gender: Number(e.target.value) as 0 | 1 | 2 }))} className={INPUT}>
+                <option value={0}>Todos</option>
+                <option value={1}>Homens</option>
+                <option value={2}>Mulheres</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <p className="mb-1 text-sm font-medium text-[#344054]">Interesses {a.advantage ? "sugeridos" : ""} (opcional)</p>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {a.interests.map((i) => (
+                <span key={i.id} className="flex items-center gap-1 rounded-full bg-[#FFF4ED] px-2.5 py-1 text-xs text-[#101828]">
+                  {i.name}
+                  <button type="button" onClick={() => onChange((x) => ({ ...x, interests: x.interests.filter((y) => y.id !== i.id) }))} className="text-[#B42318]">×</button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(query); } }} placeholder="Buscar interesse na Meta" className={INPUT} />
+              <button type="button" onClick={() => search(query)} className="shrink-0 rounded-lg border border-[#D0D5DD] px-3 text-xs font-medium">{searching ? "Buscando…" : "Buscar"}</button>
+            </div>
+            {preset && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-[#667085]">
+                Sugestões:
+                {preset.interestTerms.map((t) => (
+                  <button key={t} type="button" onClick={() => search(t)} className="font-medium text-[#FF2B00]">{t}</button>
+                ))}
+              </div>
+            )}
+            {error && <p className="mt-1 text-xs text-[#B42318]">{error}</p>}
+            {results.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {results.map((res) => (
+                  <button key={res.id} type="button" disabled={a.interests.some((i) => i.id === res.id)} onClick={() => onChange((x) => ({ ...x, interests: [...x.interests, { id: res.id, name: res.name }] }))} className="rounded-full border border-[#D0D5DD] px-2.5 py-1 text-xs text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-40">
+                    + {res.name}{res.audience ? ` (${(res.audience / 1_000_000).toFixed(1)} mi)` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <label className={LABEL}>Raio (km)<input type="number" value={a.radiusKm} onChange={(e) => onChange((x) => ({ ...x, radiusKm: Number(e.target.value) }))} className={INPUT} /></label>
-          <label className={LABEL}>Verba diária (R$)<input type="number" value={a.dailyBudget} onChange={(e) => onChange((x) => ({ ...x, dailyBudget: Number(e.target.value) }))} className={INPUT} /></label>
-          <label className={LABEL}>Idade mínima<input type="number" value={a.ageMin} onChange={(e) => onChange((x) => ({ ...x, ageMin: Number(e.target.value) }))} className={INPUT} /></label>
-          <label className={LABEL}>Idade máxima<input type="number" value={a.ageMax} onChange={(e) => onChange((x) => ({ ...x, ageMax: Number(e.target.value) }))} className={INPUT} /></label>
-        </div>
-      </div>
-      <div className="mt-3">
-        <p className="mb-1 text-sm font-medium text-[#344054]">Interesses do público</p>
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {a.interests.map((i) => (
-            <span key={i.id} className="flex items-center gap-1 rounded-full bg-[#FFF4ED] px-2.5 py-1 text-xs text-[#101828]">
-              {i.name}
-              <button type="button" onClick={() => onChange((x) => ({ ...x, interests: x.interests.filter((y) => y.id !== i.id) }))} className="text-[#B42318]">×</button>
-            </span>
-          ))}
-          {!a.interests.length && <span className="text-xs text-[#667085]">Nenhum (a Meta mostra para qualquer pessoa nas cidades).</span>}
-        </div>
-        <div className="flex gap-2">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(query); } }} placeholder="Buscar interesse na Meta" className={INPUT} />
-          <button type="button" onClick={() => search(query)} className="shrink-0 rounded-lg border border-[#D0D5DD] px-3 text-xs font-medium">{searching ? "Buscando…" : "Buscar"}</button>
-        </div>
-        {preset && (
-          <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs text-[#667085]">
-            Sugestões:
-            {preset.interestTerms.map((t) => (
-              <button key={t} type="button" onClick={() => search(t)} className="font-medium text-[#FF2B00]">{t}</button>
-            ))}
-          </div>
-        )}
-        {error && <p className="mt-1 text-xs text-[#B42318]">{error}</p>}
-        {results.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {results.map((r) => (
-              <button key={r.id} type="button" disabled={a.interests.some((i) => i.id === r.id)} onClick={() => onChange((x) => ({ ...x, interests: [...x.interests, { id: r.id, name: r.name }] }))} className="rounded-full border border-[#D0D5DD] px-2.5 py-1 text-xs text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-40">
-                + {r.name}{r.audience ? ` (${(r.audience / 1_000_000).toFixed(1)} mi)` : ""}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-function FormCard({ adset: a, onChange }: { adset: PlanAdSet; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void }) {
+function FormCard({ adset: a, title, onChange }: { adset: PlanAdSet; title: string; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void }) {
   const setForm = (patch: Partial<PlanAdSet["form"]>) => onChange((x) => ({ ...x, form: { ...x.form, ...patch } }));
   return (
     <div className="rounded-xl border border-[#EEF0F3] p-4">
-      <p className="mb-3 text-sm font-semibold text-[#101828]">Formulário instantâneo · {a.niche || "Conjunto sem nome"}</p>
+      <p className="mb-3 text-sm font-semibold text-[#101828]">Formulário instantâneo · <span className="font-mono">{title}</span></p>
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div className="flex flex-col gap-3">
           <label className={LABEL}>Título da abertura<input value={a.form.introTitle} maxLength={60} onChange={(e) => setForm({ introTitle: e.target.value })} className={INPUT} /></label>

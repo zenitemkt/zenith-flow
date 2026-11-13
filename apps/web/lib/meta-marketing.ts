@@ -148,40 +148,68 @@ export interface AdSetSpec {
   pageId: string;
   dailyBudgetCents: number;
   cityKeys: string[];
+  /** "RADIUS" = cidade + raio; "CITY" = apenas a cidade (sem raio). */
+  geoMode: "RADIUS" | "CITY";
   radiusKm: number;
   ageMin: number;
   ageMax: number;
+  /** 0 = todos, 1 = homens, 2 = mulheres. */
+  gender: 0 | 1 | 2;
+  /** Advantage+ de público: idade, gênero e interesses viram sugestões, não limites. */
+  advantage: boolean;
   interests: { id: string; name: string }[];
+  /** Remarketing ([QUENTE]): públicos personalizados da conta. */
+  customAudienceIds: string[];
+  conversion: "FORM" | "SITE";
+  pixelId?: string | null;
 }
 
 export async function createAdSet(token: string, adAccountId: string, spec: AdSetSpec): Promise<string> {
+  const cities = spec.cityKeys.map((key) => (spec.geoMode === "RADIUS" ? { key, radius: spec.radiusKm, distance_unit: "kilometer" } : { key }));
   const targeting: Record<string, unknown> = {
-    geo_locations: { cities: spec.cityKeys.map((key) => ({ key, radius: spec.radiusKm, distance_unit: "kilometer" })) },
-    age_min: spec.ageMin,
-    age_max: spec.ageMax,
-    targeting_automation: { advantage_audience: 0 },
+    geo_locations: { cities },
+    targeting_automation: { advantage_audience: spec.advantage ? 1 : 0 },
   };
+  if (spec.advantage) {
+    // Com Advantage+ a idade mínima é controle (até 25); a faixa e o gênero entram como sugestão.
+    targeting.age_min = Math.min(spec.ageMin, 25);
+    targeting.age_max = 65;
+    targeting.age_range = [spec.ageMin, spec.ageMax];
+  } else {
+    targeting.age_min = spec.ageMin;
+    targeting.age_max = spec.ageMax;
+  }
+  if (spec.gender) targeting.genders = [spec.gender];
   if (spec.interests.length) targeting.flexible_spec = [{ interests: spec.interests.map((i) => ({ id: i.id, name: i.name })) }];
+  if (spec.customAudienceIds.length) targeting.custom_audiences = spec.customAudienceIds.map((id) => ({ id }));
+  const conversion =
+    spec.conversion === "SITE"
+      ? { optimization_goal: "OFFSITE_CONVERSIONS", destination_type: "WEBSITE", promoted_object: { pixel_id: spec.pixelId, custom_event_type: "LEAD" } }
+      : { optimization_goal: "LEAD_GENERATION", destination_type: "ON_AD", promoted_object: { page_id: spec.pageId } };
   const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/adsets`, token, {
     name: spec.name,
     campaign_id: spec.campaignId,
     daily_budget: spec.dailyBudgetCents,
     billing_event: "IMPRESSIONS",
-    optimization_goal: "LEAD_GENERATION",
-    destination_type: "ON_AD",
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-    promoted_object: { page_id: spec.pageId },
+    ...conversion,
     targeting,
     status: "PAUSED",
   }, `criar conjunto "${spec.name}"`);
   return data.id;
 }
 
+export async function listCustomAudiences(token: string, adAccountId: string): Promise<{ id: string; name: string; size?: number }[]> {
+  const data = await metaGet<{ data?: { id: string; name: string; approximate_count_lower_bound?: number }[] }>(`/${act(adAccountId)}/customaudiences`, token, { fields: "id,name,approximate_count_lower_bound", limit: 200 });
+  return (data.data ?? []).map((a) => ({ id: a.id, name: a.name, size: a.approximate_count_lower_bound }));
+}
+
 export interface AdCreativeSpec {
   name: string;
   pageId: string;
   instagramUserId?: string | null;
-  formId: string;
+  /** Formulário instantâneo; sem ele, o anúncio leva para `linkUrl` (site com pixel). */
+  formId?: string | null;
   linkUrl: string;
   message: string;
   headline: string;
@@ -193,7 +221,7 @@ export interface AdCreativeSpec {
 }
 
 export async function createAdCreative(token: string, adAccountId: string, spec: AdCreativeSpec): Promise<string> {
-  const cta = { type: spec.callToAction || "SIGN_UP", value: { lead_gen_form_id: spec.formId } };
+  const cta = spec.formId ? { type: spec.callToAction || "SIGN_UP", value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || "LEARN_MORE", value: { link: spec.linkUrl } };
   const story: Record<string, unknown> = { page_id: spec.pageId };
   if (spec.instagramUserId) story.instagram_user_id = spec.instagramUserId;
   if (spec.videoId) {
