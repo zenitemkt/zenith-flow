@@ -70,7 +70,12 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const router = useRouter();
   const [plan, setPlan] = useState<TrafficPlan>(initialPlan);
   const [campaignId, setCampaignId] = useState(initialId);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(initialPlan.mode === "ADD_ADS" ? 3 : initialPlan.mode === "ADD_ADSETS" ? 1 : 0);
+  // Inclusão em campanha existente pula a etapa Campanha (e, em "só anúncios", também conjuntos e formulário).
+  const visibleSteps = plan.mode === "ADD_ADS" ? [3, 4] : plan.mode === "ADD_ADSETS" ? [1, 2, 3, 4] : [0, 1, 2, 3, 4];
+  const stepPos = visibleSteps.indexOf(step);
+  const setLabel = (a: PlanAdSet, index: number) =>
+    plan.mode === "ADD_ADS" && plan.target?.adSetName ? plan.target.adSetName : adSetName(a, (plan.mode === "ADD_ADSETS" ? plan.target?.adSetOffset ?? 0 : 0) + index);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [issues, setIssues] = useState<string[] | null>(null);
@@ -187,7 +192,11 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   async function submit() {
     const id = await save();
     if (!id) return;
-    if (!await confirmDialog(`Subir "${plan.name}" para a Meta? A campanha vai pausada (conjuntos e anúncios ativos): ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`, { title: "Subir para a Meta", confirmLabel: "Subir campanha" })) return;
+    const question =
+      plan.mode === "NEW"
+        ? `Subir "${plan.name}" para a Meta? A campanha vai pausada (conjuntos e anúncios ativos): ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`
+        : `Incluir ${plan.mode === "ADD_ADS" ? `os anúncios no conjunto "${plan.target?.adSetName}"` : `${plan.adsets.length} conjunto(s) novo(s)`} da campanha "${plan.target?.campaignName}"? Entram ativos: se a campanha estiver ativa, começam a rodar agora.`;
+    if (!await confirmDialog(question, { title: plan.mode === "NEW" ? "Subir para a Meta" : "Incluir na campanha", confirmLabel: plan.mode === "NEW" ? "Subir campanha" : "Incluir" })) return;
     setSubmitting(true);
     setSubmitError(null);
     setSubmitLog([]);
@@ -232,11 +241,24 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
 
   return (
     <section className="flex flex-col gap-4">
+      {plan.mode !== "NEW" && plan.target && (
+        <div className="rounded-xl border border-[#FF2B00]/30 bg-[#FFF4ED] px-4 py-3 text-sm text-[#344054]">
+          <p className="font-semibold text-[#101828]">
+            {plan.mode === "ADD_ADS" ? `Novos anúncios no conjunto ${plan.target.adSetName}` : "Novos conjuntos e criativos"} · campanha {plan.target.campaignName}
+          </p>
+          <p className="text-xs text-[#667085]">
+            {plan.mode === "ADD_ADS"
+              ? `A numeração continua em AD${String(plan.target.adOffset + 1).padStart(2, "0")} e os anúncios usam ${plan.conversion === "FORM" ? "o formulário instantâneo" : "o link"} que o conjunto já tem.`
+              : `Os conjuntos novos começam em [${String(plan.target.adSetOffset + 1).padStart(2, "0")}]. ${plan.target.campaignBudget ? "A campanha usa orçamento Advantage+: os conjuntos entram sem verba própria." : "Cada conjunto novo tem a própria verba."}`}{" "}
+            Tudo entra ativo: se a campanha estiver ativa, começa a rodar ao subir.
+          </p>
+        </div>
+      )}
       <ol className="flex flex-wrap gap-2">
-        {STEPS.map((label, i) => (
-          <li key={label}>
+        {visibleSteps.map((i, pos) => (
+          <li key={STEPS[i]}>
             <button type="button" disabled={saving || submitting} onClick={() => goTo(i)} className={`rounded-full px-3 py-1 text-xs font-semibold ${step === i ? "bg-[#FF2B00] text-white" : "bg-white text-[#475467] ring-1 ring-[#E4E7EC]"}`}>
-              {i + 1}. {label}
+              {pos + 1}. {STEPS[i]}
             </button>
           </li>
         ))}
@@ -324,7 +346,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             </div>
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Nenhum conjunto ainda.</p>}
             {plan.adsets.map((a, index) => (
-              <AdSetCard key={a.key} adset={a} index={index} budgetPerAdSet={plan.budgetMode === "ADSET"} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
+              <AdSetCard key={a.key} adset={a} index={index} label={setLabel(a, index)} budgetPerAdSet={plan.budgetMode === "ADSET"} defaultCities={defaultCities} onChange={(fn) => update(a.key, fn)} onRemove={() => setPlan((p) => ({ ...p, adsets: p.adsets.filter((x) => x.key !== a.key) }))} />
             ))}
             <p className={`text-sm font-medium ${budgetCap !== null && total > budgetCap ? "text-[#B42318]" : "text-[#344054]"}`}>
               {plan.budgetMode === "CAMPAIGN" ? "Orçamento da campanha" : "Total"}: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês){budgetCap !== null ? ` · teto R$ ${budgetCap.toFixed(2)}/dia` : ""}
@@ -336,10 +358,10 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
           <div className="flex flex-col gap-4">
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
             {plan.conversion === "FORM"
-              ? plan.adsets.map((a, index) => <FormCard key={a.key} adset={a} title={adSetName(a, index)} onChange={(fn) => update(a.key, fn)} />)
+              ? plan.adsets.map((a, index) => <FormCard key={a.key} adset={a} title={setLabel(a, index)} onChange={(fn) => update(a.key, fn)} />)
               : plan.adsets.map((a, index) => (
                   <label key={a.key} className={LABEL}>
-                    <span className="font-mono text-xs">{adSetName(a, index)}</span>
+                    <span className="font-mono text-xs">{setLabel(a, index)}</span>
                     Página do site com o formulário (a conversão é o evento Lead do pixel)
                     <input value={a.destinationUrl} onChange={(e) => update(a.key, (x) => ({ ...x, destinationUrl: e.target.value }))} placeholder="https://hubzenite.com.br/..." className={INPUT} />
                   </label>
@@ -478,7 +500,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               const adsList = adsForAdSet(plan, a.key, allSelected);
               return (
                 <div key={a.key} className="rounded-xl border border-[#EEF0F3] p-4">
-                  <p className="mb-3 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, plan.adsets.indexOf(a))} · {adsList.length} anúncio(s)</p>
+                  <p className="mb-3 font-mono text-sm font-semibold text-[#101828]">{setLabel(a, plan.adsets.indexOf(a))} · {adsList.length} anúncio(s)</p>
                   {plan.splitCopy && <p className="mb-2 text-xs font-semibold text-[#FF2B00]">Criativos do Grupo {tab + 1} (troque o grupo nas abas acima)</p>}
                   {driveUserEmail ? (
                     <CreativeUploader compact onDone={(ids) => attachUploaded(a.key, ids)} />
@@ -553,22 +575,22 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
           <div className="flex flex-col gap-4">
             <div className="rounded-xl bg-[#F9FAFB] p-4 text-sm">
               <p className="font-semibold text-[#101828]">{plan.name}</p>
-              <p className="text-xs text-[#667085]">
+              {plan.mode === "NEW" && <p className="text-xs text-[#667085]">
                 {plan.startAt ? `Início ${fmtWhen(plan.startAt)}` : "Começa ao ativar a campanha"} · {plan.endAt ? `término ${fmtWhen(plan.endAt)}` : "sem data de término"}
-              </p>
+              </p>}
               <ul className="mt-2 space-y-2">
                 {plan.adsets.map((a, index) => (
                   <li key={a.key} className="border-l-2 border-[#FF2B00] pl-3">
-                    <p className="font-medium text-[#101828]">{adSetName(a, index)}{plan.budgetMode === "ADSET" ? ` · R$ ${Number(a.dailyBudget).toFixed(2)}/dia` : ""}</p>
-                    <p className="text-xs text-[#667085]">
+                    <p className="font-medium text-[#101828]">{setLabel(a, index)}{plan.mode !== "ADD_ADS" && plan.budgetMode === "ADSET" ? ` · R$ ${Number(a.dailyBudget).toFixed(2)}/dia` : ""}</p>
+                    {plan.mode !== "ADD_ADS" && <p className="text-xs text-[#667085]">
                       {a.geoMode === "RADIUS" ? `raio ${a.radiusKm} km` : "apenas a cidade"} · {a.advantage ? "Advantage+ com sugestão de " : ""}{a.ageMin}–{a.ageMax} anos{a.gender ? (a.gender === 1 ? ", homens" : ", mulheres") : ""} · {a.interests.length ? a.interests.map((i) => i.name).join(", ") : "sem interesses"}{a.temperature === "QUENTE" ? ` · remarketing: ${a.customAudiences.map((c) => c.name).join(", ") || "nenhum público"}` : ""}
-                    </p>
-                    <p className="text-xs text-[#667085]">{plan.conversion === "FORM" ? `Formulário: ${a.form.introTitle || "(sem título)"} · ${a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas` : `Site: ${a.destinationUrl || "(sem link)"}`}</p>
+                    </p>}
+                    <p className="text-xs text-[#667085]">{plan.mode === "ADD_ADS" ? `Usa ${plan.conversion === "FORM" ? "o formulário instantâneo" : "o link"} que o conjunto já tem` : plan.conversion === "FORM" ? `Formulário: ${a.form.introTitle || "(sem título)"} · ${a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas` : `Site: ${a.destinationUrl || "(sem link)"}`}</p>
                     <p className="text-xs text-[#667085]">{a.creativeIds.length} anúncio(s): {a.creativeIds.map((id) => creatives.find((c) => c.id === id)?.name ?? "?").join(", ")}</p>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 font-medium text-[#101828]">{plan.budgetMode === "CAMPAIGN" ? "Orçamento da campanha (Advantage+)" : "Total"} quando ativar: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês)</p>
+              {plan.mode === "NEW" || (plan.mode === "ADD_ADSETS" && plan.budgetMode === "ADSET") ? <p className="mt-3 font-medium text-[#101828]">{plan.mode !== "NEW" ? "Verba dos conjuntos novos" : plan.budgetMode === "CAMPAIGN" ? "Orçamento da campanha (Advantage+)" : "Total"} quando ativar: R$ {total.toFixed(2)}/dia (≈ R$ {(total * 30).toFixed(0)}/mês)</p> : null}
             </div>
             {issues === null ? (
               <p className="text-sm text-[#667085]">Conferindo…</p>
@@ -629,8 +651,8 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
       )}
       {message && <p className={`text-sm ${message.ok ? "text-[#027A48]" : "text-[#B42318]"}`}>{message.text}</p>}
       <div className="flex flex-wrap gap-2">
-        {step > 0 && (
-          <button type="button" disabled={saving || submitting} onClick={() => goTo(step - 1)} className="rounded-lg border border-[#D0D5DD] bg-white px-4 py-2 text-sm font-medium text-[#344054]">
+        {stepPos > 0 && (
+          <button type="button" disabled={saving || submitting} onClick={() => goTo(visibleSteps[stepPos - 1]!)} className="rounded-lg border border-[#D0D5DD] bg-white px-4 py-2 text-sm font-medium text-[#344054]">
             Voltar
           </button>
         )}
@@ -638,7 +660,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
           {saving ? "Salvando…" : "Salvar rascunho"}
         </button>
         {step < 4 && (
-          <button type="button" disabled={saving || submitting} onClick={() => goTo(step + 1)} className="rounded-lg bg-[#101828] px-4 py-2 text-sm font-medium text-white">
+          <button type="button" disabled={saving || submitting} onClick={() => goTo(visibleSteps[stepPos + 1]!)} className="rounded-lg bg-[#101828] px-4 py-2 text-sm font-medium text-white">
             Próximo
           </button>
         )}
@@ -650,7 +672,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   );
 }
 
-function AdSetCard({ adset: a, index, budgetPerAdSet, defaultCities, onChange, onRemove }: { adset: PlanAdSet; index: number; budgetPerAdSet: boolean; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
+function AdSetCard({ adset: a, index, label, budgetPerAdSet, defaultCities, onChange, onRemove }: { adset: PlanAdSet; index: number; label: string; budgetPerAdSet: boolean; defaultCities: string[]; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void; onRemove: () => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ id: string; name: string; audience?: number }[]>([]);
   const [searching, setSearching] = useState(false);
@@ -684,7 +706,7 @@ function AdSetCard({ adset: a, index, budgetPerAdSet, defaultCities, onChange, o
   return (
     <div className="rounded-xl border border-[#EEF0F3] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="rounded-lg bg-[#F9FAFB] px-3 py-1.5 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, index)}</p>
+        <p className="rounded-lg bg-[#F9FAFB] px-3 py-1.5 font-mono text-sm font-semibold text-[#101828]">{label}</p>
         <button type="button" onClick={onRemove} className="text-xs font-medium text-[#B42318]">Remover</button>
       </div>
 

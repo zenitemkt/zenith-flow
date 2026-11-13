@@ -63,8 +63,29 @@ export interface PlanAdSet {
 }
 import type { PlanCopy } from "@/lib/traffic-copy";
 export type { PlanCopy } from "@/lib/traffic-copy";
+/** Inclusão em campanha que já está na Meta (lido da Meta ao criar o rascunho). */
+export interface PlanTarget {
+  metaCampaignId: string;
+  campaignName: string;
+  campaignNumber: number;
+  /** A campanha tem orçamento próprio (Advantage+): conjuntos novos sem verba. */
+  campaignBudget: boolean;
+  /** Último nº de conjunto na campanha: os novos continuam a partir dele. */
+  adSetOffset: number;
+  /** Só anúncios: conjunto, nome, número, último AD e o formulário/link que ele já usa. */
+  metaAdSetId: string | null;
+  adSetName: string | null;
+  adSetNumber: number | null;
+  adOffset: number;
+  formId: string | null;
+  linkUrl: string | null;
+}
+
 export interface TrafficPlan {
   name: string;
+  /** "NEW" = campanha nova; "ADD_ADSETS" = conjuntos (com criativos) em campanha existente; "ADD_ADS" = só anúncios num conjunto existente. */
+  mode: "NEW" | "ADD_ADSETS" | "ADD_ADS";
+  target: PlanTarget | null;
   /** "CAMPAIGN" = orçamento Advantage+ da campanha (padrão da Meta); "ADSET" = verba em cada conjunto. */
   budgetMode: "CAMPAIGN" | "ADSET";
   campaignDailyBudget: number;
@@ -104,7 +125,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Empresários | Região de Americana", conversion: "FORM", budgetMode: "CAMPAIGN", campaignDailyBudget: 30, startAt: "", endAt: "", copy: { primaryTexts: [], headlines: [], descriptions: [] }, splitCopy: false, copyGroups: [], copyByAd: {}, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
+  return { name: "Empresários | Região de Americana", mode: "NEW", target: null, conversion: "FORM", budgetMode: "CAMPAIGN", campaignDailyBudget: 30, startAt: "", endAt: "", copy: { primaryTexts: [], headlines: [], descriptions: [] }, splitCopy: false, copyGroups: [], copyByAd: {}, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -162,8 +183,28 @@ export function parsePlan(value: unknown): TrafficPlan {
     const i = Number(n);
     if (k.length <= 100 && Number.isInteger(i) && i >= 0 && i <= copyGroups.length) copyByAd[k] = i;
   }
+  const t = (v.target ?? null) as Partial<PlanTarget> | null;
+  const mode = v.mode === "ADD_ADSETS" || v.mode === "ADD_ADS" ? v.mode : "NEW";
+  const target: PlanTarget | null =
+    mode !== "NEW" && t && typeof t.metaCampaignId === "string"
+      ? {
+          metaCampaignId: str(t.metaCampaignId, 40),
+          campaignName: str(t.campaignName, 200),
+          campaignNumber: num(t.campaignNumber, 1, 9999, 1),
+          campaignBudget: t.campaignBudget === true,
+          adSetOffset: num(t.adSetOffset, 0, 999, 0),
+          metaAdSetId: typeof t.metaAdSetId === "string" ? str(t.metaAdSetId, 40) : null,
+          adSetName: typeof t.adSetName === "string" ? str(t.adSetName, 200) : null,
+          adSetNumber: t.adSetNumber ? num(t.adSetNumber, 1, 999, 1) : null,
+          adOffset: num(t.adOffset, 0, 999, 0),
+          formId: typeof t.formId === "string" ? str(t.formId, 40) : null,
+          linkUrl: typeof t.linkUrl === "string" ? str(t.linkUrl, 500) : null,
+        }
+      : null;
   return {
     name: str(v.name, 200) || emptyPlan().name,
+    mode: target ? mode : "NEW",
+    target,
     conversion: v.conversion === "SITE" ? "SITE" : "FORM",
     budgetMode: v.budgetMode === "ADSET" ? "ADSET" : "CAMPAIGN",
     startAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v.startAt ?? "")) ? String(v.startAt) : "",
@@ -188,6 +229,12 @@ export function brasiliaToDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/** Nome do conjunto no plano: em inclusão, continua a numeração da campanha; em "só anúncios", é o conjunto existente. */
+export function planAdSetLabel(plan: Pick<TrafficPlan, "mode" | "target">, a: PlanAdSet, index: number): string {
+  if (plan.mode === "ADD_ADS" && plan.target?.adSetName) return plan.target.adSetName;
+  return adSetName(a, (plan.mode === "ADD_ADSETS" ? plan.target?.adSetOffset ?? 0 : 0) + index);
+}
+
 /** Problemas que impedem subir (mostrados na revisão). */
 export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise<string[]> {
   const issues: string[] = [];
@@ -206,25 +253,30 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
   const end = brasiliaToDate(plan.endAt);
   if (end && end.getTime() <= Date.now()) issues.push("A data de término já passou.");
   if (start && end && end.getTime() - start.getTime() < 24 * 60 * 60_000) issues.push("O término precisa ser pelo menos 24 horas depois do início (exigência da Meta).");
-  if (plan.budgetMode === "CAMPAIGN" && plan.adsets.length && plan.campaignDailyBudget < 6 * plan.adsets.length) {
+  if (plan.mode === "NEW" && plan.budgetMode === "CAMPAIGN" && plan.adsets.length && plan.campaignDailyBudget < 6 * plan.adsets.length) {
     issues.push(`Orçamento da campanha: mínimo de R$ 6/dia por conjunto (R$ ${(6 * plan.adsets.length).toFixed(2)}/dia para ${plan.adsets.length} conjunto(s)).`);
   }
-  if (settings?.dailyBudgetCapCents && Math.round(total * 100) > settings.dailyBudgetCapCents) {
+  if (plan.mode !== "ADD_ADS" && !(plan.mode === "ADD_ADSETS" && plan.budgetMode === "CAMPAIGN") && settings?.dailyBudgetCapCents && Math.round(total * 100) > settings.dailyBudgetCapCents) {
     issues.push(`A verba (R$ ${total.toFixed(2)}/dia) passa do teto de R$ ${(settings.dailyBudgetCapCents / 100).toFixed(2)}/dia.`);
   }
   const creativeIds = Array.from(new Set(plan.adsets.flatMap((a) => a.creativeIds)));
   const creatives = await prisma.adCreative.findMany({ where: { agencyId, id: { in: creativeIds } } });
   for (const [index, a] of plan.adsets.entries()) {
-    const label = adSetName(a, index);
-    if (!a.cities.length) issues.push(`${label}: escolha pelo menos uma cidade.`);
-    if (plan.budgetMode === "ADSET" && a.dailyBudget < 6) issues.push(`${label}: verba diária mínima de R$ 6.`);
-    if (a.ageMin > a.ageMax) issues.push(`${label}: idade mínima maior que a máxima.`);
-    if (a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
-    if (plan.conversion === "FORM") {
+    const label = planAdSetLabel(plan, a, index);
+    if (plan.mode === "ADD_ADS") {
+      if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
+    }
+    if (plan.mode !== "ADD_ADS" && !a.cities.length) issues.push(`${label}: escolha pelo menos uma cidade.`);
+    if (plan.mode !== "ADD_ADS" && plan.budgetMode === "ADSET" && a.dailyBudget < 6) issues.push(`${label}: verba diária mínima de R$ 6.`);
+    if (plan.mode !== "ADD_ADS" && a.ageMin > a.ageMax) issues.push(`${label}: idade mínima maior que a máxima.`);
+    if (plan.mode !== "ADD_ADS" && a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
+    if (plan.mode === "ADD_ADS") {
+      // Usa o formulário/link que o conjunto já tem.
+    } else if (plan.conversion === "FORM") {
       if (!a.form.introTitle || (!a.form.introText && !a.form.introBullets.some((b) => b.trim()))) issues.push(`${label}: preencha o título e a saudação do formulário.`);
       if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
     } else if (!/^https?:\/\//i.test(a.destinationUrl)) issues.push(`${label}: informe o link da página do site (com o formulário).`);
-    if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
+    if (plan.mode !== "ADD_ADS" && !a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
     const chosen = a.creativeIds.map((id) => creatives.find((x) => x.id === id));
     if (chosen.some((c) => !c)) issues.push(`${label}: um criativo escolhido não existe mais.`);
     for (const [adIndex, g] of adsForAdSet(plan, a.key, chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
@@ -289,6 +341,11 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
     await save();
 
     // 2. Campanha.
+    if (!progress.campaignId && plan.mode !== "NEW" && plan.target) {
+      progress.campaignId = plan.target.metaCampaignId;
+      progress.log.push(`Incluindo na campanha ${plan.target.campaignName}.`);
+      await save();
+    }
     if (!progress.campaignId) {
       // Padrão da Zenite: "[LEAD03] Nome" (código do objetivo + próximo número livre na conta).
       const number = await nextCampaignNumber(adsToken, adAccountId, OBJECTIVE_CODES.OUTCOME_LEADS);
@@ -303,12 +360,17 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
     const today = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
     for (const [index, a] of plan.adsets.entries()) {
-      const setName = adSetName(a, index);
+      const setName = planAdSetLabel(plan, a, index);
+      const setNumber = plan.mode === "ADD_ADS" ? plan.target?.adSetNumber ?? 1 : (plan.mode === "ADD_ADSETS" ? plan.target?.adSetOffset ?? 0 : 0) + index + 1;
       const state = (progress.adsets[a.key] ??= { ads: {} });
       state.ads ??= {};
       if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${setName})` };
 
       // 3. Formulário instantâneo do conjunto.
+      if (plan.mode === "ADD_ADS" && plan.target) {
+        state.adSetId ??= plan.target.metaAdSetId ?? undefined;
+        if (plan.conversion === "FORM") state.formId ??= plan.target.formId ?? undefined;
+      }
       if (plan.conversion === "FORM" && !state.formId) {
         state.formId = await createLeadForm(pageToken, pageId, {
           name: `${plan.name} | ${setName} | ${today}`.slice(0, 200),
@@ -364,7 +426,8 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
         const adState = (state.ads[group.key] ??= {});
         if (adState.adId) continue;
         if (timeLeft() < 8_000) return { done: false, message: `Continuando… (${setName})` };
-        const adName = `AD${String(adIndex + 1).padStart(2, "0")}`;
+        const adNumber = (plan.mode === "ADD_ADS" ? plan.target?.adOffset ?? 0 : 0) + adIndex + 1;
+        const adName = `AD${String(adNumber).padStart(2, "0")}`;
         const parts = [group.feed, group.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
         for (const original of parts) {
           let creative = creatives.find((c) => c.id === original.id)!;
@@ -403,7 +466,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
             pageId,
             instagramUserId: progress.instagramUserId,
             formId: plan.conversion === "FORM" ? state.formId : null,
-            linkUrl: plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl,
+            linkUrl: plan.conversion === "SITE" ? a.destinationUrl || plan.target?.linkUrl || settings.websiteUrl || "" : settings.websiteUrl || a.form.buttonUrl || plan.target?.linkUrl || "",
             messages,
             headlines,
             descriptions,
@@ -422,10 +485,10 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           datasetId: plan.trackOfflineEvents ? pixelId : null,
         });
         // Padrão de nome no Drive e na biblioteca: "03-01-AD01-F" (campanha-conjunto-anúncio-posicionamento).
-        const campaignNo = Number(plan.name.match(/^\[[A-Z]+(\d+)\]/)?.[1] ?? "1");
+        const campaignNo = plan.target?.campaignNumber ?? Number(plan.name.match(/^\[[A-Z]+(\d+)\]/)?.[1] ?? "1");
         for (const [role, c] of [["F", feed], ["S", stories]] as const) {
           if (!c) continue;
-          const newName = standardCreativeName(campaignNo, index + 1, adIndex + 1, c.kind === "VIDEO" ? null : role);
+          const newName = standardCreativeName(campaignNo, setNumber, adNumber, c.kind === "VIDEO" ? null : role);
           const ext = c.fileName.match(/\.[a-z0-9]{2,4}$/i)?.[0] ?? "";
           await renameDriveFile(c.driveFileId, `${newName}${ext}`).catch((renameError) => console.error("ad_creative_rename_failed", c.id, renameError));
           await prisma.adCreative.update({ where: { id: c.id }, data: { name: newName, fileName: `${newName}${ext}`, primaryText: messages[0] || null, headline: headlines[0] || null, description: descriptions[0] || null, linkUrl: c.linkUrl || (plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl), metaCreativeId: adState.creativeId, metaAdId: adState.adId } });

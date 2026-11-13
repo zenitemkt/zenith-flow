@@ -24,13 +24,18 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
   const agencyId = membership.agencyId;
   const tab = TABS.some((t) => t.id === searchParams.aba) ? searchParams.aba! : "criativos";
 
-  const [folders, creatives, metaConnection, settings, pages, campaigns] = await Promise.all([
+  const [folders, creatives, metaConnection, settings, pages, campaigns, metaCampaigns] = await Promise.all([
     prisma.adCreativeFolder.findMany({ where: { agencyId }, orderBy: { createdAt: "asc" } }),
     prisma.adCreative.findMany({ where: { agencyId }, orderBy: { createdAt: "desc" }, take: 500 }),
     prisma.adAccountConnection.findUnique({ where: { agencyId_platform: { agencyId, platform: "META" } }, select: { externalAccountName: true, externalAccountId: true, scopes: true, status: true } }),
     prisma.trafficSettings.findUnique({ where: { agencyId } }),
     prisma.socialConnection.findMany({ where: { agencyId, platform: "FACEBOOK", status: "ACTIVE" }, select: { id: true, name: true, leadsEnabled: true, client: { select: { name: true } } }, orderBy: { name: "asc" } }),
     prisma.trafficCampaign.findMany({ where: { agencyId }, orderBy: { createdAt: "desc" }, take: 50 }),
+    prisma.campaign.findMany({
+      where: { agencyId, channel: "Meta Ads", externalId: { not: null }, status: { not: "ENCERRADA" } },
+      orderBy: { createdAt: "desc" },
+      select: { externalId: true, name: true, status: true, budgetCents: true, adSets: { where: { externalId: { not: null }, NOT: { metaStatus: { in: ["ARCHIVED", "DELETED"] } } }, orderBy: { name: "asc" }, select: { externalId: true, name: true, _count: { select: { ads: true } } } } },
+    }),
   ]);
 
   const creativeRows = creatives.map((c) => ({
@@ -104,21 +109,33 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
       {tab === "campanhas" && (
         <CampaignsList
           adAccountId={metaConnection?.externalAccountId ?? null}
-          campaigns={campaigns.map((c) => {
-            const plan = parsePlan(c.plan);
-            return {
-              id: c.id,
-              name: c.name,
-              status: c.status,
-              metaCampaignId: c.metaCampaignId,
-              lastError: c.lastError,
-              createdAt: c.createdAt.toISOString(),
-              submittedAt: c.submittedAt?.toISOString() ?? null,
-              adsets: plan.adsets.length,
-              ads: plan.adsets.reduce((n, a) => n + a.creativeIds.length, 0),
-              dailyBudget: planDailyTotal(plan),
-            };
-          })}
+          drafts={campaigns
+            .filter((c) => c.status !== "SUBMITTED" || (!parsePlan(c.plan).target && !metaCampaigns.some((m) => m.externalId === c.metaCampaignId)))
+            .map((c) => {
+              const plan = parsePlan(c.plan);
+              return {
+                id: c.id,
+                name: c.name,
+                status: c.status,
+                mode: plan.mode,
+                targetLabel: plan.target ? (plan.mode === "ADD_ADS" ? `${plan.target.adSetName} · ${plan.target.campaignName}` : plan.target.campaignName) : null,
+                metaCampaignId: c.metaCampaignId,
+                lastError: c.lastError,
+                createdAt: c.createdAt.toISOString(),
+                submittedAt: c.submittedAt?.toISOString() ?? null,
+                adsets: plan.adsets.length,
+                ads: plan.adsets.reduce((n, a) => n + a.creativeIds.length, 0),
+                dailyBudget: planDailyTotal(plan),
+              };
+            })}
+          metaCampaigns={metaCampaigns.map((m) => ({
+            metaCampaignId: m.externalId as string,
+            name: m.name,
+            status: m.status,
+            budgetCents: m.budgetCents,
+            fromPortal: campaigns.some((c) => c.metaCampaignId === m.externalId),
+            adsets: m.adSets.map((a) => ({ metaAdSetId: a.externalId as string, name: a.name, ads: a._count.ads })),
+          }))}
         />
       )}
 
