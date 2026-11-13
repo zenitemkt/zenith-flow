@@ -4,14 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS } from "@/lib/traffic-niches";
+import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
   id: string;
   name: string;
+  fileName: string;
   kind: "IMAGE" | "VIDEO";
   status: string;
-  ready: boolean;
+  primaryText: string | null;
+  headline: string | null;
+  description: string | null;
+  linkUrl: string | null;
+  callToAction: string | null;
 }
+const isReady = (c: CreativeOption) => Boolean(c.primaryText && c.headline);
 
 interface Props {
   campaignId: string | null;
@@ -19,6 +26,7 @@ interface Props {
   defaultCities: string[];
   defaultButtonUrl: string;
   budgetCap: number | null;
+  driveUserEmail: string | null;
   creatives: CreativeOption[];
 }
 
@@ -52,7 +60,7 @@ function newAdSet(niche: string, cities: string[], buttonUrl: string): PlanAdSet
   };
 }
 
-export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCities, defaultButtonUrl, budgetCap, creatives }: Props) {
+export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCities, defaultButtonUrl, budgetCap, driveUserEmail, creatives: initialCreatives }: Props) {
   const router = useRouter();
   const [plan, setPlan] = useState<TrafficPlan>(initialPlan);
   const [campaignId, setCampaignId] = useState(initialId);
@@ -62,6 +70,20 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [issues, setIssues] = useState<string[] | null>(null);
   const [submitLog, setSubmitLog] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [creatives, setCreatives] = useState<CreativeOption[]>(initialCreatives);
+  const [editingCreative, setEditingCreative] = useState<CreativeOption | null>(null);
+
+  /** Depois do envio pela etapa Anúncios: busca os criativos novos, põe na lista e já marca no conjunto. */
+  async function attachUploaded(adsetKey: string, driveFileIds: string[]) {
+    if (!driveFileIds.length) return;
+    const res = await fetch("/api/ad-creatives/by-drive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ driveFileIds }) });
+    const rows = ((await res.json().catch(() => null))?.creatives ?? []) as CreativeOption[];
+    if (!rows.length) return;
+    setCreatives((list) => [...rows.filter((row) => !list.some((c) => c.id === row.id)), ...list]);
+    setPlan((p) => ({ ...p, adsets: p.adsets.map((a) => (a.key === adsetKey ? { ...a, creativeIds: Array.from(new Set([...a.creativeIds, ...rows.map((row) => row.id)])) } : a)) }));
+    const missing = rows.find((row) => !isReady(row));
+    if (missing) setEditingCreative(missing);
+  }
 
   const update = (key: string, fn: (a: PlanAdSet) => PlanAdSet) => setPlan((p) => ({ ...p, adsets: p.adsets.map((a) => (a.key === key ? fn(a) : a)) }));
   const total = plan.adsets.reduce((n, a) => n + (Number(a.dailyBudget) || 0), 0);
@@ -177,29 +199,61 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
 
         {step === 3 && (
           <div className="flex flex-col gap-4">
-            {!creatives.length && <p className="text-sm text-[#667085]">Nenhum criativo na biblioteca. Coloque arquivos na pasta do Drive e sincronize na aba Criativos.</p>}
-            {plan.adsets.map((a) => (
-              <div key={a.key} className="rounded-xl border border-[#EEF0F3] p-4">
-                <p className="mb-2 text-sm font-semibold text-[#101828]">{a.niche || "Conjunto sem nome"}</p>
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {creatives.map((c) => {
-                    const on = a.creativeIds.includes(c.id);
-                    return (
-                      <label key={c.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm ${on ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#EEF0F3]"}`}>
-                        <input type="checkbox" checked={on} onChange={() => update(a.key, (x) => ({ ...x, creativeIds: on ? x.creativeIds.filter((id) => id !== c.id) : [...x.creativeIds, c.id] }))} className="accent-[#FF2B00]" />
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/ad-creatives/${c.id}/thumbnail`} alt="" className="h-10 w-10 rounded object-cover" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-[#101828]">{c.name}</span>
-                          <span className={`text-xs ${c.ready ? "text-[#667085]" : "text-[#B54708]"}`}>{c.kind === "VIDEO" ? "Vídeo" : "Imagem"}{c.ready ? "" : " · faltam textos"}</span>
-                        </span>
-                      </label>
-                    );
-                  })}
+            {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
+            {plan.adsets.map((a) => {
+              const selected = a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is CreativeOption => Boolean(c));
+              const others = creatives.filter((c) => !a.creativeIds.includes(c.id));
+              const toggle = (id: string) => update(a.key, (x) => ({ ...x, creativeIds: x.creativeIds.includes(id) ? x.creativeIds.filter((y) => y !== id) : [...x.creativeIds, id] }));
+              return (
+                <div key={a.key} className="rounded-xl border border-[#EEF0F3] p-4">
+                  <p className="mb-3 text-sm font-semibold text-[#101828]">{a.niche || "Conjunto sem nome"} · {selected.length} anúncio(s)</p>
+                  {driveUserEmail ? (
+                    <CreativeUploader compact onDone={(ids) => attachUploaded(a.key, ids)} />
+                  ) : (
+                    <p className="rounded-lg bg-[#FFFAEB] px-3 py-2 text-sm text-[#B54708]">
+                      Para subir arquivos aqui, conecte a conta Google na aba Criativos.{" "}
+                      <a href="/api/admin/traffic-drive-oauth/start" className="font-semibold underline">Conectar agora</a>
+                    </p>
+                  )}
+                  {selected.length > 0 && (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {selected.map((c) => (
+                        <div key={c.id} className="flex items-center gap-2 rounded-lg border border-[#FF2B00] bg-[#FFF4ED] p-2 text-sm">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`/api/ad-creatives/${c.id}/thumbnail`} alt="" className="h-12 w-12 rounded object-cover" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-[#101828]">{c.name}</span>
+                            <button type="button" onClick={() => setEditingCreative(c)} className={`text-xs font-semibold ${isReady(c) ? "text-[#027A48]" : "text-[#B54708]"}`}>
+                              {isReady(c) ? "Textos ok · editar" : "Preencher textos"}
+                            </button>
+                          </span>
+                          <button type="button" onClick={() => toggle(c.id)} aria-label="Tirar do conjunto" className="text-[#B42318]">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {others.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs font-semibold text-[#475467]">Escolher da biblioteca ({others.length})</summary>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {others.map((c) => (
+                          <button key={c.id} type="button" onClick={() => toggle(c.id)} className="flex items-center gap-2 rounded-lg border border-[#EEF0F3] p-2 text-left text-sm hover:bg-[#F9FAFB]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={`/api/ad-creatives/${c.id}/thumbnail`} alt="" className="h-10 w-10 rounded object-cover" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium text-[#101828]">{c.name}</span>
+                              <span className="text-xs text-[#667085]">{c.kind === "VIDEO" ? "Vídeo" : "Imagem"}{isReady(c) ? "" : " · faltam textos"}</span>
+                            </span>
+                            <span className="text-xs font-semibold text-[#FF2B00]">+ usar</span>
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
-              </div>
-            ))}
-            <p className="text-xs text-[#667085]">O texto de cada anúncio vem do criativo (aba Criativos → Textos do anúncio). Cada criativo marcado vira um anúncio no conjunto.</p>
+              );
+            })}
+            <p className="text-xs text-[#667085]">Cada criativo do conjunto vira um anúncio. Os arquivos enviados aqui ficam salvos na pasta do Drive e na biblioteca.</p>
           </div>
         )}
 
@@ -248,6 +302,16 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         )}
       </div>
 
+      {editingCreative && (
+        <CreativeEditor
+          creative={editingCreative}
+          onClose={() => setEditingCreative(null)}
+          onSaved={(values) => {
+            setCreatives((list) => list.map((c) => (c.id === editingCreative.id ? { ...c, ...values } : c)));
+            setEditingCreative(null);
+          }}
+        />
+      )}
       {message && <p className={`text-sm ${message.ok ? "text-[#027A48]" : "text-[#B42318]"}`}>{message.text}</p>}
       <div className="flex flex-wrap gap-2">
         {step > 0 && (

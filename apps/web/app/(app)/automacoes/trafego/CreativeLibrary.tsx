@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Status = "DRAFT" | "UPLOADING" | "IN_REVIEW" | "ACTIVE" | "PAUSED" | "REJECTED" | "FAILED";
 
-interface Creative {
+export interface Creative {
   id: string;
   driveFileId: string;
   name: string;
@@ -223,7 +223,7 @@ export function CreativeLibrary({ serviceEmail, driveUserEmail, folders, metaAcc
   );
 }
 
-function CreativeEditor({ creative, onClose, onSaved }: { creative: Creative; onClose: () => void; onSaved: () => void }) {
+export function CreativeEditor({ creative, onClose, onSaved }: { creative: Pick<Creative, "id" | "name" | "fileName" | "primaryText" | "headline" | "description" | "linkUrl" | "callToAction">; onClose: () => void; onSaved: (values: { name: string; primaryText: string; headline: string; description: string; linkUrl: string; callToAction: string }) => void }) {
   const [form, setForm] = useState({
     name: creative.name,
     primaryText: creative.primaryText ?? "",
@@ -245,7 +245,7 @@ function CreativeEditor({ creative, onClose, onSaved }: { creative: Creative; on
       setError((await response.json().catch(() => null))?.error ?? "Não consegui salvar.");
       return;
     }
-    onSaved();
+    onSaved(form);
   }
 
   return (
@@ -286,14 +286,14 @@ interface UploadItem {
 }
 
 /** Envia arquivos do computador direto para "1 - Para subir" no Drive e sincroniza a biblioteca no fim. */
-function CreativeUploader({ onDone }: { onDone: () => void }) {
+export function CreativeUploader({ onDone, compact = false }: { onDone: (driveFileIds: string[]) => void; compact?: boolean }) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const patch = (index: number, change: Partial<UploadItem>) => setItems((list) => list.map((x, i) => (i === index ? { ...x, ...change } : x)));
 
-  function put(url: string, file: File, onProgress: (pct: number) => void): Promise<void> {
+  function put(url: string, file: File, onProgress: (pct: number) => void): Promise<string | null> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", url);
@@ -301,7 +301,14 @@ function CreativeUploader({ onDone }: { onDone: () => void }) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
       };
-      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`O Drive recusou o arquivo (${xhr.status}).`)));
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(`O Drive recusou o arquivo (${xhr.status}).`));
+        try {
+          resolve((JSON.parse(xhr.responseText) as { id?: string }).id ?? null);
+        } catch {
+          resolve(null);
+        }
+      };
       xhr.onerror = () => reject(new Error("Falha de conexão durante o envio."));
       xhr.send(file);
     });
@@ -312,23 +319,23 @@ function CreativeUploader({ onDone }: { onDone: () => void }) {
     const start = items.length;
     setItems((list) => [...list, ...files.map((f) => ({ name: f.name, progress: 0 }))]);
     setBusy(true);
-    let sent = 0;
+    const sentIds: string[] = [];
     for (const [offset, file] of files.entries()) {
       const index = start + offset;
       try {
         const res = await fetch("/api/ad-creatives/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: file.name, mimeType: file.type, size: file.size }) });
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error ?? "Não consegui preparar o envio.");
-        await put(data.uploadUrl, file, (pct) => patch(index, { progress: pct }));
+        const driveId = await put(data.uploadUrl, file, (pct) => patch(index, { progress: pct }));
+        if (driveId) sentIds.push(driveId);
         patch(index, { progress: 100, done: true });
-        sent++;
       } catch (error) {
         patch(index, { error: error instanceof Error ? error.message : "Falhou." });
       }
     }
-    if (sent) await fetch("/api/ad-creatives/sync", { method: "POST" }).catch(() => null);
+    if (sentIds.length) await fetch("/api/ad-creatives/sync", { method: "POST" }).catch(() => null);
     setBusy(false);
-    onDone();
+    onDone(sentIds);
   }
 
   return (
@@ -343,7 +350,7 @@ function CreativeUploader({ onDone }: { onDone: () => void }) {
         setDragging(false);
         upload(Array.from(e.dataTransfer.files));
       }}
-      className={`rounded-xl border-2 border-dashed p-5 text-center ${dragging ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#D0D5DD] bg-white"}`}
+      className={`rounded-xl border-2 border-dashed ${compact ? "p-3" : "p-5"} text-center ${dragging ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#D0D5DD] bg-white"}`}
     >
       <p className="text-sm font-semibold text-[#101828]">Arraste imagens ou vídeos aqui</p>
       <p className="text-xs text-[#667085]">Vão direto para a pasta &quot;1 - Para subir&quot; do Drive e aparecem abaixo como Rascunho. JPG ou PNG até 30 MB, MP4 ou MOV até 4 GB.</p>

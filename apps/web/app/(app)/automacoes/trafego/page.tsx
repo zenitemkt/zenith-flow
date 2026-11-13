@@ -88,7 +88,8 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
           defaultCities={DEFAULT_CITIES}
           defaultButtonUrl={settings?.websiteUrl ?? "https://hubzenite.com.br/"}
           budgetCap={settings?.dailyBudgetCapCents ? settings.dailyBudgetCapCents / 100 : null}
-          creatives={creativeRows.map((c) => ({ id: c.id, name: c.name, kind: c.kind, status: c.status, ready: Boolean(c.primaryText && c.headline) }))}
+          driveUserEmail={settings?.driveRefreshTokenEnc ? settings.driveAccountEmail ?? "conta conectada" : null}
+          creatives={creativeRows.map((c) => ({ id: c.id, name: c.name, fileName: c.fileName, kind: c.kind, status: c.status, primaryText: c.primaryText, headline: c.headline, description: c.description, linkUrl: c.linkUrl, callToAction: c.callToAction }))}
         />
       )}
 
