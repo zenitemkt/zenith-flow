@@ -44,7 +44,8 @@ export async function nextCampaignNumberInfo(token: string, adAccountId: string,
       effective_status: ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"],
       ...(after ? { after } : {}),
     });
-    rows.push(...(data.data ?? [])// Excluída no Gerenciador às vezes volta com effective_status ARCHIVED, mas status DELETED.
+    // Excluída no Gerenciador às vezes volta com effective_status ARCHIVED, mas status DELETED.
+    rows.push(...(data.data ?? [])
       .filter((c) => c.status !== "DELETED" && c.effective_status !== "DELETED").map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
     after = data.paging?.next ? data.paging.cursors?.after ?? "" : "";
     if (!after) break;
