@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS } from "@/lib/traffic-niches";
@@ -72,6 +72,14 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [submitting, setSubmitting] = useState(false);
   const [creatives, setCreatives] = useState<CreativeOption[]>(initialCreatives);
   const [editingCreative, setEditingCreative] = useState<CreativeOption | null>(null);
+  const [nextCode, setNextCode] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/traffic/next-code?objective=OUTCOME_LEADS")
+      .then((res) => res.json())
+      .then((data) => setNextCode(typeof data?.code === "string" ? data.code : null))
+      .catch(() => setNextCode(null));
+  }, []);
+  const codeMatch = plan.name.match(/^\s*\[([A-Z]+\d+)\]/);
 
   /** Depois do envio pela etapa Anúncios: busca os criativos novos, põe na lista e já marca no conjunto. */
   async function attachUploaded(adsetKey: string, driveFileIds: string[]) {
@@ -174,7 +182,11 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               Nome da campanha
               <input value={plan.name} onChange={(e) => setPlan((p) => ({ ...p, name: e.target.value }))} className={INPUT} />
             </label>
-            <p className="text-sm text-[#475467]">Objetivo: <strong>Cadastros</strong>, com formulário instantâneo da Meta. A verba fica em cada conjunto (nicho), para cada um ter o próprio controle.</p>
+            <p className="rounded-lg bg-[#F9FAFB] px-3 py-2 text-sm text-[#344054]">
+              Nome na Meta: <strong>{codeMatch ? plan.name : `[${nextCode ?? "LEAD??"}] ${plan.name}`}</strong>
+              <span className="block text-xs text-[#667085]">O código do objetivo e o número entram sozinhos no envio, seguindo a sequência da conta (Reconhecimento REC, Tráfego TRAF, Engajamento ENG, Leads LEAD, Promoção do app APP, Vendas VEND).</span>
+            </p>
+            <p className="text-sm text-[#475467]">Objetivo: <strong>Leads (cadastros)</strong>, com formulário instantâneo da Meta. A verba fica em cada conjunto (nicho), para cada um ter o próprio controle.</p>
             {budgetCap === null && <p className="rounded-lg bg-[#FFFAEB] px-3 py-2 text-sm text-[#B54708]">O teto de verba ainda não foi definido em Configurações. Dá para montar o rascunho, mas só sobe depois de definir.</p>}
           </div>
         )}

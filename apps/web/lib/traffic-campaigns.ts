@@ -3,6 +3,7 @@ import { decryptSecret } from "@/lib/crypto-secrets";
 import { downloadDriveFile } from "@/lib/google-drive";
 import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
+import { OBJECTIVE_CODES, nextCampaignNumber, withCampaignCode } from "@/lib/campaign-naming";
 import {
   createAd,
   createAdCreative,
@@ -55,7 +56,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Zenite | Cadastros | Nichos locais", adsets: [] };
+  return { name: "Nichos locais | Formulário instantâneo", adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -181,6 +182,10 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
 
     // 2. Campanha.
     if (!progress.campaignId) {
+      // Padrão da Zenite: "[LEAD03] Nome" (código do objetivo + próximo número livre na conta).
+      const number = await nextCampaignNumber(adsToken, adAccountId, OBJECTIVE_CODES.OUTCOME_LEADS);
+      plan.name = withCampaignCode(OBJECTIVE_CODES.OUTCOME_LEADS, number, plan.name);
+      await prisma.trafficCampaign.update({ where: { id: row.id }, data: { name: plan.name, plan: plan as unknown as Prisma.InputJsonValue } });
       progress.campaignId = await createCampaign(adsToken, adAccountId, plan.name);
       progress.log.push(`Campanha criada (${progress.campaignId}).`);
       await save({ metaCampaignId: progress.campaignId });
