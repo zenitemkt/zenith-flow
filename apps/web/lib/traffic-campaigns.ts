@@ -20,7 +20,11 @@ import {
 /** Plano montado no passo a passo "Nova campanha". Valores de verba em reais. */
 export interface PlanForm {
   introTitle: string;
+  /** Saudação em lista (como o formulário da Zenite); vazio = parágrafo em introText. */
+  introBullets: string[];
   introText: string;
+  contactText: string;
+  privacyLinkText: string;
   askCity: boolean;
   questions: { label: string; options: string[] }[];
   thankTitle: string;
@@ -102,8 +106,11 @@ export function parsePlan(value: unknown): TrafficPlan {
       dailyBudget: num(a?.dailyBudget, 0, 100000, 30),
       form: {
         introTitle: str(f.introTitle, 60),
+        introBullets: (Array.isArray(f.introBullets) ? f.introBullets : []).map((b) => str(b, 80)).slice(0, 5),
         introText: str(f.introText, 1000),
-        askCity: f.askCity !== false,
+        contactText: str(f.contactText, 200),
+        privacyLinkText: str(f.privacyLinkText, 70),
+        askCity: f.askCity === true,
         questions: (Array.isArray(f.questions) ? f.questions : [])
           .map((q) => ({ label: str(q?.label, 200), options: (Array.isArray(q?.options) ? q.options : []).map((o) => str(o, 80)).filter(Boolean).slice(0, 10) }))
           .filter((q) => q.label)
@@ -146,7 +153,7 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     if (a.ageMin > a.ageMax) issues.push(`${label}: idade mínima maior que a máxima.`);
     if (a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
     if (plan.conversion === "FORM") {
-      if (!a.form.introTitle || !a.form.introText) issues.push(`${label}: preencha o título e o texto de abertura do formulário.`);
+      if (!a.form.introTitle || (!a.form.introText && !a.form.introBullets.some((b) => b.trim()))) issues.push(`${label}: preencha o título e a saudação do formulário.`);
       if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
     } else if (!/^https?:\/\//i.test(a.destinationUrl)) issues.push(`${label}: informe o link da página do site (com o formulário).`);
     if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
@@ -234,7 +241,10 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
         state.formId = await createLeadForm(pageToken, pageId, {
           name: `${plan.name} | ${setName} | ${today}`.slice(0, 200),
           introTitle: a.form.introTitle,
+          introBullets: a.form.introBullets,
           introText: a.form.introText,
+          contactText: a.form.contactText,
+          privacyLinkText: a.form.privacyLinkText,
           cityOptions: a.form.askCity ? a.cities : [],
           customQuestions: a.form.questions,
           thankTitle: a.form.thankTitle,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
-import { NICHE_PRESETS } from "@/lib/traffic-niches";
+import { NICHE_PRESETS, zeniteFormTemplate } from "@/lib/traffic-niches";
 import { adSetName } from "@/lib/traffic-naming";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
@@ -37,7 +37,6 @@ const LABEL = "flex flex-col gap-1 text-sm font-medium text-[#344054]";
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function newAdSet(niche: string, cities: string[], buttonUrl: string): PlanAdSet {
-  const preset = NICHE_PRESETS.find((p) => p.niche === niche);
   return {
     key: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`,
     niche,
@@ -52,16 +51,7 @@ function newAdSet(niche: string, cities: string[], buttonUrl: string): PlanAdSet
     gender: 0,
     interests: [],
     dailyBudget: 30,
-    form: {
-      introTitle: preset?.introTitle ?? "Mais clientes para a sua empresa",
-      introText: preset?.introText ?? "A Zenite cuida dos anúncios de empresas da região para trazer contatos de quem procura o que você vende. Responda 3 perguntas e a nossa equipe fala com você.",
-      askCity: true,
-      questions: preset ? preset.questions.map((q) => ({ label: q.label, options: [...q.options] })) : [{ label: "Qual o segmento da sua empresa?", options: [] }, { label: "Quanto você investe hoje por mês em anúncios?", options: ["Ainda não invisto", "Até R$ 500", "De R$ 500 a R$ 1.500", "Mais de R$ 1.500"] }],
-      thankTitle: "Recebemos o seu cadastro",
-      thankBody: "A equipe da Zenite vai falar com você pelo WhatsApp em breve.",
-      buttonText: "Conhecer a Zenite",
-      buttonUrl,
-    },
+    form: zeniteFormTemplate(niche),
     destinationUrl: buttonUrl,
     creativeIds: [],
   };
@@ -453,7 +443,7 @@ function AdSetCard({ adset: a, index, defaultCities, onChange, onRemove }: { ads
           </div>
           <label className={LABEL}>
             Nicho (opcional)
-            <input value={a.niche} onChange={(e) => onChange((x) => ({ ...x, niche: e.target.value }))} list="traffic-niches" placeholder="Deixe vazio para empresários em geral" className={INPUT} />
+            <input value={a.niche} onChange={(e) => { const niche = e.target.value; onChange((x) => ({ ...x, niche, form: { ...x.form, questions: x.form.questions.map((q) => (niche.trim() && q.label.startsWith("Qual é o segmento") ? { label: "Qual é o @ do Instagram da sua empresa?", options: [] } : !niche.trim() && q.label.startsWith("Qual é o @ do Instagram") ? { label: "Qual é o segmento da sua empresa? (Ex: Clínica Estética, Lanchonete)", options: [] } : q)) } })); }} list="traffic-niches" placeholder="Deixe vazio para empresários em geral" className={INPUT} />
             <datalist id="traffic-niches">
               {NICHE_PRESETS.map((p) => (
                 <option key={p.niche} value={p.niche} />
@@ -558,8 +548,19 @@ function FormCard({ adset: a, title, onChange }: { adset: PlanAdSet; title: stri
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div className="flex flex-col gap-3">
           <label className={LABEL}>Título da abertura<input value={a.form.introTitle} maxLength={60} onChange={(e) => setForm({ introTitle: e.target.value })} className={INPUT} /></label>
-          <label className={LABEL}>Texto da abertura<textarea value={a.form.introText} rows={3} onChange={(e) => setForm({ introText: e.target.value })} className={INPUT} /></label>
-          <p className="text-xs text-[#667085]">Sempre perguntados (a Meta já preenche com os dados do Facebook): nome, telefone e e-mail.</p>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium text-[#344054]">Saudação em lista (até 5 itens, 80 letras cada)</p>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <input key={i} value={a.form.introBullets[i] ?? ""} maxLength={80} onChange={(e) => { const next = [...a.form.introBullets]; next[i] = e.target.value; setForm({ introBullets: next }); }} placeholder={`Item ${i + 1}`} className={INPUT} />
+            ))}
+          </div>
+          {a.niche.trim() && a.form.questions.some((q) => q.label.startsWith("Qual é o segmento")) && (
+            <button type="button" onClick={() => setForm({ questions: a.form.questions.map((q) => (q.label.startsWith("Qual é o segmento") ? { label: "Qual é o @ do Instagram da sua empresa?", options: [] } : q)) })} className="self-start text-xs font-semibold text-[#FF2B00]">
+              Conjunto com nicho: trocar a pergunta do segmento pela do Instagram
+            </button>
+          )}
+          <label className={LABEL}>Texto acima dos dados de contato<input value={a.form.contactText} maxLength={200} onChange={(e) => setForm({ contactText: e.target.value })} className={INPUT} /></label>
+          <p className="text-xs text-[#667085]">Dados de contato sempre pedidos no fim (a Meta preenche com o Facebook da pessoa): nome completo, e-mail e telefone.</p>
           <label className="flex items-center gap-2 text-sm text-[#344054]">
             <input type="checkbox" checked={a.form.askCity} onChange={(e) => setForm({ askCity: e.target.checked })} className="accent-[#FF2B00]" />
             Perguntar a cidade (opções: as cidades do conjunto)
@@ -590,9 +591,9 @@ function FormCard({ adset: a, title, onChange }: { adset: PlanAdSet; title: stri
           <p className="mb-2 font-semibold text-[#667085]">Prévia</p>
           <div className="rounded-xl bg-white p-3 shadow-sm">
             <p className="text-sm font-semibold text-[#101828]">{a.form.introTitle || "Título da abertura"}</p>
-            <p className="mt-1 whitespace-pre-line text-[#475467]">{a.form.introText || "Texto da abertura"}</p>
+            <p className="mt-1 whitespace-pre-line text-[#475467]">{a.form.introBullets.filter(Boolean).length ? a.form.introBullets.filter(Boolean).map((b) => `• ${b}`).join("\n") : a.form.introText || "Saudação"}</p>
             <div className="mt-3 space-y-1.5">
-              {["Nome completo", "Telefone", "E-mail", ...(a.form.askCity ? ["Em qual cidade fica a sua empresa?"] : []), ...a.form.questions.map((q) => q.label || "Pergunta")].map((q, i) => (
+              {[...(a.form.askCity ? ["Em qual cidade fica a sua empresa?"] : []), ...a.form.questions.map((q) => q.label || "Pergunta"), "Nome completo", "E-mail", "Telefone"].map((q, i) => (
                 <p key={i} className="rounded border border-[#EEF0F3] px-2 py-1 text-[#344054]">{q}</p>
               ))}
             </div>

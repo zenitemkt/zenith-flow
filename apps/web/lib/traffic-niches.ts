@@ -51,3 +51,32 @@ export const NICHE_PRESETS: NichePreset[] = [
     questions: [{ label: "Quantos carros a loja tem em estoque?", options: ["Até 20", "21 a 50", "51 a 100", "Mais de 100"] }, ...COMMON_QUESTIONS],
   },
 ];
+
+export const ZENITE_WHATSAPP_URL = "https://wa.me/5519936196876?text=Oi";
+
+/**
+ * Formulário padrão da Zenite (o mesmo "Zenite — Orçamento (Lead Ads)" usado hoje).
+ * Com nicho, a pergunta do segmento vira a do Instagram da empresa.
+ */
+export function zeniteFormTemplate(niche: string) {
+  return {
+    introTitle: "Você precisa de um Marketing forte para aumentar suas vendas",
+    introBullets: ["Teste primeiro mês se não gostar devolvemos seu dinheiro", "Para empresas de Americana e região", "Tráfego pago, sites, redes sociais e Google"],
+    introText: "",
+    contactText: "Usamos seus dados apenas para entrar em contato sobre o seu orçamento.",
+    privacyLinkText: "Política de Privacidade da Zenite",
+    askCity: false,
+    questions: [
+      { label: "Qual serviço mais te interessa?", options: ["Gestão de tráfego pago", "Site ou landing page", "Gestão de redes sociais", "Gestão de Marketing completa"] },
+      { label: "Quanto pretende investir por mês em marketing?", options: ["Até R$ 800", "R$ 800 a R$ 1.500", "R$ 1.500 a R$ 3.000", "Acima de R$ 3.000"] },
+      { label: "Quantos funcionários sua empresa tem?", options: ["1 a 5", "6 a 20", "21 a 50", "Mais de 50"] },
+      niche.trim()
+        ? { label: "Qual é o @ do Instagram da sua empresa?", options: [] as string[] }
+        : { label: "Qual é o segmento da sua empresa? (Ex: Clínica Estética, Lanchonete)", options: [] as string[] },
+    ],
+    thankTitle: "Falta só um passo!",
+    thankBody: 'Seus dados chegaram. Toque no botão abaixo e mande um "oi" no WhatsApp: quem envia a mensagem agora recebe o orçamento primeiro.',
+    buttonText: "Conversar no WhatsApp",
+    buttonUrl: ZENITE_WHATSAPP_URL,
+  };
+}

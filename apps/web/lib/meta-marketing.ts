@@ -98,34 +98,51 @@ export async function videoReadyThumbnail(token: string, videoId: string): Promi
 export interface LeadFormSpec {
   name: string;
   introTitle: string;
+  /** Saudação em lista (até 5 itens). Vazio = usa `introText` como parágrafo. */
+  introBullets: string[];
   introText: string;
   cityOptions: string[];
   customQuestions: { label: string; options: string[] }[];
+  /** Texto acima dos dados de contato ("Usamos seus dados apenas para..."). */
+  contactText: string;
   thankTitle: string;
   thankBody: string;
   buttonText: string;
   buttonUrl: string;
   privacyUrl: string;
+  privacyLinkText: string;
 }
 
-/** Formulário instantâneo (vinculado à página que assina o anúncio; abre dentro do anúncio). */
+/**
+ * Formulário instantâneo no padrão da Zenite: tipo "maior intenção" (tela de revisão),
+ * compartilhamento aberto, saudação em lista, perguntas personalizadas primeiro (múltipla
+ * escolha antes de resposta curta) e os dados de contato no fim.
+ */
 export async function createLeadForm(pageToken: string, pageId: string, spec: LeadFormSpec): Promise<string> {
-  const questions: object[] = [{ type: "FULL_NAME" }, { type: "PHONE" }, { type: "EMAIL" }];
+  const questions: object[] = [];
   if (spec.cityOptions.length) {
     questions.push({ type: "CUSTOM", key: "cidade", label: "Em qual cidade fica a sua empresa?", options: spec.cityOptions.map((value, i) => ({ value, key: `cidade_${i + 1}` })) });
   }
-  spec.customQuestions.forEach((q, index) => {
+  // A Meta exige resposta curta depois das de múltipla escolha.
+  const ordered = [...spec.customQuestions.filter((q) => q.options.length), ...spec.customQuestions.filter((q) => !q.options.length)];
+  ordered.forEach((q, index) => {
     const key = `pergunta_${index + 1}`;
     questions.push(q.options.length ? { type: "CUSTOM", key, label: q.label, options: q.options.map((value, i) => ({ value, key: `${key}_${i + 1}` })) } : { type: "CUSTOM", key, label: q.label });
   });
+  questions.push({ type: "FULL_NAME" }, { type: "EMAIL" }, { type: "PHONE" });
+  const bullets = spec.introBullets.map((b) => b.trim().slice(0, 80)).filter(Boolean).slice(0, 5);
   const data = await metaPost<{ id: string }>(`/${pageId}/leadgen_forms`, pageToken, {
     name: spec.name.slice(0, 200),
     locale: "pt_BR",
+    is_optimized_for_quality: true,
+    block_display_for_non_targeted_viewer: false,
     questions,
-    privacy_policy: { url: spec.privacyUrl, link_text: "Política de privacidade" },
-    context_card: { title: spec.introTitle.slice(0, 60), style: "PARAGRAPH_STYLE", content: [spec.introText.slice(0, 1000)] },
-    thank_you_page: { title: spec.thankTitle.slice(0, 60), body: spec.thankBody.slice(0, 500), button_type: "VIEW_WEBSITE", button_text: spec.buttonText.slice(0, 30), website_url: spec.buttonUrl },
-    block_display_for_non_targeted_viewer: true,
+    question_page_custom_headline: spec.contactText ? spec.contactText.slice(0, 200) : undefined,
+    privacy_policy: { url: spec.privacyUrl, link_text: (spec.privacyLinkText || "Política de privacidade").slice(0, 70) },
+    context_card: bullets.length
+      ? { title: spec.introTitle.slice(0, 60), style: "LIST_STYLE", content: bullets }
+      : { title: spec.introTitle.slice(0, 60), style: "PARAGRAPH_STYLE", content: [spec.introText.slice(0, 1000)] },
+    thank_you_page: { title: spec.thankTitle.slice(0, 60), body: spec.thankBody.slice(0, 500), button_type: "VIEW_WEBSITE", button_text: spec.buttonText.slice(0, 60), website_url: spec.buttonUrl },
   }, "criar formulário instantâneo");
   return data.id;
 }
