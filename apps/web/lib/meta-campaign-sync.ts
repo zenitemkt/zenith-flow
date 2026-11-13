@@ -146,7 +146,7 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
     const info = infoById.get(externalId);
     const status: CampaignStatus | null = info ? campaignStatusFromMeta(info.effectiveStatus, info.stopTime, now) : null;
     const name = info?.name || nameFromInsights.get(externalId) || "Campanha da Meta";
-    const dates = info ? { startDate: parseDate(info.startTime), endDate: parseDate(info.stopTime) } : {};
+    const dates = info ? { startDate: parseDate(info.startTime), endDate: parseDate(info.stopTime), budgetCents: info.dailyBudgetCents } : {};
     const existing = knownByExternalId.get(externalId);
 
     if (existing) {

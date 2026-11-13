@@ -8,6 +8,10 @@ import { CPL_LEVEL_LABEL, META_STATUS_LABEL, cplCents, cplLevel, ctr, frequency,
 import { AddAdSetModal } from "./AddAdSetModal";
 import { AddAdModal } from "./AddAdModal";
 import { AddGeoTargetModal } from "./AddGeoTargetModal";
+import { TrafficActions } from "./TrafficActions";
+
+/** Ligado na Meta (o próprio status), mesmo que a campanha ou o conjunto acima esteja pausado. */
+const isOn = (status: string | null) => Boolean(status) && !["PAUSED", "ARCHIVED", "DELETED"].includes(status!);
 
 interface AdRow {
   id: string;
@@ -42,6 +46,10 @@ interface CampaignRow {
   statusLabel: string;
   statusBadgeClass: string;
   clientName: string | null;
+  /** Campanha da Meta (dá para pausar/ativar e mudar verba pelo portal). */
+  synced: boolean;
+  /** Verba diária da campanha (Advantage+); null = verba nos conjuntos. */
+  budgetCents: number | null;
   totals: LevelTotals;
   /** Só mostra ROAS quando a plataforma manda valor (compras). */
   roas: number | null;
@@ -106,7 +114,7 @@ async function deleteResource(url: string, router: ReturnType<typeof useRouter>)
   router.refresh();
 }
 
-function AdItem({ campaignId, adSetId, ad, goals }: { campaignId: string; adSetId: string; ad: AdRow; goals: Goals }) {
+function AdItem({ campaignId, adSetId, ad, goals, canManage }: { campaignId: string; adSetId: string; ad: AdRow; goals: Goals; canManage: boolean }) {
   const router = useRouter();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#F2F4F7] bg-[#FAFAFB] px-3 py-2">
@@ -126,6 +134,7 @@ function AdItem({ campaignId, adSetId, ad, goals }: { campaignId: string; adSetI
       </div>
       <div className="flex shrink-0 items-center gap-3">
         {ad.synced && <Metrics totals={ad.totals} goals={goals} compact />}
+        {ad.synced && canManage && <TrafficActions level="ad" id={ad.id} name={ad.name} active={isOn(ad.metaStatus)} budgetCents={null} />}
         {ad.assetUrl && (
           <a href={ad.assetUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs font-medium text-[#FF2B00] hover:underline">
             Ver peça <ExternalLink size={12} aria-hidden />
@@ -141,7 +150,7 @@ function AdItem({ campaignId, adSetId, ad, goals }: { campaignId: string; adSetI
   );
 }
 
-function AdSetBlock({ campaignId, adSet, goals, sort }: { campaignId: string; adSet: AdSetRow; goals: Goals; sort: SortKey }) {
+function AdSetBlock({ campaignId, adSet, goals, sort, canManage }: { campaignId: string; adSet: AdSetRow; goals: Goals; sort: SortKey; canManage: boolean }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [addingAd, setAddingAd] = useState(false);
@@ -161,6 +170,7 @@ function AdSetBlock({ campaignId, adSet, goals, sort }: { campaignId: string; ad
           </div>
         </button>
         {adSet.synced && <Metrics totals={adSet.totals} goals={goals} compact />}
+        {adSet.synced && canManage && <TrafficActions level="adset" id={adSet.id} name={adSet.name} active={isOn(adSet.metaStatus)} budgetCents={adSet.budgetCents} />}
         {!adSet.synced && (
           <>
             <button type="button" onClick={() => setAddingAd(true)} className="flex items-center gap-1 rounded-full border border-[#E4E7EC] px-2 py-1 text-xs font-medium text-[#475467] hover:bg-[#F9FAFB]">
@@ -177,7 +187,7 @@ function AdSetBlock({ campaignId, adSet, goals, sort }: { campaignId: string; ad
           {adSet.ads.length === 0 ? (
             <p className="text-xs text-[#98A2B3]">Nenhum anúncio ainda.</p>
           ) : (
-            sortRows(adSet.ads, sort).map((ad) => <AdItem key={ad.id} campaignId={campaignId} adSetId={adSet.id} ad={ad} goals={goals} />)
+            sortRows(adSet.ads, sort).map((ad) => <AdItem key={ad.id} campaignId={campaignId} adSetId={adSet.id} ad={ad} goals={goals} canManage={canManage} />)
           )}
         </div>
       )}
@@ -186,7 +196,7 @@ function AdSetBlock({ campaignId, adSet, goals, sort }: { campaignId: string; ad
   );
 }
 
-function CampaignBlock({ row, goals, sort }: { row: CampaignRow; goals: Goals; sort: SortKey }) {
+function CampaignBlock({ row, goals, sort, canManage }: { row: CampaignRow; goals: Goals; sort: SortKey; canManage: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [addingAdSet, setAddingAdSet] = useState(false);
   const [addingGeoTarget, setAddingGeoTarget] = useState(false);
@@ -204,12 +214,14 @@ function CampaignBlock({ row, goals, sort }: { row: CampaignRow; goals: Goals; s
             </div>
             <p className="text-xs text-[#98A2B3]">
               {row.clientName ?? "Funil próprio da agência"} · {row.adSets.length} conjunto(s)
+              {row.budgetCents !== null && row.synced ? ` · orçamento da campanha ${formatCents(row.budgetCents)}/dia` : ""}
             </p>
           </div>
         </button>
         <div className="flex items-center gap-4">
           <Metrics totals={row.totals} goals={goals} />
           {row.roas !== null && <StatCell value={`${row.roas.toFixed(2)}x`} label="ROAS" />}
+          {row.synced && canManage && row.status !== "ENCERRADA" && <TrafficActions level="campaign" id={row.id} name={row.name} active={row.status === "ATIVA"} budgetCents={row.budgetCents} />}
         </div>
       </div>
       {expanded && (
@@ -232,7 +244,7 @@ function CampaignBlock({ row, goals, sort }: { row: CampaignRow; goals: Goals; s
           ) : (
             <div className="flex flex-col gap-1.5">
               {sortRows(row.adSets, sort).map((adSet) => (
-                <AdSetBlock key={adSet.id} campaignId={row.id} adSet={adSet} goals={goals} sort={sort} />
+                <AdSetBlock key={adSet.id} campaignId={row.id} adSet={adSet} goals={goals} sort={sort} canManage={canManage} />
               ))}
             </div>
           )}
@@ -250,7 +262,7 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "cpl", label: "Menor custo por lead" },
 ];
 
-export function CampaignXrayTree({ rows, goals }: { rows: CampaignRow[]; goals: Goals }) {
+export function CampaignXrayTree({ rows, goals, canManage }: { rows: CampaignRow[]; goals: Goals; canManage: boolean }) {
   const [sort, setSort] = useState<SortKey>("spend");
   return (
     <div className="flex flex-col gap-3">
@@ -270,7 +282,7 @@ export function CampaignXrayTree({ rows, goals }: { rows: CampaignRow[]; goals: 
         )}
       </div>
       {sortRows(rows, sort).map((row) => (
-        <CampaignBlock key={row.id} row={row} goals={goals} sort={sort} />
+        <CampaignBlock key={row.id} row={row} goals={goals} sort={sort} canManage={canManage} />
       ))}
     </div>
   );

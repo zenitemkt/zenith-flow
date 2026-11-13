@@ -206,6 +206,8 @@ export interface MetaCampaignInfo {
   effectiveStatus: string;
   startTime: string | null;
   stopTime: string | null;
+  /** Orçamento diário da campanha (Advantage+), em centavos; null = verba nos conjuntos. */
+  dailyBudgetCents: number | null;
 }
 
 interface RawMetaCampaign {
@@ -214,9 +216,10 @@ interface RawMetaCampaign {
   effective_status?: string;
   start_time?: string;
   stop_time?: string;
+  daily_budget?: string;
 }
 
-const CAMPAIGN_FIELDS = "id,name,effective_status,start_time,stop_time";
+const CAMPAIGN_FIELDS = "id,name,effective_status,start_time,stop_time,daily_budget";
 
 function toCampaignInfo(raw: RawMetaCampaign): MetaCampaignInfo {
   return {
@@ -225,6 +228,7 @@ function toCampaignInfo(raw: RawMetaCampaign): MetaCampaignInfo {
     effectiveStatus: raw.effective_status ?? "",
     startTime: raw.start_time ?? null,
     stopTime: raw.stop_time ?? null,
+    dailyBudgetCents: raw.daily_budget ? Number(raw.daily_budget) : null,
   };
 }
 

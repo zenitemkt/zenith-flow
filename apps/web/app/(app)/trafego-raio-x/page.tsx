@@ -44,7 +44,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   periodStart.setUTCDate(periodStart.getUTCDate() - days);
   periodStart.setUTCHours(0, 0, 0, 0);
 
-  const [campaigns, clients, metaConnection, trafficSettings] = await Promise.all([
+  const [campaigns, clients, metaConnection, trafficSettings, history] = await Promise.all([
     prisma.campaign.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -75,7 +75,14 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       select: { status: true, lastValidatedAt: true },
     }),
     prisma.trafficSettings.findUnique({ where: { agencyId: membership.agencyId }, select: { cplGoodCents: true, cplMaxCents: true } }),
+    prisma.auditLog.findMany({ where: { agencyId: membership.agencyId, action: { startsWith: "traffic." } }, orderBy: { createdAt: "desc" }, take: 15 }),
   ]);
+  const actorIds = Array.from(new Set(history.map((h) => h.actorUserId).filter((x): x is string => Boolean(x))));
+  const actors = actorIds.length ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } }) : [];
+  const actorName = (id: string | null) => {
+    const u = actors.find((a) => a.id === id);
+    return u?.name || u?.email || "Alguém";
+  };
   const goals = { goodCents: trafficSettings?.cplGoodCents ?? null, maxCents: trafficSettings?.cplMaxCents ?? null };
   const canSyncMeta = canManageIntegrations(membership.role) && metaConnection?.status === "ACTIVE";
 
@@ -237,6 +244,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       ) : (
         <CampaignXrayTree
           goals={goals}
+          canManage={canManageIntegrations(membership.role)}
           rows={rows.map(({ campaign, totals }) => ({
             id: campaign.id,
             name: campaign.name,
@@ -245,6 +253,8 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
             statusLabel: CAMPAIGN_STATUS_LABELS[campaign.status],
             statusBadgeClass: CAMPAIGN_STATUS_BADGE_CLASS[campaign.status],
             clientName: campaign.client?.name ?? null,
+            synced: campaign.channel === "Meta Ads" && Boolean(campaign.externalId),
+            budgetCents: campaign.channel === "Meta Ads" ? campaign.budgetCents : null,
             totals: sumLevel(campaign.dailyMetrics),
             roas: totals.resultValueCents > 0 ? totals.roas : null,
             adSets: campaign.adSets.map((adSet) => ({
@@ -271,6 +281,26 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
             })),
           }))}
         />
+      )}
+
+      {history.length > 0 && (
+        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <h2 className="text-sm font-semibold text-[#101828]">Histórico de alterações</h2>
+          <p className="mb-2 text-xs text-[#98A2B3]">Pausar, ativar e mudanças de verba feitas pelo portal.</p>
+          <ul className="divide-y divide-[#F2F4F7] text-sm">
+            {history.map((h) => {
+              const meta = (h.metadata ?? {}) as { summary?: string; name?: string };
+              return (
+                <li key={h.id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                  <span className="text-[#344054]">
+                    <strong className="font-medium text-[#101828]">{actorName(h.actorUserId)}</strong> {meta.summary ?? h.action} &quot;{meta.name ?? ""}&quot;
+                  </span>
+                  <span className="text-xs text-[#98A2B3]">{h.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
