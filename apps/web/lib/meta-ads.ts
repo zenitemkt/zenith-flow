@@ -12,11 +12,11 @@ const GRAPH_BASE_URL = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
 
 /**
  * Permissões pedidas na autorização: `ads_read` (Ads Insights — estrutura e
- * métricas de campanha) e `business_management` (listar contas de anúncio
- * do Business Manager). `ads_management` fica de fora por enquanto — esta
- * fatia só lê, nunca cria/edita campanha (ver docs/DECISIONS.md).
+ * métricas de campanha), `business_management` (listar contas de anúncio
+ * do Business Manager) e `ads_management` (Gestor de tráfego: enviar
+ * criativos e criar/pausar anúncios, sempre com aprovação na tela — 2026-11-13).
  */
-export const META_OAUTH_SCOPES = ["ads_read", "business_management"] as const;
+export const META_OAUTH_SCOPES = ["ads_read", "business_management", "ads_management"] as const;
 
 function requireEnv(name: "META_APP_ID" | "META_APP_SECRET"): string {
   const value = process.env[name];
