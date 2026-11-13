@@ -1,17 +1,25 @@
-import { prisma, type CampaignStatus } from "@zenite-mkt/db";
+import { prisma, type AdCreativeStatus, type CampaignStatus, type Prisma } from "@zenite-mkt/db";
+import { setCreativeStatus } from "@/lib/ad-creatives";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import {
   campaignStatusFromMeta,
   fetchMetaCampaignById,
   fetchMetaCampaignInsights,
   fetchMetaCampaigns,
+  fetchMetaAdSets,
+  fetchMetaAds,
+  fetchMetaCityCoordinates,
+  fetchMetaLevelInsights,
   type MetaCampaignInfo,
 } from "@/lib/meta-ads";
 
 export const META_CAMPAIGN_CHANNEL = "Meta Ads";
 /** Depois disto sem sincronizar, as telas de campanha atualizam sozinhas ao abrir. */
 export const META_SYNC_STALE_MS = 30 * 60_000;
-const PERIOD_DAYS = 30;
+/** Primeira sincronização (e uma vez por mês) busca 90 dias; as outras refazem só 7 (a Meta corrige dias anteriores). */
+const FULL_PERIOD_DAYS = 90;
+const INCREMENTAL_PERIOD_DAYS = 7;
+const FULL_SYNC_EVERY_MS = 30 * 24 * 60 * 60_000;
 
 export interface MetaCampaignSyncResult {
   campaignsCreated: number;
@@ -23,6 +31,10 @@ export interface MetaCampaignSyncResult {
   accountId: string;
   accountName: string | null;
   campaignsFound: number;
+  adSetsSynced?: number;
+  adsSynced?: number;
+  /** Falha só nos níveis de conjunto/anúncio (as campanhas sincronizaram). */
+  levelsError?: string | null;
 }
 
 export class MetaSyncError extends Error {}
@@ -61,6 +73,8 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
   }
 
   const now = new Date();
+  const full = !connection.metaFullSyncAt || now.getTime() - connection.metaFullSyncAt.getTime() > FULL_SYNC_EVERY_MS;
+  const PERIOD_DAYS = full ? FULL_PERIOD_DAYS : INCREMENTAL_PERIOD_DAYS;
   const since = new Date(now.getTime() - PERIOD_DAYS * 24 * 60 * 60 * 1000);
 
   let listed: MetaCampaignInfo[];
@@ -147,12 +161,25 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
     metricsUpserted += 1;
   }
 
+  // Conjuntos, anúncios, números por nível, mapa e situação dos criativos do Gestor de tráfego.
+  let levels: { adSets: number; ads: number } = { adSets: 0, ads: 0 };
+  let levelsError: string | null = null;
+  try {
+    levels = await syncMetaLevels(agencyId, decryptSecret(connection.accessTokenEnc), connection.externalAccountId, campaignIdByExternalId, formatDate(since), formatDate(now));
+  } catch (error) {
+    levelsError = error instanceof Error ? error.message : "Erro desconhecido.";
+    console.error("meta_levels_sync_failed", levelsError);
+  }
+
   await prisma.adAccountConnection.update({
     where: { id: connection.id },
-    data: { lastValidatedAt: new Date(), lastError: null },
+    data: { lastValidatedAt: new Date(), lastError: levelsError ? `Conjuntos/anúncios: ${levelsError}` : null, ...(full && !levelsError ? { metaFullSyncAt: now } : {}) },
   });
 
   return {
+    adSetsSynced: levels.adSets,
+    adsSynced: levels.ads,
+    levelsError,
     campaignsCreated,
     campaignsUpdated,
     metricsUpserted,
@@ -161,4 +188,126 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
     accountName: connection.externalAccountName,
     campaignsFound: infoById.size,
   };
+}
+
+
+/** Situação do anúncio na Meta → situação do criativo na biblioteca (e pasta no Drive). */
+function creativeStatusFromAd(effectiveStatus: string): AdCreativeStatus | null {
+  switch (effectiveStatus) {
+    case "PENDING_REVIEW":
+    case "IN_PROCESS":
+    case "PREAPPROVED":
+      return "IN_REVIEW";
+    case "ACTIVE":
+      return "ACTIVE";
+    case "DISAPPROVED":
+      return "REJECTED";
+    case "PAUSED":
+    case "CAMPAIGN_PAUSED":
+    case "ADSET_PAUSED":
+    case "ARCHIVED":
+      return "PAUSED";
+    default:
+      return null;
+  }
+}
+
+/** Grava em lotes (uma ida ao banco a cada 100 linhas): 90 dias × anúncios passa de mil linhas. */
+async function upsertDaily<T extends { date: string }>(rows: T[], idFor: (row: T) => string | undefined, write: (id: string, date: Date, row: T) => Prisma.PrismaPromise<unknown>) {
+  const ops = rows.flatMap((row) => {
+    const id = idFor(row);
+    return id ? [write(id, new Date(row.date), row)] : [];
+  });
+  for (let i = 0; i < ops.length; i += 100) await prisma.$transaction(ops.slice(i, i + 100));
+}
+
+/**
+ * Conjuntos e anúncios da conta (estrutura, situação, verba, miniatura, motivo de reprovação),
+ * números diários por conjunto e por anúncio, cidades da segmentação no mapa e situação dos
+ * criativos subidos pelo Gestor de tráfego.
+ */
+async function syncMetaLevels(agencyId: string, token: string, adAccountId: string, campaignIdByExternalId: Map<string, string>, since: string, until: string) {
+  const act = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  const [adSets, ads, adSetRows, adRows] = await Promise.all([
+    fetchMetaAdSets(token, act),
+    fetchMetaAds(token, act),
+    fetchMetaLevelInsights(token, act, "adset", since, until),
+    fetchMetaLevelInsights(token, act, "ad", since, until),
+  ]);
+
+  // Conjuntos.
+  const campaignIds = Array.from(new Set(campaignIdByExternalId.values()));
+  const existingSets = await prisma.adSet.findMany({ where: { campaignId: { in: campaignIds }, externalId: { not: null } }, select: { id: true, externalId: true } });
+  const adSetIdByExternal = new Map(existingSets.map((a) => [a.externalId as string, a.id]));
+  for (const info of adSets) {
+    const campaignId = campaignIdByExternalId.get(info.campaignId);
+    if (!campaignId) continue;
+    const data = { name: info.name, metaStatus: info.effectiveStatus, active: info.effectiveStatus === "ACTIVE", budgetCents: info.dailyBudgetCents, targetingSummary: info.targetingSummary || null };
+    const id = adSetIdByExternal.get(info.id);
+    if (id) await prisma.adSet.update({ where: { id }, data: { ...data, campaignId } });
+    else adSetIdByExternal.set(info.id, (await prisma.adSet.create({ data: { ...data, campaignId, externalId: info.id } })).id);
+  }
+
+  // Anúncios.
+  const existingAds = await prisma.ad.findMany({ where: { adSet: { campaignId: { in: campaignIds } }, externalId: { not: null } }, select: { id: true, externalId: true } });
+  const adIdByExternal = new Map(existingAds.map((a) => [a.externalId as string, a.id]));
+  for (const info of ads) {
+    const adSetId = adSetIdByExternal.get(info.adSetId);
+    if (!adSetId) continue;
+    const data = { name: info.name, metaStatus: info.effectiveStatus, active: info.effectiveStatus === "ACTIVE", reviewFeedback: info.reviewFeedback, thumbnailUrl: info.thumbnailUrl };
+    const id = adIdByExternal.get(info.id);
+    if (id) await prisma.ad.update({ where: { id }, data: { ...data, adSetId } });
+    else adIdByExternal.set(info.id, (await prisma.ad.create({ data: { ...data, adSetId, externalId: info.id } })).id);
+  }
+
+  // Números diários por conjunto e por anúncio.
+  const metric = (row: { spendCents: number; impressions: number; reach: number; clicks: number; linkClicks: number; leads: number }) => ({
+    spendCents: row.spendCents,
+    impressions: row.impressions,
+    reach: row.reach,
+    clicks: row.clicks,
+    linkClicks: row.linkClicks,
+    leads: row.leads,
+  });
+  await upsertDaily(adSetRows, (r) => adSetIdByExternal.get(r.id), (adSetId, date, r) =>
+    prisma.adSetDailyMetric.upsert({ where: { adSetId_date: { adSetId, date } }, create: { adSetId, date, ...metric(r) }, update: metric(r) }),
+  );
+  await upsertDaily(adRows, (r) => adIdByExternal.get(r.id), (adId, date, r) =>
+    prisma.adDailyMetric.upsert({ where: { adId_date: { adId, date } }, create: { adId, date, ...metric(r) }, update: metric(r) }),
+  );
+
+  // Mapa: cidades (e raio) da segmentação de cada campanha. As cadastradas à mão ficam.
+  const citiesByCampaign = new Map<string, Map<string, { name: string; radiusKm: number | null }>>();
+  for (const info of adSets) {
+    const campaignId = campaignIdByExternalId.get(info.campaignId);
+    if (!campaignId || info.effectiveStatus === "ARCHIVED" || info.effectiveStatus === "DELETED") continue;
+    const map = citiesByCampaign.get(campaignId) ?? new Map();
+    for (const c of info.cities) {
+      const prev = map.get(c.key);
+      map.set(c.key, { name: c.name, radiusKm: Math.max(prev?.radiusKm ?? 0, c.radiusKm ?? 0) || null });
+    }
+    citiesByCampaign.set(campaignId, map);
+  }
+  const coords = await fetchMetaCityCoordinates(token, Array.from(new Set(Array.from(citiesByCampaign.values()).flatMap((m) => Array.from(m.keys())))));
+  for (const [campaignId, cities] of citiesByCampaign) {
+    const rows = Array.from(cities.entries()).filter(([key]) => coords.has(key));
+    if (!rows.length) continue;
+    await prisma.$transaction([
+      prisma.campaignGeoTarget.deleteMany({ where: { campaignId, externalKey: { not: null } } }),
+      prisma.campaignGeoTarget.createMany({ data: rows.map(([key, c]) => ({ campaignId, externalKey: key, label: c.name, lat: coords.get(key)!.lat, lng: coords.get(key)!.lng, radiusKm: c.radiusKm })) }),
+    ]);
+  }
+
+  // Criativos do Gestor de tráfego: situação vinda da Meta (move o arquivo de pasta no Drive e alerta se reprovar).
+  const adInfoById = new Map(ads.map((a) => [a.id, a]));
+  const creatives = await prisma.adCreative.findMany({ where: { agencyId, metaAdId: { in: Array.from(adInfoById.keys()) } }, select: { id: true, status: true, metaAdId: true } });
+  for (const creative of creatives) {
+    const info = adInfoById.get(creative.metaAdId as string);
+    const status = info ? creativeStatusFromAd(info.effectiveStatus) : null;
+    if (status && status !== creative.status) {
+      await setCreativeStatus(creative.id, status, status === "REJECTED" ? info?.reviewFeedback ?? "Reprovado pela Meta." : null).catch((error) => console.error("creative_status_sync_failed", creative.id, error));
+    }
+  }
+
+  return { adSets: adSets.length, ads: ads.length };
 }

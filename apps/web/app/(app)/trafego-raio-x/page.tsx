@@ -104,7 +104,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
         <h1 className="text-lg font-semibold text-[#101828]">Tráfego - Raio X</h1>
         <p className="text-sm text-[#667085]">
           Espelho das campanhas de mídia paga (Meta, Google e outros canais) sem precisar abrir o painel de cada
-          plataforma — campanhas da Meta vêm da conta conectada (nome, status e métricas); os outros canais são digitados à mão (seção 38 do manual).{" "}
+          plataforma — campanhas, conjuntos e anúncios da Meta vêm da conta conectada (situação, verba, números diários e cidades no mapa), atualizados todo dia às 6h e ao abrir a página; os outros canais são digitados à mão (seção 38 do manual).{" "}
           <Link href="/comercial/campanhas" className="font-medium text-[#FF2B00] hover:underline">
             Gerenciar campanhas
           </Link>
@@ -217,7 +217,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
           <h2 className="text-sm font-semibold text-[#101828]">Mapa do Tráfego</h2>
           <p className="text-xs text-[#98A2B3]">
             Onde as campanhas mostradas acima estão sendo veiculadas — pino por cidade, ou círculo quando a
-            segmentação usa raio. Preenchido à mão (seção 36); sem geocodificação automática nesta fatia.
+            segmentação usa raio. Campanhas da Meta entram sozinhas pelas cidades da segmentação; outras são cadastradas à mão.
           </p>
         </div>
         <TrafficMap points={allGeoTargets} />

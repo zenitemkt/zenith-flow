@@ -4,6 +4,7 @@
   "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then npm run migrate:deploy --workspace=packages/db; fi && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/.next",
   "crons": [
+    { "path": "/api/cron/meta-sync", "schedule": "0 9 * * *" },
     { "path": "/api/cron/site-monitor", "schedule": "0 10 * * *" },
     { "path": "/api/cron/site-monitor", "schedule": "0 13 * * *" }
   ],

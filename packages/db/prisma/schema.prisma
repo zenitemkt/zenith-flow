@@ -2471,10 +2471,13 @@ model AdSet {
   targetingSummary String?
   externalId       String?
   active           Boolean  @default(true)
+  /// Situação na Meta (effective_status), quando sincronizado.
+  metaStatus       String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  ads Ad[]
+  ads          Ad[]
+  dailyMetrics AdSetDailyMetric[]
 
   @@index([campaignId])
   @@map("ad_set")
@@ -2492,11 +2495,54 @@ model Ad {
   assetUrl     String?
   externalId   String?
   active       Boolean  @default(true)
+  /// Situação na Meta (effective_status: ACTIVE, PENDING_REVIEW, DISAPPROVED, CAMPAIGN_PAUSED...).
+  metaStatus     String?
+  /// Motivo da reprovação, quando a Meta reprova.
+  reviewFeedback String?
+  thumbnailUrl   String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  dailyMetrics AdDailyMetric[]
+
   @@index([adSetId])
   @@map("ad")
+}
+
+/// Métricas diárias por conjunto (sincronizadas da Meta). `leads` = leads de formulário + pixel, sem dupla contagem.
+model AdSetDailyMetric {
+  id          String   @id @default(cuid())
+  adSetId     String
+  adSet       AdSet    @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  date        DateTime
+  spendCents  Int      @default(0)
+  impressions Int      @default(0)
+  reach       Int      @default(0)
+  clicks      Int      @default(0)
+  linkClicks  Int      @default(0)
+  leads       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([adSetId, date])
+  @@map("ad_set_daily_metric")
+}
+
+/// Métricas diárias por anúncio (sincronizadas da Meta).
+model AdDailyMetric {
+  id          String   @id @default(cuid())
+  adId        String
+  ad          Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+  date        DateTime
+  spendCents  Int      @default(0)
+  impressions Int      @default(0)
+  reach       Int      @default(0)
+  clicks      Int      @default(0)
+  linkClicks  Int      @default(0)
+  leads       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([adId, date])
+  @@map("ad_daily_metric")
 }
 
 /// Segmentação geográfica da campanha, pro "Mapa do Tráfego" — pedido do
@@ -2512,6 +2558,8 @@ model CampaignGeoTarget {
   lat        Float
   lng        Float
   radiusKm   Float?
+  /// Preenchido quando veio da segmentação da Meta (chave da cidade); nulo = cadastrado à mão.
+  externalKey String?
   createdAt  DateTime @default(now())
 
   @@index([campaignId])
@@ -2596,6 +2644,8 @@ model AdAccountConnection {
   status              AdConnectionStatus @default(ACTIVE)
   lastError           String?
   lastValidatedAt     DateTime?
+  /// Última sincronização completa (90 dias, todos os níveis); as outras refazem só os últimos 7 dias.
+  metaFullSyncAt      DateTime?
   connectedByUserId   String?
   connectedByUser     User?              @relation(fields: [connectedByUserId], references: [id], onDelete: SetNull)
   /// Pixel ID da Meta (seção 38.1, Etapa 2 do plano de Traqueamento,

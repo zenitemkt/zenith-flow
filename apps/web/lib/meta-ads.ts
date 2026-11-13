@@ -129,7 +129,7 @@ export interface MetaCampaignInsightRow {
   resultValueCents: number;
 }
 
-interface RawMetaAction {
+export interface RawMetaAction {
   action_type: string;
   value: string;
 }
@@ -153,13 +153,25 @@ interface RawMetaInsightRow {
  * somamos só as ações que representam um lead/formulário preenchido — é uma
  * aproximação deliberada, documentada, não a contagem de tudo que a conta fez.
  */
-const LEAD_ACTION_TYPES = ["lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead"];
+function actionValue(actions: RawMetaAction[] | undefined, type: string): number | null {
+  const found = actions?.find((action) => action.action_type === type);
+  return found ? Number(found.value || 0) : null;
+}
 
-function sumActionValues(actions: RawMetaAction[] | undefined): number {
-  if (!actions) return 0;
-  return actions
-    .filter((action) => LEAD_ACTION_TYPES.includes(action.action_type))
-    .reduce((sum, action) => sum + Number(action.value || 0), 0);
+/**
+ * Leads do dia sem dupla contagem: "lead" já é o total (formulário instantâneo + pixel).
+ * Só quando ele não vem, soma as partes (formulário + pixel). Antes somava as três e
+ * contava o mesmo lead duas ou três vezes.
+ */
+export function leadCount(actions: RawMetaAction[] | undefined): number {
+  const total = actionValue(actions, "lead");
+  if (total !== null) return total;
+  return (actionValue(actions, "onsite_conversion.lead_grouped") ?? 0) + (actionValue(actions, "offsite_conversion.fb_pixel_lead") ?? 0);
+}
+
+/** Valor de compras (para ROAS), sem somar os tipos que se repetem. */
+function purchaseValue(values: RawMetaAction[] | undefined): number {
+  return actionValue(values, "omni_purchase") ?? actionValue(values, "purchase") ?? actionValue(values, "offsite_conversion.fb_pixel_purchase") ?? 0;
 }
 
 interface GraphPage<T> {
@@ -298,7 +310,186 @@ export async function fetchMetaCampaignInsights(
     impressions: Number(row.impressions || 0),
     clicks: Number(row.clicks || 0),
     reach: Number(row.reach || 0),
-    results: sumActionValues(row.actions),
-    resultValueCents: Math.round(sumActionValues(row.action_values) * 100),
+    results: leadCount(row.actions),
+    resultValueCents: Math.round(purchaseValue(row.action_values) * 100),
   }));
+}
+
+
+// ---------------------------------------------------------------------------
+// Raio X fase 2A: conjuntos, anúncios, números por nível e coordenadas das cidades.
+
+export interface MetaAdSetInfo {
+  id: string;
+  name: string;
+  campaignId: string;
+  effectiveStatus: string;
+  dailyBudgetCents: number | null;
+  cities: { key: string; name: string; radiusKm: number | null }[];
+  targetingSummary: string;
+}
+
+interface RawMetaAdSet {
+  id: string;
+  name: string;
+  campaign_id: string;
+  effective_status?: string;
+  daily_budget?: string;
+  lifetime_budget?: string;
+  targeting?: {
+    age_min?: number;
+    age_max?: number;
+    genders?: number[];
+    geo_locations?: { cities?: { key: string; name?: string; region?: string; radius?: number; distance_unit?: string }[]; regions?: { name?: string }[]; countries?: string[] };
+    custom_audiences?: { name?: string }[];
+  };
+}
+
+function targetingSummary(t: RawMetaAdSet["targeting"]): string {
+  if (!t) return "";
+  const parts: string[] = [];
+  const cities = t.geo_locations?.cities ?? [];
+  if (cities.length) parts.push(cities.map((c) => `${c.name ?? c.key}${c.radius ? ` (+${c.radius} ${c.distance_unit === "mile" ? "mi" : "km"})` : ""}`).join(", "));
+  else if (t.geo_locations?.regions?.length) parts.push(t.geo_locations.regions.map((r) => r.name).filter(Boolean).join(", "));
+  else if (t.geo_locations?.countries?.length) parts.push(t.geo_locations.countries.join(", "));
+  if (t.age_min || t.age_max) parts.push(`${t.age_min ?? 18}–${t.age_max ?? 65} anos`);
+  if (t.genders?.length === 1) parts.push(t.genders[0] === 1 ? "homens" : "mulheres");
+  if (t.custom_audiences?.length) parts.push(`remarketing: ${t.custom_audiences.map((a) => a.name).filter(Boolean).join(", ")}`);
+  return parts.join(" · ").slice(0, 500);
+}
+
+export async function fetchMetaAdSets(accessToken: string, adAccountId: string): Promise<MetaAdSetInfo[]> {
+  const rows = await graphGetAll<RawMetaAdSet>(`/${adAccountId}/adsets`, {
+    access_token: accessToken,
+    fields: "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,targeting{age_min,age_max,genders,geo_locations,custom_audiences}",
+    effective_status: ALL_CAMPAIGN_STATUSES,
+    limit: "200",
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    campaignId: r.campaign_id,
+    effectiveStatus: r.effective_status ?? "",
+    dailyBudgetCents: r.daily_budget ? Number(r.daily_budget) : null,
+    cities: (r.targeting?.geo_locations?.cities ?? []).map((c) => ({
+      key: c.key,
+      name: [c.name, c.region].filter(Boolean).join(", ") || c.key,
+      radiusKm: c.radius ? (c.distance_unit === "mile" ? c.radius * 1.609 : c.radius) : null,
+    })),
+    targetingSummary: targetingSummary(r.targeting),
+  }));
+}
+
+export interface MetaAdInfo {
+  id: string;
+  name: string;
+  adSetId: string;
+  effectiveStatus: string;
+  reviewFeedback: string | null;
+  thumbnailUrl: string | null;
+}
+
+interface RawMetaAd {
+  id: string;
+  name: string;
+  adset_id: string;
+  effective_status?: string;
+  ad_review_feedback?: { global?: Record<string, string>; placement_specific?: Record<string, Record<string, string>> };
+  creative?: { thumbnail_url?: string; image_url?: string };
+}
+
+const ALL_AD_STATUSES = JSON.stringify(["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES", "PENDING_REVIEW", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO", "CAMPAIGN_PAUSED", "ADSET_PAUSED"]);
+
+export async function fetchMetaAds(accessToken: string, adAccountId: string): Promise<MetaAdInfo[]> {
+  const rows = await graphGetAll<RawMetaAd>(`/${adAccountId}/ads`, {
+    access_token: accessToken,
+    fields: "id,name,adset_id,effective_status,ad_review_feedback,creative{thumbnail_url,image_url}",
+    effective_status: ALL_AD_STATUSES,
+    thumbnail_width: "256",
+    thumbnail_height: "256",
+    limit: "200",
+  });
+  return rows.map((r) => {
+    const feedback = [...Object.values(r.ad_review_feedback?.global ?? {}), ...Object.values(r.ad_review_feedback?.placement_specific ?? {}).flatMap((x) => Object.values(x))];
+    return {
+      id: r.id,
+      name: r.name,
+      adSetId: r.adset_id,
+      effectiveStatus: r.effective_status ?? "",
+      reviewFeedback: feedback.length ? Array.from(new Set(feedback)).join(" ").slice(0, 2000) : null,
+      thumbnailUrl: r.creative?.thumbnail_url ?? r.creative?.image_url ?? null,
+    };
+  });
+}
+
+export interface MetaLevelInsightRow {
+  /** ID do conjunto ou do anúncio, conforme o nível. */
+  id: string;
+  date: string;
+  spendCents: number;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  linkClicks: number;
+  leads: number;
+}
+
+interface RawLevelInsightRow {
+  adset_id?: string;
+  ad_id?: string;
+  spend?: string;
+  impressions?: string;
+  reach?: string;
+  clicks?: string;
+  inline_link_clicks?: string;
+  actions?: RawMetaAction[];
+  date_start: string;
+}
+
+/** Números diários por conjunto ou por anúncio. */
+export async function fetchMetaLevelInsights(accessToken: string, adAccountId: string, level: "adset" | "ad", since: string, until: string): Promise<MetaLevelInsightRow[]> {
+  const data = await graphGetAll<RawLevelInsightRow>(`/${adAccountId}/insights`, {
+    access_token: accessToken,
+    level,
+    fields: `${level === "ad" ? "ad_id" : "adset_id"},spend,impressions,reach,clicks,inline_link_clicks,actions`,
+    time_range: JSON.stringify({ since, until }),
+    time_increment: "1",
+    limit: "500",
+  }, 40);
+  return data
+    .map((row) => ({
+      id: (level === "ad" ? row.ad_id : row.adset_id) ?? "",
+      date: row.date_start,
+      spendCents: Math.round(Number(row.spend || 0) * 100),
+      impressions: Number(row.impressions || 0),
+      reach: Number(row.reach || 0),
+      clicks: Number(row.clicks || 0),
+      linkClicks: Number(row.inline_link_clicks || 0),
+      leads: leadCount(row.actions),
+    }))
+    .filter((row) => row.id);
+}
+
+/** Latitude/longitude das cidades da segmentação (busca de localização da própria Meta). */
+export async function fetchMetaCityCoordinates(accessToken: string, keys: string[]): Promise<Map<string, { lat: number; lng: number }>> {
+  const out = new Map<string, { lat: number; lng: number }>();
+  for (let i = 0; i < keys.length; i += 50) {
+    const chunk = keys.slice(i, i + 50);
+    try {
+      const data = await graphGet<{ data?: { cities?: Record<string, { latitude?: number; longitude?: number }> } | { cities?: Record<string, { latitude?: number; longitude?: number }> }[] }>("/search", {
+        access_token: accessToken,
+        type: "adgeolocationmeta",
+        cities: JSON.stringify(chunk),
+      });
+      const blocks = Array.isArray(data.data) ? data.data : data.data ? [data.data] : [];
+      for (const block of blocks) {
+        for (const [key, value] of Object.entries(block.cities ?? {})) {
+          if (typeof value.latitude === "number" && typeof value.longitude === "number") out.set(key, { lat: value.latitude, lng: value.longitude });
+        }
+      }
+    } catch (error) {
+      console.warn("meta_city_coordinates_failed", error instanceof Error ? error.message : error);
+    }
+  }
+  return out;
 }

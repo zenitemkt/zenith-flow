@@ -37,9 +37,12 @@ export function SyncMetaCampaignsButton({ autoSync = false }: { autoSync?: boole
             data.campaignsUpdated,
             "com status ou nome atualizado",
             "com status ou nome atualizados",
-          )}, ${plural(data.metricsUpserted, "dia de métrica", "dias de métrica")}.`,
+          )}, ${plural(data.metricsUpserted, "dia de métrica", "dias de métrica")}` +
+          (typeof data.adSetsSynced === "number" ? `, ${plural(data.adSetsSynced, "conjunto", "conjuntos")} e ${plural(data.adsSynced ?? 0, "anúncio", "anúncios")}` : "") +
+          ` (últimos ${data.periodDays} dias).`,
         );
       }
+      if (data.levelsError) toast.error(`Campanhas atualizadas, mas conjuntos e anúncios falharam: ${data.levelsError}`);
       router.refresh();
     } catch {
       if (!silent) toast.error("Erro de rede — tente novamente.");
