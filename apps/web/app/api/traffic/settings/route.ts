@@ -10,6 +10,16 @@ const cents = (v: unknown) => {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : null;
 };
 
+/** Guarda só o último padrão de UTMs (caixa "manter para as próximas" na nova campanha). */
+export async function PATCH(request: Request) {
+  const { session, membership } = await requireSessionAndMembership();
+  if (!session || !membership) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  const urlTags = typeof body?.urlTags === "string" ? body.urlTags.trim().slice(0, 1000) : null;
+  await prisma.trafficSettings.upsert({ where: { agencyId: membership.agencyId }, create: { agencyId: membership.agencyId, urlTags }, update: { urlTags } });
+  return NextResponse.json({ ok: true });
+}
+
 /** Configurações do Gestor de tráfego (teto, custo por lead, página, links). */
 export async function PUT(request: Request) {
   const { session, membership } = await requireSessionAndMembership();

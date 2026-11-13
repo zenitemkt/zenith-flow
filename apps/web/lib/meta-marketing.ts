@@ -228,64 +228,121 @@ export interface AdCreativeSpec {
   /** Formulário instantâneo; sem ele, o anúncio leva para `linkUrl` (site com pixel). */
   formId?: string | null;
   linkUrl: string;
-  message: string;
-  headline: string;
-  description?: string | null;
+  /** Até 5 de cada: a Meta testa as combinações (Advantage+ de criativo). */
+  messages: string[];
+  headlines: string[];
+  descriptions: string[];
   callToAction: string;
   imageHash?: string | null;
   /** Versão vertical: com ela, o anúncio usa a imagem de Stories em Stories/Status/Reels e a de Feed no resto. */
   storiesImageHash?: string | null;
   videoId?: string | null;
   videoThumbUrl?: string | null;
+  /** Parâmetros de URL (UTMs) acrescentados ao link. */
+  urlTags?: string | null;
+  /** Liga as melhorias do Advantage+ de criativo. */
+  advantageCreative: boolean;
 }
+
+/** Melhorias do Advantage+ de criativo (todas ligadas quando o anúncio pede). */
+const CREATIVE_FEATURES = [
+  "standard_enhancements",
+  "image_touchups",
+  "image_uncrop",
+  "image_animation",
+  "image_brightness_and_contrast",
+  "text_optimizations",
+  "enhance_cta",
+  "inline_comment",
+  "adapt_to_placement",
+  "add_text_overlay",
+  "music",
+  "product_extensions",
+];
 
 export async function createAdCreative(token: string, adAccountId: string, spec: AdCreativeSpec): Promise<string> {
   const cta = spec.formId ? { type: spec.callToAction || "SIGN_UP", value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || "LEARN_MORE", value: { link: spec.linkUrl } };
   const story: Record<string, unknown> = { page_id: spec.pageId };
   if (spec.instagramUserId) story.instagram_user_id = spec.instagramUserId;
-  if (spec.imageHash && spec.storiesImageHash && !spec.videoId) {
-    const feedRule = {
-      publisher_platforms: ["facebook", "instagram", "audience_network", "messenger"],
-      facebook_positions: ["feed", "marketplace", "video_feeds", "search", "instream_video"],
-      instagram_positions: ["stream", "explore", "explore_home", "profile_feed", "ig_search"],
-      audience_network_positions: ["classic"],
-      messenger_positions: ["messenger_home"],
-    };
-    const storyRule = {
-      publisher_platforms: ["facebook", "instagram", "messenger"],
-      facebook_positions: ["story", "facebook_reels"],
-      instagram_positions: ["story", "reels"],
-      messenger_positions: ["story"],
-    };
+  const messages = spec.messages.map((t) => t.trim()).filter(Boolean).slice(0, 5);
+  const headlines = spec.headlines.map((t) => t.trim()).filter(Boolean).slice(0, 5);
+  const descriptions = spec.descriptions.map((t) => t.trim()).filter(Boolean).slice(0, 5);
+  const pair = Boolean(spec.imageHash && spec.storiesImageHash && !spec.videoId);
+  const multi = messages.length > 1 || headlines.length > 1 || descriptions.length > 1;
+
+  const params: Record<string, string | object> = { name: spec.name, object_story_spec: story };
+  if (spec.urlTags) params.url_tags = spec.urlTags;
+
+  if (pair || multi) {
     const assetFeed: Record<string, unknown> = {
-      images: [{ hash: spec.imageHash, adlabels: [{ name: "feed" }] }, { hash: spec.storiesImageHash, adlabels: [{ name: "stories" }] }],
-      bodies: [{ text: spec.message }],
-      titles: [{ text: spec.headline }],
-      ...(spec.description ? { descriptions: [{ text: spec.description }] } : {}),
+      bodies: messages.map((text) => ({ text })),
+      titles: headlines.map((text) => ({ text })),
+      ...(descriptions.length ? { descriptions: descriptions.map((text) => ({ text })) } : {}),
       link_urls: [{ website_url: spec.linkUrl }],
       call_to_action_types: [cta.type],
       ...(spec.formId ? { call_to_actions: [cta] } : {}),
-      ad_formats: ["SINGLE_IMAGE"],
-      optimization_type: "PLACEMENT",
-      asset_customization_rules: [
-        { customization_spec: storyRule, image_label: { name: "stories" }, priority: 1 },
-        { customization_spec: feedRule, image_label: { name: "feed" }, priority: 2 },
-      ],
     };
-    const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, { name: spec.name, object_story_spec: story, asset_feed_spec: assetFeed }, `criar criativo "${spec.name}"`);
-    return data.id;
-  }
-  if (spec.videoId) {
-    story.video_data = { video_id: spec.videoId, image_url: spec.videoThumbUrl ?? undefined, message: spec.message, title: spec.headline, link_description: spec.description ?? undefined, call_to_action: cta };
+    if (spec.videoId) {
+      assetFeed.videos = [{ video_id: spec.videoId, thumbnail_url: spec.videoThumbUrl ?? undefined }];
+      assetFeed.ad_formats = ["SINGLE_VIDEO"];
+    } else if (pair) {
+      assetFeed.images = [{ hash: spec.imageHash, adlabels: [{ name: "feed" }] }, { hash: spec.storiesImageHash, adlabels: [{ name: "stories" }] }];
+      assetFeed.ad_formats = ["SINGLE_IMAGE"];
+      assetFeed.optimization_type = "PLACEMENT";
+      assetFeed.asset_customization_rules = [
+        {
+          customization_spec: { publisher_platforms: ["facebook", "instagram", "messenger"], facebook_positions: ["story", "facebook_reels"], instagram_positions: ["story", "reels"], messenger_positions: ["story"] },
+          image_label: { name: "stories" },
+          priority: 1,
+        },
+        {
+          customization_spec: {
+            publisher_platforms: ["facebook", "instagram", "audience_network", "messenger"],
+            facebook_positions: ["feed", "marketplace", "video_feeds", "search", "instream_video"],
+            instagram_positions: ["stream", "explore", "explore_home", "profile_feed", "ig_search"],
+            audience_network_positions: ["classic"],
+            messenger_positions: ["messenger_home"],
+          },
+          image_label: { name: "feed" },
+          priority: 2,
+        },
+      ];
+    } else {
+      assetFeed.images = [{ hash: spec.imageHash }];
+      assetFeed.ad_formats = ["SINGLE_IMAGE"];
+    }
+    params.asset_feed_spec = assetFeed;
+  } else if (spec.videoId) {
+    story.video_data = { video_id: spec.videoId, image_url: spec.videoThumbUrl ?? undefined, message: messages[0], title: headlines[0], link_description: descriptions[0], call_to_action: cta };
   } else {
-    story.link_data = { image_hash: spec.imageHash, link: spec.linkUrl, message: spec.message, name: spec.headline, description: spec.description ?? undefined, call_to_action: cta };
+    story.link_data = { image_hash: spec.imageHash, link: spec.linkUrl, message: messages[0], name: headlines[0], description: descriptions[0], call_to_action: cta };
   }
-  const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, { name: spec.name, object_story_spec: story }, `criar criativo "${spec.name}"`);
-  return data.id;
+
+  if (spec.advantageCreative) {
+    params.degrees_of_freedom_spec = { creative_features_spec: Object.fromEntries(CREATIVE_FEATURES.map((f) => [f, { enroll_status: "OPT_IN" }])) };
+  }
+  try {
+    return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
+  } catch (error) {
+    // Alguma melhoria pode não valer para esse formato/conta: tenta de novo só com as que a Meta sempre aceita.
+    if (!spec.advantageCreative) throw error;
+    console.warn("adcreative_features_retry", error instanceof Error ? error.message : error);
+    params.degrees_of_freedom_spec = { creative_features_spec: { standard_enhancements: { enroll_status: "OPT_IN" } } };
+    try {
+      return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
+    } catch {
+      delete params.degrees_of_freedom_spec;
+      return (await metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`)).id;
+    }
+  }
 }
 
-export async function createAd(token: string, adAccountId: string, name: string, adSetId: string, creativeId: string): Promise<string> {
-  const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/ads`, token, { name, adset_id: adSetId, creative: { creative_id: creativeId }, status: "PAUSED" }, `criar anúncio "${name}"`);
+/** Anúncio pausado, com rastreamento dos eventos do site (pixel) e offline (conjunto de dados). */
+export async function createAd(token: string, adAccountId: string, name: string, adSetId: string, creativeId: string, tracking?: { pixelId?: string | null; datasetId?: string | null }): Promise<string> {
+  const specs: object[] = [];
+  if (tracking?.pixelId) specs.push({ "action.type": ["offsite_conversion"], fb_pixel: [tracking.pixelId] });
+  if (tracking?.datasetId) specs.push({ "action.type": ["offline_conversion"], dataset: [tracking.datasetId] });
+  const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/ads`, token, { name, adset_id: adSetId, creative: { creative_id: creativeId }, status: "PAUSED", ...(specs.length ? { tracking_specs: specs } : {}) }, `criar anúncio "${name}"`);
   return data.id;
 }
 

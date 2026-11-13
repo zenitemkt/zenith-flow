@@ -6,6 +6,7 @@ import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS, zeniteFormTemplate } from "@/lib/traffic-niches";
 import { adSetName } from "@/lib/traffic-naming";
 import { creativeRole, groupCreativesIntoAds } from "@/lib/creative-pairing";
+import { DEFAULT_URL_TAGS, splitLines, splitPrimaryTexts } from "@/lib/copy-split";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
@@ -31,6 +32,7 @@ interface Props {
   defaultButtonUrl: string;
   budgetCap: number | null;
   driveUserEmail: string | null;
+  savedUrlTags: string | null;
   creatives: CreativeOption[];
 }
 
@@ -60,7 +62,7 @@ function newAdSet(niche: string, cities: string[], buttonUrl: string): PlanAdSet
   };
 }
 
-export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCities, defaultButtonUrl, budgetCap, driveUserEmail, creatives: initialCreatives }: Props) {
+export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCities, defaultButtonUrl, budgetCap, driveUserEmail, savedUrlTags, creatives: initialCreatives }: Props) {
   const router = useRouter();
   const [plan, setPlan] = useState<TrafficPlan>(initialPlan);
   const [campaignId, setCampaignId] = useState(initialId);
@@ -73,6 +75,11 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [creatives, setCreatives] = useState<CreativeOption[]>(initialCreatives);
   const [editingCreative, setEditingCreative] = useState<CreativeOption | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
+  const [keepUrlTags, setKeepUrlTags] = useState(Boolean(savedUrlTags));
+  const [pasteTexts, setPasteTexts] = useState("");
+  const [pasteHeadlines, setPasteHeadlines] = useState("");
+  const [pasteDescriptions, setPasteDescriptions] = useState("");
+  const setCopy = (patch: Partial<TrafficPlan["copy"]>) => setPlan((p) => ({ ...p, copy: { ...p.copy, ...patch } }));
   useEffect(() => {
     fetch("/api/traffic/next-code?objective=OUTCOME_LEADS")
       .then((res) => res.json())
@@ -111,6 +118,9 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
       } else {
         const res = await fetch(`/api/traffic/campaigns/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
         if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Não consegui salvar.");
+      }
+      if (keepUrlTags && plan.urlTags !== savedUrlTags) {
+        await fetch("/api/traffic/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ urlTags: plan.urlTags }) }).catch(() => null);
       }
       setMessage({ ok: true, text: "Rascunho salvo." });
       return id;
@@ -239,6 +249,70 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
 
         {step === 3 && (
           <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-[#EEF0F3] p-4">
+              <p className="text-sm font-semibold text-[#101828]">Textos de todos os anúncios</p>
+              <p className="mb-3 text-xs text-[#667085]">Cole tudo de uma vez: até 5 de cada. Separe os textos principais com uma linha &quot;---&quot;, com numeração (1., 2., 3.) ou com duas linhas em branco. Títulos e descrições: um por linha. Vazio = usa os textos de cada criativo.</p>
+              <div className="grid gap-4 lg:grid-cols-3">
+                {(
+                  [
+                    { label: "Textos principais", raw: pasteTexts, setRaw: setPasteTexts, items: plan.copy.primaryTexts, field: "primaryTexts", split: splitPrimaryTexts, rows: 8 },
+                    { label: "Títulos", raw: pasteHeadlines, setRaw: setPasteHeadlines, items: plan.copy.headlines, field: "headlines", split: splitLines, rows: 5 },
+                    { label: "Descrições (opcional)", raw: pasteDescriptions, setRaw: setPasteDescriptions, items: plan.copy.descriptions, field: "descriptions", split: splitLines, rows: 5 },
+                  ] as const
+                ).map((box) => (
+                  <div key={box.field} className="flex flex-col gap-2">
+                    <label className={LABEL}>
+                      {box.label}
+                      <textarea value={box.raw} rows={box.rows} onChange={(e) => box.setRaw(e.target.value)} placeholder="Cole aqui" className={INPUT} />
+                    </label>
+                    <button type="button" disabled={!box.raw.trim()} onClick={() => { setCopy({ [box.field]: box.split(box.raw) }); box.setRaw(""); }} className="self-start rounded-lg bg-[#101828] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">
+                      Separar e usar
+                    </button>
+                    {box.items.length > 0 && (
+                      <ol className="space-y-1.5">
+                        {box.items.map((item, i) => (
+                          <li key={i} className="flex gap-2 rounded-lg bg-[#F9FAFB] p-2 text-xs text-[#344054]">
+                            <span className="font-semibold text-[#FF2B00]">{i + 1}</span>
+                            <textarea value={item} rows={box.field === "primaryTexts" ? 4 : 1} onChange={(e) => setCopy({ [box.field]: box.items.map((x, j) => (j === i ? e.target.value : x)) })} className="min-w-0 flex-1 resize-y rounded border border-[#EEF0F3] bg-white p-1" />
+                            <button type="button" onClick={() => setCopy({ [box.field]: box.items.filter((_, j) => j !== i) })} className="self-start text-[#B42318]">×</button>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-[#EEF0F3] p-4">
+                <p className="text-sm font-semibold text-[#101828]">Advantage+ de criativo</p>
+                <label className="mt-2 flex items-center gap-2 text-sm text-[#344054]">
+                  <input type="checkbox" checked={plan.advantageCreative} onChange={(e) => setPlan((p) => ({ ...p, advantageCreative: e.target.checked }))} className="accent-[#FF2B00]" />
+                  Todas as otimizações ligadas
+                </label>
+                <p className="mt-1 text-xs text-[#667085]">Sobreposições, retoques visuais, música, melhorias no texto, animação, detalhes e etiquetas, comentários relevantes, CTA e brilho/contraste.</p>
+              </div>
+              <div className="rounded-xl border border-[#EEF0F3] p-4">
+                <p className="text-sm font-semibold text-[#101828]">Rastreamento</p>
+                <div className="mt-2 flex flex-wrap gap-4 text-sm text-[#344054]">
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={plan.trackSiteEvents} onChange={(e) => setPlan((p) => ({ ...p, trackSiteEvents: e.target.checked }))} className="accent-[#FF2B00]" />Eventos do site</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={plan.trackOfflineEvents} onChange={(e) => setPlan((p) => ({ ...p, trackOfflineEvents: e.target.checked }))} className="accent-[#FF2B00]" />Eventos offline</label>
+                </div>
+                <label className={`${LABEL} mt-3`}>
+                  Parâmetros de URL (UTMs)
+                  <textarea value={plan.urlTags} rows={3} onChange={(e) => setPlan((p) => ({ ...p, urlTags: e.target.value }))} className={`${INPUT} font-mono text-xs`} />
+                </label>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs text-[#344054]">
+                    <input type="checkbox" checked={keepUrlTags} onChange={(e) => setKeepUrlTags(e.target.checked)} className="accent-[#FF2B00]" />
+                    Manter este padrão para as próximas campanhas
+                  </label>
+                  <button type="button" onClick={() => setPlan((p) => ({ ...p, urlTags: DEFAULT_URL_TAGS }))} className="text-xs font-semibold text-[#FF2B00]">Usar o padrão Zenite</button>
+                </div>
+              </div>
+            </div>
+
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
             {plan.adsets.map((a) => {
               const selected = a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is CreativeOption => Boolean(c));

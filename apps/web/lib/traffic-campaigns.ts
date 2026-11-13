@@ -2,6 +2,7 @@ import { prisma, Prisma } from "@zenite-mkt/db";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { downloadDriveFile, renameDriveFile } from "@/lib/google-drive";
 import { groupCreativesIntoAds, standardCreativeName } from "@/lib/creative-pairing";
+import { DEFAULT_URL_TAGS } from "@/lib/copy-split";
 import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
 import { OBJECTIVE_CODES, nextCampaignNumber, withCampaignCode } from "@/lib/campaign-naming";
@@ -57,8 +58,21 @@ export interface PlanAdSet {
   destinationUrl: string;
   creativeIds: string[];
 }
+export interface PlanCopy {
+  primaryTexts: string[];
+  headlines: string[];
+  descriptions: string[];
+}
 export interface TrafficPlan {
   name: string;
+  /** Textos de todos os anúncios (até 5 de cada). Vazio = usa os textos de cada criativo. */
+  copy: PlanCopy;
+  /** Advantage+ de criativo com todas as melhorias. */
+  advantageCreative: boolean;
+  trackSiteEvents: boolean;
+  trackOfflineEvents: boolean;
+  /** Parâmetros de URL (UTMs). */
+  urlTags: string;
   /** "FORM" = formulário instantâneo da Meta; "SITE" = formulário no site com conversão no pixel. */
   conversion: "FORM" | "SITE";
   adsets: PlanAdSet[];
@@ -78,7 +92,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Empresários | Região de Americana", conversion: "FORM", adsets: [] };
+  return { name: "Empresários | Região de Americana", conversion: "FORM", copy: { primaryTexts: [], headlines: [], descriptions: [] }, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -125,7 +139,18 @@ export function parsePlan(value: unknown): TrafficPlan {
       creativeIds: (Array.isArray(a?.creativeIds) ? a.creativeIds : []).filter((x) => typeof x === "string").slice(0, 20),
     };
   });
-  return { name: str(v.name, 200) || emptyPlan().name, conversion: v.conversion === "SITE" ? "SITE" : "FORM", adsets };
+  const c = (v.copy ?? {}) as Partial<PlanCopy>;
+  const list = (x: unknown, max: number) => (Array.isArray(x) ? x : []).map((t) => str(t, max)).filter((t) => t.trim()).slice(0, 5);
+  return {
+    name: str(v.name, 200) || emptyPlan().name,
+    conversion: v.conversion === "SITE" ? "SITE" : "FORM",
+    copy: { primaryTexts: list(c.primaryTexts, 2000), headlines: list(c.headlines, 255), descriptions: list(c.descriptions, 255) },
+    advantageCreative: v.advantageCreative !== false,
+    trackSiteEvents: v.trackSiteEvents !== false,
+    trackOfflineEvents: v.trackOfflineEvents !== false,
+    urlTags: typeof v.urlTags === "string" ? v.urlTags.trim().slice(0, 1000) : DEFAULT_URL_TAGS,
+    adsets,
+  };
 }
 
 /** Problemas que impedem subir (mostrados na revisão). */
@@ -163,7 +188,8 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     for (const [adIndex, g] of groupCreativesIntoAds(chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
       const pair = [g.feed, g.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
       const adLabel = `${label} AD${String(adIndex + 1).padStart(2, "0")}`;
-      if (!pair.some((c) => c.primaryText && c.headline)) issues.push(`${adLabel}: preencha o texto principal e o título ("${pair.map((c) => c.name).join(" + ")}").`);
+      const campaignCopy = plan.copy.primaryTexts.length > 0 && plan.copy.headlines.length > 0;
+      if (!campaignCopy && !pair.some((c) => c.primaryText && c.headline)) issues.push(`${adLabel}: preencha o texto principal e o título ("${pair.map((c) => c.name).join(" + ")}").`);
       for (const c of pair) if (c.missingInDrive && !c.metaImageHash && !c.metaVideoId) issues.push(`${adLabel}: o arquivo "${c.name}" não está mais no Drive.`);
     }
   }
@@ -325,9 +351,11 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
             instagramUserId: progress.instagramUserId,
             formId: plan.conversion === "FORM" ? state.formId : null,
             linkUrl: plan.conversion === "SITE" ? a.destinationUrl : settings.websiteUrl || a.form.buttonUrl,
-            message: texts.primaryText!,
-            headline: texts.headline!,
-            description: texts.description,
+            messages: plan.copy.primaryTexts.length ? plan.copy.primaryTexts : [texts.primaryText ?? ""],
+            headlines: plan.copy.headlines.length ? plan.copy.headlines : [texts.headline ?? ""],
+            descriptions: plan.copy.descriptions.length ? plan.copy.descriptions : texts.description ? [texts.description] : [],
+            urlTags: plan.urlTags || null,
+            advantageCreative: plan.advantageCreative,
             callToAction: texts.callToAction || (plan.conversion === "FORM" ? "SIGN_UP" : "LEARN_MORE"),
             imageHash: main.metaImageHash,
             storiesImageHash: feed && stories ? stories.metaImageHash : null,
@@ -336,7 +364,10 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           });
           await save();
         }
-        adState.adId = await createAd(adsToken, adAccountId, adName, state.adSetId, adState.creativeId);
+        adState.adId = await createAd(adsToken, adAccountId, adName, state.adSetId, adState.creativeId, {
+          pixelId: plan.trackSiteEvents ? pixelId : null,
+          datasetId: plan.trackOfflineEvents ? pixelId : null,
+        });
         // Padrão de nome no Drive e na biblioteca: "03-01-AD01-F" (campanha-conjunto-anúncio-posicionamento).
         const campaignNo = Number(plan.name.match(/^\[[A-Z]+(\d+)\]/)?.[1] ?? "1");
         for (const [role, c] of [["F", feed], ["S", stories]] as const) {

@@ -84,7 +84,8 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
         <CampaignWizard
           key={editing?.id ?? `new-${searchParams.novo ?? ""}`}
           campaignId={editing?.id ?? null}
-          initialPlan={editing ? parsePlan(editing.plan) : emptyPlan()}
+          initialPlan={editing ? parsePlan(editing.plan) : { ...emptyPlan(), urlTags: settings?.urlTags ?? emptyPlan().urlTags }}
+          savedUrlTags={settings?.urlTags ?? null}
           defaultCities={DEFAULT_CITIES}
           defaultButtonUrl={settings?.websiteUrl ?? "https://hubzenite.com.br/"}
           budgetCap={settings?.dailyBudgetCapCents ? settings.dailyBudgetCapCents / 100 : null}

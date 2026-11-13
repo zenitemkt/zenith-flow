@@ -3470,6 +3470,8 @@ model TrafficSettings {
   /// Conta Google que envia os criativos pelo portal (conta de serviço não tem espaço próprio no Drive).
   driveRefreshTokenEnc String?
   driveAccountEmail   String?
+  /// Último padrão de parâmetros de URL (UTMs) marcado para reaproveitar nas próximas campanhas.
+  urlTags             String?
   updatedAt           DateTime @updatedAt
 
   @@map("traffic_settings")
