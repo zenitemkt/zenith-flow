@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { syncCreativeFolder } from "@/lib/ad-creatives";
+import { withAgencyDrive } from "@/lib/drive-auth";
 
 export const maxDuration = 60;
 
@@ -12,12 +13,14 @@ export async function POST() {
   const folders = await prisma.adCreativeFolder.findMany({ where: { agencyId: membership.agencyId } });
   const totals = { added: 0, updated: 0, missing: 0 };
   try {
-    for (const folder of folders) {
-      const result = await syncCreativeFolder(folder);
-      totals.added += result.added;
-      totals.updated += result.updated;
-      totals.missing += result.missing;
-    }
+    await withAgencyDrive(membership.agencyId, async () => {
+      for (const folder of folders) {
+        const result = await syncCreativeFolder(folder);
+        totals.added += result.added;
+        totals.updated += result.updated;
+        totals.missing += result.missing;
+      }
+    });
     return NextResponse.json({ ok: true, ...totals });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Falha ao ler o Drive." }, { status: 502 });

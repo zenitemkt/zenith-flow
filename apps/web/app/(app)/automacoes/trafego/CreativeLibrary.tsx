@@ -27,6 +27,8 @@ interface Creative {
 
 interface Props {
   serviceEmail: string | null;
+  /** Conta Google que envia os arquivos pelo portal (null = não conectada). */
+  driveUserEmail: string | null;
   folders: { id: string; name: string; rootFolderId: string; lastSyncAt: string | null; lastSyncError: string | null }[];
   metaAccount: { name: string; canWrite: boolean; active: boolean } | null;
   creatives: Creative[];
@@ -60,7 +62,7 @@ function fmtSize(bytes: number | null) {
   return bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
 }
 
-export function CreativeLibrary({ serviceEmail, folders, metaAccount, creatives }: Props) {
+export function CreativeLibrary({ serviceEmail, driveUserEmail, folders, metaAccount, creatives }: Props) {
   const router = useRouter();
   const [folderLink, setFolderLink] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -112,6 +114,11 @@ export function CreativeLibrary({ serviceEmail, folders, metaAccount, creatives 
                   </span>
                 </div>
               ))}
+              <p className="mt-2 text-xs text-[#667085]">
+                Envio pelo portal:{" "}
+                {driveUserEmail ? <strong className="text-[#027A48]">{driveUserEmail}</strong> : <span className="text-[#B54708]">conta Google não conectada</span>} ·{" "}
+                <a href="/api/admin/traffic-drive-oauth/start" className="font-semibold text-[#FF2B00]">{driveUserEmail ? "trocar" : "conectar"}</a>
+              </p>
               <div className="mt-2 flex gap-2">
                 <input value={folderLink} onChange={(e) => setFolderLink(e.target.value)} placeholder="https://drive.google.com/drive/folders/..." className={INPUT} />
                 <button type="button" disabled={!folderLink.trim() || busy !== null} onClick={() => call("connect", "/api/ad-creatives/folders", { folder: folderLink })} className="shrink-0 rounded-lg bg-[#101828] px-3 text-sm font-medium text-white disabled:opacity-50">
@@ -144,6 +151,14 @@ export function CreativeLibrary({ serviceEmail, folders, metaAccount, creatives 
 
       {folders.length > 0 && (
         <>
+          {driveUserEmail ? (
+            <CreativeUploader onDone={() => router.refresh()} />
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#FEDF89] bg-[#FFFAEB] p-4">
+              <p className="text-sm text-[#B54708]">Para enviar criativos direto pelo portal, conecte a conta Google dona da pasta. O arquivo fica no seu Drive, no seu espaço.</p>
+              <a href="/api/admin/traffic-drive-oauth/start" className="shrink-0 rounded-lg bg-[#101828] px-4 py-2 text-sm font-medium text-white">Conectar conta Google</a>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setFilter("ALL")} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${filter === "ALL" ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}>
               Todos ({creatives.length})
@@ -259,6 +274,106 @@ function CreativeEditor({ creative, onClose, onSaved }: { creative: Creative; on
           <button type="button" disabled={saving} onClick={save} className="rounded-lg bg-[#101828] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{saving ? "Salvando…" : "Salvar"}</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface UploadItem {
+  name: string;
+  progress: number;
+  error?: string;
+  done?: boolean;
+}
+
+/** Envia arquivos do computador direto para "1 - Para subir" no Drive e sincroniza a biblioteca no fim. */
+function CreativeUploader({ onDone }: { onDone: () => void }) {
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const patch = (index: number, change: Partial<UploadItem>) => setItems((list) => list.map((x, i) => (i === index ? { ...x, ...change } : x)));
+
+  function put(url: string, file: File, onProgress: (pct: number) => void): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", file.type);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`O Drive recusou o arquivo (${xhr.status}).`)));
+      xhr.onerror = () => reject(new Error("Falha de conexão durante o envio."));
+      xhr.send(file);
+    });
+  }
+
+  async function upload(files: File[]) {
+    if (!files.length || busy) return;
+    const start = items.length;
+    setItems((list) => [...list, ...files.map((f) => ({ name: f.name, progress: 0 }))]);
+    setBusy(true);
+    let sent = 0;
+    for (const [offset, file] of files.entries()) {
+      const index = start + offset;
+      try {
+        const res = await fetch("/api/ad-creatives/upload-url", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fileName: file.name, mimeType: file.type, size: file.size }) });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error ?? "Não consegui preparar o envio.");
+        await put(data.uploadUrl, file, (pct) => patch(index, { progress: pct }));
+        patch(index, { progress: 100, done: true });
+        sent++;
+      } catch (error) {
+        patch(index, { error: error instanceof Error ? error.message : "Falhou." });
+      }
+    }
+    if (sent) await fetch("/api/ad-creatives/sync", { method: "POST" }).catch(() => null);
+    setBusy(false);
+    onDone();
+  }
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        upload(Array.from(e.dataTransfer.files));
+      }}
+      className={`rounded-xl border-2 border-dashed p-5 text-center ${dragging ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#D0D5DD] bg-white"}`}
+    >
+      <p className="text-sm font-semibold text-[#101828]">Arraste imagens ou vídeos aqui</p>
+      <p className="text-xs text-[#667085]">Vão direto para a pasta &quot;1 - Para subir&quot; do Drive e aparecem abaixo como Rascunho. JPG ou PNG até 30 MB, MP4 ou MOV até 4 GB.</p>
+      <label className="mt-3 inline-block cursor-pointer rounded-lg bg-[#101828] px-4 py-2 text-sm font-medium text-white">
+        {busy ? "Enviando…" : "Escolher arquivos"}
+        <input
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,video/mp4,video/quicktime"
+          hidden
+          disabled={busy}
+          onChange={(e) => {
+            upload(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
+      </label>
+      {items.length > 0 && (
+        <ul className="mx-auto mt-3 max-w-xl space-y-1.5 text-left">
+          {items.map((item, i) => (
+            <li key={i} className="text-xs">
+              <div className="flex justify-between gap-2">
+                <span className="truncate text-[#344054]">{item.name}</span>
+                <span className={item.error ? "text-[#B42318]" : item.done ? "text-[#027A48]" : "text-[#667085]"}>{item.error ? "falhou" : item.done ? "enviado" : `${item.progress}%`}</span>
+              </div>
+              {item.error ? <p className="text-[#B42318]">{item.error}</p> : <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[#F2F4F7]"><div className="h-full bg-[#FF2B00] transition-all" style={{ width: `${item.progress}%` }} /></div>}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

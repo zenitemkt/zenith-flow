@@ -1,4 +1,5 @@
 import { createSign } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 /**
  * Google Drive por conta de serviço (sem login de usuário): o sistema só enxerga as pastas
@@ -31,7 +32,19 @@ export function driveServiceAccountEmail(): string | null {
 
 let cached: { token: string; expiresAt: number } | null = null;
 
+/**
+ * Token de um usuário Google (quando a agência conectou a própria conta) para as chamadas feitas
+ * dentro de `runWithDriveUserToken`. A conta de serviço não tem espaço no Drive e não pode CRIAR
+ * arquivos em Drive pessoal; com o token do usuário o arquivo fica dele.
+ */
+const userToken = new AsyncLocalStorage<string>();
+export function runWithDriveUserToken<T>(token: string | null, fn: () => Promise<T>): Promise<T> {
+  return token ? userToken.run(token, fn) : fn();
+}
+
 async function accessToken(): Promise<string> {
+  const fromUser = userToken.getStore();
+  if (fromUser) return fromUser;
   if (cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
   const sa = serviceAccount();
   if (!sa) throw new Error("Google Drive não configurado (GOOGLE_DRIVE_SA_JSON ausente ou inválido).");
@@ -139,4 +152,29 @@ export async function fetchDriveThumbnail(fileId: string, size = 480): Promise<R
   const url = file.thumbnailLink.replace(/=s\d+$/, `=s${size}`);
   const response = await fetch(url, { headers: { Authorization: `Bearer ${await accessToken()}` } });
   return response.ok ? response : null;
+}
+
+/**
+ * Abre uma sessão de envio "retomável" no Drive e devolve o endereço para o NAVEGADOR mandar o
+ * arquivo direto ao Google (não passa pelo servidor, que tem limite de ~4 MB por requisição).
+ * O `origin` libera o envio do navegador (CORS) a partir do portal.
+ */
+export async function createDriveResumableUpload(input: { name: string; mimeType: string; size: number; parentId: string; origin: string }): Promise<string> {
+  const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${await accessToken()}`,
+      "Content-Type": "application/json; charset=UTF-8",
+      "X-Upload-Content-Type": input.mimeType,
+      "X-Upload-Content-Length": String(input.size),
+      Origin: input.origin,
+    },
+    body: JSON.stringify({ name: input.name, parents: [input.parentId] }),
+  });
+  const location = response.headers.get("location");
+  if (!response.ok || !location) {
+    const data = await response.json().catch(() => ({}));
+    throw new DriveError(`Google Drive: não consegui abrir o envio (${(data as { error?: { message?: string } })?.error?.message ?? response.status}).`, response.status);
+  }
+  return location;
 }

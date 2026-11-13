@@ -3,6 +3,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
 import { parseDriveFolderId } from "@/lib/google-drive";
 import { connectCreativeFolder, syncCreativeFolder } from "@/lib/ad-creatives";
+import { withAgencyDrive } from "@/lib/drive-auth";
 
 export const maxDuration = 60;
 
@@ -15,8 +16,10 @@ export async function POST(request: Request) {
   const folderId = typeof body?.folder === "string" ? parseDriveFolderId(body.folder) : null;
   if (!folderId) return NextResponse.json({ error: "Cole o link da pasta do Google Drive." }, { status: 400 });
   try {
-    const folder = await connectCreativeFolder(membership.agencyId, folderId);
-    const result = await syncCreativeFolder(folder);
+    const { folder, result } = await withAgencyDrive(membership.agencyId, async () => {
+      const connected = await connectCreativeFolder(membership.agencyId, folderId);
+      return { folder: connected, result: await syncCreativeFolder(connected) };
+    });
     return NextResponse.json({ ok: true, folderId: folder.id, ...result }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não consegui conectar a pasta." }, { status: 400 });

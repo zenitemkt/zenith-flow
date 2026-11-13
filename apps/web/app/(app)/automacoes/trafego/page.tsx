@@ -73,6 +73,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
       {tab === "criativos" && (
         <CreativeLibrary
           serviceEmail={driveServiceAccountEmail()}
+          driveUserEmail={settings?.driveRefreshTokenEnc ? settings.driveAccountEmail ?? "conta conectada" : null}
           folders={folders.map((f) => ({ id: f.id, name: f.name, rootFolderId: f.rootFolderId, lastSyncAt: f.lastSyncAt?.toISOString() ?? null, lastSyncError: f.lastSyncError }))}
           metaAccount={metaConnection ? { name: metaConnection.externalAccountName ?? metaConnection.externalAccountId, canWrite: metaConnection.scopes.includes("ads_management"), active: metaConnection.status === "ACTIVE" } : null}
           creatives={creativeRows}
