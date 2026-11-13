@@ -146,7 +146,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
         <p className="text-sm text-[#667085]">
           Espelho das campanhas de mídia paga (Meta, Google e outros canais) sem precisar abrir o painel de cada
           plataforma — campanhas, conjuntos e anúncios da Meta vêm da conta conectada (situação, verba, números diários e cidades no mapa), atualizados todo dia às 6h e ao abrir a página; os outros canais são digitados à mão (seção 38 do manual).{" "}
-          <Link href="/comercial/campanhas" className="font-medium text-[#FF2B00] hover:underline">
+          <Link href="/trafego-raio-x/gestor?aba=campanhas" className="font-medium text-[#FF2B00] hover:underline">
             Gerenciar campanhas
           </Link>
         </p>
@@ -245,7 +245,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
           <p className="text-sm text-[#667085]">
             Nenhuma campanha {statusFilter === "TODAS" ? "" : CAMPAIGN_STATUS_LABELS[statusFilter as CampaignStatus].toLowerCase() + " "}
             por aqui.{" "}
-            <Link href="/comercial/campanhas" className="font-medium text-[#FF2B00] hover:underline">
+            <Link href="/trafego-raio-x/gestor?aba=nova" className="font-medium text-[#FF2B00] hover:underline">
               Criar campanha
             </Link>
           </p>

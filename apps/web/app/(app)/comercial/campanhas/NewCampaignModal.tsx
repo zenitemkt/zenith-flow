@@ -76,10 +76,10 @@ export function NewCampaignModal({ clients }: { clients: { id: string; name: str
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white"
-        style={{ backgroundColor: "#FF2B00" }}
+        className="flex h-10 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white px-4 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
+        title="Campanhas do Google e de outros canais, digitadas à mão"
       >
-        Nova campanha
+        Cadastrar manual (outros canais)
       </button>
       <Modal open={open} onClose={close} title="Nova campanha">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">

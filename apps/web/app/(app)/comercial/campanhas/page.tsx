@@ -65,6 +65,9 @@ export default async function CampaignsPage() {
         <div className="flex items-center gap-2">
           {canSyncMeta && <SyncMetaCampaignsButton autoSync={isMetaSyncStale(metaConnection?.lastValidatedAt ?? null)} />}
           <NewCampaignModal clients={clients} />
+          <Link href="/trafego-raio-x/gestor?aba=nova" className="flex h-10 items-center justify-center rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white">
+            Nova campanha
+          </Link>
         </div>
       </div>
 
