@@ -84,6 +84,9 @@ export interface TrafficPlan {
   urlTags: string;
   /** "FORM" = formulário instantâneo da Meta; "SITE" = formulário no site com conversão no pixel. */
   conversion: "FORM" | "SITE";
+  /** Programação, horário de Brasília ("AAAA-MM-DDTHH:MM"). Vazio = começa ao ativar / sem término. */
+  startAt: string;
+  endAt: string;
   adsets: PlanAdSet[];
 }
 
@@ -101,7 +104,7 @@ interface Progress {
 export const DEFAULT_CITIES = ["Americana", "Santa Bárbara d'Oeste", "Paulínia", "Limeira", "Sumaré", "Nova Odessa"];
 
 export function emptyPlan(): TrafficPlan {
-  return { name: "Empresários | Região de Americana", conversion: "FORM", budgetMode: "CAMPAIGN", campaignDailyBudget: 30, copy: { primaryTexts: [], headlines: [], descriptions: [] }, splitCopy: false, copyGroups: [], copyByAd: {}, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
+  return { name: "Empresários | Região de Americana", conversion: "FORM", budgetMode: "CAMPAIGN", campaignDailyBudget: 30, startAt: "", endAt: "", copy: { primaryTexts: [], headlines: [], descriptions: [] }, splitCopy: false, copyGroups: [], copyByAd: {}, advantageCreative: true, trackSiteEvents: true, trackOfflineEvents: true, urlTags: DEFAULT_URL_TAGS, adsets: [] };
 }
 
 /** Normaliza o que vem da tela (nunca confia no formato). */
@@ -163,6 +166,8 @@ export function parsePlan(value: unknown): TrafficPlan {
     name: str(v.name, 200) || emptyPlan().name,
     conversion: v.conversion === "SITE" ? "SITE" : "FORM",
     budgetMode: v.budgetMode === "ADSET" ? "ADSET" : "CAMPAIGN",
+    startAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v.startAt ?? "")) ? String(v.startAt) : "",
+    endAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v.endAt ?? "")) ? String(v.endAt) : "",
     campaignDailyBudget: num(v.campaignDailyBudget, 0, 100000, 30),
     copy: copyOf(v.copy),
     splitCopy: v.splitCopy === true && copyGroups.length > 0,
@@ -174,6 +179,13 @@ export function parsePlan(value: unknown): TrafficPlan {
     urlTags: typeof v.urlTags === "string" ? v.urlTags.trim().slice(0, 1000) : DEFAULT_URL_TAGS,
     adsets,
   };
+}
+
+/** "AAAA-MM-DDTHH:MM" no horário de Brasília (UTC-3, sem horário de verão) → data. */
+export function brasiliaToDate(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(`${value}:00-03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /** Problemas que impedem subir (mostrados na revisão). */
@@ -190,6 +202,10 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
   }
   if (!plan.adsets.length) issues.push("Adicione pelo menos um conjunto.");
   const total = planDailyTotal(plan);
+  const start = brasiliaToDate(plan.startAt);
+  const end = brasiliaToDate(plan.endAt);
+  if (end && end.getTime() <= Date.now()) issues.push("A data de término já passou.");
+  if (start && end && end.getTime() - start.getTime() < 24 * 60 * 60_000) issues.push("O término precisa ser pelo menos 24 horas depois do início (exigência da Meta).");
   if (plan.budgetMode === "CAMPAIGN" && plan.adsets.length && plan.campaignDailyBudget < 6 * plan.adsets.length) {
     issues.push(`Orçamento da campanha: mínimo de R$ 6/dia por conjunto (R$ ${(6 * plan.adsets.length).toFixed(2)}/dia para ${plan.adsets.length} conjunto(s)).`);
   }
@@ -331,6 +347,12 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
           customAudienceIds: a.temperature === "QUENTE" ? a.customAudiences.map((c) => c.id) : [],
           conversion: plan.conversion,
           pixelId,
+          // Início no passado = começa assim que a campanha for ativada.
+          startTime: (() => {
+            const d = brasiliaToDate(plan.startAt);
+            return d && d.getTime() > Date.now() ? d.toISOString() : null;
+          })(),
+          endTime: brasiliaToDate(plan.endAt)?.toISOString() ?? null,
         });
         progress.log.push(`Conjunto ${setName} criado.`);
         await save();

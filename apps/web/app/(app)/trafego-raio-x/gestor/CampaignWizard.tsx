@@ -39,6 +39,7 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<string, string> = { ACTIVE: "ativa", PAUSED: "pausada", ARCHIVED: "arquivada", IN_PROCESS: "em processamento", WITH_ISSUES: "com problemas" };
+const fmtWhen = (v: string) => `${v.slice(8, 10)}/${v.slice(5, 7)}/${v.slice(0, 4)} às ${v.slice(11, 16)}`;
 const STEPS = ["Campanha", "Conjuntos", "Formulário ou site", "Anúncios", "Revisão"];
 const INPUT = "w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
 const LABEL = "flex flex-col gap-1 text-sm font-medium text-[#344054]";
@@ -284,6 +285,26 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                 </label>
               ) : (
                 <p className="mt-1 text-xs text-[#667085]">A verba fica em cada conjunto (etapa 2), para cada um ter o próprio controle.</p>
+              )}
+            </div>
+            <div>
+              <p className="mb-1 text-sm font-medium text-[#344054]">Programação (horário de Brasília)</p>
+              <div className="grid max-w-xl gap-3 sm:grid-cols-2">
+                <label className={LABEL}>
+                  Início
+                  <input type="datetime-local" value={plan.startAt} onChange={(e) => setPlan((p) => ({ ...p, startAt: e.target.value }))} className={INPUT} />
+                  <span className="text-xs font-normal text-[#667085]">Vazio = começa assim que você ativar a campanha.</span>
+                </label>
+                <label className={LABEL}>
+                  Término (opcional)
+                  <input type="datetime-local" value={plan.endAt} min={plan.startAt || undefined} onChange={(e) => setPlan((p) => ({ ...p, endAt: e.target.value }))} className={INPUT} />
+                  <span className="text-xs font-normal text-[#667085]">Vazio = roda até você pausar.</span>
+                </label>
+              </div>
+              {(plan.startAt || plan.endAt) && (
+                <button type="button" onClick={() => setPlan((p) => ({ ...p, startAt: "", endAt: "" }))} className="mt-1 text-xs font-semibold text-[#FF2B00]">
+                  Limpar datas
+                </button>
               )}
             </div>
             {budgetCap === null && <p className="rounded-lg bg-[#FFFAEB] px-3 py-2 text-sm text-[#B54708]">O teto de verba ainda não foi definido em Configurações. Dá para montar o rascunho, mas só sobe depois de definir.</p>}
@@ -532,6 +553,9 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
           <div className="flex flex-col gap-4">
             <div className="rounded-xl bg-[#F9FAFB] p-4 text-sm">
               <p className="font-semibold text-[#101828]">{plan.name}</p>
+              <p className="text-xs text-[#667085]">
+                {plan.startAt ? `Início ${fmtWhen(plan.startAt)}` : "Começa ao ativar a campanha"} · {plan.endAt ? `término ${fmtWhen(plan.endAt)}` : "sem data de término"}
+              </p>
               <ul className="mt-2 space-y-2">
                 {plan.adsets.map((a, index) => (
                   <li key={a.key} className="border-l-2 border-[#FF2B00] pl-3">

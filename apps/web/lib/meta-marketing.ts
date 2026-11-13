@@ -182,6 +182,9 @@ export interface AdSetSpec {
   customAudienceIds: string[];
   conversion: "FORM" | "SITE";
   pixelId?: string | null;
+  /** Início e término programados (ISO com fuso). Sem início = começa ao ativar; sem término = contínuo. */
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 export async function createAdSet(token: string, adAccountId: string, spec: AdSetSpec): Promise<string> {
@@ -211,6 +214,8 @@ export async function createAdSet(token: string, adAccountId: string, spec: AdSe
     campaign_id: spec.campaignId,
     ...(spec.dailyBudgetCents ? { daily_budget: spec.dailyBudgetCents, bid_strategy: "LOWEST_COST_WITHOUT_CAP" } : {}),
     billing_event: "IMPRESSIONS",
+    ...(spec.startTime ? { start_time: spec.startTime } : {}),
+    ...(spec.endTime ? { end_time: spec.endTime } : {}),
     ...conversion,
     targeting,
     // Conjunto e anúncio nascem ativos; a campanha pausada segura a veiculação até você ativar.
