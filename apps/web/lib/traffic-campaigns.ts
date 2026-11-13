@@ -24,6 +24,8 @@ import {
 
 /** Plano montado no passo a passo "Nova campanha". Valores de verba em reais. */
 export interface PlanForm {
+  /** Nome do formulário na Meta (Central de Formulários). Vazio = automático (campanha | conjunto | data). */
+  formName?: string;
   introTitle: string;
   /** Saudação em lista (como o formulário da Zenite); vazio = parágrafo em introText. */
   introBullets: string[];
@@ -153,6 +155,7 @@ export function parsePlan(value: unknown): TrafficPlan {
       interests: (Array.isArray(a?.interests) ? a.interests : []).filter((x) => x && typeof x.id === "string").map((x) => ({ id: str(x.id, 40), name: str(x.name, 120) })).slice(0, 25),
       dailyBudget: num(a?.dailyBudget, 0, 100000, 30),
       form: {
+        formName: str(f.formName, 200),
         introTitle: str(f.introTitle, 60),
         introBullets: (Array.isArray(f.introBullets) ? f.introBullets : []).map((b) => str(b, 80)).slice(0, 5),
         introText: str(f.introText, 1000),
@@ -373,7 +376,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
       }
       if (plan.conversion === "FORM" && !state.formId) {
         state.formId = await createLeadForm(pageToken, pageId, {
-          name: `${plan.name} | ${setName} | ${today}`.slice(0, 200),
+          name: (a.form.formName?.trim() || `${plan.name} | ${setName} | ${today}`).slice(0, 200),
           introTitle: a.form.introTitle,
           introBullets: a.form.introBullets,
           introText: a.form.introText,

@@ -358,7 +358,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
           <div className="flex flex-col gap-4">
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
             {plan.conversion === "FORM"
-              ? plan.adsets.map((a, index) => <FormCard key={a.key} adset={a} title={setLabel(a, index)} onChange={(fn) => update(a.key, fn)} />)
+              ? plan.adsets.map((a, index) => <FormCard key={a.key} adset={a} title={setLabel(a, index)} autoName={`${codeMatch ? plan.name : `[${nextCode ?? "LEAD??"}] ${plan.name}`} | ${setLabel(a, index)} | ${new Date().toLocaleDateString("pt-BR")}`} onChange={(fn) => update(a.key, fn)} />)
               : plan.adsets.map((a, index) => (
                   <label key={a.key} className={LABEL}>
                     <span className="font-mono text-xs">{setLabel(a, index)}</span>
@@ -842,13 +842,18 @@ function AdSetCard({ adset: a, index, label, budgetPerAdSet, defaultCities, onCh
   );
 }
 
-function FormCard({ adset: a, title, onChange }: { adset: PlanAdSet; title: string; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void }) {
+function FormCard({ adset: a, title, autoName, onChange }: { adset: PlanAdSet; title: string; autoName: string; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void }) {
   const setForm = (patch: Partial<PlanAdSet["form"]>) => onChange((x) => ({ ...x, form: { ...x.form, ...patch } }));
   return (
     <div className="rounded-xl border border-[#EEF0F3] p-4">
       <p className="mb-3 text-sm font-semibold text-[#101828]">Formulário instantâneo · <span className="font-mono">{title}</span></p>
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div className="flex flex-col gap-3">
+          <label className={LABEL}>
+            Nome do formulário (como aparece na Meta)
+            <input value={a.form.formName ?? ""} maxLength={200} onChange={(e) => setForm({ formName: e.target.value })} placeholder={autoName} className={INPUT} />
+            <span className="text-xs font-normal text-[#667085]">Vazio = nome automático: {autoName}</span>
+          </label>
           <label className={LABEL}>Título da abertura<input value={a.form.introTitle} maxLength={60} onChange={(e) => setForm({ introTitle: e.target.value })} className={INPUT} /></label>
           <div className="flex flex-col gap-1.5">
             <p className="text-sm font-medium text-[#344054]">Saudação em lista (até 5 itens, 80 letras cada)</p>
