@@ -140,7 +140,7 @@ export async function setCreativeStatus(creativeId: string, status: AdCreativeSt
       severity: "WARNING",
       title: status === "REJECTED" ? `Criativo reprovado pela Meta: ${creative.name}` : `Criativo não subiu: ${creative.name}`,
       detail: error ?? "Sem detalhe do erro.",
-      href: "/automacoes/trafego",
+      href: "/trafego-raio-x/gestor",
     });
   }
 }

@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 }
 
 async function connectTrafficDrive(code: string, agencyId: string) {
-  const back = (status: string) => NextResponse.redirect(new URL(`/automacoes/trafego?aba=criativos&drive=${status}`, calendarRedirectUri()));
+  const back = (status: string) => NextResponse.redirect(new URL(`/trafego-raio-x/gestor?aba=criativos&drive=${status}`, calendarRedirectUri()));
   cookies().delete("traffic_gdrive_state");
   const { id, secret } = googleClient();
   const response = await fetch("https://oauth2.googleapis.com/token", {

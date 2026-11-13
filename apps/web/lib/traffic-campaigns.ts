@@ -420,7 +420,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha no envio.";
     await save({ status: "FAILED", lastError: message });
-    await raiseSystemAlert({ agencyId, key: `ads:campaign:${row.id}`, category: "INTEGRATION", severity: "WARNING", title: `Campanha não subiu: ${plan.name}`, detail: message, href: "/automacoes/trafego" });
+    await raiseSystemAlert({ agencyId, key: `ads:campaign:${row.id}`, category: "INTEGRATION", severity: "WARNING", title: `Campanha não subiu: ${plan.name}`, detail: message, href: "/trafego-raio-x/gestor" });
     return { done: true, message };
   }
 }

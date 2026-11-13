@@ -98,7 +98,17 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "finance-indicators", label: "Indicadores", href: "/financeiro/indicadores", comingSoon: false },
         ],
       },
-      { id: "traffic-xray", label: "Tráfego - Raio X", icon: Radar, href: "/trafego-raio-x", comingSoon: false },
+      {
+        id: "traffic-xray",
+        label: "Tráfego - Raio X",
+        icon: Radar,
+        href: "/trafego-raio-x",
+        comingSoon: false,
+        children: [
+          { id: "traffic-xray-overview", label: "Raio X", href: "/trafego-raio-x", comingSoon: false },
+          { id: "traffic-manager", label: "Gestor de tráfego", href: "/trafego-raio-x/gestor", comingSoon: false },
+        ],
+      },
     ],
   },
   {
@@ -141,7 +151,6 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "automations-instagram", label: "Instagram", href: "/automacoes/instagram", comingSoon: false },
           { id: "automations-assistant", label: "Assistente virtual", href: "/automacoes/assistente", comingSoon: false },
           { id: "automations-assistant-sim", label: "Testar assistente", href: "/automacoes/assistente/simulador", comingSoon: false },
-          { id: "automations-traffic", label: "Gestor de tráfego", href: "/automacoes/trafego", comingSoon: false },
         ],
       },
       { id: "tracking", label: "Traqueamento", icon: Target, href: "/traqueamento", comingSoon: false },

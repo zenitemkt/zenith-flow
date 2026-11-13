@@ -141,7 +141,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         if (!res.ok) throw new Error(data?.error ?? "Não consegui salvar.");
         id = data.id as string;
         setCampaignId(id);
-        window.history.replaceState(null, "", `/automacoes/trafego?aba=nova&campanha=${id}`);
+        window.history.replaceState(null, "", `/trafego-raio-x/gestor?aba=nova&campanha=${id}`);
       } else {
         const res = await fetch(`/api/traffic/campaigns/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
         if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Não consegui salvar.");
@@ -179,7 +179,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         return;
       }
     }
-    router.push(`/automacoes/trafego?aba=nova&novo=${Date.now()}`);
+    router.push(`/trafego-raio-x/gestor?aba=nova&novo=${Date.now()}`);
     router.refresh();
   }
 
@@ -215,7 +215,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     }
     polling = false;
     if (ok) {
-      router.push(`/automacoes/trafego?aba=campanhas&enviada=${id}`);
+      router.push(`/trafego-raio-x/gestor?aba=campanhas&enviada=${id}`);
       router.refresh();
       return;
     }

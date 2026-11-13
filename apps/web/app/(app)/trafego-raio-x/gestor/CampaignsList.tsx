@@ -44,7 +44,7 @@ export function CampaignsList({ campaigns, adAccountId }: { campaigns: Row[]; ad
   if (!campaigns.length) {
     return (
       <p className="rounded-xl border border-dashed border-[#D0D5DD] bg-white p-10 text-center text-sm text-[#667085]">
-        Nenhuma campanha ainda. <Link href="/automacoes/trafego?aba=nova" className="font-semibold text-[#FF2B00]">Montar a primeira</Link>
+        Nenhuma campanha ainda. <Link href="/trafego-raio-x/gestor?aba=nova" className="font-semibold text-[#FF2B00]">Montar a primeira</Link>
       </p>
     );
   }
@@ -68,7 +68,7 @@ export function CampaignsList({ campaigns, adAccountId }: { campaigns: Row[]; ad
             </div>
             <div className="flex shrink-0 gap-2">
               {c.status !== "SUBMITTED" && (
-                <Link href={`/automacoes/trafego?aba=nova&campanha=${c.id}`} className="rounded-lg bg-[#101828] px-3 py-1.5 text-xs font-medium text-white">
+                <Link href={`/trafego-raio-x/gestor?aba=nova&campanha=${c.id}`} className="rounded-lg bg-[#101828] px-3 py-1.5 text-xs font-medium text-white">
                   {c.status === "DRAFT" ? "Continuar" : "Revisar e tentar de novo"}
                 </Link>
               )}
