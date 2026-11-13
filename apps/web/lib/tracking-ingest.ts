@@ -6,12 +6,10 @@ import { decryptSecret } from "@/lib/crypto-secrets";
 import { sendMetaCapiEvent, META_EVENT_NAME_MAP } from "@/lib/meta-capi";
 import {
   isTrackingEventName,
-  isConsentSatisfied,
   normalizeReferrer,
   normalizeTrackingUrl,
   parseConsentSnapshot,
   validateProperties,
-  TRACKING_EVENT_CONSENT_REQUIREMENT,
   TRACKING_SESSION_TIMEOUT_MS,
   type ConsentSnapshot,
   type TrackingEventName,
@@ -205,10 +203,10 @@ export async function processTrackingEvent(
   const properties = validateProperties(body?.properties);
   if (properties === null) return { eventId, status: "invalid", error: "properties inválido." };
 
-  const requirement = TRACKING_EVENT_CONSENT_REQUIREMENT[eventName];
-  if (!isConsentSatisfied(consent, requirement)) {
-    return { eventId, status: "dropped_no_consent" };
-  }
+  // Análise interna (2026-11-13, decisão do Gabriel, base legal: legítimo interesse): todo evento do
+  // site é guardado no Zenite Flow, com ou sem aceite do banner, e nunca é compartilhado. O banner só
+  // decide o envio a terceiros: Meta (CAPI abaixo exige consent.marketing; pixel e GA4 no navegador).
+  // O consentimento de cada evento continua gravado em `consent`.
 
   const normalizedUrl = normalizeTrackingUrl(body?.url);
   const referrer = normalizeReferrer(body?.referrer);
