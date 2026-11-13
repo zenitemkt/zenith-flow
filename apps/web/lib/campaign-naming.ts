@@ -41,12 +41,13 @@ export async function nextCampaignNumberInfo(token: string, adAccountId: string,
     const data = await metaGet<{ data?: { name: string; status?: string; effective_status?: string }[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${act}/campaigns`, token, {
       fields: "name,status,effective_status",
       limit: 200,
-      effective_status: ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"],
+      // Arquivadas ficam fora: a Meta devolve campanha excluída no Gerenciador como ARCHIVED.
+      effective_status: ["ACTIVE", "PAUSED", "IN_PROCESS", "WITH_ISSUES"],
       ...(after ? { after } : {}),
     });
     // Excluída no Gerenciador às vezes volta com effective_status ARCHIVED, mas status DELETED.
     rows.push(...(data.data ?? [])
-      .filter((c) => c.status !== "DELETED" && c.effective_status !== "DELETED").map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
+      .filter((c) => !["DELETED", "ARCHIVED"].includes(c.status ?? "") && !["DELETED", "ARCHIVED"].includes(c.effective_status ?? "")).map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
     after = data.paging?.next ? data.paging.cursors?.after ?? "" : "";
     if (!after) break;
   }

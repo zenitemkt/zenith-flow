@@ -252,7 +252,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
               Nome na Meta: <strong>{codeMatch ? plan.name : `[${nextCode ?? "LEAD??"}] ${plan.name}`}</strong>
               {!codeMatch && lastUsed && (
                 <span className="block text-xs text-[#667085]">
-                  Último número em uso na conta: <strong>{lastUsed.name}</strong> ({STATUS_LABEL[lastUsed.status] ?? lastUsed.status.toLowerCase()}). Campanhas apagadas no Gerenciador liberam o número; arquivadas continuam contando.
+                  Último número em uso na conta: <strong>{lastUsed.name}</strong> ({STATUS_LABEL[lastUsed.status] ?? lastUsed.status.toLowerCase()}). Campanhas excluídas ou arquivadas no Gerenciador liberam o número.
                 </span>
               )}
               <span className="block text-xs text-[#667085]">O código do objetivo e o número entram sozinhos no envio, seguindo a sequência da conta (Reconhecimento REC, Tráfego TRAF, Engajamento ENG, Leads LEAD, Promoção do app APP, Vendas VEND).</span>
