@@ -124,6 +124,20 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     }
   }
 
+  /** Apaga o rascunho (os criativos enviados continuam na biblioteca e no Drive) e começa do zero. */
+  async function discard() {
+    if (!window.confirm("Descartar este rascunho? Os criativos enviados continuam na biblioteca.")) return;
+    if (campaignId) {
+      const res = await fetch(`/api/traffic/campaigns/${campaignId}`, { method: "DELETE" });
+      if (!res.ok) {
+        setMessage({ ok: false, text: (await res.json().catch(() => null))?.error ?? "Não consegui descartar." });
+        return;
+      }
+    }
+    router.push(`/automacoes/trafego?aba=nova&novo=${Date.now()}`);
+    router.refresh();
+  }
+
   async function submit() {
     const id = await save();
     if (!id) return;
@@ -327,6 +341,9 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             Próximo
           </button>
         )}
+        <button type="button" disabled={saving || submitting} onClick={discard} className="ml-auto rounded-lg border border-[#FECDCA] bg-white px-4 py-2 text-sm font-medium text-[#B42318] hover:bg-[#FEF3F2]">
+          Descartar rascunho
+        </button>
       </div>
     </section>
   );

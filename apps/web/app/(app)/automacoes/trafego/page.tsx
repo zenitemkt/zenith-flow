@@ -17,7 +17,7 @@ const TABS = [
   { id: "configuracoes", label: "Configurações" },
 ] as const;
 
-export default async function TrafficManagerPage({ searchParams }: { searchParams: { aba?: string; campanha?: string } }) {
+export default async function TrafficManagerPage({ searchParams }: { searchParams: { aba?: string; campanha?: string; novo?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   const agencyId = membership.agencyId;
@@ -82,7 +82,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
 
       {tab === "nova" && (
         <CampaignWizard
-          key={editing?.id ?? "new"}
+          key={editing?.id ?? `new-${searchParams.novo ?? ""}`}
           campaignId={editing?.id ?? null}
           initialPlan={editing ? parsePlan(editing.plan) : emptyPlan()}
           defaultCities={DEFAULT_CITIES}
