@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import type { PlanAdSet, TrafficPlan } from "@/lib/traffic-campaigns";
 import { NICHE_PRESETS, zeniteFormTemplate } from "@/lib/traffic-niches";
 import { adSetName } from "@/lib/traffic-naming";
-import { creativeRole, groupCreativesIntoAds } from "@/lib/creative-pairing";
+import { creativeRole } from "@/lib/creative-pairing";
 import { DEFAULT_URL_TAGS, splitLines, splitPrimaryTexts } from "@/lib/copy-split";
-import { adCopyKey, copyForAd, emptyCopy, planDailyTotal, type PlanCopy } from "@/lib/traffic-copy";
+import { adCopyKey, adsForAdSet, copyForAd, creativeGroup, emptyCopy, planDailyTotal, type PlanCopy } from "@/lib/traffic-copy";
 import { CreativeEditor, CreativeUploader } from "./CreativeLibrary";
 
 interface CreativeOption {
@@ -110,7 +110,12 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     const rows = ((await res.json().catch(() => null))?.creatives ?? []) as CreativeOption[];
     if (!rows.length) return;
     setCreatives((list) => [...rows.filter((row) => !list.some((c) => c.id === row.id)), ...list]);
-    setPlan((p) => ({ ...p, adsets: p.adsets.map((a) => (a.key === adsetKey ? { ...a, creativeIds: Array.from(new Set([...a.creativeIds, ...rows.map((row) => row.id)])) } : a)) }));
+    // Os arquivos enviados entram no grupo de textos aberto no momento.
+    setPlan((p) => ({
+      ...p,
+      copyByAd: p.splitCopy ? { ...p.copyByAd, ...Object.fromEntries(rows.filter((row) => !p.adsets.find((a) => a.key === adsetKey)?.creativeIds.includes(row.id)).map((row) => [adCopyKey(adsetKey, row.id), tab])) } : p.copyByAd,
+      adsets: p.adsets.map((a) => (a.key === adsetKey ? { ...a, creativeIds: Array.from(new Set([...a.creativeIds, ...rows.map((row) => row.id)])) } : a)),
+    }));
     // Só pede os textos no criativo quando a campanha não tem textos próprios.
     const missing = rows.find((row) => !isReady(row));
     if (missing && !hasCopy(plan.copy)) setEditingCreative(missing);
@@ -213,7 +218,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
     router.refresh();
   }
 
-  const expectedSteps = 1 + plan.adsets.reduce((n, a) => n + (plan.conversion === "FORM" ? 1 : 0) + 1 + groupCreativesIntoAds(a.creativeIds.map((cid) => creatives.find((c) => c.id === cid)).filter((c): c is CreativeOption => Boolean(c))).length, 0);
+  const expectedSteps = 1 + plan.adsets.reduce((n, a) => n + (plan.conversion === "FORM" ? 1 : 0) + 1 + adsForAdSet(plan, a.key, a.creativeIds.map((cid) => creatives.find((c) => c.id === cid)).filter((c): c is CreativeOption => Boolean(c))).length, 0);
   const doneSteps = submitLog.filter((l) => /criad[oa]/i.test(l)).length;
   const percent = Math.min(100, Math.round((doneSteps / Math.max(1, expectedSteps)) * 100));
   const elapsed = startedAt ? Math.max(0, Math.round((now - startedAt) / 1000)) : 0;
@@ -425,12 +430,24 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
 
             {!plan.adsets.length && <p className="text-sm text-[#667085]">Adicione conjuntos na etapa 2.</p>}
             {plan.adsets.map((a) => {
-              const selected = a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is CreativeOption => Boolean(c));
+              // Com grupos ligados, cada grupo de textos tem os próprios criativos (mostra só os do grupo aberto).
+              const allSelected = a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is CreativeOption => Boolean(c));
+              const selected = allSelected.filter((c) => creativeGroup(plan, a.key, c.id) === tab);
               const others = creatives.filter((c) => !a.creativeIds.includes(c.id));
-              const toggle = (id: string) => update(a.key, (x) => ({ ...x, creativeIds: x.creativeIds.includes(id) ? x.creativeIds.filter((y) => y !== id) : [...x.creativeIds, id] }));
+              const toggle = (id: string) =>
+                setPlan((p) => {
+                  const removing = a.creativeIds.includes(id);
+                  return {
+                    ...p,
+                    copyByAd: !removing && p.splitCopy ? { ...p.copyByAd, [adCopyKey(a.key, id)]: tab } : p.copyByAd,
+                    adsets: p.adsets.map((x) => (x.key === a.key ? { ...x, creativeIds: removing ? x.creativeIds.filter((y) => y !== id) : [...x.creativeIds, id] } : x)),
+                  };
+                });
+              const adsList = adsForAdSet(plan, a.key, allSelected);
               return (
                 <div key={a.key} className="rounded-xl border border-[#EEF0F3] p-4">
-                  <p className="mb-3 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, plan.adsets.indexOf(a))} · {selected.length} anúncio(s)</p>
+                  <p className="mb-3 font-mono text-sm font-semibold text-[#101828]">{adSetName(a, plan.adsets.indexOf(a))} · {adsList.length} anúncio(s)</p>
+                  {plan.splitCopy && <p className="mb-2 text-xs font-semibold text-[#FF2B00]">Criativos do Grupo {tab + 1} (troque o grupo nas abas acima)</p>}
                   {driveUserEmail ? (
                     <CreativeUploader compact onDone={(ids) => attachUploaded(a.key, ids)} />
                   ) : (
@@ -460,30 +477,16 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                       ))}
                     </div>
                   )}
-                  {selected.length > 0 && (
+                  {adsList.length > 0 && (
                     <ul className="mt-3 space-y-1 rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#344054]">
                       <li className="font-semibold">Como os anúncios vão subir:</li>
-                      {groupCreativesIntoAds(selected).map((g, i) => (
+                      {adsList.map((g, i) => (
                         <li key={g.key} className="flex flex-wrap items-center gap-2">
                           <span>
                             <strong>AD{String(i + 1).padStart(2, "0")}</strong>:{" "}
                             {g.feed && g.stories ? `Feed "${g.feed.name}" + Stories "${g.stories.name}" (cada um no seu posicionamento)` : g.feed?.kind === "VIDEO" ? `vídeo "${g.feed.name}"` : `"${(g.feed ?? g.stories)!.name}" em todos os posicionamentos`}
                           </span>
-                          {plan.splitCopy && (
-                            <select
-                              value={plan.copyByAd[adCopyKey(a.key, (g.feed ?? g.stories)!.id)] ?? 0}
-                              onChange={(e) => {
-                                const key = adCopyKey(a.key, (g.feed ?? g.stories)!.id);
-                                const n = Number(e.target.value);
-                                setPlan((p) => ({ ...p, copyByAd: { ...p.copyByAd, [key]: n } }));
-                              }}
-                              className="rounded border border-[#D0D5DD] bg-white px-1 py-0.5 text-xs"
-                            >
-                              {Array.from({ length: groupCount }, (_, n) => (
-                                <option key={n} value={n}>Textos do grupo {n + 1}</option>
-                              ))}
-                            </select>
-                          )}
+                          {plan.splitCopy && <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#FF2B00]">Grupo {g.copyGroup + 1}</span>}
                         </li>
                       ))}
                       <li className="text-[#667085]">Par Feed/Stories reconhecido pelo fim do nome (-F/-S, -FD/-ST) ou pela proporção. Ao subir, os arquivos são renomeados para o padrão 01-01-AD01-F.</li>

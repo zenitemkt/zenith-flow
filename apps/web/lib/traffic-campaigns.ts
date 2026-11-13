@@ -1,9 +1,9 @@
 import { prisma, Prisma } from "@zenite-mkt/db";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { downloadDriveFile, renameDriveFile } from "@/lib/google-drive";
-import { groupCreativesIntoAds, standardCreativeName } from "@/lib/creative-pairing";
+import { standardCreativeName } from "@/lib/creative-pairing";
 import { DEFAULT_URL_TAGS } from "@/lib/copy-split";
-import { copyForAd, planDailyTotal } from "@/lib/traffic-copy";
+import { adsForAdSet, copyForAd, planDailyTotal } from "@/lib/traffic-copy";
 export { adCopyKey, copyForAd, emptyCopy, planDailyTotal } from "@/lib/traffic-copy";
 import { setCreativeStatus } from "@/lib/ad-creatives";
 import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
@@ -210,7 +210,7 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     if (!a.creativeIds.length) issues.push(`${label}: escolha pelo menos um criativo.`);
     const chosen = a.creativeIds.map((id) => creatives.find((x) => x.id === id));
     if (chosen.some((c) => !c)) issues.push(`${label}: um criativo escolhido não existe mais.`);
-    for (const [adIndex, g] of groupCreativesIntoAds(chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
+    for (const [adIndex, g] of adsForAdSet(plan, a.key, chosen.filter((c): c is (typeof creatives)[number] => Boolean(c))).entries()) {
       const pair = [g.feed, g.stories].filter((c): c is NonNullable<typeof c> => Boolean(c));
       const adLabel = `${label} AD${String(adIndex + 1).padStart(2, "0")}`;
       const copy = copyForAd(plan, a.key, (g.feed ?? g.stories)!.id);
@@ -336,7 +336,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
       }
 
       // 5. Anúncios: Feed + Stories da mesma imagem viram um anúncio; nome AD01, AD02... no conjunto.
-      const groups = groupCreativesIntoAds(a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is (typeof creatives)[number] => Boolean(c)));
+      const groups = adsForAdSet(plan, a.key, a.creativeIds.map((id) => creatives.find((c) => c.id === id)).filter((c): c is (typeof creatives)[number] => Boolean(c)));
       for (const [adIndex, group] of groups.entries()) {
         const adState = (state.ads[group.key] ??= {});
         if (adState.adId) continue;
