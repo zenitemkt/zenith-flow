@@ -38,13 +38,14 @@ export async function nextCampaignNumberInfo(token: string, adAccountId: string,
   const rows: { name: string; status: string }[] = extraNames.map((name) => ({ name, status: "RASCUNHO" }));
   let after = "";
   for (let page = 0; page < 20; page++) {
-    const data = await metaGet<{ data?: { name: string; effective_status?: string }[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${act}/campaigns`, token, {
-      fields: "name,effective_status",
+    const data = await metaGet<{ data?: { name: string; status?: string; effective_status?: string }[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${act}/campaigns`, token, {
+      fields: "name,status,effective_status",
       limit: 200,
       effective_status: ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"],
       ...(after ? { after } : {}),
     });
-    rows.push(...(data.data ?? []).filter((c) => c.effective_status !== "DELETED").map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
+    rows.push(...(data.data ?? [])// Excluída no Gerenciador às vezes volta com effective_status ARCHIVED, mas status DELETED.
+      .filter((c) => c.status !== "DELETED" && c.effective_status !== "DELETED").map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
     after = data.paging?.next ? data.paging.cursors?.after ?? "" : "";
     if (!after) break;
   }
