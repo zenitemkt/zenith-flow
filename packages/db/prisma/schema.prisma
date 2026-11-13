@@ -183,6 +183,8 @@ model Agency {
   leads                        Lead[]
   commercialAlerts             CommercialAlert[]
   systemAlerts                 SystemAlert[]
+  adCreativeFolders            AdCreativeFolder[]
+  adCreatives                  AdCreative[]
   systemAlertSettings          SystemAlertSettings?
   leadEmails                   LeadEmail[]
   leadPhones                   LeadPhone[]
@@ -3370,4 +3372,79 @@ model SystemAlertSettings {
   updatedAt     DateTime @updatedAt
 
   @@map("system_alert_settings")
+}
+
+/// Gestor de tráfego: pasta do Google Drive com os criativos de uma conta de anúncios.
+/// As subpastas espelham a situação do criativo (o sistema move o arquivo entre elas).
+model AdCreativeFolder {
+  id            String   @id @default(cuid())
+  agencyId      String
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name          String
+  rootFolderId  String
+  inboxFolderId String
+  liveFolderId  String
+  pausedFolderId String
+  failedFolderId String
+  lastSyncAt    DateTime?
+  lastSyncError String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  creatives AdCreative[]
+
+  @@unique([agencyId, rootFolderId])
+  @@map("ad_creative_folder")
+}
+
+enum AdCreativeStatus {
+  DRAFT
+  UPLOADING
+  IN_REVIEW
+  ACTIVE
+  PAUSED
+  REJECTED
+  FAILED
+}
+
+enum AdCreativeKind {
+  IMAGE
+  VIDEO
+}
+
+model AdCreative {
+  id            String           @id @default(cuid())
+  agencyId      String
+  agency        Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  folderId      String
+  folder        AdCreativeFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  driveFileId   String           @unique
+  fileName      String
+  mimeType      String
+  kind          AdCreativeKind
+  sizeBytes     BigInt?
+  width         Int?
+  height        Int?
+  status        AdCreativeStatus @default(DRAFT)
+  /// true = o arquivo sumiu do Drive (apagado ou tirado da pasta).
+  missingInDrive Boolean         @default(false)
+  name          String
+  primaryText   String?
+  headline      String?
+  description   String?
+  linkUrl       String?
+  callToAction  String?
+  /// Identificadores na Meta, preenchidos conforme o criativo sobe.
+  metaImageHash String?
+  metaVideoId   String?
+  metaCreativeId String?
+  metaAdId      String?
+  lastError     String?
+  uploadedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([agencyId, status])
+  @@index([folderId])
+  @@map("ad_creative")
 }

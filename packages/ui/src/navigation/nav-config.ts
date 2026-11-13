@@ -141,6 +141,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "automations-instagram", label: "Instagram", href: "/automacoes/instagram", comingSoon: false },
           { id: "automations-assistant", label: "Assistente virtual", href: "/automacoes/assistente", comingSoon: false },
           { id: "automations-assistant-sim", label: "Testar assistente", href: "/automacoes/assistente/simulador", comingSoon: false },
+          { id: "automations-traffic", label: "Gestor de tráfego", href: "/automacoes/trafego", comingSoon: false },
         ],
       },
       { id: "tracking", label: "Traqueamento", icon: Target, href: "/traqueamento", comingSoon: false },
