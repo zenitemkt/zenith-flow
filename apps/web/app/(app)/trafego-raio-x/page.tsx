@@ -9,6 +9,8 @@ import { prisma } from "@zenite-mkt/db";
 import type { CampaignStatus } from "@zenite-mkt/db";
 import { CampaignXrayTree } from "./CampaignXrayTree";
 import { TrafficMap } from "./TrafficMap";
+import { DailyChart, type DailyPoint } from "./DailyChart";
+import { CPL_LEVEL_LABEL, cplCents, cplLevel, ctr, frequency, sumLevel } from "@/lib/xray-metrics";
 import { SyncMetaCampaignsButton } from "../comercial/campanhas/SyncMetaCampaignsButton";
 import { canManageIntegrations } from "@/lib/rbac";
 import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
@@ -42,7 +44,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   periodStart.setUTCDate(periodStart.getUTCDate() - days);
   periodStart.setUTCHours(0, 0, 0, 0);
 
-  const [campaigns, clients, metaConnection] = await Promise.all([
+  const [campaigns, clients, metaConnection, trafficSettings] = await Promise.all([
     prisma.campaign.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -52,7 +54,13 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       include: {
         client: { select: { id: true, name: true } },
         dailyMetrics: { where: { date: { gte: periodStart } } },
-        adSets: { orderBy: { createdAt: "asc" }, include: { ads: { orderBy: { createdAt: "asc" } } } },
+        adSets: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            dailyMetrics: { where: { date: { gte: periodStart } } },
+            ads: { orderBy: { createdAt: "asc" }, include: { dailyMetrics: { where: { date: { gte: periodStart } } } } },
+          },
+        },
         geoTargets: { orderBy: { createdAt: "asc" } },
       },
       orderBy: { createdAt: "desc" },
@@ -66,7 +74,9 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
       select: { status: true, lastValidatedAt: true },
     }),
+    prisma.trafficSettings.findUnique({ where: { agencyId: membership.agencyId }, select: { cplGoodCents: true, cplMaxCents: true } }),
   ]);
+  const goals = { goodCents: trafficSettings?.cplGoodCents ?? null, maxCents: trafficSettings?.cplMaxCents ?? null };
   const canSyncMeta = canManageIntegrations(membership.role) && metaConnection?.status === "ACTIVE";
 
   const rows = campaigns.map((campaign) => ({
@@ -75,6 +85,28 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   }));
 
   const blended = computeCampaignTotals(campaigns.flatMap((c) => c.dailyMetrics));
+  const all = sumLevel(campaigns.flatMap((c) => c.dailyMetrics));
+  const allCpl = cplCents(all);
+  const allLevel = cplLevel(all, goals.goodCents, goals.maxCents);
+  const allCtr = ctr(all);
+  const allFrequency = frequency(all);
+
+  // Gráfico diário: todos os dias do período, com zero nos dias sem gasto.
+  const byDay = new Map<string, DailyPoint>();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    byDay.set(key, { date: key, spendCents: 0, leads: 0 });
+  }
+  for (const m of campaigns.flatMap((c) => c.dailyMetrics)) {
+    const point = byDay.get(m.date.toISOString().slice(0, 10));
+    if (point) {
+      point.spendCents += m.spendCents;
+      point.leads += m.results ?? 0;
+    }
+  }
+  const dailyPoints = Array.from(byDay.values());
   const allGeoTargets = campaigns.flatMap((c) =>
     c.geoTargets.map((g) => ({ ...g, campaignName: c.name, campaignId: c.id })),
   );
@@ -152,26 +184,45 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
         params={filterParams(statusFilter, days)}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <p className="text-2xl font-semibold text-[#101828]">{formatCents(blended.spendCents)}</p>
+          <p className="text-2xl font-semibold text-[#101828]">{formatCents(all.spendCents)}</p>
           <p className="mt-1 text-xs font-medium text-[#475467]">gasto no período ({days} dias)</p>
         </div>
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <p className="text-2xl font-semibold text-[#101828]">{blended.clicks.toLocaleString("pt-BR")}</p>
-          <p className="mt-1 text-xs font-medium text-[#475467]">cliques</p>
+          <p className="text-2xl font-semibold text-[#101828]">{all.leads.toLocaleString("pt-BR")}</p>
+          <p className="mt-1 text-xs font-medium text-[#475467]">leads</p>
         </div>
         <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <p className="text-2xl font-semibold text-[#101828]">{blended.frequency === null ? "—" : blended.frequency.toFixed(2)}</p>
-          <p className="mt-1 text-xs font-medium text-[#475467]">frequência média (impressões / alcance)</p>
-        </div>
-        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <p className="text-2xl font-semibold text-[#101828]">{blended.roas === null ? "—" : `${blended.roas.toFixed(2)}x`}</p>
+          <p className={`text-2xl font-semibold ${allLevel === "good" ? "text-[#027A48]" : allLevel === "warning" ? "text-[#B54708]" : allLevel === "critical" ? "text-[#B42318]" : "text-[#101828]"}`}>
+            {allCpl === null ? "—" : formatCents(allCpl)}
+          </p>
           <p className="mt-1 text-xs font-medium text-[#475467]">
-            ROAS combinado{blended.roi !== null && ` · ROI ${Math.round(blended.roi * 100)}%`}
+            custo por lead{allLevel !== "none" ? ` · ${CPL_LEVEL_LABEL[allLevel]}` : ""}
+            {goals.goodCents || goals.maxCents ? (
+              <span className="block font-normal text-[#98A2B3]">
+                meta: {goals.goodCents ? `bom até ${formatCents(goals.goodCents)}` : ""}{goals.goodCents && goals.maxCents ? " · " : ""}{goals.maxCents ? `máx. ${formatCents(goals.maxCents)}` : ""}
+              </span>
+            ) : null}
           </p>
         </div>
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <p className="text-2xl font-semibold text-[#101828]">{allCtr === null ? "—" : `${(allCtr * 100).toFixed(2)}%`}</p>
+          <p className="mt-1 text-xs font-medium text-[#475467]">CTR · {all.clicks.toLocaleString("pt-BR")} cliques</p>
+        </div>
+        <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+          <p className="text-2xl font-semibold text-[#101828]">{allFrequency === null ? "—" : allFrequency.toFixed(2)}</p>
+          <p className="mt-1 text-xs font-medium text-[#475467]">frequência média</p>
+        </div>
+        {blended.resultValueCents > 0 && blended.roas !== null && (
+          <div className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <p className="text-2xl font-semibold text-[#101828]">{blended.roas.toFixed(2)}x</p>
+            <p className="mt-1 text-xs font-medium text-[#475467]">ROAS{blended.roi !== null && ` · ROI ${Math.round(blended.roi * 100)}%`}</p>
+          </div>
+        )}
       </div>
+
+      {all.spendCents > 0 && <DailyChart points={dailyPoints} />}
 
       {rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
@@ -185,6 +236,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <CampaignXrayTree
+          goals={goals}
           rows={rows.map(({ campaign, totals }) => ({
             id: campaign.id,
             name: campaign.name,
@@ -193,19 +245,28 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
             statusLabel: CAMPAIGN_STATUS_LABELS[campaign.status],
             statusBadgeClass: CAMPAIGN_STATUS_BADGE_CLASS[campaign.status],
             clientName: campaign.client?.name ?? null,
-            totals,
+            totals: sumLevel(campaign.dailyMetrics),
+            roas: totals.resultValueCents > 0 ? totals.roas : null,
             adSets: campaign.adSets.map((adSet) => ({
               id: adSet.id,
               name: adSet.name,
               budgetCents: adSet.budgetCents,
               targetingSummary: adSet.targetingSummary,
               active: adSet.active,
+              synced: Boolean(adSet.externalId),
+              metaStatus: adSet.metaStatus,
+              totals: sumLevel(adSet.dailyMetrics),
               ads: adSet.ads.map((ad) => ({
                 id: ad.id,
                 name: ad.name,
                 creativeNote: ad.creativeNote,
                 assetUrl: ad.assetUrl,
                 active: ad.active,
+                synced: Boolean(ad.externalId),
+                metaStatus: ad.metaStatus,
+                reviewFeedback: ad.reviewFeedback,
+                thumbnailUrl: ad.thumbnailUrl,
+                totals: sumLevel(ad.dailyMetrics),
               })),
             })),
           }))}
