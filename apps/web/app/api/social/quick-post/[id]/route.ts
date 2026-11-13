@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@/lib/social-scheduling";
 import { publishPostsNow } from "@/lib/social-publisher";
 import { QUICK_POST_AUDIT_ACTION } from "@/lib/social-quick-post";
+import { createPendingPostRule, parseMiniChatInput } from "@/lib/instagram-post-rules";
 
 export const maxDuration = 60;
 
@@ -64,6 +65,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (Number.isNaN(publishAt.getTime())) {
     return NextResponse.json({ error: "Escolha data e hora da publicação." }, { status: 400 });
   }
+  // Mini-chat do post (palavra-chave nos comentários): só Instagram, fora de Story.
+  const miniChat = platforms.includes("INSTAGRAM") && format !== "STORY" ? parseMiniChatInput(body?.miniChat) : null;
+  if (typeof miniChat === "string") return NextResponse.json({ error: miniChat }, { status: 400 });
 
   // Aprova antes de agendar: scheduleContentPosts move Aprovado → Agendado.
   await prisma.$transaction([
@@ -94,6 +98,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     await prisma.contentItem.update({ where: { id: item.id }, data: { status: "PRODUCAO" } });
     if (error instanceof ScheduleError) return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;
+  }
+
+  if (miniChat) {
+    const igPost = await prisma.socialPost.findFirst({ where: { id: { in: ids }, platform: "INSTAGRAM" }, select: { id: true, clientId: true } });
+    if (igPost) await createPendingPostRule({ agencyId: item.agencyId, clientId: igPost.clientId, socialPostId: igPost.id, caption, miniChat });
   }
 
   if (!now) return NextResponse.json({ ok: true, scheduled: ids.length }, { status: 201 });

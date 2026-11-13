@@ -1,5 +1,6 @@
 import { prisma, type SocialPost } from "@zenite-mkt/db";
 import { raiseSystemAlert } from "@/lib/system-alerts";
+import { activatePendingPostRules } from "@/lib/instagram-post-rules";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { MetaApiError } from "@/lib/meta-ads";
 import {
@@ -124,6 +125,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
         nextAttemptAt: null,
       },
     });
+    if (full.platform === "INSTAGRAM") await activatePendingPostRules(full.id, result.externalPostId ?? null, result.permalink ?? null);
     await prisma.auditLog.create({
       data: {
         agencyId: full.agencyId,

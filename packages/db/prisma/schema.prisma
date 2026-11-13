@@ -3109,6 +3109,9 @@ model InstagramAutomationRule {
   publicReplyTexts String[]
   /// Sequência de passos (mensagem, atraso, pergunta, etiqueta, condição) — null = só a mensagem única acima. O passo 0 espelha responseText/buttons.
   flow             Json?
+  /// Regra criada junto com o agendamento do post: fica inativa (sem mediaId) até o post sair;
+  /// na publicação recebe o mediaId do post e liga sozinha.
+  socialPostId     String?
   active           Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -3118,6 +3121,7 @@ model InstagramAutomationRule {
 
   @@index([agencyId])
   @@index([clientId, triggerType, active])
+  @@index([socialPostId])
   @@map("instagram_automation_rule")
 }
 

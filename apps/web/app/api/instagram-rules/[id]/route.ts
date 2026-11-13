@@ -58,6 +58,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       .slice(0, 20);
   }
   if (Object.keys(data).length === 0) return NextResponse.json({ error: "Nada pra atualizar." }, { status: 400 });
+  // Regra de post agendado sem mediaId: ligar agora faria ela valer para TODOS os posts.
+  const finalMediaId = "mediaId" in data ? data.mediaId : rule.mediaId;
+  if (data.active === true && rule.socialPostId && !finalMediaId) {
+    return NextResponse.json({ error: "Esta regra liga sozinha quando o post agendado for publicado." }, { status: 409 });
+  }
 
   const updated = await prisma.instagramAutomationRule.update({ where: { id: rule.id }, data });
   return NextResponse.json({ rule: updated });

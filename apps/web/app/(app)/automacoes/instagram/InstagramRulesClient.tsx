@@ -23,6 +23,8 @@ interface Rule {
   publicReplyTexts: string[];
   flow: FlowStep[] | null;
   active: boolean;
+  /** Criada no agendamento do post: liga sozinha quando o post for publicado. */
+  socialPostId?: string | null;
 }
 
 interface Contact {
@@ -223,14 +225,20 @@ export function InstagramRulesClient({
                         <span className="rounded-full bg-[#FFF4F2] px-2 py-0.5 text-xs font-medium text-[#FF2B00]">sequência · {rule.flow.length} passos</span>
                       )}
                       {rule.mediaId && <span className="rounded-full bg-[#FFF4ED] px-2 py-0.5 text-xs font-medium text-[#B93815]">post específico</span>}
-                      {!rule.active && <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#98A2B3]">pausada</span>}
+                      {!rule.active && rule.socialPostId && !rule.mediaId ? (
+                        <span className="rounded-full bg-[#EFF8FF] px-2 py-0.5 text-xs font-medium text-[#175CD3]">aguardando o post agendado ser publicado</span>
+                      ) : (
+                        !rule.active && <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#98A2B3]">pausada</span>
+                      )}
                     </div>
                     <p className="truncate text-sm text-[#344054]" title={rule.responseText}>{rule.responseText}</p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button type="button" onClick={() => toggleActive(rule)} className="h-8 rounded-lg border border-[#D0D5DD] px-2.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">
-                      {rule.active ? "Pausar" : "Ativar"}
-                    </button>
+                    {!(rule.socialPostId && !rule.mediaId && !rule.active) && (
+                      <button type="button" onClick={() => toggleActive(rule)} className="h-8 rounded-lg border border-[#D0D5DD] px-2.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">
+                        {rule.active ? "Pausar" : "Ativar"}
+                      </button>
+                    )}
                     <button type="button" onClick={() => setEditing(rule)} className="h-8 rounded-lg border border-[#D0D5DD] px-2.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">
                       Editar
                     </button>

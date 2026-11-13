@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CalendarClock, Facebook, Film, ImagePlus, Instagram, X, Zap } from "lucide-react";
+import { CalendarClock, Facebook, Film, ImagePlus, Instagram, MessageCircle, X, Zap } from "lucide-react";
 import type { SocialPlatform, SocialPostFormat } from "@zenite-mkt/db";
 import { CONTENT_MEDIA_MAX_FILES, isVideoType, validateContentMediaFile } from "@/lib/content-media";
 import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-upload";
@@ -95,6 +95,9 @@ export function QuickPostForm({
   const [time, setTime] = useState(() => defaultTimeFor(startDate, preset));
   /** Horário próprio de cada rede (mesma data); a rede que não está aqui usa `time`. */
   const [overrides, setOverrides] = useState<Partial<Record<SocialPlatform, string>>>({});
+  // Mini-chat do post: palavra-chave nos comentários → resposta pública + direct automático.
+  const [miniChat, setMiniChat] = useState({ enabled: false, keyword: "", responseText: "", publicReplies: "", buttons: [{ text: "", url: "" }] });
+  const miniChatAvailable = platforms.includes("INSTAGRAM") && format !== "STORY";
   const [busy, setBusy] = useState<"schedule" | "now" | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +166,12 @@ export function QuickPostForm({
     const mediaError = quickPostMediaError({ platforms, format, files });
     if (mediaError) return setError(mediaError);
     if (caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
+    if (miniChatAvailable && miniChat.enabled) {
+      if (!miniChat.keyword.trim()) return setError("Mini-chat: informe a palavra-chave.");
+      if (!miniChat.responseText.trim()) return setError("Mini-chat: escreva a mensagem que vai no direct.");
+      const badButton = miniChat.buttons.some((b) => (b.text.trim() || b.url.trim()) && (!b.text.trim() || !/^https?:\/\//i.test(b.url.trim())));
+      if (badButton) return setError("Mini-chat: cada botão precisa de texto e de um link começando com https://.");
+    }
     const byPlatform = Object.fromEntries(platforms.map((p) => [p, new Date(`${date}T${timeOf(p)}:00-03:00`)])) as Partial<Record<SocialPlatform, Date>>;
     const instants = platforms.map((p) => byPlatform[p]!);
     if (!now && instants.some((d) => Number.isNaN(d.getTime()))) return setError("Escolha a hora de cada rede.");
@@ -217,7 +226,19 @@ export function QuickPostForm({
       const res = await fetch(`/api/social/quick-post/${contentId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, now }),
+        body: JSON.stringify({
+          ...payload,
+          now,
+          miniChat: miniChatAvailable && miniChat.enabled
+            ? {
+                enabled: true,
+                keyword: miniChat.keyword,
+                responseText: miniChat.responseText,
+                publicReplyTexts: miniChat.publicReplies.split("\n"),
+                buttons: miniChat.buttons.filter((b) => b.text.trim() || b.url.trim()),
+              }
+            : undefined,
+        }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error ?? "Não foi possível agendar.");
@@ -430,6 +451,55 @@ export function QuickPostForm({
             className="w-full min-w-0 resize-y rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] disabled:bg-[#F9FAFB]"
           />
         </div>
+
+        {miniChatAvailable && (
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+            <label className="flex cursor-pointer items-start gap-2">
+              <input type="checkbox" checked={miniChat.enabled} onChange={(e) => setMiniChat((m) => ({ ...m, enabled: e.target.checked }))} className="mt-0.5 h-4 w-4 accent-[#FF2B00]" />
+              <span>
+                <span className="flex items-center gap-1.5 text-sm font-medium text-[#101828]">
+                  <MessageCircle size={15} aria-hidden className="text-[#FF2B00]" /> Mini-chat: palavra-chave nos comentários
+                </span>
+                <span className="block text-xs text-[#667085]">Quem comentar a palavra neste post recebe uma resposta no comentário e uma mensagem no direct. Liga sozinho quando o post for publicado no Instagram.</span>
+              </span>
+            </label>
+            {miniChat.enabled && (
+              <div className="mt-3 flex flex-col gap-3">
+                <label className={`flex flex-col gap-1 ${FIELD_LABEL}`}>
+                  Palavra-chave
+                  <input value={miniChat.keyword} onChange={(e) => setMiniChat((m) => ({ ...m, keyword: e.target.value }))} placeholder='Ex.: QUERO' className={INPUT} />
+                  <span className="text-xs font-normal text-[#98A2B3]">Vale se o comentário contiver a palavra, sem diferenciar maiúscula de minúscula.</span>
+                </label>
+                <label className={`flex flex-col gap-1 ${FIELD_LABEL}`}>
+                  Mensagem no direct
+                  <textarea value={miniChat.responseText} onChange={(e) => setMiniChat((m) => ({ ...m, responseText: e.target.value }))} rows={3} placeholder="Oi! Aqui está o link que você pediu..." className="w-full min-w-0 resize-y rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm outline-none focus:border-[#FF2B00]" />
+                </label>
+                <label className={`flex flex-col gap-1 ${FIELD_LABEL}`}>
+                  Respostas no comentário (opcional, uma por linha, sorteada a cada vez)
+                  <textarea value={miniChat.publicReplies} onChange={(e) => setMiniChat((m) => ({ ...m, publicReplies: e.target.value }))} rows={2} placeholder={"Te mandei no direct!\nOlha seu direct 😉"} className="w-full min-w-0 resize-y rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm outline-none focus:border-[#FF2B00]" />
+                </label>
+                <div className="flex flex-col gap-2">
+                  <span className={FIELD_LABEL}>Botões com link no direct (opcional, até 3)</span>
+                  {miniChat.buttons.map((b, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
+                      <input value={b.text} maxLength={20} onChange={(e) => setMiniChat((m) => ({ ...m, buttons: m.buttons.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) }))} placeholder="Texto" className={INPUT} />
+                      <input value={b.url} onChange={(e) => setMiniChat((m) => ({ ...m, buttons: m.buttons.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)) }))} placeholder="https://..." className={INPUT} />
+                      <button type="button" aria-label="Remover botão" onClick={() => setMiniChat((m) => ({ ...m, buttons: m.buttons.length > 1 ? m.buttons.filter((_, j) => j !== i) : [{ text: "", url: "" }] }))} className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white text-[#667085] hover:text-[#B42318]">
+                        <X size={15} aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                  {miniChat.buttons.length < 3 && (
+                    <button type="button" onClick={() => setMiniChat((m) => ({ ...m, buttons: [...m.buttons, { text: "", url: "" }] }))} className="self-start text-xs font-semibold text-[#FF2B00]">
+                      + Adicionar botão
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-[#667085]">Para sequência com atraso, perguntas ou etiquetas, edite depois em Automações → Instagram.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {!instant && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
