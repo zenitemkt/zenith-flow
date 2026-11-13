@@ -38,6 +38,7 @@ interface Props {
   creatives: CreativeOption[];
 }
 
+const STATUS_LABEL: Record<string, string> = { ACTIVE: "ativa", PAUSED: "pausada", ARCHIVED: "arquivada", IN_PROCESS: "em processamento", WITH_ISSUES: "com problemas" };
 const STEPS = ["Campanha", "Conjuntos", "Formulário ou site", "Anúncios", "Revisão"];
 const INPUT = "w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
 const LABEL = "flex flex-col gap-1 text-sm font-medium text-[#344054]";
@@ -85,6 +86,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   const [creatives, setCreatives] = useState<CreativeOption[]>(initialCreatives);
   const [editingCreative, setEditingCreative] = useState<CreativeOption | null>(null);
   const [nextCode, setNextCode] = useState<string | null>(null);
+  const [lastUsed, setLastUsed] = useState<{ name: string; status: string } | null>(null);
   const [keepUrlTags, setKeepUrlTags] = useState(Boolean(savedUrlTags));
   const [pasteTexts, setPasteTexts] = useState("");
   const [pasteHeadlines, setPasteHeadlines] = useState("");
@@ -99,7 +101,10 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   useEffect(() => {
     fetch("/api/traffic/next-code?objective=OUTCOME_LEADS")
       .then((res) => res.json())
-      .then((data) => setNextCode(typeof data?.code === "string" ? data.code : null))
+      .then((data) => {
+        setNextCode(typeof data?.code === "string" ? data.code : null);
+        setLastUsed(data?.last && typeof data.last.name === "string" ? data.last : null);
+      })
       .catch(() => setNextCode(null));
   }, []);
   const codeMatch = plan.name.match(/^\s*\[([A-Z]+\d+)\]/);
@@ -245,6 +250,11 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             </label>
             <p className="rounded-lg bg-[#F9FAFB] px-3 py-2 text-sm text-[#344054]">
               Nome na Meta: <strong>{codeMatch ? plan.name : `[${nextCode ?? "LEAD??"}] ${plan.name}`}</strong>
+              {!codeMatch && lastUsed && (
+                <span className="block text-xs text-[#667085]">
+                  Último número em uso na conta: <strong>{lastUsed.name}</strong> ({STATUS_LABEL[lastUsed.status] ?? lastUsed.status.toLowerCase()}). Campanhas apagadas no Gerenciador liberam o número; arquivadas continuam contando.
+                </span>
+              )}
               <span className="block text-xs text-[#667085]">O código do objetivo e o número entram sozinhos no envio, seguindo a sequência da conta (Reconhecimento REC, Tráfego TRAF, Engajamento ENG, Leads LEAD, Promoção do app APP, Vendas VEND).</span>
             </p>
             <div>

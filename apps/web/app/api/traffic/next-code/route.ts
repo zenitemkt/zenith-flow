@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { decryptSecret } from "@/lib/crypto-secrets";
-import { OBJECTIVE_CODES, nextCampaignNumber } from "@/lib/campaign-naming";
+import { OBJECTIVE_CODES, nextCampaignNumberInfo } from "@/lib/campaign-naming";
 
 /** Próximo código de campanha (ex.: LEAD03) para mostrar na tela antes de subir. */
 export async function GET(request: Request) {
@@ -14,8 +14,8 @@ export async function GET(request: Request) {
   const ads = await prisma.adAccountConnection.findUnique({ where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } } });
   if (!ads) return NextResponse.json({ error: "Conta de anúncios da Meta não conectada." }, { status: 400 });
   try {
-    const number = await nextCampaignNumber(decryptSecret(ads.accessTokenEnc), ads.externalAccountId, code);
-    return NextResponse.json({ code: `${code}${String(number).padStart(2, "0")}` });
+    const info = await nextCampaignNumberInfo(decryptSecret(ads.accessTokenEnc), ads.externalAccountId, code);
+    return NextResponse.json({ code: `${code}${String(info.next).padStart(2, "0")}`, last: info.last });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não consegui ler as campanhas." }, { status: 502 });
   }

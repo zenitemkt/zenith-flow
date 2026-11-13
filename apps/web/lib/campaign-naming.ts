@@ -28,24 +28,34 @@ export function withCampaignCode(code: string, number: number, name: string): st
 
 /** Maior número já usado para o código, lendo todas as campanhas da conta (inclusive pausadas e arquivadas). */
 export async function nextCampaignNumber(token: string, adAccountId: string, code: string, extraNames: string[] = []): Promise<number> {
+  return (await nextCampaignNumberInfo(token, adAccountId, code, extraNames)).next;
+}
+
+/** Próximo número e qual campanha da conta está usando o número mais alto (para explicar na tela). */
+export async function nextCampaignNumberInfo(token: string, adAccountId: string, code: string, extraNames: string[] = []): Promise<{ next: number; last: { name: string; status: string } | null }> {
   const act = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
-  const names: string[] = [...extraNames];
+  // Apagadas no Gerenciador (DELETED) não contam: o número volta a ficar livre.
+  const rows: { name: string; status: string }[] = extraNames.map((name) => ({ name, status: "RASCUNHO" }));
   let after = "";
   for (let page = 0; page < 20; page++) {
-    const data = await metaGet<{ data?: { name: string }[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${act}/campaigns`, token, {
-      fields: "name",
+    const data = await metaGet<{ data?: { name: string; effective_status?: string }[]; paging?: { cursors?: { after?: string }; next?: string } }>(`/${act}/campaigns`, token, {
+      fields: "name,effective_status",
       limit: 200,
       effective_status: ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"],
       ...(after ? { after } : {}),
     });
-    names.push(...(data.data ?? []).map((c) => c.name));
+    rows.push(...(data.data ?? []).filter((c) => c.effective_status !== "DELETED").map((c) => ({ name: c.name, status: c.effective_status ?? "" })));
     after = data.paging?.next ? data.paging.cursors?.after ?? "" : "";
     if (!after) break;
   }
   let max = 0;
-  for (const name of names) {
-    const match = name.match(PREFIX);
-    if (match && match[1] === code) max = Math.max(max, Number(match[2]));
+  let last: { name: string; status: string } | null = null;
+  for (const row of rows) {
+    const match = row.name.match(PREFIX);
+    if (match && match[1] === code && Number(match[2]) > max) {
+      max = Number(match[2]);
+      last = row;
+    }
   }
-  return max + 1;
+  return { next: max + 1, last };
 }
