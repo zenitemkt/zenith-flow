@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { prisma } from "@zenite-mkt/db";
 import { syncMetaCampaigns } from "@/lib/meta-campaign-sync";
+import { generateTrafficRecommendations } from "@/lib/traffic-recommendations";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export async function GET(request: Request) {
   for (const { agencyId } of connections) {
     try {
       const r = await syncMetaCampaigns(agencyId);
+      await generateTrafficRecommendations(agencyId).catch((error) => console.error("traffic_recommendations_failed", agencyId, error));
       results.push({ agencyId, ok: !r.levelsError, detail: `${r.campaignsFound} campanhas, ${r.adSetsSynced ?? 0} conjuntos, ${r.adsSynced ?? 0} anúncios, ${r.periodDays} dias${r.levelsError ? ` · ${r.levelsError}` : ""}` });
     } catch (error) {
       console.error("meta_cron_sync_failed", agencyId, error);

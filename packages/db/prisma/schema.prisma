@@ -229,6 +229,7 @@ model Agency {
   contentAutomationConnections ContentAutomationConnection[]
   blogPageViewCounts           BlogPageViewCount[]
   searchConsoleConnection      SearchConsoleConnection?
+  trafficRecommendations       TrafficRecommendation[]
 
   @@map("agency")
 }
@@ -2487,21 +2488,21 @@ model AdSet {
 /// external_id"). `assetUrl` é um link (Drive ou outro) pra peça, mesmo
 /// padrão de link-em-vez-de-upload já usado em `Client.driveUrl`.
 model Ad {
-  id           String   @id @default(cuid())
-  adSetId      String
-  adSet        AdSet    @relation(fields: [adSetId], references: [id], onDelete: Cascade)
-  name         String
-  creativeNote String?
-  assetUrl     String?
-  externalId   String?
-  active       Boolean  @default(true)
+  id             String   @id @default(cuid())
+  adSetId        String
+  adSet          AdSet    @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  name           String
+  creativeNote   String?
+  assetUrl       String?
+  externalId     String?
+  active         Boolean  @default(true)
   /// Situação na Meta (effective_status: ACTIVE, PENDING_REVIEW, DISAPPROVED, CAMPAIGN_PAUSED...).
   metaStatus     String?
   /// Motivo da reprovação, quando a Meta reprova.
   reviewFeedback String?
   thumbnailUrl   String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   dailyMetrics AdDailyMetric[]
 
@@ -2551,16 +2552,16 @@ model AdDailyMetric {
 /// geocodificação automática — evita depender de mais uma chave de API
 /// externa nesta fatia manual.
 model CampaignGeoTarget {
-  id         String   @id @default(cuid())
-  campaignId String
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  label      String
-  lat        Float
-  lng        Float
-  radiusKm   Float?
+  id          String   @id @default(cuid())
+  campaignId  String
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  label       String
+  lat         Float
+  lng         Float
+  radiusKm    Float?
   /// Preenchido quando veio da segmentação da Meta (chave da cidade); nulo = cadastrado à mão.
   externalKey String?
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   @@index([campaignId])
   @@map("campaign_geo_target")
@@ -3392,23 +3393,23 @@ enum SystemAlertStatus {
 }
 
 model SystemAlert {
-  id          String              @id @default(cuid())
-  agencyId    String
-  agency      Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  key         String
-  category    SystemAlertCategory
-  severity    SystemAlertSeverity
-  status      SystemAlertStatus   @default(OPEN)
-  title       String
-  detail      String
-  href        String?
-  occurrences Int                 @default(1)
-  firstSeenAt DateTime            @default(now())
-  lastSeenAt  DateTime            @default(now())
-  resolvedAt  DateTime?
-  autoResolved Boolean            @default(false)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id           String              @id @default(cuid())
+  agencyId     String
+  agency       Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  key          String
+  category     SystemAlertCategory
+  severity     SystemAlertSeverity
+  status       SystemAlertStatus   @default(OPEN)
+  title        String
+  detail       String
+  href         String?
+  occurrences  Int                 @default(1)
+  firstSeenAt  DateTime            @default(now())
+  lastSeenAt   DateTime            @default(now())
+  resolvedAt   DateTime?
+  autoResolved Boolean             @default(false)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@unique([agencyId, key])
   @@index([agencyId, status, lastSeenAt])
@@ -3429,19 +3430,19 @@ model SystemAlertSettings {
 /// Gestor de tráfego: pasta do Google Drive com os criativos de uma conta de anúncios.
 /// As subpastas espelham a situação do criativo (o sistema move o arquivo entre elas).
 model AdCreativeFolder {
-  id            String   @id @default(cuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name          String
-  rootFolderId  String
-  inboxFolderId String
-  liveFolderId  String
+  id             String    @id @default(cuid())
+  agencyId       String
+  agency         Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name           String
+  rootFolderId   String
+  inboxFolderId  String
+  liveFolderId   String
   pausedFolderId String
   failedFolderId String
-  lastSyncAt    DateTime?
-  lastSyncError String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  lastSyncAt     DateTime?
+  lastSyncError  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   creatives AdCreative[]
 
@@ -3465,36 +3466,36 @@ enum AdCreativeKind {
 }
 
 model AdCreative {
-  id            String           @id @default(cuid())
-  agencyId      String
-  agency        Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  folderId      String
-  folder        AdCreativeFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  driveFileId   String           @unique
-  fileName      String
-  mimeType      String
-  kind          AdCreativeKind
-  sizeBytes     BigInt?
-  width         Int?
-  height        Int?
-  status        AdCreativeStatus @default(DRAFT)
+  id             String           @id @default(cuid())
+  agencyId       String
+  agency         Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  folderId       String
+  folder         AdCreativeFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  driveFileId    String           @unique
+  fileName       String
+  mimeType       String
+  kind           AdCreativeKind
+  sizeBytes      BigInt?
+  width          Int?
+  height         Int?
+  status         AdCreativeStatus @default(DRAFT)
   /// true = o arquivo sumiu do Drive (apagado ou tirado da pasta).
-  missingInDrive Boolean         @default(false)
-  name          String
-  primaryText   String?
-  headline      String?
-  description   String?
-  linkUrl       String?
-  callToAction  String?
+  missingInDrive Boolean          @default(false)
+  name           String
+  primaryText    String?
+  headline       String?
+  description    String?
+  linkUrl        String?
+  callToAction   String?
   /// Identificadores na Meta, preenchidos conforme o criativo sobe.
-  metaImageHash String?
-  metaVideoId   String?
+  metaImageHash  String?
+  metaVideoId    String?
   metaCreativeId String?
-  metaAdId      String?
-  lastError     String?
-  uploadedAt    DateTime?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  metaAdId       String?
+  lastError      String?
+  uploadedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([agencyId, status])
   @@index([folderId])
@@ -3503,26 +3504,28 @@ model AdCreative {
 
 /// Gestor de tráfego: travas e padrões da agência (teto de verba, custo por lead, página dos formulários).
 model TrafficSettings {
-  id                  String   @id @default(cuid())
-  agencyId            String   @unique
-  agency              Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(cuid())
+  agencyId             String   @unique
+  agency               Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   /// Teto da soma das verbas diárias dos conjuntos de uma campanha, em centavos. null = não deixa subir.
-  dailyBudgetCapCents Int?
-  cplGoodCents        Int?
-  cplMaxCents         Int?
-  maxBudgetChangePct  Int      @default(20)
+  dailyBudgetCapCents  Int?
+  cplGoodCents         Int?
+  cplMaxCents          Int?
+  maxBudgetChangePct   Int      @default(20)
   /// Botão de emergência: true bloqueia qualquer envio ou alteração na Meta.
-  killSwitch          Boolean  @default(false)
+  killSwitch           Boolean  @default(false)
   /// SocialConnection (FACEBOOK, leadsEnabled) que assina os anúncios e guarda os formulários.
-  pageConnectionId    String?
-  privacyPolicyUrl    String?
-  websiteUrl          String?
+  pageConnectionId     String?
+  privacyPolicyUrl     String?
+  websiteUrl           String?
   /// Conta Google que envia os criativos pelo portal (conta de serviço não tem espaço próprio no Drive).
   driveRefreshTokenEnc String?
-  driveAccountEmail   String?
+  driveAccountEmail    String?
   /// Último padrão de parâmetros de URL (UTMs) marcado para reaproveitar nas próximas campanhas.
-  urlTags             String?
-  updatedAt           DateTime @updatedAt
+  urlTags              String?
+  /// Limites das recomendações diárias (fase 3). Vazio = padrões de lib/traffic-recommendations.ts.
+  recommendationRules  Json?
+  updatedAt            DateTime @updatedAt
 
   @@map("traffic_settings")
 }
@@ -3537,20 +3540,48 @@ enum TrafficCampaignStatus {
 /// Campanha montada no passo a passo. `plan` = conjuntos, formulários e anúncios; `progress` = ids
 /// já criados na Meta (o envio é retomável: o que já subiu não sobe de novo).
 model TrafficCampaign {
-  id             String                @id @default(cuid())
-  agencyId       String
-  agency         Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name           String
-  status         TrafficCampaignStatus @default(DRAFT)
-  plan           Json
-  progress       Json?
-  metaCampaignId String?
-  lastError      String?
+  id              String                @id @default(cuid())
+  agencyId        String
+  agency          Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  status          TrafficCampaignStatus @default(DRAFT)
+  plan            Json
+  progress        Json?
+  metaCampaignId  String?
+  lastError       String?
   createdByUserId String?
-  submittedAt    DateTime?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  submittedAt     DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   @@index([agencyId, createdAt])
   @@map("traffic_campaign")
+}
+
+/// Recomendação diária do Tráfego - Raio X (fase 3): o sistema sugere, quem aplica é a equipe.
+model TrafficRecommendation {
+  id                   String    @id @default(cuid())
+  agencyId             String
+  agency               Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  /// "PAUSE" | "DECREASE_BUDGET" | "INCREASE_BUDGET" | "CREATIVE_FATIGUE" | "REJECTED"
+  type                 String
+  /// "campaign" | "adset" | "ad" (id do portal em targetId)
+  level                String
+  targetId             String
+  targetName           String
+  campaignName         String?
+  reason               String
+  metrics              Json?
+  suggestedBudgetCents Int?
+  /// "PENDING" | "APPLIED" | "IGNORED" | "EXPIRED"
+  status               String    @default("PENDING")
+  resolvedAt           DateTime?
+  resolvedByUserId     String?
+  resultNote           String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([agencyId, status])
+  @@index([agencyId, type, targetId])
+  @@map("traffic_recommendation")
 }

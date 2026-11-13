@@ -3,6 +3,8 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
 import { isSafeHttpUrl } from "@/lib/instagram-flow-model";
+import { parseRules } from "@/lib/traffic-recommendations";
+import type { Prisma } from "@zenite-mkt/db";
 
 const cents = (v: unknown) => {
   if (v === null || v === "" || v === undefined) return null;
@@ -45,6 +47,7 @@ export async function PUT(request: Request) {
     pageConnectionId,
     privacyPolicyUrl: privacy || null,
     websiteUrl: website || null,
+    recommendationRules: parseRules(body.rules) as unknown as Prisma.InputJsonValue,
   };
   await prisma.trafficSettings.upsert({ where: { agencyId: membership.agencyId }, create: { agencyId: membership.agencyId, ...data }, update: data });
   return NextResponse.json({ ok: true });

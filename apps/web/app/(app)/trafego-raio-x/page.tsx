@@ -10,6 +10,7 @@ import type { CampaignStatus } from "@zenite-mkt/db";
 import { CampaignXrayTree } from "./CampaignXrayTree";
 import { TrafficMap } from "./TrafficMap";
 import { DailyChart, type DailyPoint } from "./DailyChart";
+import { RecommendationsPanel } from "./RecommendationsPanel";
 import { CPL_LEVEL_LABEL, cplCents, cplLevel, ctr, frequency, sumLevel } from "@/lib/xray-metrics";
 import { SyncMetaCampaignsButton } from "../comercial/campanhas/SyncMetaCampaignsButton";
 import { canManageIntegrations } from "@/lib/rbac";
@@ -44,7 +45,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   periodStart.setUTCDate(periodStart.getUTCDate() - days);
   periodStart.setUTCHours(0, 0, 0, 0);
 
-  const [campaigns, clients, metaConnection, trafficSettings, history] = await Promise.all([
+  const [campaigns, clients, metaConnection, trafficSettings, recommendations, history] = await Promise.all([
     prisma.campaign.findMany({
       where: {
         agencyId: membership.agencyId,
@@ -75,6 +76,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       select: { status: true, lastValidatedAt: true },
     }),
     prisma.trafficSettings.findUnique({ where: { agencyId: membership.agencyId }, select: { cplGoodCents: true, cplMaxCents: true } }),
+    prisma.trafficRecommendation.findMany({ where: { agencyId: membership.agencyId, status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 30 }),
     prisma.auditLog.findMany({ where: { agencyId: membership.agencyId, action: { startsWith: "traffic." } }, orderBy: { createdAt: "desc" }, take: 15 }),
   ]);
   const actorIds = Array.from(new Set(history.map((h) => h.actorUserId).filter((x): x is string => Boolean(x))));
@@ -228,6 +230,13 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
           </div>
         )}
       </div>
+
+      {recommendations.length > 0 && (
+        <RecommendationsPanel
+          canManage={canManageIntegrations(membership.role)}
+          items={recommendations.map((r) => ({ id: r.id, type: r.type, level: r.level, targetName: r.targetName, campaignName: r.campaignName, reason: r.reason, suggestedBudgetCents: r.suggestedBudgetCents, createdAt: r.createdAt.toISOString() }))}
+        />
+      )}
 
       {all.spendCents > 0 && <DailyChart points={dailyPoints} />}
 

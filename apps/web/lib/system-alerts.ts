@@ -19,6 +19,7 @@ export const SYSTEM_ALERT_TYPES = [
   { id: "instagram-chat", category: "SOCIAL", label: "Mini-chat do Instagram", description: "Resposta automática de gatilho, comentário ou direct que falhou.", prefixes: ["instagram:send:"] },
   { id: "assistant", category: "AUTOMATION", label: "Assistente virtual (Milena)", description: "Falhou duas vezes com um lead e passou a conversa para a equipe.", prefixes: ["assistant:"] },
   { id: "ads-creative", category: "INTEGRATION", label: "Criativo de anúncio com problema", description: "Criativo reprovado pela Meta, que falhou ao subir, ou campanha que não subiu.", prefixes: ["ads:creative:", "ads:campaign:"] },
+  { id: "traffic-recommendations", category: "AUTOMATION", label: "Recomendações de tráfego", description: "Sugestões diárias do Tráfego - Raio X: pausar anúncio caro, ajustar verba, trocar criativo cansado ou reprovado.", prefixes: ["traffic:rec:"] },
   { id: "social-connection", category: "INTEGRATION", label: "Conexão de rede social expirou", description: "Acesso a um perfil expirou ou foi removido.", prefixes: ["social:connection:"] },
 ] as const;
 export type SystemAlertTypeId = (typeof SYSTEM_ALERT_TYPES)[number]["id"];

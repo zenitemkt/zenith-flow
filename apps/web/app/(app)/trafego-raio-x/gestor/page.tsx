@@ -4,6 +4,7 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { driveServiceAccountEmail } from "@/lib/google-drive";
 import { creativeWarnings } from "@/lib/ad-creatives";
+import { parseRules } from "@/lib/traffic-recommendations";
 import { DEFAULT_CITIES, emptyPlan, parsePlan, planDailyTotal } from "@/lib/traffic-campaigns";
 import { CreativeLibrary } from "./CreativeLibrary";
 import { CampaignWizard } from "./CampaignWizard";
@@ -128,6 +129,10 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
             cplGood: cents(settings?.cplGoodCents),
             cplMax: cents(settings?.cplMaxCents),
             maxBudgetChangePct: String(settings?.maxBudgetChangePct ?? 20),
+            rules: (() => {
+              const r = parseRules(settings?.recommendationRules);
+              return { noLeadSpendMultiplier: String(r.noLeadSpendMultiplier), minLeadsToJudgeBad: String(r.minLeadsToJudgeBad), minLeadsToScale: String(r.minLeadsToScale), fatigueFrequency: String(r.fatigueFrequency), fatigueCtrDropPct: String(r.fatigueCtrDropPct) };
+            })(),
             killSwitch: settings?.killSwitch ?? false,
             pageConnectionId: settings?.pageConnectionId ?? pages.find((p) => p.leadsEnabled)?.id ?? "",
             privacyPolicyUrl: settings?.privacyPolicyUrl ?? "https://hubzenite.com.br/politica-de-privacidade/",

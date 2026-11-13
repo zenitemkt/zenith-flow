@@ -12,7 +12,16 @@ interface Values {
   pageConnectionId: string;
   privacyPolicyUrl: string;
   websiteUrl: string;
+  rules: { noLeadSpendMultiplier: string; minLeadsToJudgeBad: string; minLeadsToScale: string; fatigueFrequency: string; fatigueCtrDropPct: string };
 }
+
+const RULE_FIELDS: { key: keyof Values["rules"]; label: string; hint: string }[] = [
+  { key: "noLeadSpendMultiplier", label: "Pausar sem lead após gastar (× CPL máximo)", hint: "Ex.: 2 = anúncio que gastou 2× o custo por lead máximo sem nenhum lead." },
+  { key: "minLeadsToJudgeBad", label: "Leads mínimos para julgar CPL alto", hint: "Abaixo disso ainda é cedo para pausar ou reduzir." },
+  { key: "minLeadsToScale", label: "Leads mínimos para aumentar verba", hint: "Com CPL bom e pelo menos esse número de leads em 7 dias." },
+  { key: "fatigueFrequency", label: "Frequência de público cansado", hint: "Junto com a queda da taxa de cliques abaixo." },
+  { key: "fatigueCtrDropPct", label: "Queda da taxa de cliques (%)", hint: "Frente à semana anterior." },
+];
 
 const INPUT = "w-full rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
 
@@ -99,8 +108,22 @@ export function TrafficSettingsForm({ initial, saved, pages }: { initial: Values
       <label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-[#344054]">
         Ajuste máximo de verba por dia (%)
         <input value={v.maxBudgetChangePct} onChange={set("maxBudgetChangePct")} inputMode="numeric" className={INPUT} />
-        <span className="text-xs font-normal text-[#667085]">Usado pelas recomendações (próxima etapa).</span>
+        <span className="text-xs font-normal text-[#667085]">Limite de aumento por vez nos botões de verba e nas recomendações.</span>
       </label>
+
+      <div className="rounded-xl border border-[#EEF0F3] p-4">
+        <p className="text-sm font-semibold text-[#101828]">Recomendações diárias</p>
+        <p className="mb-3 text-xs text-[#667085]">Todo dia às 6h (e ao atualizar da Meta) o Raio X olha os últimos 7 dias e sugere ações. Nada é aplicado sem você.</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {RULE_FIELDS.map((f) => (
+            <label key={f.key} className="flex flex-col gap-1 text-sm font-medium text-[#344054]">
+              {f.label}
+              <input value={v.rules[f.key]} onChange={(e) => setV((x) => ({ ...x, rules: { ...x.rules, [f.key]: e.target.value } }))} inputMode="decimal" className={INPUT} />
+              <span className="text-xs font-normal text-[#667085]">{f.hint}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {message && <p className={`text-sm ${message.ok ? "text-[#027A48]" : "text-[#B54708]"}`}>{message.text}</p>}
       <div>

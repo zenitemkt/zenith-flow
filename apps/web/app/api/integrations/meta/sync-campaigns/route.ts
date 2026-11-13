@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
 import { MetaSyncError, syncMetaCampaigns } from "@/lib/meta-campaign-sync";
+import { generateTrafficRecommendations } from "@/lib/traffic-recommendations";
 
 export const maxDuration = 60;
 
@@ -21,7 +22,11 @@ export async function POST() {
 
   try {
     const result = await syncMetaCampaigns(membership.agencyId);
-    return NextResponse.json({ ok: true, ...result });
+    const recommendations = await generateTrafficRecommendations(membership.agencyId).catch((error) => {
+      console.error("traffic_recommendations_failed", error);
+      return null;
+    });
+    return NextResponse.json({ ok: true, ...result, recommendationsPending: recommendations?.pending ?? null });
   } catch (error) {
     if (error instanceof MetaSyncError) {
       const notConnected = error.message.startsWith("Conecte");
