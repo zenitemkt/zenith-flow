@@ -59,7 +59,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Gestor de tráfego</h1>
-        <p className="text-sm text-[#667085]">Criativos do Google Drive, campanhas com formulário instantâneo e as travas de verba. Tudo sobe para a Meta pausado; quem ativa é você.</p>
+        <p className="text-sm text-[#667085]">Criativos do Google Drive, campanhas com formulário instantâneo e as travas de verba. A campanha sobe pausada (conjuntos e anúncios ativos); quem ativa é você.</p>
       </div>
 
       <nav className="flex flex-wrap gap-1 rounded-xl border border-[#E4E7EC] bg-white p-1">
@@ -97,7 +97,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
       {tab === "campanhas" && searchParams.enviada && campaigns.some((c) => c.id === searchParams.enviada && c.status === "SUBMITTED") && (
         <div className="rounded-xl border border-[#ABEFC6] bg-[#ECFDF3] px-4 py-3 text-sm text-[#027A48]">
           <p className="font-semibold">Campanha &quot;{campaigns.find((c) => c.id === searchParams.enviada)?.name}&quot; subiu para a Meta.</p>
-          <p>Campanha, conjuntos e anúncios estão pausados. Confira no Gerenciador de Anúncios e ative quando quiser.</p>
+          <p>A campanha está pausada e os conjuntos e anúncios, ativos. Confira no Gerenciador de Anúncios e ative a campanha quando quiser.</p>
         </div>
       )}
       {tab === "campanhas" && (

@@ -21,7 +21,7 @@ interface Row {
 const STATUS = {
   DRAFT: { label: "Rascunho", cls: "bg-[#F2F4F7] text-[#344054]" },
   SUBMITTING: { label: "Subindo (incompleta)", cls: "bg-[#EFF8FF] text-[#175CD3]" },
-  SUBMITTED: { label: "Na Meta, pausada", cls: "bg-[#ECFDF3] text-[#027A48]" },
+  SUBMITTED: { label: "Na Meta, campanha pausada", cls: "bg-[#ECFDF3] text-[#027A48]" },
   FAILED: { label: "Falhou ao subir", cls: "bg-[#FEF3F2] text-[#B42318]" },
 } as const;
 

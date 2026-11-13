@@ -186,7 +186,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
   async function submit() {
     const id = await save();
     if (!id) return;
-    if (!await confirmDialog(`Subir "${plan.name}" para a Meta? Tudo vai pausado: ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`, { title: "Subir para a Meta", confirmLabel: "Subir campanha" })) return;
+    if (!await confirmDialog(`Subir "${plan.name}" para a Meta? A campanha vai pausada (conjuntos e anúncios ativos): ${plan.adsets.length} conjunto(s), R$ ${total.toFixed(2)}/dia quando ativar.`, { title: "Subir para a Meta", confirmLabel: "Subir campanha" })) return;
     setSubmitting(true);
     setSubmitError(null);
     setSubmitLog([]);
@@ -555,7 +555,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                 ))}
               </ul>
             ) : (
-              <p className="rounded-lg bg-[#ECFDF3] px-3 py-2 text-sm text-[#027A48]">Tudo certo para subir. A campanha, os conjuntos e os anúncios vão pausados.</p>
+              <p className="rounded-lg bg-[#ECFDF3] px-3 py-2 text-sm text-[#027A48]">Tudo certo para subir. A campanha vai pausada; conjuntos e anúncios vão ativos e começam a rodar quando você ativar a campanha.</p>
             )}
             {submitting && (
               <div className="rounded-xl border border-[#FF2B00]/40 bg-[#FFF4ED] p-4" aria-live="polite">
@@ -586,7 +586,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
             )}
             <div>
               <button type="button" disabled={submitting || saving || !issues || issues.length > 0} onClick={submit} className="rounded-lg bg-[#FF2B00] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40">
-                {submitting ? "Subindo…" : "Aprovar e subir (pausado)"}
+                {submitting ? "Subindo…" : "Aprovar e subir (campanha pausada)"}
               </button>
             </div>
           </div>

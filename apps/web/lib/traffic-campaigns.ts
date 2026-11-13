@@ -416,7 +416,7 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
 
     await save({ status: "SUBMITTED", submittedAt: new Date(), lastError: null });
     await resolveSystemAlert(agencyId, `ads:campaign:${row.id}`);
-    return { done: true, ok: true, message: "Campanha enviada para a Meta, pausada. Ative no Gerenciador ou aqui quando quiser." };
+    return { done: true, ok: true, message: "Campanha enviada para a Meta: campanha pausada, conjuntos e anúncios ativos. Ative a campanha no Gerenciador quando quiser." };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha no envio.";
     await save({ status: "FAILED", lastError: message });

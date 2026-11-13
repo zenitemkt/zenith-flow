@@ -213,7 +213,8 @@ export async function createAdSet(token: string, adAccountId: string, spec: AdSe
     billing_event: "IMPRESSIONS",
     ...conversion,
     targeting,
-    status: "PAUSED",
+    // Conjunto e anúncio nascem ativos; a campanha pausada segura a veiculação até você ativar.
+    status: "ACTIVE",
   }, `criar conjunto "${spec.name}"`);
   return data.id;
 }
@@ -363,12 +364,12 @@ async function postCreative(token: string, adAccountId: string, spec: AdCreative
   return post();
 }
 
-/** Anúncio pausado, com rastreamento dos eventos do site (pixel) e offline (conjunto de dados). */
+/** Anúncio ativo (a campanha segue pausada), com rastreamento dos eventos do site (pixel) e offline (conjunto de dados). */
 export async function createAd(token: string, adAccountId: string, name: string, adSetId: string, creativeId: string, tracking?: { pixelId?: string | null; datasetId?: string | null }): Promise<string> {
   const specs: object[] = [];
   if (tracking?.pixelId) specs.push({ "action.type": ["offsite_conversion"], fb_pixel: [tracking.pixelId] });
   if (tracking?.datasetId) specs.push({ "action.type": ["offline_conversion"], dataset: [tracking.datasetId] });
-  const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/ads`, token, { name, adset_id: adSetId, creative: { creative_id: creativeId }, status: "PAUSED", ...(specs.length ? { tracking_specs: specs } : {}) }, `criar anúncio "${name}"`);
+  const data = await metaPost<{ id: string }>(`/${act(adAccountId)}/ads`, token, { name, adset_id: adSetId, creative: { creative_id: creativeId }, status: "ACTIVE", ...(specs.length ? { tracking_specs: specs } : {}) }, `criar anúncio "${name}"`);
   return data.id;
 }
 
