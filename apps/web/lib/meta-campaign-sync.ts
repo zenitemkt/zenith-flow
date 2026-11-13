@@ -20,6 +20,7 @@ export const META_SYNC_STALE_MS = 30 * 60_000;
 const FULL_PERIOD_DAYS = 90;
 const INCREMENTAL_PERIOD_DAYS = 7;
 const FULL_SYNC_EVERY_MS = 30 * 24 * 60 * 60_000;
+const FULL_SYNC_AFTER = new Date("2026-11-13T19:15:00Z");
 
 export interface MetaCampaignSyncResult {
   campaignsCreated: number;
@@ -73,7 +74,8 @@ export async function syncMetaCampaigns(agencyId: string): Promise<MetaCampaignS
   }
 
   const now = new Date();
-  const full = !connection.metaFullSyncAt || now.getTime() - connection.metaFullSyncAt.getTime() > FULL_SYNC_EVERY_MS;
+  // FULL_SYNC_AFTER: busca completa refeita depois da correção dos conjuntos de campanha pausada.
+  const full = !connection.metaFullSyncAt || connection.metaFullSyncAt < FULL_SYNC_AFTER || now.getTime() - connection.metaFullSyncAt.getTime() > FULL_SYNC_EVERY_MS;
   const PERIOD_DAYS = full ? FULL_PERIOD_DAYS : INCREMENTAL_PERIOD_DAYS;
   const since = new Date(now.getTime() - PERIOD_DAYS * 24 * 60 * 60 * 1000);
 
