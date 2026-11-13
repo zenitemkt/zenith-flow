@@ -38,6 +38,11 @@ export function mapLeadFields(fieldData: Array<{ name: string; values?: string[]
         out.email ??= value;
         continue;
       }
+      if (/cidade/.test(plain)) {
+        out.city ??= value;
+        out.extras.push(`${field.name.replace(/_/g, " ")}: ${value}`);
+        continue;
+      }
       if (/servic/.test(plain)) out.service ??= value;
       else if (/invest|verba|orcamento|budget/.test(plain)) out.investment ??= value;
       else if (/funcionari|colaborador|equipe|employee/.test(plain)) out.employees ??= value;

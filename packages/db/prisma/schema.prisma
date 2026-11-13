@@ -185,6 +185,8 @@ model Agency {
   systemAlerts                 SystemAlert[]
   adCreativeFolders            AdCreativeFolder[]
   adCreatives                  AdCreative[]
+  trafficSettings              TrafficSettings?
+  trafficCampaigns             TrafficCampaign[]
   systemAlertSettings          SystemAlertSettings?
   leadEmails                   LeadEmail[]
   leadPhones                   LeadPhone[]
@@ -3447,4 +3449,53 @@ model AdCreative {
   @@index([agencyId, status])
   @@index([folderId])
   @@map("ad_creative")
+}
+
+/// Gestor de tráfego: travas e padrões da agência (teto de verba, custo por lead, página dos formulários).
+model TrafficSettings {
+  id                  String   @id @default(cuid())
+  agencyId            String   @unique
+  agency              Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  /// Teto da soma das verbas diárias dos conjuntos de uma campanha, em centavos. null = não deixa subir.
+  dailyBudgetCapCents Int?
+  cplGoodCents        Int?
+  cplMaxCents         Int?
+  maxBudgetChangePct  Int      @default(20)
+  /// Botão de emergência: true bloqueia qualquer envio ou alteração na Meta.
+  killSwitch          Boolean  @default(false)
+  /// SocialConnection (FACEBOOK, leadsEnabled) que assina os anúncios e guarda os formulários.
+  pageConnectionId    String?
+  privacyPolicyUrl    String?
+  websiteUrl          String?
+  updatedAt           DateTime @updatedAt
+
+  @@map("traffic_settings")
+}
+
+enum TrafficCampaignStatus {
+  DRAFT
+  SUBMITTING
+  SUBMITTED
+  FAILED
+}
+
+/// Campanha montada no passo a passo. `plan` = conjuntos, formulários e anúncios; `progress` = ids
+/// já criados na Meta (o envio é retomável: o que já subiu não sobe de novo).
+model TrafficCampaign {
+  id             String                @id @default(cuid())
+  agencyId       String
+  agency         Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name           String
+  status         TrafficCampaignStatus @default(DRAFT)
+  plan           Json
+  progress       Json?
+  metaCampaignId String?
+  lastError      String?
+  createdByUserId String?
+  submittedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([agencyId, createdAt])
+  @@map("traffic_campaign")
 }
