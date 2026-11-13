@@ -347,20 +347,34 @@ export async function createAdCreative(token: string, adAccountId: string, spec:
 async function postCreative(token: string, adAccountId: string, spec: AdCreativeSpec, params: Record<string, string | object>): Promise<string> {
   const post = () => metaPost<{ id: string }>(`/${act(adAccountId)}/adcreatives`, token, params, `criar criativo "${spec.name}"`).then((r) => r.id);
   if (!spec.advantageCreative) return post();
+  // "Adicionar música" não fica em creative_features_spec: vai como asset_feed_spec.audios (música escolhida pela Meta).
+  const baseFeed = params.asset_feed_spec as Record<string, unknown> | undefined;
+  const setMusic = (on: boolean) => {
+    if (on) params.asset_feed_spec = { ...(baseFeed ?? {}), audios: [{ type: "random" }] };
+    else if (baseFeed) params.asset_feed_spec = baseFeed;
+    else delete params.asset_feed_spec;
+  };
+  let music = true;
   let features = [...CREATIVE_FEATURES];
-  for (let attempt = 0; attempt < 8 && features.length; attempt++) {
+  for (let attempt = 0; attempt < 9 && features.length; attempt++) {
+    setMusic(music);
     params.degrees_of_freedom_spec = { creative_features_spec: Object.fromEntries(features.map((f) => [f, { enroll_status: "OPT_IN" }])) };
     try {
       return await post();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.warn("adcreative_features_retry", features.join(","), message);
+      console.warn("adcreative_features_retry", music ? "music," : "", features.join(","), message);
+      if (music && /audio|music|m[uú]sica/i.test(message)) {
+        music = false;
+        continue;
+      }
       // Tira a melhoria citada no erro; sem citação, tira as menos comuns primeiro (do fim da lista).
       const named = features.filter((f) => message.includes(f));
       features = named.length ? features.filter((f) => !named.includes(f)) : features.slice(0, -2);
     }
   }
   delete params.degrees_of_freedom_spec;
+  setMusic(false);
   return post();
 }
 
