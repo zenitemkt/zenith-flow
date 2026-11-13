@@ -330,6 +330,8 @@ export interface MetaAdSetInfo {
   effectiveStatus: string;
   dailyBudgetCents: number | null;
   cities: { key: string; name: string; radiusKm: number | null }[];
+  /** Locais marcados por endereço/pino (já vêm com latitude e longitude). */
+  pins: { key: string; name: string; lat: number; lng: number; radiusKm: number | null }[];
   targetingSummary: string;
 }
 
@@ -344,7 +346,12 @@ interface RawMetaAdSet {
     age_min?: number;
     age_max?: number;
     genders?: number[];
-    geo_locations?: { cities?: { key: string; name?: string; region?: string; radius?: number; distance_unit?: string }[]; regions?: { name?: string }[]; countries?: string[] };
+    geo_locations?: {
+      cities?: { key: string; name?: string; region?: string; radius?: number; distance_unit?: string }[];
+      custom_locations?: { latitude?: number; longitude?: number; radius?: number; distance_unit?: string; name?: string; address_string?: string }[];
+      regions?: { name?: string }[];
+      countries?: string[];
+    };
     custom_audiences?: { name?: string }[];
   };
 }
@@ -353,7 +360,14 @@ function targetingSummary(t: RawMetaAdSet["targeting"]): string {
   if (!t) return "";
   const parts: string[] = [];
   const cities = t.geo_locations?.cities ?? [];
-  if (cities.length) parts.push(cities.map((c) => `${c.name ?? c.key}${c.radius ? ` (+${c.radius} ${c.distance_unit === "mile" ? "mi" : "km"})` : ""}`).join(", "));
+  const pins = t.geo_locations?.custom_locations ?? [];
+  if (cities.length || pins.length)
+    parts.push(
+      [
+        ...cities.map((c) => `${c.name ?? c.key}${c.radius ? ` (+${c.radius} ${c.distance_unit === "mile" ? "mi" : "km"})` : ""}`),
+        ...pins.map((c) => `${c.name || c.address_string || "ponto no mapa"}${c.radius ? ` (raio ${c.radius} ${c.distance_unit === "mile" ? "mi" : "km"})` : ""}`),
+      ].join(", "),
+    );
   else if (t.geo_locations?.regions?.length) parts.push(t.geo_locations.regions.map((r) => r.name).filter(Boolean).join(", "));
   else if (t.geo_locations?.countries?.length) parts.push(t.geo_locations.countries.join(", "));
   if (t.age_min || t.age_max) parts.push(`${t.age_min ?? 18}–${t.age_max ?? 65} anos`);
@@ -362,11 +376,14 @@ function targetingSummary(t: RawMetaAdSet["targeting"]): string {
   return parts.join(" · ").slice(0, 500);
 }
 
+const ALL_ADSET_STATUSES = JSON.stringify(["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"]);
+
 export async function fetchMetaAdSets(accessToken: string, adAccountId: string): Promise<MetaAdSetInfo[]> {
   const rows = await graphGetAll<RawMetaAdSet>(`/${adAccountId}/adsets`, {
     access_token: accessToken,
     fields: "id,name,campaign_id,effective_status,daily_budget,lifetime_budget,targeting{age_min,age_max,genders,geo_locations,custom_audiences}",
-    effective_status: ALL_CAMPAIGN_STATUSES,
+    // Conjunto de campanha pausada vem como CAMPAIGN_PAUSED: sem isso no filtro, a Meta não devolve nenhum.
+    effective_status: ALL_ADSET_STATUSES,
     limit: "200",
   });
   return rows.map((r) => ({
@@ -380,6 +397,15 @@ export async function fetchMetaAdSets(accessToken: string, adAccountId: string):
       name: [c.name, c.region].filter(Boolean).join(", ") || c.key,
       radiusKm: c.radius ? (c.distance_unit === "mile" ? c.radius * 1.609 : c.radius) : null,
     })),
+    pins: (r.targeting?.geo_locations?.custom_locations ?? [])
+      .filter((c) => typeof c.latitude === "number" && typeof c.longitude === "number")
+      .map((c) => ({
+        key: `pin:${c.latitude!.toFixed(4)},${c.longitude!.toFixed(4)}`,
+        name: c.name || c.address_string || `Ponto ${c.latitude!.toFixed(3)}, ${c.longitude!.toFixed(3)}`,
+        lat: c.latitude!,
+        lng: c.longitude!,
+        radiusKm: c.radius ? (c.distance_unit === "mile" ? c.radius * 1.609 : c.radius) : null,
+      })),
     targetingSummary: targetingSummary(r.targeting),
   }));
 }

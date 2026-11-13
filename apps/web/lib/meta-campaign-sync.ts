@@ -313,13 +313,30 @@ async function syncMetaLevels(agencyId: string, token: string, adAccountId: stri
     }
     citiesByCampaign.set(campaignId, map);
   }
-  const coords = await fetchMetaCityCoordinates(token, Array.from(new Set(Array.from(citiesByCampaign.values()).flatMap((m) => Array.from(m.keys())))));
+  const cityKeys = Array.from(new Set(Array.from(citiesByCampaign.values()).flatMap((m) => Array.from(m.keys()).filter((k) => !k.startsWith("pin:")))));
+  const cityNames = new Map<string, string>();
+  for (const m of citiesByCampaign.values()) for (const [k, c] of m) if (!k.startsWith("pin:")) cityNames.set(k, c.name);
+  const coords = await resolveCityCoordinates(agencyId, token, cityKeys, cityNames);
+  // Pinos (endereço/coordenada) já trazem latitude e longitude.
+  const pinCoords = new Map<string, { lat: number; lng: number }>();
+  for (const info of adSets) {
+    const campaignId = campaignIdByExternalId.get(info.campaignId);
+    if (!campaignId || info.effectiveStatus === "ARCHIVED" || info.effectiveStatus === "DELETED") continue;
+    const map = citiesByCampaign.get(campaignId) ?? new Map();
+    for (const p of info.pins) {
+      pinCoords.set(p.key, { lat: p.lat, lng: p.lng });
+      const prev = map.get(p.key);
+      map.set(p.key, { name: p.name, radiusKm: Math.max(prev?.radiusKm ?? 0, p.radiusKm ?? 0) || null });
+    }
+    citiesByCampaign.set(campaignId, map);
+  }
+  const where = (key: string) => coords.get(key) ?? pinCoords.get(key);
   for (const [campaignId, cities] of citiesByCampaign) {
-    const rows = Array.from(cities.entries()).filter(([key]) => coords.has(key));
+    const rows = Array.from(cities.entries()).filter(([key]) => where(key));
     if (!rows.length) continue;
     await prisma.$transaction([
       prisma.campaignGeoTarget.deleteMany({ where: { campaignId, externalKey: { not: null } } }),
-      prisma.campaignGeoTarget.createMany({ data: rows.map(([key, c]) => ({ campaignId, externalKey: key, label: c.name, lat: coords.get(key)!.lat, lng: coords.get(key)!.lng, radiusKm: c.radiusKm })) }),
+      prisma.campaignGeoTarget.createMany({ data: rows.map(([key, c]) => ({ campaignId, externalKey: key, label: c.name, lat: where(key)!.lat, lng: where(key)!.lng, radiusKm: c.radiusKm })) }),
     ]);
   }
 
@@ -335,4 +352,42 @@ async function syncMetaLevels(agencyId: string, token: string, adAccountId: stri
   }
 
   return { adSets: adSets.length, ads: ads.length };
+}
+
+
+/**
+ * Coordenadas das cidades da segmentação: primeiro as já guardadas (mapa de outra campanha),
+ * depois a busca de localização da Meta e, para o que faltar, o OpenStreetMap (só o nome da
+ * cidade; até 10 por sincronização, 1 por segundo, como pede a política de uso deles).
+ */
+async function resolveCityCoordinates(agencyId: string, token: string, keys: string[], names: Map<string, string>) {
+  const out = new Map<string, { lat: number; lng: number }>();
+  if (!keys.length) return out;
+  const saved = await prisma.campaignGeoTarget.findMany({ where: { externalKey: { in: keys }, campaign: { agencyId } }, select: { externalKey: true, lat: true, lng: true } });
+  for (const g of saved) if (g.externalKey) out.set(g.externalKey, { lat: g.lat, lng: g.lng });
+  let missing = keys.filter((k) => !out.has(k));
+  if (missing.length) {
+    const meta = await fetchMetaCityCoordinates(token, missing);
+    for (const [k, v] of meta) out.set(k, v);
+    missing = missing.filter((k) => !out.has(k));
+  }
+  for (const key of missing.slice(0, 10)) {
+    const name = names.get(key);
+    if (!name) continue;
+    try {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", `${name}, Brasil`);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("countrycodes", "br");
+      const res = await fetch(url, { headers: { "User-Agent": "traffic-map-sync/1.0", "Accept-Language": "pt-BR" }, cache: "no-store" });
+      const data = (await res.json().catch(() => [])) as { lat?: string; lon?: string }[];
+      const first = data[0];
+      if (first?.lat && first?.lon) out.set(key, { lat: Number(first.lat), lng: Number(first.lon) });
+    } catch (error) {
+      console.warn("city_geocode_failed", name, error instanceof Error ? error.message : error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+  }
+  return out;
 }
