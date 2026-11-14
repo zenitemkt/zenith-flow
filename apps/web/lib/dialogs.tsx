@@ -55,7 +55,8 @@ function open(message: string, options: ConfirmOptions, alertOnly: boolean): Pro
   if (typeof document === "undefined") return Promise.resolve(false);
   return new Promise((resolve) => {
     const host = document.createElement("div");
-    document.body.appendChild(host);
+    // Dentro do shell do painel, a janela herda o tema escuro (zenite-theme.css).
+    (document.querySelector(".zenite-app") ?? document.body).appendChild(host);
     const root = createRoot(host);
     let closed = false;
     const close = (ok: boolean) => {

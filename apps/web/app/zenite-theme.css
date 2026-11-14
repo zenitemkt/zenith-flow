@@ -98,3 +98,39 @@
   background: rgba(255, 43, 0, 0.4);
   color: #fff;
 }
+
+/* ---------- avisos e status das telas novas (Gestor de tráfego, Raio X, alertas, 2026-11) ---------- */
+.dark .zenite-app .bg-\[\#FFF4ED\],
+.dark .zenite-app .bg-\[\#FFF1EB\],
+.dark .zenite-app .bg-\[\#FFF4F2\] { background-color: rgba(255, 43, 0, 0.12); }
+.dark .zenite-app .bg-\[\#FEF3F2\] { background-color: rgba(217, 67, 67, 0.14); }
+.dark .zenite-app .bg-\[\#ECFDF3\],
+.dark .zenite-app .bg-\[\#D1FADF\] { background-color: rgba(22, 163, 106, 0.14); }
+.dark .zenite-app .bg-\[\#FFFAEB\],
+.dark .zenite-app .bg-\[\#FFFCF5\] { background-color: rgba(245, 181, 68, 0.12); }
+.dark .zenite-app .bg-\[\#EFF8FF\] { background-color: rgba(83, 145, 255, 0.14); }
+.dark .zenite-app .bg-\[\#EEF0F3\],
+.dark .zenite-app .bg-\[\#D0D5DD\] { background-color: rgba(255, 255, 255, 0.1); }
+.dark .zenite-app .hover\:bg-\[\#FEF3F2\]:hover { background-color: rgba(217, 67, 67, 0.22); }
+
+.dark .zenite-app .text-\[\#027A48\],
+.dark .zenite-app .text-\[\#067647\],
+.dark .zenite-app .text-\[\#05603A\] { color: #5ee0a6; }
+.dark .zenite-app .text-\[\#B54708\],
+.dark .zenite-app .text-\[\#C2410C\] { color: #f7c66a; }
+.dark .zenite-app .text-\[\#175CD3\] { color: #93b4ff; }
+.dark .zenite-app .text-\[\#C42100\],
+.dark .zenite-app .text-\[\#B93815\] { color: #ff8a5c; }
+.dark .zenite-app .text-\[\#D92D20\] { color: #ff8a80; }
+
+.dark .zenite-app .border-\[\#FECDCA\],
+.dark .zenite-app .border-\[\#FDA29B\] { border-color: rgba(217, 67, 67, 0.4); }
+.dark .zenite-app .border-\[\#ABEFC6\],
+.dark .zenite-app .border-\[\#A6F4C5\] { border-color: rgba(22, 163, 106, 0.4); }
+.dark .zenite-app .border-\[\#FEDF89\],
+.dark .zenite-app .border-\[\#FEC84B\] { border-color: rgba(245, 181, 68, 0.4); }
+.dark .zenite-app .border-\[\#FFD6C2\] { border-color: rgba(255, 43, 0, 0.35); }
+
+/* gráficos: rótulos dos eixos legíveis no escuro */
+.dark .zenite-app .fill-\[\#98A2B3\] { fill: #8b8d9a; }
+.dark .zenite-app .stroke-\[\#E4E7EC\] { stroke: rgba(255, 255, 255, 0.12); }
