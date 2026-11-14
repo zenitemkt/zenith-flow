@@ -4,8 +4,9 @@
 
 ## Implementado
 
-- **Story só no Instagram (2026-11-13)**: `QuickPostForm.tsx` e `SocialPublishPanel.tsx` — com Story, título e legenda ficam desativados (e não são enviados) e o Facebook fica desativado/desmarcado. Ver `docs/DECISIONS.md` (2026-11-13, "Story no Facebook").
-  - Testado: `tsc --noEmit`, `lint` e `vitest` dos testes de agendamento. Não testado no navegador.
+- **Story no Facebook (2026-11-13)**: `publishFacebookStory` (`lib/meta-social.ts`) chamado por `lib/social-publisher.ts`; travas removidas de `social-scheduling.ts` e `social-quick-post.ts`. `QuickPostForm.tsx` e `SocialPublishPanel.tsx`: com Story, título e legenda ficam desativados e não são enviados. Ver `docs/DECISIONS.md` (2026-11-13, "Story no Facebook").
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (93) e `next build` de `apps/web`.
+  - **Não testado ao vivo**: nenhum story real publicado numa Página (sem credenciais aqui). Primeiro teste recomendado: story de foto e de vídeo numa Página de teste com "Publicar agora".
 
 - **Clientes particulares de cada sócio (2026-11-13)**: ver `docs/DECISIONS.md` (2026-11-13, "Cliente particular"). `lib/client-access.ts` calcula os clientes ocultos do login (memoizado por requisição) e expõe os filtros; aplicado nas páginas da equipe, nas rotas por id (404) e nas de criação que validam o cliente, e no `FinanceViewer` (`hiddenClientIds`).
   - Testado: `tsc --noEmit`, `lint`, `vitest` (93, com `lib/client-access.test.ts` novo) e `next build` de `apps/web`.

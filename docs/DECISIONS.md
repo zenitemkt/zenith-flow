@@ -1,8 +1,10 @@
-## 2026-11-13 — Story no Facebook fica de fora; story sem título nem legenda
+## 2026-11-13 — Story no Facebook; story sem título nem legenda
 
-**Pedido**: desativar título e legenda quando o formato é Story e desativar o Facebook em Story (dava "Story no Facebook ainda não é suportado").
+**Pedido**: desativar título e legenda quando o formato é Story; depois, em vez de bloquear o Facebook em Story (dava "Story no Facebook ainda não é suportado"), passar a publicar.
 
-**Decisão**: a API do Instagram não aceita `caption` em `media_type=STORIES`, então título e legenda ficam desativados e vão vazios (o cartão usa o título automático "Instagram · dd/mm"). Story no Facebook existe na API da Meta (`/{page-id}/photo_stories` e `/video_stories`), mas o agendador (`lib/social-publisher.ts`) não implementa. Por enquanto a interface só impede a combinação: o botão do Facebook fica desativado e é desmarcado ao escolher Story. As travas no servidor (`social-scheduling.ts`, `social-quick-post.ts`, `social-publisher.ts`) continuam.
+**Decisão 1**: a API do Instagram não aceita `caption` em `media_type=STORIES` e a de stories da Página também não tem texto, então título e legenda ficam desativados e vão vazios (o cartão usa o título automático "Instagram · dd/mm").
+
+**Decisão 2**: story na Página pela Graph API, com as permissões já pedidas (`pages_manage_posts`). Foto: `/photos` com `published=false` e depois `/photo_stories` com o `photo_id`. Vídeo: `/video_stories` `upload_phase=start` → POST no `upload_url` com o cabeçalho `file_url` (URL assinada do arquivo, sem baixar no servidor) → `upload_phase=finish`, que publica. Sem permalink (story não tem link permanente). Erros da Meta seguem a mesma regra de tentar de novo do feed.
 
 ## 2026-11-12 — Estilo "Zenite Originals"
 

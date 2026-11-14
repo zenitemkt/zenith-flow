@@ -48,9 +48,6 @@ export function quickPostMediaError(input: {
   if (input.platforms.includes("INSTAGRAM") && count === 0) return "O Instagram precisa da arte. Escolha a imagem ou o vídeo.";
   if (input.format === "STORY" && count !== 1) return "Story aceita exatamente um arquivo.";
   if (input.format === "REEL" && (count !== 1 || !hasVideo)) return "Reels precisa de um único vídeo.";
-  if (input.platforms.includes("FACEBOOK") && input.format === "STORY") {
-    return "Story no Facebook ainda não é suportado — desmarque o Facebook ou use Feed.";
-  }
   if (input.platforms.includes("FACEBOOK") && count > 1 && hasVideo) return "O Facebook não aceita carrossel com vídeo.";
   return null;
 }

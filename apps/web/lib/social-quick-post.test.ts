@@ -36,8 +36,10 @@ describe("publicação direta — regras da arte", () => {
     expect(quickPostMediaError({ platforms: ["INSTAGRAM"], format: "STORY", files: [img, img] })).toMatch(/Story/);
   });
 
-  it("Facebook não aceita Story nem carrossel com vídeo", () => {
-    expect(quickPostMediaError({ platforms: ["FACEBOOK"], format: "STORY", files: [img] })).toMatch(/Facebook/);
+  it("Facebook aceita Story de um arquivo, mas não carrossel com vídeo", () => {
+    expect(quickPostMediaError({ platforms: ["FACEBOOK"], format: "STORY", files: [img] })).toBeNull();
+    expect(quickPostMediaError({ platforms: ["FACEBOOK", "INSTAGRAM"], format: "STORY", files: [vid] })).toBeNull();
+    expect(quickPostMediaError({ platforms: ["FACEBOOK"], format: "STORY", files: [] })).toMatch(/Story/);
     expect(quickPostMediaError({ platforms: ["FACEBOOK"], format: "FEED", files: [img, vid] })).toMatch(/carrossel/);
   });
 });

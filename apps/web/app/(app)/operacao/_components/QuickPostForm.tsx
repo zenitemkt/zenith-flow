@@ -48,13 +48,8 @@ function defaultTimeFor(date: string, client: QuickPostClient | undefined): stri
   return preferred > nowTime ? preferred : nextRoundHourSP();
 }
 
-/** Redes que aceitam o formato. Story só sai no Instagram (o agendador não publica story no Facebook). */
-function platformAllows(platform: SocialPlatform, format: SocialPostFormat): boolean {
-  return !(format === "STORY" && platform === "FACEBOOK");
-}
-
-function activePlatforms(client: QuickPostClient | undefined, format: SocialPostFormat = "FEED"): SocialPlatform[] {
-  return client ? client.connections.filter((c) => c.active && platformAllows(c.platform, format)).map((c) => c.platform) : [];
+function activePlatforms(client: QuickPostClient | undefined): SocialPlatform[] {
+  return client ? client.connections.filter((c) => c.active).map((c) => c.platform) : [];
 }
 
 /**
@@ -119,14 +114,9 @@ export function QuickPostForm({
   function selectClient(id: string) {
     const next = clients.find((c) => c.id === id);
     setClientId(id);
-    setPlatforms(activePlatforms(next, format));
+    setPlatforms(activePlatforms(next));
     setTime(defaultTimeFor(date, next));
     setOverrides({});
-  }
-
-  function selectFormat(f: SocialPostFormat) {
-    setFormat(f);
-    setPlatforms((prev) => prev.filter((p) => platformAllows(p, f)));
   }
 
   const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
@@ -357,15 +347,14 @@ export function QuickPostForm({
               {client.connections.map((c) => {
                 const Icon = ICON[c.platform];
                 const on = platforms.includes(c.platform);
-                const allowed = platformAllows(c.platform, format);
                 return (
                   <button
                     key={c.platform}
                     type="button"
-                    disabled={!c.active || !allowed}
+                    disabled={!c.active}
                     onClick={() => togglePlatform(c.platform)}
                     aria-pressed={on}
-                    title={!c.active ? "Conexão com erro — reconecte no perfil do cliente" : !allowed ? "Story só sai no Instagram" : c.name}
+                    title={c.active ? c.name : "Conexão com erro — reconecte no perfil do cliente"}
                     className={`flex h-10 min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:opacity-50 ${
                       on ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
                     }`}
@@ -377,9 +366,6 @@ export function QuickPostForm({
                 );
               })}
             </div>
-            {format === "STORY" && client.connections.some((c) => c.platform === "FACEBOOK") && (
-              <p className="text-xs text-[#667085]">Story só sai no Instagram — o Facebook fica de fora.</p>
-            )}
           </div>
         )}
 
@@ -390,7 +376,7 @@ export function QuickPostForm({
               <button
                 key={f}
                 type="button"
-                onClick={() => selectFormat(f)}
+                onClick={() => setFormat(f)}
                 aria-pressed={format === f}
                 className={`h-9 rounded-lg text-sm font-medium ${
                   format === f ? "bg-[#F2F4F7] font-semibold text-[#101828] ring-1 ring-[#101828]" : "border border-[#E4E7EC] text-[#475467]"

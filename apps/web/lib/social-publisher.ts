@@ -6,6 +6,7 @@ import { MetaApiError } from "@/lib/meta-ads";
 import {
   RetryableSocialError,
   finishInstagramContainer,
+  publishFacebookStory,
   publishToFacebookPage,
   publishToInstagram,
   type PublishResult,
@@ -107,8 +108,10 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
         ? await finishInstagramContainer({ igUserId: full.connection.externalId, token, containerId: full.externalContainerId, budgetMs })
         : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs });
     } else if (full.platform === "FACEBOOK") {
-      if (full.format === "STORY") throw new Error("Story no Facebook ainda não é suportado — use Feed.");
-      result = await publishToFacebookPage({ pageId: full.connection.externalId, token, caption, media });
+      result =
+        full.format === "STORY"
+          ? await publishFacebookStory({ pageId: full.connection.externalId, token, media })
+          : await publishToFacebookPage({ pageId: full.connection.externalId, token, caption, media });
     } else {
       throw new Error("Google Meu Negócio ainda não está disponível.");
     }

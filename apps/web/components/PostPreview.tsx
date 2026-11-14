@@ -287,7 +287,8 @@ export function PostPreview({
 
       {platform === "INSTAGRAM" && format === "FEED" && <InstagramFeed profile={profile} media={media} caption={text} />}
       {platform === "INSTAGRAM" && format !== "FEED" && <VerticalFrame profile={profile} media={media} caption={text} story={format === "STORY"} />}
-      {platform === "FACEBOOK" && <FacebookPost profile={profile} media={media} caption={text} whenLabel={whenLabel} />}
+      {platform === "FACEBOOK" && format === "STORY" && <VerticalFrame profile={profile} media={media} caption="" story />}
+      {platform === "FACEBOOK" && format !== "STORY" && <FacebookPost profile={profile} media={media} caption={text} whenLabel={whenLabel} />}
 
       <p className="text-center text-[11px] leading-4 text-[#98A2B3]">Simulação aproximada: o visual final pode variar um pouco em cada aparelho.</p>
     </div>

@@ -102,9 +102,6 @@ export async function scheduleContentPosts(input: {
   }
   if (input.format === "STORY" && media.length !== 1) throw new ScheduleError("Story aceita exatamente um arquivo.");
   if (input.format === "REEL" && (media.length !== 1 || !hasVideo)) throw new ScheduleError("Reels precisa de um único vídeo.");
-  if (platforms.includes("FACEBOOK") && input.format === "STORY") {
-    throw new ScheduleError("Story no Facebook ainda não é suportado — desmarque o Facebook ou use Feed.");
-  }
   if (platforms.includes("FACEBOOK") && media.length > 1 && hasVideo) {
     throw new ScheduleError("O Facebook não aceita carrossel com vídeo.");
   }

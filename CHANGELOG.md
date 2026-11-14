@@ -4,7 +4,7 @@
 
 ### Alterado
 
-- **Story só no Instagram, sem título nem legenda**: na publicação direta (Calendário/Operação) e no painel de publicação do cartão, escolher Story desativa o título e a legenda (a API do Instagram não aceita legenda em story) e desativa o botão do Facebook, que é desmarcado sozinho (o agendador não publica story no Facebook). Antes, o Facebook continuava marcado e o envio parava com "Story no Facebook ainda não é suportado".
+- **Story no Facebook e story sem título nem legenda**: o agendador passa a publicar story na Página do Facebook (foto via `/photos` sem publicar + `/photo_stories`; vídeo via `/video_stories` em três fases), com as mesmas permissões do feed. Some o erro "Story no Facebook ainda não é suportado". Na publicação direta (Calendário/Operação) e no painel de publicação do cartão, escolher Story desativa o título e a legenda (nenhuma das duas APIs aceita texto em story). A pré-visualização do Facebook em Story fica vertical. `publishFacebookStory` em `lib/meta-social.ts`.
 
 ### Adicionado
 

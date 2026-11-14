@@ -212,6 +212,46 @@ export async function publishToFacebookPage(input: {
   return { externalPostId: postId, permalink };
 }
 
+/**
+ * Story na Página do Facebook (um arquivo, sem legenda — a API não tem texto em story).
+ * Foto: sobe sem publicar em /photos e publica em /photo_stories.
+ * Vídeo: /video_stories em três fases — start (devolve video_id e upload_url),
+ * envio pela URL pública (`file_url` no rupload) e finish, que publica.
+ * Mesmas permissões do feed (`pages_manage_posts`). Story não tem permalink.
+ */
+export async function publishFacebookStory(input: { pageId: string; token: string; media: PublishMedia[] }): Promise<PublishResult> {
+  const { pageId, token, media } = input;
+  if (media.length !== 1) throw new Error("Story aceita um arquivo só.");
+  const item = media[0]!;
+
+  if (!item.isVideo) {
+    const photo = await graphPost<{ id: string }>(`/${pageId}/photos`, { access_token: token, url: item.url, published: "false" });
+    const story = await graphPost<{ success?: boolean; post_id?: string }>(`/${pageId}/photo_stories`, {
+      access_token: token,
+      photo_id: photo.id,
+    });
+    return { externalPostId: story.post_id ?? photo.id, permalink: null };
+  }
+
+  const start = await graphPost<{ video_id: string; upload_url: string }>(`/${pageId}/video_stories`, {
+    access_token: token,
+    upload_phase: "start",
+  });
+  const upload = await fetch(start.upload_url, {
+    method: "POST",
+    headers: { Authorization: `OAuth ${token}`, file_url: item.url },
+    cache: "no-store",
+  });
+  const uploadBody = await upload.json().catch(() => null);
+  if (!upload.ok) throw new MetaApiError(graphErrorMessage(uploadBody), upload.status, uploadBody);
+  const story = await graphPost<{ success?: boolean; post_id?: string }>(`/${pageId}/video_stories`, {
+    access_token: token,
+    upload_phase: "finish",
+    video_id: start.video_id,
+  });
+  return { externalPostId: story.post_id ?? start.video_id, permalink: null };
+}
+
 // ----- Instagram -----
 
 type IgFormat = "FEED" | "REEL" | "STORY";
