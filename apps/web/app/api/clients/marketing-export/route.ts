@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { parseMarketingFilters, fetchMarketingRows, buildMarketingCsv } from "@/lib/marketing-audience";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 /** Mesmos filtros da tela `/clientes/marketing`, servidos como download em vez de HTML. */
 export async function GET(request: Request) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const hasAnyParam = [...searchParams.keys()].length > 0;
   const filters = parseMarketingFilters((key) => searchParams.getAll(key), hasAnyParam);
 
-  const rows = await fetchMarketingRows(membership.agencyId, filters);
+  const rows = await fetchMarketingRows(membership.agencyId, filters, await getHiddenClientIds(membership.agencyId, session.user.id));
   const csv = buildMarketingCsv(rows);
 
   return new NextResponse(csv, {

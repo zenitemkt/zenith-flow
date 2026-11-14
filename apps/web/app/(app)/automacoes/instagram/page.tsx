@@ -3,6 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import type { FlowStep } from "@/lib/instagram-flow-model";
 import { InstagramRulesClient } from "./InstagramRulesClient";
+import { getHiddenClientIds, visibleByClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -11,9 +12,10 @@ interface PageProps {
 export default async function InstagramAutomationPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId, socialConnections: { some: { platform: "INSTAGRAM" } } },
+    where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId, socialConnections: { some: { platform: "INSTAGRAM" } } },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
@@ -22,7 +24,7 @@ export default async function InstagramAutomationPage({ searchParams }: PageProp
 
   const [rules, instagramConnection] = selectedClientId
     ? await Promise.all([
-        prisma.instagramAutomationRule.findMany({ where: { agencyId: membership.agencyId, clientId: selectedClientId }, orderBy: { createdAt: "desc" } }),
+        prisma.instagramAutomationRule.findMany({ where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, clientId: selectedClientId }, orderBy: { createdAt: "desc" } }),
         prisma.socialConnection.findUnique({ where: { clientId_platform: { clientId: selectedClientId, platform: "INSTAGRAM" } } }),
       ])
     : [[], null];

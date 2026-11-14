@@ -9,6 +9,7 @@ import { TrackingPeriodFilter } from "./TrackingPeriodFilter";
 import { BotTrafficToggle } from "./BotTrafficToggle";
 import { TrackingSegmentFilter } from "./TrackingSegmentFilter";
 import { applySegmentFilters, readSegmentFilters } from "@/lib/tracking-segments";
+import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 const BarsChart = dynamic(() =>
   import("@/app/_components/charts/BarsChart").then((module) => module.BarsChart),
@@ -21,6 +22,7 @@ interface PageProps {
 export default async function TrackingOverviewPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const selectedPeriod = resolvePipelinePeriod({ ...searchParams, period: searchParams.period ?? "today" });
   const range = selectedPeriod.createdAt;
@@ -39,7 +41,7 @@ export default async function TrackingOverviewPage({ searchParams }: PageProps) 
         where: { visitor: { agencyId }, ...(range ? { startedAt: range } : {}) },
         include: { visitor: { select: { firstSeenAt: true, leadId: true } } },
       }),
-      prisma.campaign.findMany({ where: { agencyId } }),
+      prisma.campaign.findMany({ where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId } }),
       prisma.lead.count({ where: { agencyId, ...(range ? { createdAt: range } : {}) } }),
       prisma.trackingEvent.count({ where: { agencyId, ...eventWhereBotFilter, ...(range ? { occurredAt: range } : {}) } }),
       prisma.trackingEvent.findMany({

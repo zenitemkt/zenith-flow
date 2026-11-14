@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { prisma } from "@zenite-mkt/db";
 import { DriveFolderCard } from "./DriveFolderCard";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 /**
  * Biblioteca de conteúdo = atalho pra pasta de cada cliente no Google Drive
@@ -14,9 +15,10 @@ export default async function BibliotecaPage() {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId },
+    where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
     select: { id: true, name: true, driveUrl: true },
     orderBy: { name: "asc" },
   });

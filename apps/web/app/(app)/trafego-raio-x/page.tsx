@@ -15,6 +15,7 @@ import { CPL_LEVEL_LABEL, cplCents, cplLevel, ctr, frequency, sumLevel } from "@
 import { SyncMetaCampaignsButton } from "../comercial/campanhas/SyncMetaCampaignsButton";
 import { canManageIntegrations } from "@/lib/rbac";
 import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { clientId?: string; status?: string; days?: string };
@@ -34,6 +35,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const activeClientId = searchParams.clientId;
   const statusFilter: CampaignStatus | "TODAS" = STATUS_FILTERS.some((s) => s.value === searchParams.status)
@@ -47,7 +49,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
 
   const [campaigns, clients, metaConnection, trafficSettings, recommendations, history] = await Promise.all([
     prisma.campaign.findMany({
-      where: {
+      where: { AND: [visibleByOptionalClientWhere(hidden)],
         agencyId: membership.agencyId,
         ...(activeClientId ? { clientId: activeClientId } : {}),
         ...(statusFilter === "TODAS" ? {} : { status: statusFilter }),
@@ -67,7 +69,7 @@ export default async function TrafficXrayPage({ searchParams }: PageProps) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

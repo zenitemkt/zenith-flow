@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { prisma } from "@zenite-mkt/db";
 import type { OnboardingRunStatus } from "@zenite-mkt/db";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 const RUN_STATUS_LABELS: Record<OnboardingRunStatus, string> = {
   EM_ANDAMENTO: "Em andamento",
@@ -26,9 +27,10 @@ export default async function ClientsOnboardingPage() {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId },
+    where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
     include: {
       onboardingRuns: {
         orderBy: { startedAt: "desc" },

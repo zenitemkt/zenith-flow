@@ -7,6 +7,7 @@ import { getCommercialPendencies } from "@/lib/commercial-pendencies";
 import { SYSTEM_ALERT_CATEGORY_LABEL, SYSTEM_ALERT_TYPES, alertTypeOfKey, getDisabledAlertTypes } from "@/lib/system-alerts";
 import { AlertActions } from "./AlertActions";
 import { AlertTypeSettings } from "./AlertTypeSettings";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 const CATEGORIES = Object.keys(SYSTEM_ALERT_CATEGORY_LABEL) as SystemAlertCategory[];
 const STATUS_LABEL: Record<SystemAlertStatus, string> = { OPEN: "Abertos", RESOLVED: "Resolvidos", IGNORED: "Ignorados" };
@@ -37,7 +38,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: { cat
   const [allAlerts, openAll, commercial, disabled] = await Promise.all([
     prisma.systemAlert.findMany({ where: { agencyId, status, ...(category ? { category } : {}) }, orderBy: { lastSeenAt: "desc" }, take: 200 }),
     prisma.systemAlert.findMany({ where: { agencyId, status: "OPEN" }, select: { key: true, category: true }, take: 500 }),
-    getCommercialPendencies(agencyId),
+    getCommercialPendencies(agencyId, await getHiddenClientIds(membership.agencyId, session.user.id)),
     getDisabledAlertTypes(agencyId),
   ]);
   const enabled = (key: string) => {

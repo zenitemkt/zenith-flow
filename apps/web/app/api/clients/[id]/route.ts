@@ -5,6 +5,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
 import { readDriveUrl, readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -30,7 +31,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const client = await prisma.client.findUnique({ where: { id: params.id } });
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
 
@@ -92,7 +93,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!membership) return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
   if (!canManageTeam(membership.role)) return NextResponse.json({ error: "Apenas administradores podem excluir clientes." }, { status: 403 });
   const client = await prisma.client.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, name: true, workspaceId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   await prisma.$transaction(async (tx) => {
     await tx.client.delete({ where: { id: client.id } });

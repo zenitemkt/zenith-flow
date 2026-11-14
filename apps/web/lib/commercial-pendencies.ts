@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma, type CommercialAlertType } from "@zenite-mkt/db";
 import { syncCommercialAlerts } from "./commercial-intelligence";
+import { visibleByOptionalClientWhere } from "@/lib/client-access";
 
 export type CommercialPendingPriority = "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW";
 export type CommercialPendingKind =
@@ -83,11 +84,11 @@ export async function refreshCommercialAlerts(agencyId: string): Promise<void> {
  * já tenha chamado (e memoizado via `cache()`) a versão de baixo, de outra
  * requisição concorrente da mesma renderização.
  */
-export async function computeCommercialPendencies(agencyId: string): Promise<CommercialPendencies> {
+export async function computeCommercialPendencies(agencyId: string, hidden: string[] = []): Promise<CommercialPendencies> {
   const now = new Date();
   const [opportunities, proposals, alerts] = await Promise.all([
     prisma.opportunity.findMany({
-      where: { agencyId, status: "OPEN" },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId, status: "OPEN" },
       select: {
         id: true,
         createdAt: true,
@@ -98,7 +99,7 @@ export async function computeCommercialPendencies(agencyId: string): Promise<Com
       },
     }),
     prisma.proposal.findMany({
-      where: { agencyId, status: { in: ["ENVIADA", "VISUALIZADA", "ACEITA"] } },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId, status: { in: ["ENVIADA", "VISUALIZADA", "ACEITA"] } },
       select: {
         id: true,
         name: true,

@@ -8,6 +8,7 @@ import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { filterableClients } from "@/lib/clients";
 import { loadQuickPostClients } from "@/lib/quick-post-clients";
 import type { CalendarContentItem, CalendarSocialPost } from "./InteractiveContentCalendar";
+import { getHiddenClientIds, visibleByClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 /** Code-split: framer-motion só baixa quando esta rota é visitada. */
 const InteractiveContentCalendar = dynamic(() =>
@@ -25,6 +26,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const { year, month } = parseMonth(searchParams.month);
   const rangeStart = new Date(Date.UTC(year, month, 1));
@@ -33,7 +35,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
 
   const [monthItems, pendingItems, clients, socialPosts, quickPostClients] = await Promise.all([
     prisma.contentItem.findMany({
-      where: {
+      where: { AND: [visibleByClientWhere(hidden)],
         agencyId: membership.agencyId,
         scheduledDate: { gte: rangeStart, lt: rangeEnd },
         ...(activeClientId ? { clientId: activeClientId } : {}),
@@ -42,7 +44,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       orderBy: { scheduledDate: "asc" },
     }),
     prisma.contentItem.findMany({
-      where: {
+      where: { AND: [visibleByClientWhere(hidden)],
         agencyId: membership.agencyId,
         status: { notIn: [...NON_PENDING_STATUSES] },
         ...(activeClientId ? { clientId: activeClientId } : {}),
@@ -51,13 +53,13 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       orderBy: [{ scheduledDate: "asc" }, { createdAt: "desc" }],
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true, status: true },
       orderBy: { name: "asc" },
     }),
     // Publicações nas redes do mês (em São Paulo: o mês começa às 03:00 UTC do dia 1).
     prisma.socialPost.findMany({
-      where: {
+      where: { AND: [visibleByClientWhere(hidden)],
         agencyId: membership.agencyId,
         status: { not: "CANCELED" },
         // Peça excluída some do Calendário junto com as publicações dela.
@@ -76,7 +78,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
       },
       orderBy: { publishAt: "asc" },
     }),
-    loadQuickPostClients(membership.agencyId, activeClientId),
+    loadQuickPostClients(membership.agencyId, activeClientId, hidden),
   ]);
 
   const calendarPosts: CalendarSocialPost[] = socialPosts.map((p) => ({

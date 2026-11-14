@@ -4,6 +4,7 @@ import { resolvePipelinePeriod } from "@/lib/pipeline-period";
 import { buildCommercialReport, type ReportRow } from "@/lib/commercial-reports";
 import { formatOpportunityValue } from "@/lib/pipeline";
 import { ReportsFilter } from "./ReportsFilter";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 interface SearchParams { period?: string; year?: string; month?: string; from?: string; to?: string; origin?: string; campaign?: string; service?: string }
 
@@ -29,7 +30,7 @@ export default async function CommercialReportsPage({ searchParams }: { searchPa
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   const selectedPeriod = resolvePipelinePeriod({ ...searchParams, period: searchParams.period ?? "last30" });
-  const report = await buildCommercialReport(membership.agencyId, { range: selectedPeriod.createdAt, origin: searchParams.origin, campaign: searchParams.campaign, service: searchParams.service });
+  const report = await buildCommercialReport(membership.agencyId, { range: selectedPeriod.createdAt, origin: searchParams.origin, campaign: searchParams.campaign, service: searchParams.service }, await getHiddenClientIds(membership.agencyId, session.user.id));
   const cards = [[report.totals.visitors, "visitantes"], [report.totals.leads, "leads"], [report.totals.qualified, "qualificados"], [report.totals.proposals, "propostas"], [report.totals.sales, "vendas"], [formatOpportunityValue(report.totals.revenueCents), "valor ganho"], [`${report.totals.conversionRate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`, "conversão"]];
   return (
     <div className="flex flex-col gap-6">

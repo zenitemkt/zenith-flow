@@ -5,6 +5,7 @@ import { contentBoardColumnForStatus } from "@/lib/content";
 import { prisma } from "@zenite-mkt/db";
 import { canManageTeam } from "@/lib/rbac";
 import { ClientsBoard, type ClientCardData } from "./ClientsBoard";
+import { getHiddenClientIds, visibleByClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 export default async function CarteiraPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -12,9 +13,10 @@ export default async function CarteiraPage() {
     redirect("/login");
   }
 
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
   const [clients, contentCounts] = await Promise.all([
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { agencyId: membership.agencyId, ...visibleClientWhere(hidden) },
       select: {
         id: true,
         name: true,
@@ -34,7 +36,7 @@ export default async function CarteiraPage() {
     }),
     prisma.contentItem.groupBy({
       by: ["clientId", "status"],
-      where: { agencyId: membership.agencyId, status: { not: "ARQUIVADO" } },
+      where: { agencyId: membership.agencyId, status: { not: "ARQUIVADO" }, ...visibleByClientWhere(hidden) },
       _count: { _all: true },
     }),
   ]);

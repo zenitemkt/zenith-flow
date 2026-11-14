@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { isSafeHttpUrl, isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
 import { Prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
 
   const rule = await prisma.instagramAutomationRule.findFirst({ where: { id: params.id, agencyId: membership.agencyId } });
-  if (!rule) return NextResponse.json({ error: "Regra não encontrada." }, { status: 404 });
+  if (!rule || !(await canSeeClient(membership.agencyId, session.user.id, rule.clientId))) return NextResponse.json({ error: "Regra não encontrada." }, { status: 404 });
 
   const body = await request.json().catch(() => null);
   const data: Record<string, unknown> = {};
@@ -75,7 +76,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
 
   const rule = await prisma.instagramAutomationRule.findFirst({ where: { id: params.id, agencyId: membership.agencyId } });
-  if (!rule) return NextResponse.json({ error: "Regra não encontrada." }, { status: 404 });
+  if (!rule || !(await canSeeClient(membership.agencyId, session.user.id, rule.clientId))) return NextResponse.json({ error: "Regra não encontrada." }, { status: 404 });
 
   await prisma.instagramAutomationRule.delete({ where: { id: rule.id } });
   return NextResponse.json({ ok: true });

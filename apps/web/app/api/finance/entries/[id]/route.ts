@@ -8,6 +8,7 @@ import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma } from "@zenite-mkt/db";
 import { splitProportionally } from "@/lib/finance-shares";
 import { replaceEntryShares } from "@/lib/finance-partners";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -28,7 +29,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const entry = await prisma.financeEntry.findUnique({ where: { id: params.id } });
-  if (!entry || entry.agencyId !== membership.agencyId) {
+  if (!entry || entry.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, entry.clientId))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
   // Particular de outro sócio: este login não vê nem altera.

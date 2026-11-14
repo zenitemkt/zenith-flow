@@ -6,6 +6,7 @@ import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@
 import { publishPostsNow } from "@/lib/social-publisher";
 import { QUICK_POST_AUDIT_ACTION } from "@/lib/social-quick-post";
 import { createPendingPostRule, parseMiniChatInput } from "@/lib/instagram-post-rules";
+import { canSeeClient } from "@/lib/client-access";
 
 export const maxDuration = 60;
 
@@ -24,9 +25,9 @@ async function loadQuickPostItem(id: string) {
   }
   const item = await prisma.contentItem.findUnique({
     where: { id },
-    select: { id: true, agencyId: true, status: true, _count: { select: { versions: true, socialPosts: true } } },
+    select: { id: true, agencyId: true, clientId: true, status: true, _count: { select: { versions: true, socialPosts: true } } },
   });
-  if (!item || item.agencyId !== membership.agencyId) {
+  if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return { error: NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 }) } as const;
   }
   // Só peças criadas pela publicação direta podem pular a aprovação do cliente.

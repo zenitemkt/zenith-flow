@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { encryptSecret } from "@/lib/crypto-secrets";
 import { fetchInstagramTokenIdentity, exchangeForLongLivedInstagramToken } from "@/lib/instagram-automation";
+import { canSeeClient } from "@/lib/client-access";
 
 /**
  * Salva o token IGAA ("API do Instagram com Login do Instagram" — seção 4.1
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
   const accessToken = typeof body?.accessToken === "string" ? body.accessToken.trim() : "";
   if (!accessToken) return NextResponse.json({ error: "Cole o token de acesso." }, { status: 400 });
 
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   let identity;
   try {

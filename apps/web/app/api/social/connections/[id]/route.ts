@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -20,7 +21,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const connection = await prisma.socialConnection.findUnique({ where: { id: params.id } });
-  if (!connection || connection.agencyId !== membership.agencyId) {
+  if (!connection || connection.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, connection.clientId))) {
     return NextResponse.json({ error: "Conexão não encontrada." }, { status: 404 });
   }
 

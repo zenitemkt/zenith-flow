@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { getOrCreateTaskProject } from "@/lib/task-projects";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
 
   if (clientId) {
     const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client || client.agencyId !== membership.agencyId) {
+    if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
       return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
     }
   }

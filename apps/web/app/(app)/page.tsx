@@ -17,6 +17,7 @@ import { KpiCard, AttentionList, MiniPanel, type AttentionItem, type Tone } from
 import { AskAiButton } from "@/app/_components/AskAiButton";
 import { prisma } from "@zenite-mkt/db";
 import { getCommercialPendencies } from "@/lib/commercial-pendencies";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 const COCKPIT_BAR_COLORS = ["#FF2B00", "#168F9D", "#316FDC"];
 
@@ -72,6 +73,7 @@ export default async function HomePage() {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const now = new Date();
   const sixWeeksAgo = new Date(now);
@@ -98,7 +100,7 @@ export default async function HomePage() {
     commercialPendencies,
   ] = await Promise.all([
     prisma.recurringTaskTemplate.findMany({
-      where: { agencyId: membership.agencyId, status: "ATIVO" },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, status: "ATIVO" },
       include: { generations: { select: { period: true } }, dates: { select: { date: true } }, client: { select: { name: true } } },
     }),
     prisma.contentApproval.count({
@@ -112,7 +114,7 @@ export default async function HomePage() {
       },
     }),
     prisma.task.findMany({
-      where: {
+      where: { AND: [{ project: visibleByOptionalClientWhere(hidden) }],
         project: { agencyId: membership.agencyId },
         assigneeUserId: session.user.id,
         status: { notIn: ["CONCLUIDA", "CANCELADA"] },
@@ -122,14 +124,14 @@ export default async function HomePage() {
       take: 6,
     }),
     prisma.task.findMany({
-      where: {
+      where: { AND: [{ project: visibleByOptionalClientWhere(hidden) }],
         project: { agencyId: membership.agencyId },
         status: "CONCLUIDA",
         completedAt: { gte: sixWeeksAgo },
       },
       select: { completedAt: true },
     }),
-    prisma.client.count({ where: { agencyId: membership.agencyId, status: "ATIVO" } }),
+    prisma.client.count({ where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId, status: "ATIVO" } }),
     prisma.financeEntry.aggregate({
       where: { AND: [zeniteOnly], agencyId: membership.agencyId, type: "RECEITA", status: { in: ["PREVISTO", "PENDENTE", "VENCIDO"] } },
       _sum: { amountCents: true },
@@ -156,8 +158,8 @@ export default async function HomePage() {
       },
       _sum: { amountCents: true },
     }),
-    getXrayDashboard(membership.agencyId),
-    getCommercialPendencies(membership.agencyId),
+    getXrayDashboard(membership.agencyId, hidden),
+    getCommercialPendencies(membership.agencyId, hidden),
   ]);
 
   const clientsAtRiskCount = xray.clientes.healthScoreData.find((d) => d.name === "Alto risco")?.value ?? 0;

@@ -2,6 +2,7 @@ import type { ClientStatus, LeadStatus } from "@zenite-mkt/db";
 import { prisma } from "@zenite-mkt/db";
 import { CLIENT_STATUS_LABELS } from "./clients";
 import { LEAD_STATUS_LABELS } from "./leads";
+import { visibleClientWhere } from "@/lib/client-access";
 
 export const ALL_CLIENT_STATUSES: ClientStatus[] = [
   "PROSPECT",
@@ -58,12 +59,12 @@ export interface MarketingContactRow {
  * `ClientContact.marketingOptOut` é sempre respeitado (mesma regra já usada
  * pelas campanhas de NPS em `clientes/nps/page.tsx`) — nunca vira destinatário.
  */
-export async function fetchMarketingRows(agencyId: string, filters: MarketingFilters): Promise<MarketingContactRow[]> {
+export async function fetchMarketingRows(agencyId: string, filters: MarketingFilters, hidden: string[] = []): Promise<MarketingContactRow[]> {
   const rows: MarketingContactRow[] = [];
 
   if (filters.clientStatuses.length > 0) {
     const clients = await prisma.client.findMany({
-      where: {
+      where: { AND: [visibleClientWhere(hidden)],
         agencyId,
         status: { in: filters.clientStatuses },
         ...(filters.stageIds.length > 0

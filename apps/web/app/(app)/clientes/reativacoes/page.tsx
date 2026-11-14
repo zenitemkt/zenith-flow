@@ -3,15 +3,17 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { prisma } from "@zenite-mkt/db";
 import { ReactivationInfoForm } from "./ReactivationInfoForm";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 export default async function ReativacoesPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId, status: "ENCERRADO" },
+    where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId, status: "ENCERRADO" },
     include: {
       statusHistory: { orderBy: { createdAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" }, take: 1 },

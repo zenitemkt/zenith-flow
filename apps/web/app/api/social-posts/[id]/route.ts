@@ -3,6 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { publishSocialPostNow } from "@/lib/social-publisher";
+import { canSeeClient } from "@/lib/client-access";
 
 export const maxDuration = 60;
 
@@ -49,7 +50,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
   const post = await prisma.socialPost.findUnique({ where: { id: params.id } });
-  if (!post || post.agencyId !== membership.agencyId) {
+  if (!post || post.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, post.clientId))) {
     return NextResponse.json({ error: "Publicação não encontrada." }, { status: 404 });
   }
 

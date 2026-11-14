@@ -7,6 +7,7 @@ import { isClientRole } from "@/lib/rbac";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { CLIENT_IMAGE_MAX_BYTES, CLIENT_IMAGE_TYPES } from "@/lib/clients";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string; kind: string };
@@ -31,7 +32,7 @@ async function authorize(clientId: string) {
     where: { id: clientId },
     select: { id: true, agencyId: true, workspaceId: true, avatarKey: true, bannerKey: true },
   });
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     return { error: NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 }) };
   }
   return { session, membership, client };

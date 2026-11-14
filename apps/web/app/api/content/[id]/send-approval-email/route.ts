@@ -4,6 +4,7 @@ import { isClientRole } from "@/lib/rbac";
 import { splitEmailList } from "@/lib/proposals";
 import { sendContentApprovalEmail, EmailNotConfiguredError } from "@/lib/email";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const item = await prisma.contentItem.findUnique({ where: { id: params.id } });
-  if (!item || item.agencyId !== membership.agencyId) {
+  if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 });
   }
 

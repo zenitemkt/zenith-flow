@@ -6,6 +6,7 @@ import { r2, R2_BUCKET } from "@/lib/r2";
 import { MAX_UPLOAD_BYTES } from "@/lib/media";
 import { buildObjectKey } from "@/lib/media-server";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
   const resolvedClientId = typeof clientId === "string" && clientId ? clientId : null;
   if (resolvedClientId) {
     const client = await prisma.client.findUnique({ where: { id: resolvedClientId } });
-    if (!client || client.agencyId !== membership.agencyId) {
+    if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
       return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
     }
   }

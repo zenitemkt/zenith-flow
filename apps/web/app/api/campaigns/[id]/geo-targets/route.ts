@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -28,7 +29,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const campaign = await prisma.campaign.findUnique({ where: { id: params.id } });
-  if (!campaign || campaign.agencyId !== membership.agencyId) {
+  if (!campaign || campaign.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, campaign.clientId))) {
     return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
   }
 

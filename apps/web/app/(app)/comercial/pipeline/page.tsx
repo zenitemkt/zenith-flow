@@ -9,6 +9,7 @@ import { PipelinePeriodFilter } from "./PipelinePeriodFilter";
 import { NewOpportunityModal } from "./NewOpportunityModal";
 import type { FunnelStage } from "@/app/_components/charts/FunnelChart";
 import { getLeadCommercialSnapshots } from "@/lib/commercial-intelligence";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 const PipelineFunnelSection = dynamic(() =>
   import("./PipelineFunnelSection").then((module) => module.PipelineFunnelSection),
@@ -21,6 +22,7 @@ interface PageProps {
 export default async function PipelinePage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const selectedPeriod = resolvePipelinePeriod(searchParams);
   const periodWhere = selectedPeriod.createdAt ? { createdAt: selectedPeriod.createdAt } : {};
@@ -28,20 +30,20 @@ export default async function PipelinePage({ searchParams }: PageProps) {
   const [stages, openOpportunities, periodOpportunities, closedOpportunities, clients, leads, trackedVisitorsCount] = await Promise.all([
     prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, orderBy: { order: "asc" } }),
     prisma.opportunity.findMany({
-      where: { agencyId: membership.agencyId, status: "OPEN" },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, status: "OPEN" },
       include: { client: { select: { name: true } }, lead: { select: { name: true } } },
     }),
     prisma.opportunity.findMany({
-      where: { agencyId: membership.agencyId, ...periodWhere },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, ...periodWhere },
       select: { stageId: true, status: true, valueCents: true },
     }),
     prisma.opportunity.findMany({
-      where: { agencyId: membership.agencyId, status: { in: ["WON", "LOST"] }, ...periodWhere },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, status: { in: ["WON", "LOST"] }, ...periodWhere },
       include: { client: { select: { name: true } }, lead: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
       take: 20,
     }),
-    prisma.client.findMany({ where: { agencyId: membership.agencyId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.client.findMany({ where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.lead.findMany({
       where: { agencyId: membership.agencyId, status: { not: "CONVERTIDO" } },
       select: { id: true, name: true },

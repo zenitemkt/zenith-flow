@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -16,7 +17,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
   const client = await prisma.client.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
 

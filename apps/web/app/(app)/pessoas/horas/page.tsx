@@ -12,6 +12,7 @@ import { NewTimeEntryForm } from "./NewTimeEntryForm";
 import { TimerWidget } from "./TimerWidget";
 import { TimeEntryRow } from "./TimeEntryRow";
 import { TimesheetStatusActions } from "./TimesheetStatusActions";
+import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { week?: string };
@@ -29,6 +30,7 @@ export default async function HorasPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const requestedWeek = searchParams.week ? new Date(searchParams.week) : new Date();
   const weekStart = startOfWeekUTC(isNaN(requestedWeek.getTime()) ? new Date() : requestedWeek);
@@ -47,7 +49,7 @@ export default async function HorasPage({ searchParams }: PageProps) {
       },
     }),
     prisma.task.findMany({
-      where: { project: { agencyId: membership.agencyId }, assigneeUserId: session.user.id },
+      where: { AND: [{ project: visibleByOptionalClientWhere(hidden) }], project: { agencyId: membership.agencyId }, assigneeUserId: session.user.id },
       select: { id: true, title: true },
       orderBy: { createdAt: "desc" },
       take: 50,

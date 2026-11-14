@@ -3,14 +3,16 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { reaisToCents } from "@/lib/finance";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string; adSetId: string };
 }
 
-async function loadAdSet(campaignId: string, adSetId: string, agencyId: string) {
+async function loadAdSet(campaignId: string, adSetId: string, agencyId: string, userId: string) {
   const adSet = await prisma.adSet.findUnique({ where: { id: adSetId }, include: { campaign: true } });
   if (!adSet || adSet.campaignId !== campaignId || adSet.campaign.agencyId !== agencyId) return null;
+  if (!(await canSeeClient(agencyId, userId, adSet.campaign.clientId))) return null;
   return adSet;
 }
 
@@ -27,7 +29,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const adSet = await loadAdSet(params.id, params.adSetId, membership.agencyId);
+  const adSet = await loadAdSet(params.id, params.adSetId, membership.agencyId, session.user.id);
   if (!adSet) {
     return NextResponse.json({ error: "Conjunto de anúncios não encontrado." }, { status: 404 });
   }
@@ -63,7 +65,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const adSet = await loadAdSet(params.id, params.adSetId, membership.agencyId);
+  const adSet = await loadAdSet(params.id, params.adSetId, membership.agencyId, session.user.id);
   if (!adSet) {
     return NextResponse.json({ error: "Conjunto de anúncios não encontrado." }, { status: 404 });
   }

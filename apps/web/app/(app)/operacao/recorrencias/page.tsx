@@ -11,6 +11,7 @@ import { prisma, type RecurringTaskStatus } from "@zenite-mkt/db";
 import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { filterableClients } from "@/lib/clients";
 import { RecurringTaskActions } from "./RecurringTaskActions";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 const STATUS_BADGE_CLASS: Record<RecurringTaskStatus, string> = {
   RASCUNHO: "bg-[#F2F4F7] text-[#475467]",
@@ -29,12 +30,13 @@ export default async function RecurringTasksPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const activeClientId = searchParams.clientId;
 
   const [templates, people, clients] = await Promise.all([
     prisma.recurringTaskTemplate.findMany({
-      where: { agencyId: membership.agencyId, ...(activeClientId ? { clientId: activeClientId } : {}) },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, ...(activeClientId ? { clientId: activeClientId } : {}) },
       include: {
         client: { select: { id: true, name: true } },
         assignees: { orderBy: { order: "asc" } },
@@ -45,7 +47,7 @@ export default async function RecurringTasksPage({ searchParams }: PageProps) {
     }),
     getAgencyMembers(membership.agencyId),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true, status: true },
       orderBy: { name: "asc" },
     }),

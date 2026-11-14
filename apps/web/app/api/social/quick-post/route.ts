@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { CAPTION_MAX, PLATFORM_LABELS } from "@/lib/social-scheduling";
 import { QUICK_POST_AUDIT_ACTION, QUICK_POST_FORMAT_LABEL, quickPostTitle, spDateOf } from "@/lib/social-quick-post";
+import { canSeeClient } from "@/lib/client-access";
 
 const FORMATS: SocialPostFormat[] = ["FEED", "REEL", "STORY"];
 /** Reenvio do mesmo formulário (duplo clique, rede lenta) em poucos segundos devolve a peça já criada. */
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
   // Confere as conexões antes de criar a peça, pra não sobrar cartão pela metade.

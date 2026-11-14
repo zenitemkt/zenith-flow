@@ -4,6 +4,8 @@
 
 ### Adicionado
 
+- **Clientes particulares de cada sócio**: cliente com "Quem recebe deste cliente" = um sócio só (ligado a um login) passa a ser só desse sócio. O outro sócio e o restante da equipe não veem o cliente nem nada dele: carteira, perfil, Operação, calendário, publicações, tarefas, recorrências, financeiro (inclusive lançamentos divididos), comercial (pipeline, propostas, campanhas, pendências, metas, relatórios), tráfego, automações, indicadores do início e exportações. Link direto responde "não encontrado". Clientes divididos (Zenite) e sem definição continuam visíveis para todos. Regra em `lib/client-access.ts`, também aplicada dentro de `lib/finance-scope.ts`.
+
 - **Novo ícone da marca**: o "z" branco com ponto laranja sobre fundo grafite agora é o favicon da aba do navegador e o logo do menu lateral, do cabeçalho mobile e da proposta pública (`app/icon.svg`, `public/logo-z.svg` — vetor, nítido em qualquer tamanho). O ícone também deixou de passar pelo login no middleware, então aparece na tela de login.
 
 - **Gestor de tráfego: incluir em campanha existente** (aba Campanhas): a lista mostra os rascunhos e todas as campanhas da Meta (inclusive as criadas no Gerenciador), cada uma com "+ Conjuntos e criativos" (assistente a partir de Conjuntos; numeração continua do último [NN]; sem verba própria se a campanha for Advantage+) e "+ Criativos" (escolhe o conjunto; só a etapa Anúncios; AD continua do último número; reaproveita o formulário instantâneo ou o link que o conjunto já usa). Lido da Meta ao criar o rascunho (`lib/traffic-extend.ts`, plano com `mode`/`target`). Arquivos renomeados com o número real da campanha/conjunto/anúncio. Tudo entra ativo.

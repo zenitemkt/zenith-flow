@@ -10,6 +10,7 @@ import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { startOfDayUTC } from "@/lib/dates";
 import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
 import { prisma, type FinanceEntryStatus } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -31,7 +32,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const entry = await prisma.financeEntry.findUnique({ where: { id: params.id } });
-  if (!entry || entry.agencyId !== membership.agencyId) {
+  if (!entry || entry.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, entry.clientId))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
   // Particular de outro sócio: este login não vê nem altera.

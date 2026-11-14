@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 /** Painel de métricas (Blueprint, seção 4.6) — enviadas, lidas, clicaram, sem regra, falharam, últimos 30 dias. */
 export async function GET(request: Request) {
@@ -11,8 +12,8 @@ export async function GET(request: Request) {
   if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
 
   const clientId = new URL(request.url).searchParams.get("clientId") ?? "";
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const logs = await prisma.instagramAutomationLog.findMany({

@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { resolvePipelinePeriod } from "@/lib/pipeline-period";
 import { prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 /**
  * Detalhe de uma etapa do funil (Pipeline comercial), aberto ao clicar numa
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
   const { searchParams } = new URL(request.url);
   const stageId = searchParams.get("stageId");
   if (!stageId) {
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
   }
 
   const opportunities = await prisma.opportunity.findMany({
-    where: {
+    where: { AND: [visibleByOptionalClientWhere(hidden)],
       agencyId: membership.agencyId,
       ...periodWhere,
       ...(isWonSegment ? { status: "WON" } : { stageId, status: "OPEN" }),

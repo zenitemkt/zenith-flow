@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { buildCohortRows, startOfMonthUTC, COHORT_MONTH_WINDOW } from "@/lib/cohort";
 import { prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 function retentionCellClass(value: number | null): string {
   if (value === null) return "text-[#D0D5DD]";
@@ -16,9 +17,10 @@ export default async function CohortPage() {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const clients = await prisma.client.findMany({
-    where: { agencyId: membership.agencyId },
+    where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
     include: { statusHistory: { orderBy: { createdAt: "asc" }, select: { toStatus: true, createdAt: true } } },
   });
 

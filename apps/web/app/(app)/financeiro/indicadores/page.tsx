@@ -4,12 +4,14 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { computeDSO, computeLogoChurnRate, INDICATOR_WINDOW_DAYS } from "@/lib/finance-indicators";
 import { statusAsOf } from "@/lib/cohort";
 import { prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 export default async function IndicadoresPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const now = new Date();
   const periodStart = new Date(now.getTime() - INDICATOR_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -31,7 +33,7 @@ export default async function IndicadoresPage() {
       _sum: { amountCents: true },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: "asc" } } },
     }),
   ]);

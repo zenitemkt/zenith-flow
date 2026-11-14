@@ -16,6 +16,7 @@ import { AddLeadNoteForm } from "./AddLeadNoteForm";
 import { DeleteLeadButton } from "./DeleteLeadButton";
 import { LeadIntelligencePanel } from "./LeadIntelligencePanel";
 import { SubmissionAttribution } from "./SubmissionAttribution";
+import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   params: { id: string };
@@ -26,6 +27,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const lead = await prisma.lead.findUnique({
     where: { id: params.id },
@@ -48,11 +50,11 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
   const [opportunities, proposals, pipelineStages] = await Promise.all([
     prisma.opportunity.findMany({
-      where: { agencyId: membership.agencyId, leadId: lead.id },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, leadId: lead.id },
       include: { statusHistory: { orderBy: { createdAt: "asc" } } },
     }),
     prisma.proposal.findMany({
-      where: { agencyId: membership.agencyId, leadId: lead.id },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, leadId: lead.id },
       include: { statusHistory: { orderBy: { createdAt: "asc" } } },
     }),
     prisma.pipelineStage.findMany({

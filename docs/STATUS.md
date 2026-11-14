@@ -1,8 +1,13 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-11-12.
+Última atualização: 2026-11-13.
 
 ## Implementado
+
+- **Clientes particulares de cada sócio (2026-11-13)**: ver `docs/DECISIONS.md` (2026-11-13, "Cliente particular"). `lib/client-access.ts` calcula os clientes ocultos do login (memoizado por requisição) e expõe os filtros; aplicado nas páginas da equipe, nas rotas por id (404) e nas de criação que validam o cliente, e no `FinanceViewer` (`hiddenClientIds`).
+  - Testado: `tsc --noEmit`, `lint`, `vitest` (93, com `lib/client-access.test.ts` novo) e `next build` de `apps/web`.
+  - **Não testado ao vivo**: navegação com dois logins (Kevin/Gabriel) no navegador; depende de os sócios estarem ligados aos logins em Financeiro → Sócios.
+  - Fora do escopo: crons, webhooks, portal do cliente e a Milena (assistente por WhatsApp) não filtram; designação de funcionários por cliente fica para uma fatia futura (hoje quem não é sócio não vê os particulares).
 
 - **Central de alertas** (2026-11-12): `SystemAlert` + `lib/system-alerts.ts`, sino com abas por categoria (`packages/ui/src/shell/NotificationCenter.tsx`), página `/alertas` (resolver, ignorar, reabrir, histórico), monitor do site 2x/dia (`lib/site-monitor.ts`, `/api/cron/site-monitor`) e alertas por evento em blog, publicação social, conexão social, mini-chat do Instagram, Lead Ads e Milena.
 - **Zenite × particular, privacidade entre sócios e repasse do mês (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12,

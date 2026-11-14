@@ -28,6 +28,7 @@ import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
 import { ContentPropertiesPanel } from "./ContentPropertiesPanel";
 import { SocialPublishPanel } from "./SocialPublishPanel";
 import { platformForChannel, postFormatFor } from "@/lib/social-scheduling";
+import { getHiddenClientIds, isClientHidden, visibleByClientWhere } from "@/lib/client-access";
 
 /** Rótulos curtos da trilha de etapas — mesmos 5 baldes do quadro de Operação. */
 const STEP_LABEL: Record<string, string> = {
@@ -73,6 +74,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const item = await prisma.contentItem.findUnique({
     where: { id },
@@ -96,7 +98,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
     },
   });
 
-  if (!item || item.agencyId !== membership.agencyId) {
+  if (!item || item.agencyId !== membership.agencyId || isClientHidden(hidden, item.clientId)) {
     notFound();
   }
 
@@ -107,7 +109,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
     getMentionableMembers(membership.agencyId),
     getAgencyMembers(membership.agencyId),
     prisma.socialConnection.findMany({
-      where: { clientId: item.client.id, platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
+      where: { AND: [visibleByClientWhere(hidden)], clientId: item.client.id, platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
       select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
       orderBy: { platform: "desc" },
     }),

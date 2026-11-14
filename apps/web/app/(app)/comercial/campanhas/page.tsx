@@ -10,21 +10,23 @@ import { CampaignClientSelect } from "./CampaignClientSelect";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam, canManageIntegrations } from "@/lib/rbac";
 import { isMetaSyncStale } from "@/lib/meta-campaign-sync";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 export default async function CampaignsPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const [campaigns, clients, metaConnection] = await Promise.all([
     prisma.campaign.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId },
       include: { client: { select: { id: true, name: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

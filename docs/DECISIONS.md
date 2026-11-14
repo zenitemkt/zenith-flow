@@ -1235,6 +1235,14 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 
 
 
+## 2026-11-13 — Cliente particular: só o sócio que atende vê
+
+**Contexto**: Kevin e Gabriel querem usar o mesmo sistema para a agência (Zenite) e para os clientes particulares de cada um, sem um sistema duplicado. O campo "Quem recebe deste cliente" só mexia no financeiro.
+
+**Decisão**: cliente cuja divisão (`ClientPartnerShare`) tem um sócio só, e esse sócio ligado a um login (`FinancePartner.userId`), é visível apenas para esse login. Dividido entre sócios ou sem divisão: todos veem. Sócio sem login: todos veem (mesma regra do financeiro particular). Funcionários (não sócios) não veem particulares; designação por cliente fica para depois. A regra vale em todas as telas e rotas da equipe, inclusive indicadores (para o outro sócio é como se o cliente não existisse). No financeiro, o cliente oculto esconde até lançamentos divididos. Filtros entram como `AND: [...]` para compor com os filtros de cada tela; `findUnique` por id passa por `canSeeClient` e responde 404.
+
+**Consequência**: os números de negócio que não dependem de quem olha (`businessEntryWhere`, DRE em cache) continuam iguais para todos; um lançamento dividido de cliente particular ainda entraria neles (caso raro). Crons, webhooks, portal e a Milena não filtram. Cada consulta nova a dado de cliente nas telas da equipe precisa usar os filtros de `lib/client-access.ts`.
+
 ## 2026-11-12 — Central de alertas de sistema separada dos alertas comerciais
 
 **Contexto**: em 12/11/2026 os artigos do blog deram 404 para quem entrava em `/blog` sem barra, e ninguém foi avisado. Falhas de publicação nas redes, do mini-chat do Instagram e da Milena também só apareciam em logs.

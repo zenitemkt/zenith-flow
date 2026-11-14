@@ -26,6 +26,7 @@ import { RetentionPlanActions } from "./RetentionPlanActions";
 import { getAgencyMembers } from "@/lib/team";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam } from "@/lib/rbac";
+import { canSeeClient, getHiddenClientIds, visibleByClientWhere, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   params: { id: string };
@@ -37,6 +38,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
@@ -55,14 +57,14 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
     },
   });
 
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     notFound();
   }
 
   const [latestHealthScore, latestChurnRisk, retentionPlans, teamMembersRaw, portalMembersRaw] = await Promise.all([
-    prisma.healthScoreSnapshot.findFirst({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
-    prisma.churnRiskSnapshot.findFirst({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
-    prisma.retentionPlan.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    prisma.healthScoreSnapshot.findFirst({ where: { AND: [visibleByClientWhere(hidden)], clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    prisma.churnRiskSnapshot.findFirst({ where: { AND: [visibleByClientWhere(hidden)], clientId: client.id }, orderBy: { createdAt: "desc" } }),
+    prisma.retentionPlan.findMany({ where: { AND: [visibleByClientWhere(hidden)], clientId: client.id }, orderBy: { createdAt: "desc" } }),
     getAgencyMembers(membership.agencyId),
     client.workspaceId
       ? prisma.membership.findMany({
@@ -74,7 +76,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
   ]);
   const [negotiations, pipelineStages, unlinkedProposals] = await Promise.all([
     prisma.opportunity.findMany({
-      where: { agencyId: membership.agencyId, OR: [{ clientId: client.id }, { lead: { convertedClientId: client.id } }] },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId, OR: [{ clientId: client.id }, { lead: { convertedClientId: client.id } }] },
       include: {
         stage: { select: { name: true } },
         submission: { select: { interest: true, service: true, summary: true, source: true } },
@@ -85,7 +87,7 @@ export default async function ClientProfilePage({ params, searchParams }: PagePr
     }),
     prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, select: { id: true, name: true } }),
     prisma.proposal.findMany({
-      where: {
+      where: { AND: [visibleByOptionalClientWhere(hidden)],
         agencyId: membership.agencyId,
         opportunityId: null,
         OR: [{ clientId: client.id }, { lead: { convertedClientId: client.id } }],

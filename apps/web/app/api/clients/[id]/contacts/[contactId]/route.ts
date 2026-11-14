@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string; contactId: string };
 }
 
-async function loadContact(clientId: string, contactId: string, agencyId: string) {
+async function loadContact(clientId: string, contactId: string, agencyId: string, userId: string) {
   const contact = await prisma.clientContact.findUnique({ where: { id: contactId }, include: { client: true } });
   if (!contact || contact.clientId !== clientId || contact.client.agencyId !== agencyId) return null;
+  if (!(await canSeeClient(agencyId, userId, contact.clientId))) return null;
   return contact;
 }
 
@@ -26,7 +28,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const contact = await loadContact(params.id, params.contactId, membership.agencyId);
+  const contact = await loadContact(params.id, params.contactId, membership.agencyId, session.user.id);
   if (!contact) {
     return NextResponse.json({ error: "Contato não encontrado." }, { status: 404 });
   }
@@ -71,7 +73,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const contact = await loadContact(params.id, params.contactId, membership.agencyId);
+  const contact = await loadContact(params.id, params.contactId, membership.agencyId, session.user.id);
   if (!contact) {
     return NextResponse.json({ error: "Contato não encontrado." }, { status: 404 });
   }

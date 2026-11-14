@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 /** Contatos do mini-chat (quem já conversou), com etiquetas, respostas salvas e em que sequência estão. */
 export async function GET(request: Request) {
@@ -12,8 +13,8 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const clientId = url.searchParams.get("clientId") ?? "";
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   const tag = url.searchParams.get("tag")?.trim() || null;
   const contacts = await prisma.instagramContact.findMany({

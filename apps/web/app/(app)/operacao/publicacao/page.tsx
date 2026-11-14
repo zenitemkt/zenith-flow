@@ -7,6 +7,7 @@ import { isClientRole } from "@/lib/rbac";
 import { loadQuickPostClients } from "@/lib/quick-post-clients";
 import { RescheduleSocialPostButton } from "@/components/RescheduleSocialPostButton";
 import { PublishNowPanel } from "./PublishNowPanel";
+import { getHiddenClientIds, visibleByClientWhere } from "@/lib/client-access";
 
 const FORMAT_LABEL: Record<SocialPostFormat, string> = { FEED: "Feed", REEL: "Reels", STORY: "Story" };
 const ICON: Record<SocialPlatform, typeof Instagram> = { INSTAGRAM: Instagram, FACEBOOK: Facebook, GOOGLE_BUSINESS: MapPin };
@@ -33,6 +34,7 @@ interface PageProps {
 export default async function PublicacaoPage({ searchParams }: PageProps) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
   if (isClientRole(membership.role)) redirect("/portal");
 
   const postSelect = {
@@ -50,16 +52,16 @@ export default async function PublicacaoPage({ searchParams }: PageProps) {
   } as const;
 
   const [clients, recent, failed] = await Promise.all([
-    loadQuickPostClients(membership.agencyId, searchParams.clientId),
+    loadQuickPostClients(membership.agencyId, searchParams.clientId, hidden),
     prisma.socialPost.findMany({
-      where: { agencyId: membership.agencyId, status: { notIn: ["CANCELED", "FAILED"] } },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, status: { notIn: ["CANCELED", "FAILED"] } },
       select: postSelect,
       orderBy: { publishAt: "desc" },
       take: 15,
     }),
     // Todas as que falharam (qualquer data) — para reagendar o que ficou para trás.
     prisma.socialPost.findMany({
-      where: { agencyId: membership.agencyId, status: "FAILED" },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, status: "FAILED" },
       select: postSelect,
       orderBy: { publishAt: "asc" },
       take: 100,

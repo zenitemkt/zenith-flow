@@ -5,6 +5,7 @@ import { ClientFilterSelect } from "@/app/_components/ClientFilterSelect";
 import { UploadFileForm } from "@/app/_components/UploadFileForm";
 import { MediaAssetList } from "@/app/_components/MediaAssetList";
 import { DriveFolderCard } from "../../operacao/biblioteca/DriveFolderCard";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -15,12 +16,13 @@ export default async function ArquivosPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const activeClientId = searchParams.clientId;
 
   const [assets, clients] = await Promise.all([
     prisma.mediaAsset.findMany({
-      where: {
+      where: { AND: [visibleByOptionalClientWhere(hidden)],
         agencyId: membership.agencyId,
         ...(activeClientId ? { clientId: activeClientId } : {}),
       },
@@ -28,7 +30,7 @@ export default async function ArquivosPage({ searchParams }: PageProps) {
       orderBy: { createdAt: "desc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true, driveUrl: true },
       orderBy: { name: "asc" },
     }),

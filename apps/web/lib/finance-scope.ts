@@ -1,4 +1,5 @@
 import { prisma, type Prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds, isClientHidden } from "@/lib/client-access";
 
 /**
  * Zenite × particular (2026-11-12).
@@ -13,6 +14,10 @@ import { prisma, type Prisma } from "@zenite-mkt/db";
  * Toda leitura de `FinanceEntry` nas telas passa por um destes dois filtros:
  * `visibleEntryWhere` (o que este login pode ver) ou `businessEntryWhere`
  * (só o negócio, igual para todos — indicadores, DRE, metas).
+ *
+ * Cliente particular de outro sócio (`lib/client-access.ts`, 2026-11-13): os
+ * lançamentos desse cliente somem para este login em qualquer recorte, mesmo
+ * os divididos.
  */
 export interface ScopePartner {
   id: string;
@@ -28,24 +33,30 @@ export interface FinanceViewer {
   myPartnerId: string | null;
   /** Sócios cujo particular este login NÃO vê (ligados a outro usuário). */
   hiddenPartnerIds: string[];
+  /** Clientes particulares de outro sócio: nada deles aparece para este login. */
+  hiddenClientIds: string[];
 }
 
-export function buildFinanceViewer(userId: string, partners: ScopePartner[]): FinanceViewer {
+export function buildFinanceViewer(userId: string, partners: ScopePartner[], hiddenClientIds: string[] = []): FinanceViewer {
   return {
     userId,
     partners,
+    hiddenClientIds,
     myPartnerId: partners.find((p) => p.userId === userId)?.id ?? null,
     hiddenPartnerIds: partners.filter((p) => p.userId && p.userId !== userId).map((p) => p.id),
   };
 }
 
 export async function loadFinanceViewer(agencyId: string, userId: string): Promise<FinanceViewer> {
-  const partners = await prisma.financePartner.findMany({
-    where: { agencyId },
-    select: { id: true, name: true, active: true, userId: true },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-  });
-  return buildFinanceViewer(userId, partners);
+  const [partners, hiddenClientIds] = await Promise.all([
+    prisma.financePartner.findMany({
+      where: { agencyId },
+      select: { id: true, name: true, active: true, userId: true },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    }),
+    getHiddenClientIds(agencyId, userId),
+  ]);
+  return buildFinanceViewer(userId, partners, hiddenClientIds);
 }
 
 /** "É particular do sócio X": tem parte dele e todas as partes são dele (a parte é única por sócio). */
@@ -57,9 +68,15 @@ function noneOf(partnerIds: string[]): Prisma.FinanceEntryWhereInput {
   return partnerIds.length > 0 ? { NOT: partnerIds.map(particularOf) } : {};
 }
 
-/** O que este login pode ver: tudo, menos o particular de sócio ligado a outro usuário. */
+/** Acrescenta "fora dos clientes particulares de outro sócio" (sem mudar o filtro quando não há nenhum). */
+function withoutHiddenClients(viewer: FinanceViewer, where: Prisma.FinanceEntryWhereInput): Prisma.FinanceEntryWhereInput {
+  if (viewer.hiddenClientIds.length === 0) return where;
+  return { AND: [where, { OR: [{ clientId: null }, { clientId: { notIn: viewer.hiddenClientIds } }] }] };
+}
+
+/** O que este login pode ver: tudo, menos o particular de sócio ligado a outro usuário e os clientes particulares dele. */
 export function visibleEntryWhere(viewer: FinanceViewer): Prisma.FinanceEntryWhereInput {
-  return noneOf(viewer.hiddenPartnerIds);
+  return withoutHiddenClients(viewer, noneOf(viewer.hiddenPartnerIds));
 }
 
 /** Só o negócio: Zenite + não definido, sem particular de ninguém. Não depende de quem está olhando. */
@@ -103,9 +120,9 @@ export function parseScope(viewer: FinanceViewer, raw: string | undefined): stri
 
 /** Filtro do recorte escolhido — sempre dentro do que o login pode ver. */
 export function scopeEntryWhere(viewer: FinanceViewer, scope: string): Prisma.FinanceEntryWhereInput {
-  if (scope === SCOPE_ZENITE) return { AND: [{ partnerShares: { some: {} } }, noneOf(viewer.partners.map((p) => p.id))] };
-  if (scope === SCOPE_NONE) return { partnerShares: { none: {} } };
-  if (scope && !viewer.hiddenPartnerIds.includes(scope)) return particularOf(scope);
+  if (scope === SCOPE_ZENITE) return withoutHiddenClients(viewer, { AND: [{ partnerShares: { some: {} } }, noneOf(viewer.partners.map((p) => p.id))] });
+  if (scope === SCOPE_NONE) return withoutHiddenClients(viewer, { partnerShares: { none: {} } });
+  if (scope && !viewer.hiddenPartnerIds.includes(scope)) return withoutHiddenClients(viewer, particularOf(scope));
   return visibleEntryWhere(viewer);
 }
 
@@ -116,7 +133,8 @@ export function entryScopeOf(shares: { partnerId: string }[]): { kind: "none" | 
   return { kind: "zenite" };
 }
 
-export function canSeeEntry(viewer: FinanceViewer, shares: { partnerId: string }[]): boolean {
+export function canSeeEntry(viewer: FinanceViewer, shares: { partnerId: string }[], clientId?: string | null): boolean {
+  if (isClientHidden(viewer.hiddenClientIds, clientId)) return false;
   const scope = entryScopeOf(shares);
   return scope.kind !== "particular" || !viewer.hiddenPartnerIds.includes(scope.partnerId!);
 }
@@ -126,9 +144,10 @@ export function canSeeEntry(viewer: FinanceViewer, shares: { partnerId: string }
  * de outro sócio (a rota responde 404, como se não existisse).
  */
 export async function canActOnEntry(agencyId: string, userId: string, financeEntryId: string): Promise<boolean> {
-  const [viewer, shares] = await Promise.all([
+  const [viewer, shares, entry] = await Promise.all([
     loadFinanceViewer(agencyId, userId),
     prisma.financeEntryShare.findMany({ where: { financeEntryId }, select: { partnerId: true } }),
+    prisma.financeEntry.findUnique({ where: { id: financeEntryId }, select: { clientId: true } }),
   ]);
-  return canSeeEntry(viewer, shares);
+  return canSeeEntry(viewer, shares, entry?.clientId);
 }

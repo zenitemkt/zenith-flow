@@ -1,5 +1,6 @@
 import { prisma } from "@zenite-mkt/db";
 import { resolveTouchpoint } from "./attribution";
+import { visibleByOptionalClientWhere } from "@/lib/client-access";
 
 export interface CommercialReportFilters {
   range?: { gte?: Date; lt?: Date };
@@ -51,7 +52,7 @@ function emptyRow(label: string): Omit<ReportRow, "conversionRate"> {
 /** Campos de sessão usados por `resolveTouchpoint` — nada além disso entra na seleção enxuta abaixo. */
 const TOUCHPOINT_SESSION_SELECT = { id: true, startedAt: true, utmCampaign: true, utmSource: true, referrer: true } as const;
 
-export async function buildCommercialReport(agencyId: string, filters: CommercialReportFilters): Promise<CommercialReport> {
+export async function buildCommercialReport(agencyId: string, filters: CommercialReportFilters, hidden: string[] = []): Promise<CommercialReport> {
   // Sessão expira depois de 30min sem evento (mesma regra de sempre) — por
   // isso dá pra filtrar por `startedAt` no próprio banco sem quebrar o
   // rastreio de "último serviço visto antes do abandono" (3º loop abaixo):
@@ -84,7 +85,7 @@ export async function buildCommercialReport(agencyId: string, filters: Commercia
         },
       },
     }),
-    prisma.campaign.findMany({ where: { agencyId } }),
+    prisma.campaign.findMany({ where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId } }),
   ]);
 
   const channelMap = new Map<string, ReturnType<typeof emptyRow>>();

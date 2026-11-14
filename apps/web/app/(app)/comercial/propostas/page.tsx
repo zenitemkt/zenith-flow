@@ -6,20 +6,22 @@ import { prisma } from "@zenite-mkt/db";
 import { NewProposalModal } from "./NewProposalModal";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam } from "@/lib/rbac";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 export default async function ProposalsPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const [proposals, clients, leads] = await Promise.all([
     prisma.proposal.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId },
       include: { client: { select: { name: true } }, lead: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.client.findMany({ where: { agencyId: membership.agencyId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.client.findMany({ where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     prisma.lead.findMany({
       where: { agencyId: membership.agencyId, status: { not: "CONVERTIDO" } },
       select: { id: true, name: true },

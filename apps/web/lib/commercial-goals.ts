@@ -2,6 +2,7 @@ import { businessEntryWhere } from "@/lib/finance-scope";
 import { prisma, type CommercialGoal, type GoalMetric } from "@zenite-mkt/db";
 import { isClientActive } from "@/lib/clients";
 import { GOAL_METRIC_BY_ID, periodEnd } from "@/lib/goal-periods";
+import { visibleClientWhere } from "@/lib/client-access";
 
 export type GoalPace = "achieved" | "on_track" | "behind" | "missed" | "upcoming";
 
@@ -25,7 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Realizado de uma métrica no intervalo [start, end). `asOf` limita até onde
  * olhar (agora, quando o período ainda está em andamento).
  */
-async function computeActual(agencyId: string, metric: GoalMetric, start: Date, end: Date, asOf: Date): Promise<number> {
+async function computeActual(agencyId: string, metric: GoalMetric, start: Date, end: Date, asOf: Date, hidden: string[]): Promise<number> {
   const until = asOf < end ? asOf : end;
 
   // Metas de receita contam só a Zenite (particular de sócio fica de fora).
@@ -58,7 +59,7 @@ async function computeActual(agencyId: string, metric: GoalMetric, start: Date, 
     case "NEW_CLIENTS": {
       // Primeira vez que o cliente entrou em ONBOARDING/ATIVO — reativação não conta como cliente novo.
       const clients = await prisma.client.findMany({
-        where: { agencyId },
+        where: { AND: [visibleClientWhere(hidden)], agencyId },
         select: {
           statusHistory: {
             where: { toStatus: { in: ["ONBOARDING", "ATIVO"] } },
@@ -76,7 +77,7 @@ async function computeActual(agencyId: string, metric: GoalMetric, start: Date, 
     case "ACTIVE_CLIENTS": {
       // Status de cada cliente no instante `until`, reconstruído pelo histórico.
       const clients = await prisma.client.findMany({
-        where: { agencyId, createdAt: { lt: until } },
+        where: { AND: [visibleClientWhere(hidden)], agencyId, createdAt: { lt: until } },
         select: {
           status: true,
           statusHistory: { where: { createdAt: { lt: until } }, orderBy: { createdAt: "desc" }, take: 1, select: { toStatus: true } },
@@ -87,10 +88,10 @@ async function computeActual(agencyId: string, metric: GoalMetric, start: Date, 
   }
 }
 
-export async function computeGoalProgress(goal: CommercialGoal, now: Date = new Date()): Promise<GoalProgress> {
+export async function computeGoalProgress(goal: CommercialGoal, now: Date = new Date(), hidden: string[] = []): Promise<GoalProgress> {
   const start = goal.periodStart;
   const end = periodEnd(goal.period, start);
-  const actual = start > now ? 0 : await computeActual(goal.agencyId, goal.metric, start, end, now);
+  const actual = start > now ? 0 : await computeActual(goal.agencyId, goal.metric, start, end, now, hidden);
   const percent = goal.target > 0 ? (actual / goal.target) * 100 : 0;
   const total = end.getTime() - start.getTime();
   const elapsed = Math.min(1, Math.max(0, (now.getTime() - start.getTime()) / total));

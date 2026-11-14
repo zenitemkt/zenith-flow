@@ -23,6 +23,7 @@ import { PartnerTotalsTable } from "./PartnerTotalsTable";
 import { PayoutTable, type PayoutRow } from "./PayoutTable";
 import { ScopePills } from "./ScopePills";
 import { partnerChoices, loadPartnerLogins } from "./partner-choices";
+import { getHiddenClientIds, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 export async function FinanceListPageContent({
   type,
@@ -40,6 +41,7 @@ export async function FinanceListPageContent({
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const viewer = await loadFinanceViewer(membership.agencyId, session.user.id);
   const scope = parseScope(viewer, rawScope);
@@ -78,12 +80,12 @@ export async function FinanceListPageContent({
       orderBy: { name: "asc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     prisma.project.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

@@ -19,6 +19,7 @@ import { ChooseMetaAccountForm } from "./ChooseMetaAccountForm";
 import { MetaPixelIdForm } from "./MetaPixelIdForm";
 import { Ga4MeasurementIdForm } from "./Ga4MeasurementIdForm";
 import { SendTestMetaEventButton } from "./SendTestMetaEventButton";
+import { getHiddenClientIds, visibleByClientWhere, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 const SITE_LEAD_SOURCE = "Site Zenite Hub";
 
@@ -54,11 +55,12 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const canManage = canManageIntegrations(membership.role);
 
   const facebookPages = await prisma.socialConnection.findMany({
-    where: { agencyId: membership.agencyId, platform: "FACEBOOK" },
+    where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, platform: "FACEBOOK" },
     select: { id: true, clientId: true, name: true, leadsEnabled: true, leadsLastError: true, client: { select: { name: true } } },
     orderBy: { name: "asc" },
   });
@@ -136,7 +138,7 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
         })
       : Promise.resolve([]),
     getDeliveryQualityStats(membership.agencyId, last30Days),
-    prisma.commercialMetaEvent.findMany({ where: { agencyId: membership.agencyId }, orderBy: { attemptedAt: "desc" }, take: 12 }),
+    prisma.commercialMetaEvent.findMany({ where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId }, orderBy: { attemptedAt: "desc" }, take: 12 }),
   ]);
 
   const siteLeadConfigured =

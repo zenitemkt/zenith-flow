@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { isSafeHttpUrl, isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
 import { Prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 function text(value: unknown, maxLength = 1000): string | null {
   if (typeof value !== "string") return null;
@@ -31,8 +32,8 @@ export async function GET(request: Request) {
   if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
 
   const clientId = new URL(request.url).searchParams.get("clientId") ?? "";
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   const rules = await prisma.instagramAutomationRule.findMany({ where: { agencyId: membership.agencyId, clientId }, orderBy: { createdAt: "desc" } });
   return NextResponse.json({ rules });
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const clientId = text(body?.clientId, 60) ?? "";
-  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
 
   const triggerType = text(body?.triggerType, 30) ?? "";
   if (!VALID_TRIGGERS.includes(triggerType)) return NextResponse.json({ error: "triggerType inválido." }, { status: 400 });

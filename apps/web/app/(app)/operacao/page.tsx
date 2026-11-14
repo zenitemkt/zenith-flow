@@ -8,6 +8,7 @@ import { prisma } from "@zenite-mkt/db";
 import { ContentBoard, type BoardContentItem } from "./ContentBoard";
 import { NewContentModal } from "./NewContentModal";
 import { RefreshButton } from "./RefreshButton";
+import { getHiddenClientIds, visibleByClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { clientId?: string };
@@ -18,12 +19,13 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const activeClientId = searchParams.clientId;
 
   const [items, clients, people] = await Promise.all([
     prisma.contentItem.findMany({
-      where: {
+      where: { AND: [visibleByClientWhere(hidden)],
         agencyId: membership.agencyId,
         status: { not: "ARQUIVADO" },
         ...(activeClientId ? { clientId: activeClientId } : {}),
@@ -48,7 +50,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
       orderBy: { createdAt: "asc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId },
       select: { id: true, name: true, status: true },
       orderBy: { name: "asc" },
     }),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -22,7 +23,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const template = await prisma.recurringTaskTemplate.findUnique({ where: { id: params.id } });
-  if (!template || template.agencyId !== membership.agencyId) {
+  if (!template || template.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, template.clientId))) {
     return NextResponse.json({ error: "Recorrência não encontrada." }, { status: 404 });
   }
   if (template.status !== "ATIVO") {

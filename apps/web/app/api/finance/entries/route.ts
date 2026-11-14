@@ -7,6 +7,7 @@ import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma, type FinanceEntryType, type FinanceCategoryNature } from "@zenite-mkt/db";
 import { ShareError } from "@/lib/finance-shares";
 import { clientDefaultShares, readEntryShares, replaceEntryShares } from "@/lib/finance-partners";
+import { canSeeClient } from "@/lib/client-access";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -56,13 +57,13 @@ export async function POST(request: Request) {
 
   if (clientId) {
     const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client || client.agencyId !== membership.agencyId) {
+    if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
       return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
     }
   }
   if (projectId) {
     const project = await prisma.project.findUnique({ where: { id: projectId } });
-    if (!project || project.agencyId !== membership.agencyId) {
+    if (!project || project.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, project.clientId))) {
       return NextResponse.json({ error: "Projeto inválido." }, { status: 400 });
     }
   }

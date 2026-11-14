@@ -6,12 +6,14 @@ import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { SURVEY_STATUS_LABELS, SURVEY_STATUS_BADGE_CLASS } from "@/lib/nps";
 import { prisma } from "@zenite-mkt/db";
 import { NewSurveyModal } from "./NewSurveyModal";
+import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 
 export default async function NpsPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const canDelete = canManageTeam(membership.role);
   const [campaigns, clients] = await Promise.all([
@@ -24,7 +26,7 @@ export default async function NpsPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId, status: { in: ["ATIVO", "REATIVADO"] } },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId, status: { in: ["ATIVO", "REATIVADO"] } },
       include: { contacts: true },
       orderBy: { name: "asc" },
     }),

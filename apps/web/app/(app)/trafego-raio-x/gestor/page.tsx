@@ -12,6 +12,7 @@ import { WizardModal } from "./WizardModal";
 import { NewCampaignLanding } from "./NewCampaignLanding";
 import { TrafficSettingsForm } from "./TrafficSettingsForm";
 import { CampaignsList } from "./CampaignsList";
+import { getHiddenClientIds, visibleByClientWhere, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 const TABS = [
   { id: "criativos", label: "Criativos" },
@@ -23,6 +24,7 @@ const TABS = [
 export default async function TrafficManagerPage({ searchParams }: { searchParams: { aba?: string; campanha?: string; novo?: string; enviada?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
   const agencyId = membership.agencyId;
   const tab = TABS.some((t) => t.id === searchParams.aba) ? searchParams.aba! : "criativos";
 
@@ -31,10 +33,10 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
     prisma.adCreative.findMany({ where: { agencyId }, orderBy: { createdAt: "desc" }, take: 500 }),
     prisma.adAccountConnection.findUnique({ where: { agencyId_platform: { agencyId, platform: "META" } }, select: { externalAccountName: true, externalAccountId: true, scopes: true, status: true } }),
     prisma.trafficSettings.findUnique({ where: { agencyId } }),
-    prisma.socialConnection.findMany({ where: { agencyId, platform: "FACEBOOK", status: "ACTIVE" }, select: { id: true, name: true, leadsEnabled: true, client: { select: { name: true } } }, orderBy: { name: "asc" } }),
+    prisma.socialConnection.findMany({ where: { AND: [visibleByClientWhere(hidden)], agencyId, platform: "FACEBOOK", status: "ACTIVE" }, select: { id: true, name: true, leadsEnabled: true, client: { select: { name: true } } }, orderBy: { name: "asc" } }),
     prisma.trafficCampaign.findMany({ where: { agencyId }, orderBy: { createdAt: "desc" }, take: 50 }),
     prisma.campaign.findMany({
-      where: { agencyId, channel: "Meta Ads", externalId: { not: null }, status: { not: "ENCERRADA" } },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId, channel: "Meta Ads", externalId: { not: null }, status: { not: "ENCERRADA" } },
       orderBy: { createdAt: "desc" },
       select: { externalId: true, name: true, status: true, budgetCents: true, adSets: { where: { externalId: { not: null }, NOT: { metaStatus: { in: ["ARCHIVED", "DELETED"] } } }, orderBy: { name: "asc" }, select: { externalId: true, name: true, _count: { select: { ads: true } } } } },
     }),

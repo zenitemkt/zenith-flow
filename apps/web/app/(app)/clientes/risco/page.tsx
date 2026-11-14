@@ -3,25 +3,27 @@ import { redirect } from "next/navigation";
 import { requireSessionAndMembership } from "@/lib/session";
 import { CHURN_BAND_LABELS, CHURN_BAND_BADGE_CLASS } from "@/lib/churn-risk";
 import { prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds, visibleByClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 export default async function ChurnRiskPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const [clients, snapshots, activePlans] = await Promise.all([
     prisma.client.findMany({
-      where: { agencyId: membership.agencyId, status: { in: ["ATIVO", "REATIVADO"] } },
+      where: { AND: [visibleClientWhere(hidden)], agencyId: membership.agencyId, status: { in: ["ATIVO", "REATIVADO"] } },
       orderBy: { name: "asc" },
     }),
     prisma.churnRiskSnapshot.findMany({
-      where: { agencyId: membership.agencyId },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId },
       orderBy: { createdAt: "desc" },
       select: { clientId: true, score: true, band: true, createdAt: true },
     }),
     prisma.retentionPlan.findMany({
-      where: { agencyId: membership.agencyId, status: "ATIVO" },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, status: "ATIVO" },
       select: { clientId: true },
     }),
   ]);

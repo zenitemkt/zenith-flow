@@ -4,6 +4,7 @@ import { AlertCircle, Clock3, Eye, Sparkles } from "lucide-react";
 import { requireSessionAndMembership } from "@/lib/session";
 import { computeCommercialPendencies, refreshCommercialAlerts, type CommercialPendingItem, type CommercialPendingPriority } from "@/lib/commercial-pendencies";
 import { AlertActions } from "./AlertActions";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 const SECTIONS: { priority: CommercialPendingPriority; title: string; subtitle: string }[] = [
   { priority: "URGENT", title: "Urgente", subtitle: "Itens vencidos ou leads parados há mais de 24 horas." },
@@ -35,7 +36,7 @@ export default async function CommercialPendenciesPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   await refreshCommercialAlerts(membership.agencyId);
-  const pendencies = await computeCommercialPendencies(membership.agencyId);
+  const pendencies = await computeCommercialPendencies(membership.agencyId, await getHiddenClientIds(membership.agencyId, session.user.id));
   return (
     <div className="flex flex-col gap-6">
       <div><h1 className="text-lg font-semibold text-[#101828]">Pendências comerciais</h1><p className="text-sm text-[#667085]">O que precisa da atenção dos sócios agora — andamento comercial e sinais de comportamento no site, num só lugar.</p></div>

@@ -5,6 +5,7 @@ import { Shell } from "../_components/Shell";
 import { getCommercialPendencies } from "@/lib/commercial-pendencies";
 import { SocialPublishTicker } from "@/components/SocialPublishTicker";
 import { getDisabledAlertTypes, getSystemAlertSummary } from "@/lib/system-alerts";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -30,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [themePreference, memberships, commercialPendencies, systemAlerts] = await Promise.all([
     getUserThemePreference(session.user.id),
     getActiveMemberships(session.user.id),
-    getCommercialPendencies(membership.agencyId),
+    getCommercialPendencies(membership.agencyId, await getHiddenClientIds(membership.agencyId, session.user.id)),
     getSystemAlertSummary(membership.agencyId),
   ]);
   const commercialOff = (await getDisabledAlertTypes(membership.agencyId)).has("commercial");

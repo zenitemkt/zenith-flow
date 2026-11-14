@@ -9,6 +9,7 @@ import { CampaignStatusActions } from "./CampaignStatusActions";
 import { AddDailyMetricForm } from "./AddDailyMetricForm";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 interface PageProps {
   params: { id: string };
@@ -26,7 +27,7 @@ export default async function CampaignDetailPage({ params, searchParams }: PageP
     include: { dailyMetrics: { orderBy: { date: "desc" }, take: 30 }, client: { select: { id: true, name: true } } },
   });
 
-  if (!campaign || campaign.agencyId !== membership.agencyId) {
+  if (!campaign || campaign.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, campaign.clientId))) {
     notFound();
   }
 

@@ -5,6 +5,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -26,7 +27,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const asset = await prisma.mediaAsset.findUnique({ where: { id: params.id } });
-  if (!asset || asset.agencyId !== membership.agencyId) {
+  if (!asset || asset.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, asset.clientId))) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
   }
 
@@ -70,7 +71,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const asset = await prisma.mediaAsset.findUnique({ where: { id: params.id } });
-  if (!asset || asset.agencyId !== membership.agencyId) {
+  if (!asset || asset.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, asset.clientId))) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
   }
 

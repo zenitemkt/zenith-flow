@@ -5,6 +5,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -25,7 +26,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const entry = await prisma.financeEntry.findUnique({ where: { id: params.id } });
-  if (!entry || entry.agencyId !== membership.agencyId) {
+  if (!entry || entry.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, entry.clientId))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
   // Particular de outro sócio: este login não vê nem altera.
@@ -40,7 +41,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const asset = await prisma.mediaAsset.findUnique({ where: { id: mediaAssetId } });
-  if (!asset || asset.agencyId !== membership.agencyId) {
+  if (!asset || asset.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, asset.clientId))) {
     return NextResponse.json({ error: "Arquivo inválido." }, { status: 400 });
   }
   if (entry.clientId && asset.clientId !== entry.clientId) {
@@ -68,7 +69,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const entry = await prisma.financeEntry.findUnique({ where: { id: params.id } });
-  if (!entry || entry.agencyId !== membership.agencyId) {
+  if (!entry || entry.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, entry.clientId))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
   // Particular de outro sócio: este login não vê nem altera.

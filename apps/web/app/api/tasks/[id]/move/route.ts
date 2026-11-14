@@ -7,6 +7,7 @@ import { closeCurrentRun } from "@/lib/task-timer";
 import { getOrCreateDefaultOperationStage } from "@/lib/operation-stages";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma, type WorkItemStatus } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -48,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     where: { id: params.id },
     include: { project: true, blockedBy: true },
   });
-  if (!task || task.project.agencyId !== membership.agencyId) {
+  if (!task || task.project.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, task.project.clientId))) {
     return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
   }
   if (!canActOnTask(membership.role, session.user.id, task)) {

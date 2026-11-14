@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
 import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const opportunity = await prisma.opportunity.findUnique({ where: { id: params.id } });
-  if (!opportunity || opportunity.agencyId !== membership.agencyId) {
+  if (!opportunity || opportunity.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, opportunity.clientId))) {
     return NextResponse.json({ error: "Oportunidade não encontrada." }, { status: 404 });
   }
   if (opportunity.status !== "OPEN") {

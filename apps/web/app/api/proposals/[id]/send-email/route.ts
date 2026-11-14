@@ -6,6 +6,7 @@ import { ensureProposalSent } from "@/lib/proposals-server";
 import { sendProposalEmail, EmailNotConfiguredError } from "@/lib/email";
 import { prisma } from "@zenite-mkt/db";
 import { dispatchCommercialMetaEvent } from "@/lib/commercial-meta-events";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const proposal = await prisma.proposal.findUnique({ where: { id: params.id } });
-  if (!proposal || proposal.agencyId !== membership.agencyId) {
+  if (!proposal || proposal.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, proposal.clientId))) {
     return NextResponse.json({ error: "Proposta não encontrada." }, { status: 404 });
   }
   if (proposal.status === "ACEITA") {

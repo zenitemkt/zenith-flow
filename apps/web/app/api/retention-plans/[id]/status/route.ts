@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma, type RetentionPlanStatus } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -27,7 +28,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const plan = await prisma.retentionPlan.findUnique({ where: { id: params.id } });
-  if (!plan || plan.agencyId !== membership.agencyId) {
+  if (!plan || plan.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, plan.clientId))) {
     return NextResponse.json({ error: "Plano não encontrado." }, { status: 404 });
   }
   if (plan.status !== "ATIVO") {

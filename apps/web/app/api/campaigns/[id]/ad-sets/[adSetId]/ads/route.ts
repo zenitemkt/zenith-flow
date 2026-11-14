@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string; adSetId: string };
@@ -22,7 +23,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const adSet = await prisma.adSet.findUnique({ where: { id: params.adSetId }, include: { campaign: true } });
-  if (!adSet || adSet.campaignId !== params.id || adSet.campaign.agencyId !== membership.agencyId) {
+  if (!adSet || adSet.campaignId !== params.id || adSet.campaign.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, adSet.campaign.clientId))) {
     return NextResponse.json({ error: "Conjunto de anúncios não encontrado." }, { status: 404 });
   }
 

@@ -9,6 +9,7 @@ import {
   fetchMarketingRows,
 } from "@/lib/marketing-audience";
 import { prisma } from "@zenite-mkt/db";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: Record<string, string | string[] | undefined>;
@@ -32,7 +33,7 @@ export default async function MarketingPage({ searchParams }: PageProps) {
   const filters = parseMarketingFilters((key) => getAll(searchParams, key), hasAnyParam);
 
   const [rows, stages] = await Promise.all([
-    fetchMarketingRows(membership.agencyId, filters),
+    fetchMarketingRows(membership.agencyId, filters, await getHiddenClientIds(membership.agencyId, session.user.id)),
     prisma.pipelineStage.findMany({ where: { agencyId: membership.agencyId }, orderBy: { order: "asc" } }),
   ]);
 

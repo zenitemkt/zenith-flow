@@ -7,6 +7,7 @@ import { isClientRole } from "@/lib/rbac";
 import { financeEntriesCacheTag } from "@/lib/finance-cache";
 import { ShareError } from "@/lib/finance-shares";
 import { readEntryShares, replaceEntryShares } from "@/lib/finance-partners";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -31,7 +32,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     where: { id: params.id },
     include: { reversedBy: { select: { id: true } } },
   });
-  if (!entry || entry.agencyId !== membership.agencyId) {
+  if (!entry || entry.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, entry.clientId))) {
     return NextResponse.json({ error: "Lançamento não encontrado." }, { status: 404 });
   }
   // Particular de outro sócio: este login não vê nem altera.

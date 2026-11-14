@@ -11,6 +11,7 @@ import {
 } from "@/lib/timesheets";
 import { prisma } from "@zenite-mkt/db";
 import { TimesheetStatusActions } from "../horas/TimesheetStatusActions";
+import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
 
 interface PageProps {
   searchParams: { week?: string };
@@ -28,6 +29,7 @@ export default async function CapacidadePage({ searchParams }: PageProps) {
   if (!session || !membership) {
     redirect("/login");
   }
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
   if (!canApproveTimesheets(membership.role)) {
     redirect("/pessoas/horas");
   }
@@ -50,7 +52,7 @@ export default async function CapacidadePage({ searchParams }: PageProps) {
       _sum: { minutes: true },
     }),
     prisma.task.findMany({
-      where: { project: { agencyId: membership.agencyId }, estimatedMinutes: { not: null } },
+      where: { AND: [{ project: visibleByOptionalClientWhere(hidden) }], project: { agencyId: membership.agencyId }, estimatedMinutes: { not: null } },
       select: {
         id: true,
         estimatedMinutes: true,

@@ -6,6 +6,7 @@ import { canActOnTask } from "@/lib/tasks";
 import { closeCurrentRun } from "@/lib/task-timer";
 import { fireWorkflowTrigger } from "@/lib/workflow-engine";
 import { prisma } from "@zenite-mkt/db";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams {
   params: { id: string };
@@ -35,7 +36,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const task = await prisma.task.findUnique({ where: { id: params.id }, include: { project: true } });
-  if (!task || task.project.agencyId !== membership.agencyId) {
+  if (!task || task.project.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, task.project.clientId))) {
     return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
   }
   if (task.status !== "EM_ANDAMENTO" && task.status !== "BACKLOG") {

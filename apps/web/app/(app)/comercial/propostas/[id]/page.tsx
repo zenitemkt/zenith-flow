@@ -8,6 +8,7 @@ import { EditProposalForm } from "./EditProposalForm";
 import { CopyProposalLinkButton } from "./CopyProposalLinkButton";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 import { canManageTeam } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 interface PageProps {
   params: { id: string };
@@ -46,7 +47,7 @@ export default async function ProposalDetailPage({ params, searchParams }: PageP
     },
   });
 
-  if (!proposal || proposal.agencyId !== membership.agencyId) {
+  if (!proposal || proposal.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, proposal.clientId))) {
     notFound();
   }
 

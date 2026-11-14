@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getCurrentMembership, getServerSession } from "@/lib/session";
 import { canManageTeam, isClientRole } from "@/lib/rbac";
+import { canSeeClient } from "@/lib/client-access";
 
 interface RouteParams { params: { id: string } }
 
@@ -12,13 +13,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   const campaign = await prisma.campaign.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, clientId: true } });
-  if (!campaign || campaign.agencyId !== membership.agencyId) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
+  if (!campaign || campaign.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, campaign.clientId))) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
 
   const body = await request.json().catch(() => null);
   const clientId = typeof body?.clientId === "string" && body.clientId ? body.clientId : null;
   if (clientId) {
-    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { agencyId: true } });
-    if (!client || client.agencyId !== membership.agencyId) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
+    const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
+    if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
   }
 
   await prisma.$transaction([
@@ -44,8 +45,8 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership) return NextResponse.json({ error: "Você não pertence a uma agência." }, { status: 403 });
   if (!canManageTeam(membership.role)) return NextResponse.json({ error: "Apenas administradores podem excluir campanhas." }, { status: 403 });
-  const campaign = await prisma.campaign.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, name: true } });
-  if (!campaign || campaign.agencyId !== membership.agencyId) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
+  const campaign = await prisma.campaign.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, name: true, clientId: true } });
+  if (!campaign || campaign.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, campaign.clientId))) return NextResponse.json({ error: "Campanha não encontrada." }, { status: 404 });
 
   await prisma.$transaction(async (tx) => {
     await tx.campaign.delete({ where: { id: campaign.id } });

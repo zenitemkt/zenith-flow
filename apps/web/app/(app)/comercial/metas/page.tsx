@@ -19,6 +19,7 @@ import {
 } from "@/lib/goal-periods";
 import { GoalRing } from "./GoalRing";
 import { GoalActions, NewGoalButton } from "./GoalFormModal";
+import { getHiddenClientIds } from "@/lib/client-access";
 
 const PACE: Record<GoalPace, { label: string; color: string; badge: string }> = {
   achieved: { label: "Meta batida", color: "#16A36A", badge: "bg-[#DCFCE7] text-[#166534]" },
@@ -105,7 +106,8 @@ export default async function MetasPage({ searchParams }: { searchParams: { mes?
     },
     orderBy: [{ period: "asc" }, { createdAt: "asc" }],
   });
-  const progress = await Promise.all(goals.map((goal) => computeGoalProgress(goal, now)));
+  const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
+  const progress = await Promise.all(goals.map((goal) => computeGoalProgress(goal, now, hidden)));
 
   const prev = spYearMonth(monthStart(year, month - 1));
   const next = spYearMonth(monthStart(year, month + 1));

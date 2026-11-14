@@ -13,6 +13,7 @@ import { statusAsOf } from "./cohort";
 import { startOfWeekUTC } from "./timesheets";
 import { getAgencyMembers } from "./team";
 import type { ClientStatus, ProposalStatus, ContentStatus, WorkItemStatus, EmployeeStatus } from "@zenite-mkt/db";
+import { visibleByClientWhere, visibleByOptionalClientWhere, visibleClientWhere } from "@/lib/client-access";
 
 /**
  * X-RAY da agência (Home): consolida, por tema, os indicadores que o dono
@@ -68,7 +69,7 @@ export interface NamedCount {
   color: string;
 }
 
-export async function getXrayDashboard(agencyId: string) {
+export async function getXrayDashboard(agencyId: string, hidden: string[] = []) {
   const now = new Date();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
@@ -101,14 +102,14 @@ export async function getXrayDashboard(agencyId: string) {
     agencyMembers,
     contentByStatus,
   ] = await Promise.all([
-    prisma.client.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
+    prisma.client.groupBy({ by: ["status"], where: { AND: [visibleClientWhere(hidden)], agencyId }, _count: true }),
     prisma.healthScoreSnapshot.findMany({
-      where: { agencyId },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId },
       orderBy: { createdAt: "desc" },
       select: { clientId: true, score: true },
     }),
     prisma.churnRiskSnapshot.findMany({
-      where: { agencyId },
+      where: { AND: [visibleByClientWhere(hidden)], agencyId },
       orderBy: { createdAt: "desc" },
       select: { clientId: true, band: true },
     }),
@@ -124,14 +125,14 @@ export async function getXrayDashboard(agencyId: string) {
     }),
     prisma.pipelineStage.findMany({ where: { agencyId }, orderBy: { order: "asc" } }),
     prisma.opportunity.findMany({
-      where: { agencyId, status: "OPEN" },
+      where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId, status: "OPEN" },
       select: { stageId: true, valueCents: true },
     }),
-    prisma.opportunity.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
-    prisma.proposal.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
+    prisma.opportunity.groupBy({ by: ["status"], where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId }, _count: true }),
+    prisma.proposal.groupBy({ by: ["status"], where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId }, _count: true }),
     prisma.lead.findMany({ where: { agencyId }, select: { status: true, createdAt: true } }),
     prisma.task.findMany({
-      where: { project: { agencyId }, status: { notIn: ["CONCLUIDA", "CANCELADA"] } },
+      where: { AND: [{ project: visibleByOptionalClientWhere(hidden) }], project: { agencyId }, status: { notIn: ["CONCLUIDA", "CANCELADA"] } },
       select: { status: true, assigneeUserId: true },
     }),
     prisma.financeEntry.findMany({
@@ -167,7 +168,7 @@ export async function getXrayDashboard(agencyId: string) {
       _sum: { amountCents: true },
     }),
     prisma.client.findMany({
-      where: { agencyId },
+      where: { AND: [visibleClientWhere(hidden)], agencyId },
       select: { statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: "asc" } } },
     }),
     prisma.employee.groupBy({ by: ["status"], where: { agencyId }, _count: true }),
@@ -176,7 +177,7 @@ export async function getXrayDashboard(agencyId: string) {
       select: { userId: true, minutes: true },
     }),
     getAgencyMembers(agencyId),
-    prisma.contentItem.groupBy({ by: ["status"], where: { agencyId, status: { not: "ARQUIVADO" } }, _count: true }),
+    prisma.contentItem.groupBy({ by: ["status"], where: { AND: [visibleByClientWhere(hidden)], agencyId, status: { not: "ARQUIVADO" } }, _count: true }),
   ]);
 
   const memberNameById = new Map(agencyMembers.map((m) => [m.userId, m.name]));

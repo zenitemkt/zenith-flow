@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { createOAuthState } from "@/lib/oauth-state";
 import { buildMetaSocialAuthorizeUrl } from "@/lib/meta-social";
 import { META_LEADS_SCOPES } from "@/lib/meta-lead-ads";
+import { canSeeClient } from "@/lib/client-access";
 
 /** "Conectar Facebook/Instagram" no perfil do cliente — leva pro diálogo de autorização da Meta. */
 export async function GET(request: Request) {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const clientId = params.get("clientId") ?? "";
   const client = await prisma.client.findUnique({ where: { id: clientId }, select: { id: true, agencyId: true } });
-  if (!client || client.agencyId !== membership.agencyId) {
+  if (!client || client.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
 

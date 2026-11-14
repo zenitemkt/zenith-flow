@@ -4,6 +4,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { fetchRecentInstagramMedia } from "@/lib/instagram-automation";
+import { canSeeClient } from "@/lib/client-access";
 
 /** Posts/reels recentes — pra regra de comentário presa a um post específico (Blueprint, seção 4.6). */
 export async function GET(request: Request) {
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     prisma.socialConnection.findUnique({ where: { clientId_platform: { clientId, platform: "FACEBOOK" } } }),
     prisma.socialConnection.findUnique({ where: { clientId_platform: { clientId, platform: "INSTAGRAM" } } }),
   ]);
-  if (!facebook || facebook.agencyId !== membership.agencyId || !instagram) {
+  if (!facebook || facebook.agencyId !== membership.agencyId || !instagram || !(await canSeeClient(membership.agencyId, session.user.id, facebook.clientId))) {
     return NextResponse.json({ error: "Instagram não conectado pra este cliente." }, { status: 400 });
   }
 
