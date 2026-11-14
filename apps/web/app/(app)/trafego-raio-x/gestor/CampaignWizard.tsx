@@ -585,7 +585,7 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
                     {plan.mode !== "ADD_ADS" && <p className="text-xs text-[#667085]">
                       {a.geoMode === "RADIUS" ? `raio ${a.radiusKm} km` : "apenas a cidade"} · {a.advantage ? "Advantage+ com sugestão de " : ""}{a.ageMin}–{a.ageMax} anos{a.gender ? (a.gender === 1 ? ", homens" : ", mulheres") : ""} · {a.interests.length ? a.interests.map((i) => i.name).join(", ") : "sem interesses"}{a.temperature === "QUENTE" ? ` · remarketing: ${a.customAudiences.map((c) => c.name).join(", ") || "nenhum público"}` : ""}
                     </p>}
-                    <p className="text-xs text-[#667085]">{plan.mode === "ADD_ADS" ? `Usa ${plan.conversion === "FORM" ? "o formulário instantâneo" : "o link"} que o conjunto já tem` : plan.conversion === "FORM" ? `Formulário: ${a.form.introTitle || "(sem título)"} · ${a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas` : `Site: ${a.destinationUrl || "(sem link)"}`}</p>
+                    <p className="text-xs text-[#667085]">{plan.mode === "ADD_ADS" ? `Usa ${plan.conversion === "FORM" ? "o formulário instantâneo" : "o link"} que o conjunto já tem` : plan.conversion === "FORM" && a.form.existingFormId ? `Formulário existente: ${a.form.existingFormName || a.form.existingFormId}` : plan.conversion === "FORM" ? `Formulário: ${a.form.introTitle || "(sem título)"} · ${a.form.questions.length + (a.form.askCity ? 1 : 0) + 3} perguntas` : `Site: ${a.destinationUrl || "(sem link)"}`}</p>
                     <p className="text-xs text-[#667085]">{a.creativeIds.length} anúncio(s): {a.creativeIds.map((id) => creatives.find((c) => c.id === id)?.name ?? "?").join(", ")}</p>
                   </li>
                 ))}
@@ -842,11 +842,72 @@ function AdSetCard({ adset: a, index, label, budgetPerAdSet, defaultCities, onCh
   );
 }
 
+function ExistingFormPicker({ value, onPick }: { value: string; onPick: (form: { id: string; name: string } | null) => void }) {
+  const [forms, setForms] = useState<{ id: string; name: string; status: string; createdAt: string | null; leads: number | null }[] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    fetch("/api/traffic/lead-forms")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data?.forms)) setForms(data.forms);
+        else setError(data?.error ?? "Não consegui listar os formulários.");
+      })
+      .catch(() => setError("Erro de rede ao listar os formulários."));
+  }, []);
+  if (error) return <p className="text-sm text-[#B42318]">{error}</p>;
+  if (!forms) return <p className="text-sm text-[#667085]">Carregando formulários da página…</p>;
+  if (!forms.length) return <p className="text-sm text-[#667085]">A página ainda não tem formulários. Use &quot;Criar formulário novo&quot;.</p>;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {forms.map((f) => (
+        <button key={f.id} type="button" onClick={() => onPick(f)} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm ${value === f.id ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#EEF0F3] bg-white hover:border-[#FF2B00]"}`}>
+          <span className="min-w-0 truncate font-medium text-[#101828]">{f.name}</span>
+          <span className="shrink-0 text-xs text-[#667085]">
+            {f.status === "ACTIVE" ? "ativo" : f.status.toLowerCase()}
+            {f.leads !== null ? ` · ${f.leads} leads` : ""}
+            {f.createdAt ? ` · criado em ${new Date(f.createdAt).toLocaleDateString("pt-BR")}` : ""}
+            {value === f.id ? " · escolhido" : ""}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function FormCard({ adset: a, title, autoName, onChange }: { adset: PlanAdSet; title: string; autoName: string; onChange: (fn: (a: PlanAdSet) => PlanAdSet) => void }) {
   const setForm = (patch: Partial<PlanAdSet["form"]>) => onChange((x) => ({ ...x, form: { ...x.form, ...patch } }));
+  const [useExisting, setUseExisting] = useState(Boolean(a.form.existingFormId));
+  const sourceToggle = (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {([[false, "Criar formulário novo"], [true, "Usar formulário existente"]] as const).map(([value, label]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => {
+            setUseExisting(value);
+            if (!value) setForm({ existingFormId: "", existingFormName: "" });
+          }}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${useExisting === value ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+  if (useExisting) {
+    return (
+      <div className="rounded-xl border border-[#EEF0F3] p-4">
+        <p className="mb-3 text-sm font-semibold text-[#101828]">Formulário instantâneo · <span className="font-mono">{title}</span></p>
+        {sourceToggle}
+        <p className="mb-2 text-xs text-[#667085]">Formulários da página dos anúncios. O escolhido é usado como está na Meta, sem alterar nada nele.</p>
+        <ExistingFormPicker value={a.form.existingFormId ?? ""} onPick={(f) => setForm({ existingFormId: f?.id ?? "", existingFormName: f?.name ?? "" })} />
+      </div>
+    );
+  }
   return (
     <div className="rounded-xl border border-[#EEF0F3] p-4">
       <p className="mb-3 text-sm font-semibold text-[#101828]">Formulário instantâneo · <span className="font-mono">{title}</span></p>
+      {sourceToggle}
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div className="flex flex-col gap-3">
           <label className={LABEL}>

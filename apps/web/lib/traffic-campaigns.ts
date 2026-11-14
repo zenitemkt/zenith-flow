@@ -26,6 +26,9 @@ import {
 export interface PlanForm {
   /** Nome do formulário na Meta (Central de Formulários). Vazio = automático (campanha | conjunto | data). */
   formName?: string;
+  /** Usar um formulário que já existe na página (em vez de criar um novo). */
+  existingFormId?: string;
+  existingFormName?: string;
   introTitle: string;
   /** Saudação em lista (como o formulário da Zenite); vazio = parágrafo em introText. */
   introBullets: string[];
@@ -156,6 +159,8 @@ export function parsePlan(value: unknown): TrafficPlan {
       dailyBudget: num(a?.dailyBudget, 0, 100000, 30),
       form: {
         formName: str(f.formName, 200),
+        existingFormId: /^\d{5,25}$/.test(String(f.existingFormId ?? "")) ? String(f.existingFormId) : "",
+        existingFormName: str(f.existingFormName, 200),
         introTitle: str(f.introTitle, 60),
         introBullets: (Array.isArray(f.introBullets) ? f.introBullets : []).map((b) => str(b, 80)).slice(0, 5),
         introText: str(f.introText, 1000),
@@ -275,6 +280,8 @@ export async function validatePlan(agencyId: string, plan: TrafficPlan): Promise
     if (plan.mode !== "ADD_ADS" && a.temperature === "QUENTE" && !a.customAudiences.length) issues.push(`${label}: conjunto [QUENTE] precisa de pelo menos um público personalizado (remarketing).`);
     if (plan.mode === "ADD_ADS") {
       // Usa o formulário/link que o conjunto já tem.
+    } else if (plan.conversion === "FORM" && a.form.existingFormId) {
+      // Formulário que já existe na página: nada para preencher.
     } else if (plan.conversion === "FORM") {
       if (!a.form.introTitle || (!a.form.introText && !a.form.introBullets.some((b) => b.trim()))) issues.push(`${label}: preencha o título e a saudação do formulário.`);
       if (!a.form.thankTitle || !a.form.thankBody || !a.form.buttonUrl) issues.push(`${label}: preencha a tela de agradecimento do formulário (título, texto e link do botão).`);
@@ -373,6 +380,11 @@ export async function submitTrafficCampaign(campaignId: string, agencyId: string
       if (plan.mode === "ADD_ADS" && plan.target) {
         state.adSetId ??= plan.target.metaAdSetId ?? undefined;
         if (plan.conversion === "FORM") state.formId ??= plan.target.formId ?? undefined;
+      }
+      if (plan.conversion === "FORM" && !state.formId && a.form.existingFormId) {
+        state.formId = a.form.existingFormId;
+        progress.log.push(`Formulário existente "${a.form.existingFormName || a.form.existingFormId}" usado em ${setName}.`);
+        await save();
       }
       if (plan.conversion === "FORM" && !state.formId) {
         state.formId = await createLeadForm(pageToken, pageId, {
