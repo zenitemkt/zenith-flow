@@ -252,8 +252,8 @@ export interface AdCreativeSpec {
   advantageCreative: boolean;
 }
 
-/** Botão padrão: "Ver detalhes" (GET_DETAILS na API). */
-export const DEFAULT_CTA = "GET_DETAILS";
+/** Botão padrão: "Ver detalhes" (SEE_DETAILS na API). */
+export const DEFAULT_CTA = "SEE_DETAILS";
 
 /**
  * Melhorias do Advantage+ de criativo, todas ligadas (nomes da referência AdCreativeFeaturesSpec, v27).

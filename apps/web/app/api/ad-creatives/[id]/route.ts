@@ -3,7 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { isSafeHttpUrl } from "@/lib/instagram-flow-model";
 
-const CTAS = ["GET_DETAILS", "LEARN_MORE", "SEND_MESSAGE", "WHATSAPP_MESSAGE", "SIGN_UP", "CONTACT_US", "GET_QUOTE", "BOOK_NOW", "SHOP_NOW"];
+const CTAS = ["SEE_DETAILS", "LEARN_MORE", "SEND_MESSAGE", "WHATSAPP_MESSAGE", "SIGN_UP", "CONTACT_US", "GET_QUOTE", "BOOK_NOW", "SHOP_NOW"];
 const clean = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) || null : undefined);
 
 /** Edita os textos do anúncio de um criativo (nome, texto principal, título, descrição, link, botão). */
