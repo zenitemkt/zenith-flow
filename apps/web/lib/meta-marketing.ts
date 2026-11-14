@@ -276,6 +276,8 @@ const CREATIVE_FEATURES = [
 ];
 
 export async function createAdCreative(token: string, adAccountId: string, spec: AdCreativeSpec): Promise<string> {
+  // Criativos salvos antes da correção podem ter o código antigo do "Ver detalhes".
+  if (spec.callToAction === "GET_DETAILS") spec = { ...spec, callToAction: DEFAULT_CTA };
   const cta = spec.formId ? { type: spec.callToAction || DEFAULT_CTA, value: { lead_gen_form_id: spec.formId } } : { type: spec.callToAction || DEFAULT_CTA, value: { link: spec.linkUrl } };
   const story: Record<string, unknown> = { page_id: spec.pageId };
   if (spec.instagramUserId) story.instagram_user_id = spec.instagramUserId;
