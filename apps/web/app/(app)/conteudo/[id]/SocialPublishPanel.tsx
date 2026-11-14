@@ -81,9 +81,12 @@ export function SocialPublishPanel({
 }) {
   const router = useRouter();
   const active = connections.filter((c) => c.status === "ACTIVE");
+  /** Story só sai no Instagram (o agendador não publica story no Facebook). */
+  const allows = (p: SocialPlatform, f: SocialPostFormat) => !(f === "STORY" && p === "FACEBOOK");
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(() => {
-    const preferred = active.find((c) => c.platform === defaultPlatform);
-    return preferred ? [preferred.platform] : active.map((c) => c.platform);
+    const usable = active.filter((c) => allows(c.platform, defaultFormat));
+    const preferred = usable.find((c) => c.platform === defaultPlatform);
+    return preferred ? [preferred.platform] : usable.map((c) => c.platform);
   });
   const [format, setFormat] = useState<SocialPostFormat>(defaultFormat);
   const [caption, setCaption] = useState(defaultCaption);
@@ -97,6 +100,11 @@ export function SocialPublishPanel({
 
   function toggle(p: SocialPlatform) {
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  }
+
+  function selectFormat(f: SocialPostFormat) {
+    setFormat(f);
+    setPlatforms((prev) => prev.filter((p) => allows(p, f)));
   }
 
   async function submit(now: boolean) {
@@ -118,7 +126,7 @@ export function SocialPublishPanel({
     const res = await fetch(`/api/content/${contentId}/social-posts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platforms, format, caption, publishAt, publishAtByPlatform, now }),
+      body: JSON.stringify({ platforms, format, caption: format === "STORY" ? "" : caption, publishAt, publishAtByPlatform, now }),
     });
     const body = await res.json().catch(() => null);
     setBusy(null);
@@ -228,14 +236,15 @@ export function SocialPublishPanel({
         {connections.map((c) => {
           const Icon = ICON[c.platform];
           const on = platforms.includes(c.platform);
+          const allowed = allows(c.platform, format);
           return (
             <button
               key={c.platform}
               type="button"
-              disabled={c.status !== "ACTIVE"}
+              disabled={c.status !== "ACTIVE" || !allowed}
               onClick={() => toggle(c.platform)}
               aria-pressed={on}
-              title={c.status !== "ACTIVE" ? "Conexão com erro — reconecte no perfil do cliente" : c.name}
+              title={c.status !== "ACTIVE" ? "Conexão com erro — reconecte no perfil do cliente" : !allowed ? "Story só sai no Instagram" : c.name}
               className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:opacity-50 ${
                 on ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
               }`}
@@ -255,7 +264,7 @@ export function SocialPublishPanel({
             <button
               key={f}
               type="button"
-              onClick={() => setFormat(f)}
+              onClick={() => selectFormat(f)}
               aria-pressed={format === f}
               disabled={(f === "REEL" && !hasVideo) || (f === "STORY" && mediaCount !== 1)}
               className={`h-9 flex-1 rounded-lg text-sm font-medium disabled:opacity-40 ${
@@ -267,6 +276,9 @@ export function SocialPublishPanel({
           ))}
         </div>
         {mediaCount > 1 && format === "FEED" && <p className="text-xs text-[#667085]">{mediaCount} arquivos → sai como carrossel.</p>}
+        {format === "STORY" && connections.some((c) => c.platform === "FACEBOOK") && (
+          <p className="text-xs text-[#667085]">Story só sai no Instagram — o Facebook fica de fora.</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -278,7 +290,7 @@ export function SocialPublishPanel({
         </label>
         <textarea
           id="social-caption"
-          value={caption}
+          value={format === "STORY" ? "" : caption}
           onChange={(e) => setCaption(e.target.value)}
           rows={5}
           disabled={format === "STORY"}

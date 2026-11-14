@@ -48,8 +48,13 @@ function defaultTimeFor(date: string, client: QuickPostClient | undefined): stri
   return preferred > nowTime ? preferred : nextRoundHourSP();
 }
 
-function activePlatforms(client: QuickPostClient | undefined): SocialPlatform[] {
-  return client ? client.connections.filter((c) => c.active).map((c) => c.platform) : [];
+/** Redes que aceitam o formato. Story só sai no Instagram (o agendador não publica story no Facebook). */
+function platformAllows(platform: SocialPlatform, format: SocialPostFormat): boolean {
+  return !(format === "STORY" && platform === "FACEBOOK");
+}
+
+function activePlatforms(client: QuickPostClient | undefined, format: SocialPostFormat = "FEED"): SocialPlatform[] {
+  return client ? client.connections.filter((c) => c.active && platformAllows(c.platform, format)).map((c) => c.platform) : [];
 }
 
 /**
@@ -114,9 +119,14 @@ export function QuickPostForm({
   function selectClient(id: string) {
     const next = clients.find((c) => c.id === id);
     setClientId(id);
-    setPlatforms(activePlatforms(next));
+    setPlatforms(activePlatforms(next, format));
     setTime(defaultTimeFor(date, next));
     setOverrides({});
+  }
+
+  function selectFormat(f: SocialPostFormat) {
+    setFormat(f);
+    setPlatforms((prev) => prev.filter((p) => platformAllows(p, f)));
   }
 
   const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
@@ -166,7 +176,7 @@ export function QuickPostForm({
     if (!client) return setError("Escolha o cliente.");
     const mediaError = quickPostMediaError({ platforms, format, files });
     if (mediaError) return setError(mediaError);
-    if (caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
+    if (format !== "STORY" && caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
     if (miniChatAvailable && miniChat.enabled) {
       if (!miniChat.keyword.trim()) return setError("Mini-chat: informe a palavra-chave.");
       if (!miniChat.responseText.trim()) return setError("Mini-chat: escreva a mensagem que vai no direct.");
@@ -200,7 +210,7 @@ export function QuickPostForm({
       const created = await fetch("/api/social/quick-post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, clientId: client.id, title }),
+        body: JSON.stringify({ ...payload, clientId: client.id, title: format === "STORY" ? "" : title }),
       });
       const createdBody = await created.json().catch(() => null);
       if (!created.ok) throw new Error(createdBody?.error ?? "Não foi possível criar a publicação.");
@@ -347,14 +357,15 @@ export function QuickPostForm({
               {client.connections.map((c) => {
                 const Icon = ICON[c.platform];
                 const on = platforms.includes(c.platform);
+                const allowed = platformAllows(c.platform, format);
                 return (
                   <button
                     key={c.platform}
                     type="button"
-                    disabled={!c.active}
+                    disabled={!c.active || !allowed}
                     onClick={() => togglePlatform(c.platform)}
                     aria-pressed={on}
-                    title={c.active ? c.name : "Conexão com erro — reconecte no perfil do cliente"}
+                    title={!c.active ? "Conexão com erro — reconecte no perfil do cliente" : !allowed ? "Story só sai no Instagram" : c.name}
                     className={`flex h-10 min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:opacity-50 ${
                       on ? "border-[#101828] bg-[#101828] text-white" : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB]"
                     }`}
@@ -366,6 +377,9 @@ export function QuickPostForm({
                 );
               })}
             </div>
+            {format === "STORY" && client.connections.some((c) => c.platform === "FACEBOOK") && (
+              <p className="text-xs text-[#667085]">Story só sai no Instagram — o Facebook fica de fora.</p>
+            )}
           </div>
         )}
 
@@ -376,7 +390,7 @@ export function QuickPostForm({
               <button
                 key={f}
                 type="button"
-                onClick={() => setFormat(f)}
+                onClick={() => selectFormat(f)}
                 aria-pressed={format === f}
                 className={`h-9 rounded-lg text-sm font-medium ${
                   format === f ? "bg-[#F2F4F7] font-semibold text-[#101828] ring-1 ring-[#101828]" : "border border-[#E4E7EC] text-[#475467]"
@@ -432,7 +446,13 @@ export function QuickPostForm({
 
         <label className={`flex flex-col gap-1.5 ${FIELD_LABEL}`}>
           Título no cartão (opcional)
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Se ficar vazio, usa o começo da legenda" className={INPUT} />
+          <input
+            value={format === "STORY" ? "" : title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={format === "STORY"}
+            placeholder={format === "STORY" ? "Story não tem título nem legenda." : "Se ficar vazio, usa o começo da legenda"}
+            className={`${INPUT} disabled:bg-[#F9FAFB]`}
+          />
         </label>
 
         <div className="flex flex-col gap-1.5">
@@ -444,7 +464,7 @@ export function QuickPostForm({
           </label>
           <textarea
             id="quick-caption"
-            value={caption}
+            value={format === "STORY" ? "" : caption}
             onChange={(e) => setCaption(e.target.value)}
             rows={5}
             disabled={format === "STORY"}

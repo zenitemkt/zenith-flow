@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Alterado
+
+- **Story só no Instagram, sem título nem legenda**: na publicação direta (Calendário/Operação) e no painel de publicação do cartão, escolher Story desativa o título e a legenda (a API do Instagram não aceita legenda em story) e desativa o botão do Facebook, que é desmarcado sozinho (o agendador não publica story no Facebook). Antes, o Facebook continuava marcado e o envio parava com "Story no Facebook ainda não é suportado".
+
 ### Adicionado
 
 - **Clientes particulares de cada sócio**: cliente com "Quem recebe deste cliente" = um sócio só (ligado a um login) passa a ser só desse sócio. O outro sócio e o restante da equipe não veem o cliente nem nada dele: carteira, perfil, Operação, calendário, publicações, tarefas, recorrências, financeiro (inclusive lançamentos divididos), comercial (pipeline, propostas, campanhas, pendências, metas, relatórios), tráfego, automações, indicadores do início e exportações. Link direto responde "não encontrado". Clientes divididos (Zenite) e sem definição continuam visíveis para todos. Regra em `lib/client-access.ts`, também aplicada dentro de `lib/finance-scope.ts`.
