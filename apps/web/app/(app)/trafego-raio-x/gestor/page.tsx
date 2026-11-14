@@ -8,6 +8,8 @@ import { parseRules } from "@/lib/traffic-recommendations";
 import { DEFAULT_CITIES, emptyPlan, parsePlan, planDailyTotal } from "@/lib/traffic-campaigns";
 import { CreativeLibrary } from "./CreativeLibrary";
 import { CampaignWizard } from "./CampaignWizard";
+import { WizardModal } from "./WizardModal";
+import { NewCampaignLanding } from "./NewCampaignLanding";
 import { TrafficSettingsForm } from "./TrafficSettingsForm";
 import { CampaignsList } from "./CampaignsList";
 
@@ -87,6 +89,25 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
       )}
 
       {tab === "nova" && (
+        <NewCampaignLanding
+          drafts={campaigns
+            .filter((c) => c.status !== "SUBMITTED")
+            .map((c) => {
+              const plan = parsePlan(c.plan);
+              return {
+                id: c.id,
+                title: plan.target ? (plan.mode === "ADD_ADS" ? `Novos anúncios · ${plan.target.adSetName}` : `Novos conjuntos · ${plan.target.campaignName}`) : c.name,
+                status: c.status,
+                updatedAt: c.updatedAt.toISOString(),
+                adsets: plan.adsets.length,
+                creatives: plan.adsets.reduce((n, a) => n + a.creativeIds.length, 0),
+                lastError: c.lastError,
+              };
+            })}
+        />
+      )}
+      {tab === "nova" && (editing || searchParams.novo) && (
+        <WizardModal title={editing ? `Rascunho: ${parsePlan(editing.plan).target?.campaignName ?? editing.name}` : "Nova campanha"}>
         <CampaignWizard
           key={editing?.id ?? `new-${searchParams.novo ?? ""}`}
           campaignId={editing?.id ?? null}
@@ -98,6 +119,7 @@ export default async function TrafficManagerPage({ searchParams }: { searchParam
           driveUserEmail={settings?.driveRefreshTokenEnc ? settings.driveAccountEmail ?? "conta conectada" : null}
           creatives={creativeRows.map((c) => ({ id: c.id, name: c.name, fileName: c.fileName, kind: c.kind, width: c.width, height: c.height, status: c.status, primaryText: c.primaryText, headline: c.headline, description: c.description, linkUrl: c.linkUrl, callToAction: c.callToAction }))}
         />
+        </WizardModal>
       )}
 
       {tab === "campanhas" && searchParams.enviada && campaigns.some((c) => c.id === searchParams.enviada && c.status === "SUBMITTED") && (

@@ -185,7 +185,8 @@ export function CampaignWizard({ campaignId: initialId, initialPlan, defaultCiti
         return;
       }
     }
-    router.push(`/trafego-raio-x/gestor?aba=nova&novo=${Date.now()}`);
+    router.push("/trafego-raio-x/gestor?aba=nova");
+    router.refresh();
     router.refresh();
   }
 
