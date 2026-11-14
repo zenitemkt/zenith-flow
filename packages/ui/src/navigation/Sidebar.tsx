@@ -158,7 +158,7 @@ function SidebarHeader({
           className="flex h-11 min-w-[44px] items-center gap-2 rounded-lg px-2 text-white hover:bg-[#232532]"
         >
           <img
-            src="/logo-z.png"
+            src="/logo-z.svg"
             alt=""
             aria-hidden
             className="h-8 w-8 shrink-0 rounded-lg object-cover"

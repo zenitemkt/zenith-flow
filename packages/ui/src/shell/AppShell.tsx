@@ -109,7 +109,7 @@ export function AppShell({
           <Menu size={22} aria-hidden />
         </button>
         <span className="flex items-center gap-2 text-sm font-semibold text-[#101828] dark:text-white">
-          <img src="/logo-z.png" alt="" aria-hidden className="h-6 w-6 rounded-md object-cover" />
+          <img src="/logo-z.svg" alt="" aria-hidden className="h-6 w-6 rounded-md object-cover" />
           ZENITE MKT
         </span>
       </header>

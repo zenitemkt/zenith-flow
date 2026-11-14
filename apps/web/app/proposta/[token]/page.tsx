@@ -73,7 +73,7 @@ export default async function PropostaPage({ params }: PageProps) {
         <div className="w-full rounded-2xl border border-[#2F3140] bg-[#171821] shadow-[0_30px_80px_rgba(0,0,0,0.55)] print:w-full print:rounded-none print:border-0 print:bg-white print:shadow-none">
           <div className="flex items-center justify-between border-b border-[#2F3140] px-8 py-6 print:border-[#E4E7EC]">
             <div className="flex items-center gap-2">
-              <img src="/logo-z.png" alt="" aria-hidden className="h-8 w-8 rounded-lg object-cover" />
+              <img src="/logo-z.svg" alt="" aria-hidden className="h-8 w-8 rounded-lg object-cover" />
               <span className="text-sm font-semibold tracking-wide text-white print:text-[#101828]">ZENITE MKT</span>
             </div>
             {!invalid && <PrintProposalButton />}
