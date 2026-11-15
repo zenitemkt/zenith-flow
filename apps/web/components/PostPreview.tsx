@@ -7,6 +7,9 @@ import type { SocialPlatform, SocialPostFormat } from "@zenite-mkt/db";
 export interface PreviewMedia {
   url: string;
   isVideo: boolean;
+  /** Capa do vídeo: imagem enviada (tem prioridade) ou segundo do vídeo. */
+  poster?: string | null;
+  startAt?: number | null;
 }
 
 export interface PreviewProfile {
@@ -48,8 +51,12 @@ function Avatar({ profile, size }: { profile: PreviewProfile; size: number }) {
 }
 
 function Media({ item, className }: { item: PreviewMedia; className: string }) {
+  if (item.isVideo && item.poster) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={item.poster} alt="" className={className} />;
+  }
   return item.isVideo ? (
-    <video src={`${item.url}#t=0.1`} muted playsInline preload="metadata" className={className} />
+    <video key={item.startAt ?? 0.1} src={`${item.url}#t=${item.startAt ?? 0.1}`} muted playsInline preload="metadata" className={className} />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={item.url} alt="" className={className} />
@@ -248,6 +255,7 @@ export function PostPreview({
   caption,
   profiles,
   whenLabel,
+  igCover,
 }: {
   platforms: SocialPlatform[];
   format: SocialPostFormat;
@@ -256,6 +264,8 @@ export function PostPreview({
   profiles: Partial<Record<SocialPlatform, PreviewProfile>>;
   /** Ex.: "Agendado para 29/10 às 13:00". */
   whenLabel: string;
+  /** Capa escolhida para o vídeo único (só Instagram). */
+  igCover?: { imageUrl: string | null; seconds: number | null } | null;
 }) {
   const networks: SocialPlatform[] = platforms.filter((p) => p === "INSTAGRAM" || p === "FACEBOOK");
   const [picked, setPicked] = useState<SocialPlatform | null>(null);
@@ -263,6 +273,7 @@ export function PostPreview({
   const platform = picked && networks.includes(picked) ? picked : networks[0]!;
   const profile = profiles[platform] ?? { name: "Seu perfil" };
   const text = format === "STORY" ? "" : caption;
+  const igMedia = igCover && format !== "STORY" && media.length === 1 && media[0]!.isVideo ? [{ ...media[0]!, poster: igCover.imageUrl, startAt: igCover.seconds }] : media;
 
   return (
     <div className="mx-auto flex w-full max-w-[340px] flex-col gap-2.5">
@@ -285,8 +296,8 @@ export function PostPreview({
         )}
       </div>
 
-      {platform === "INSTAGRAM" && format === "FEED" && <InstagramFeed profile={profile} media={media} caption={text} />}
-      {platform === "INSTAGRAM" && format !== "FEED" && <VerticalFrame profile={profile} media={media} caption={text} story={format === "STORY"} />}
+      {platform === "INSTAGRAM" && format === "FEED" && <InstagramFeed profile={profile} media={igMedia} caption={text} />}
+      {platform === "INSTAGRAM" && format !== "FEED" && <VerticalFrame profile={profile} media={igMedia} caption={text} story={format === "STORY"} />}
       {platform === "FACEBOOK" && format === "STORY" && <VerticalFrame profile={profile} media={media} caption="" story />}
       {platform === "FACEBOOK" && format !== "STORY" && <FacebookPost profile={profile} media={media} caption={text} whenLabel={whenLabel} />}
 

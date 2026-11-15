@@ -60,6 +60,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     throw error;
   }
 
+  const collaborators = (Array.isArray(body?.collaborators) ? body.collaborators : [])
+    .map((x: unknown) => String(x).replace(/^@/, "").trim())
+    .filter((x: string) => /^[A-Za-z0-9._]{1,30}$/.test(x))
+    .slice(0, 3);
+  const coverOffsetMs = body?.coverOffsetMs != null && body.coverOffsetMs !== "" && Number.isFinite(Number(body.coverOffsetMs)) ? Math.max(0, Math.round(Number(body.coverOffsetMs))) : null;
+  const coverKey = typeof body?.coverKey === "string" && /^(drive:[A-Za-z0-9_-]{10,80}|[\w\/.-]{10,300})$/.test(body.coverKey) ? body.coverKey : null;
+  if (collaborators.length || coverOffsetMs !== null || coverKey) {
+    await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey } });
+  }
+
   if (!now) return NextResponse.json({ ok: true, scheduled: ids.length }, { status: 201 });
 
   // "Publicar agora": publica na hora, uma rede por vez, dentro do tempo da função.

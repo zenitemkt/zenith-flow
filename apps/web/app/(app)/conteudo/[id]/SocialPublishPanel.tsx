@@ -9,6 +9,8 @@ import type { SocialPlatform, SocialPostFormat, SocialPostStatus } from "@zenite
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 import { PostPreview, type PreviewMedia, type PreviewProfile } from "@/components/PostPreview";
 import { RescheduleSocialPostButton } from "@/components/RescheduleSocialPostButton";
+import { VideoCoverPicker, emptyCover, useCoverPreview, type CoverValue } from "@/components/VideoCoverPicker";
+import { uploadSocialMedia } from "@/lib/content-media-upload";
 
 export interface PanelConnection {
   platform: SocialPlatform;
@@ -94,6 +96,13 @@ export function SocialPublishPanel({
   const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
   const [busy, setBusy] = useState<"schedule" | "now" | string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [collabText, setCollabText] = useState("");
+  const [cover, setCover] = useState<CoverValue>(emptyCover);
+  const igOn = platforms.includes("INSTAGRAM");
+  const collabAvailable = igOn && format !== "STORY";
+  const coverAvailable = igOn && format !== "STORY" && media.length === 1 && media[0]!.isVideo;
+  const coverPreview = useCoverPreview(cover);
+  const collaborators = collabText.split(/[\s,;]+/).map((x) => x.replace(/^@/, "").trim()).filter(Boolean);
 
   function toggle(p: SocialPlatform) {
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -110,7 +119,25 @@ export function SocialPublishPanel({
     const when = platforms.map((p) => `${LABEL[p]} às ${timeOf(p)}`).join(" e ");
     if (!now && !await confirmDialog(`Agendar para ${date.split("-").reverse().join("/")} — ${when}?`)) return;
     if (now && !await confirmDialog("Publicar agora nas redes marcadas? Isso vai ao ar imediatamente.")) return;
+    if (collabAvailable && collaborators.length > 3) {
+      setMessage({ kind: "error", text: "Collab aceita no máximo 3 perfis." });
+      return;
+    }
+    if (coverAvailable && cover.mode === "image" && !cover.file) {
+      setMessage({ kind: "error", text: "Escolha a imagem da capa ou mude para Automática." });
+      return;
+    }
     setBusy(now ? "now" : "schedule");
+    let coverKey: string | null = null;
+    if (coverAvailable && cover.mode === "image" && cover.file) {
+      try {
+        coverKey = (await uploadSocialMedia(contentId, cover.file)).key;
+      } catch {
+        setBusy(null);
+        setMessage({ kind: "error", text: "Não foi possível enviar a capa." });
+        return;
+      }
+    }
     // publishAt = o mais cedo (padrão); cada rede segue o próprio horário em publishAtByPlatform.
     const earliest = Math.min(...Object.values(instants).map((d) => d.getTime()));
     const publishAt = new Date(now || !Number.isFinite(earliest) ? Date.now() : earliest).toISOString();
@@ -118,7 +145,17 @@ export function SocialPublishPanel({
     const res = await fetch(`/api/content/${contentId}/social-posts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platforms, format, caption: format === "STORY" ? "" : caption, publishAt, publishAtByPlatform, now }),
+      body: JSON.stringify({
+        platforms,
+        format,
+        caption: format === "STORY" ? "" : caption,
+        publishAt,
+        publishAtByPlatform,
+        now,
+        collaborators: collabAvailable ? collaborators : [],
+        coverOffsetMs: coverAvailable && cover.mode === "frame" ? Math.round(cover.seconds * 1000) : null,
+        coverKey,
+      }),
     });
     const body = await res.json().catch(() => null);
     setBusy(null);
@@ -317,7 +354,23 @@ export function SocialPublishPanel({
         )}
       </div>
 
+      {collabAvailable && (
+        <label className="flex flex-col gap-1 text-xs font-medium text-[#667085]">
+          Collab no Instagram (opcional)
+          <input
+            value={collabText}
+            onChange={(e) => setCollabText(e.target.value)}
+            placeholder="@perfil1, @perfil2"
+            className="h-10 w-full min-w-0 rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
+          />
+          <span className="font-normal">Até 3 perfis. Cada um recebe o convite e precisa aceitar para o post aparecer no perfil dele.</span>
+        </label>
+      )}
+
+      {coverAvailable && <VideoCoverPicker videoUrl={media[0]!.url} value={cover} onChange={setCover} />}
+
       <PostPreview
+        igCover={coverAvailable ? coverPreview : null}
         platforms={platforms}
         format={format}
         media={media}

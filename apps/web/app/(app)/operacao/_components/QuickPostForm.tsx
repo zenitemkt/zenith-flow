@@ -12,6 +12,7 @@ import { formatBytes } from "@/lib/media";
 import { quickPostMediaError } from "@/lib/social-quick-post";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 import { PostPreview, type PreviewProfile } from "@/components/PostPreview";
+import { useCoverPreview } from "@/components/VideoCoverPicker";
 
 /** Cliente com Instagram/Facebook conectado — só esses aparecem na publicação direta. */
 export interface QuickPostClient {
@@ -95,6 +96,7 @@ export function QuickPostForm({
   const [coverMode, setCoverMode] = useState<"auto" | "frame" | "image">("auto");
   const [coverSeconds, setCoverSeconds] = useState("0");
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const coverPreview = useCoverPreview({ mode: coverMode, seconds: Number(coverSeconds) || 0, file: coverFile });
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [date, setDate] = useState(startDate);
@@ -642,6 +644,7 @@ export function QuickPostForm({
       </fieldset>
       <aside className="min-w-0 md:sticky md:top-0 md:self-start">
         <PostPreview
+          igCover={coverAvailable ? coverPreview : null}
           platforms={platforms}
           format={format}
           media={previewMedia}
