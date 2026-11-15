@@ -8,6 +8,9 @@ export interface CoverValue {
   mode: CoverMode;
   seconds: number;
   file: File | null;
+  /** Capa já salva no agendamento (mantida se nenhuma imagem nova for escolhida). */
+  savedKey?: string | null;
+  savedUrl?: string | null;
 }
 
 export const emptyCover: CoverValue = { mode: "auto", seconds: 0, file: null };
@@ -77,10 +80,11 @@ export function VideoCoverPicker({ videoUrl, value, onChange }: { videoUrl: stri
       {value.mode === "image" && (
         <div className="mt-2 flex flex-col gap-2 text-xs text-[#667085]">
           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => onChange({ ...value, file: e.target.files?.[0] ?? null })} className="text-xs" />
-          {imageUrl && (
+          {(imageUrl ?? value.savedUrl) && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="Capa escolhida" className="mx-auto max-h-64 rounded-lg" />
+            <img src={(imageUrl ?? value.savedUrl)!} alt="Capa escolhida" className="mx-auto max-h-64 rounded-lg" />
           )}
+          {!imageUrl && value.savedUrl && <span>Capa atual. Escolha outro arquivo para trocar.</span>}
           Imagem vertical 9:16 (1080×1920) fica melhor.
         </div>
       )}
@@ -100,7 +104,10 @@ export function useCoverPreview(value: CoverValue) {
     setImageUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [value.mode, value.file]);
-  if (value.mode === "image") return imageUrl ? { imageUrl, seconds: null } : null;
+  if (value.mode === "image") {
+    const url = imageUrl ?? value.savedUrl ?? null;
+    return url ? { imageUrl: url, seconds: null } : null;
+  }
   if (value.mode === "frame") return { imageUrl: null, seconds: value.seconds };
   return null;
 }

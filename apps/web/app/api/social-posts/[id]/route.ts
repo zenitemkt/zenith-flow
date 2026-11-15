@@ -79,6 +79,39 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true });
   }
 
+  if (action === "update") {
+    const publishAt = new Date(typeof body?.publishAt === "string" ? body.publishAt : "");
+    if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() < Date.now() - 60_000) {
+      return NextResponse.json({ error: "Escolha uma data e hora no futuro." }, { status: 400 });
+    }
+    const format = ["FEED", "REEL", "STORY"].includes(body?.format) ? (body.format as "FEED" | "REEL" | "STORY") : post.format;
+    const caption = typeof body?.caption === "string" ? body.caption.trim() : post.caption;
+    const ig = post.platform === "INSTAGRAM";
+    const collaborators = (Array.isArray(body?.collaborators) ? body.collaborators : [])
+      .map((x: unknown) => String(x).replace(/^@/, "").trim())
+      .filter((x: string) => /^[A-Za-z0-9._]{1,30}$/.test(x))
+      .slice(0, 3);
+    const coverOffsetMs = body?.coverOffsetMs != null && body.coverOffsetMs !== "" && Number.isFinite(Number(body.coverOffsetMs)) ? Math.max(0, Math.round(Number(body.coverOffsetMs))) : null;
+    const coverKey = typeof body?.coverKey === "string" && /^(drive:[A-Za-z0-9_-]{10,80}|[\w\/.-]{10,300})$/.test(body.coverKey) ? body.coverKey : null;
+    const result = await prisma.socialPost.updateMany({
+      where: { id: post.id, status: "SCHEDULED" },
+      data: {
+        publishAt,
+        format,
+        caption: format === "STORY" ? "" : caption,
+        ...(ig ? { collaborators, coverOffsetMs, coverKey } : {}),
+        attempts: 0,
+        nextAttemptAt: null,
+        lastError: null,
+        externalContainerId: null,
+      },
+    });
+    if (result.count === 0) return NextResponse.json({ error: "Esta publicação não está mais agendada." }, { status: 409 });
+    await audit("updated", { publishAt: publishAt.toISOString(), format, collaborators: ig ? collaborators : undefined });
+    if (post.contentItemId) await syncContentDate(post.contentItemId, session.user.id);
+    return NextResponse.json({ ok: true });
+  }
+
   if (action === "reschedule") {
     const publishAt = new Date(typeof body?.publishAt === "string" ? body.publishAt : "");
     if (Number.isNaN(publishAt.getTime()) || publishAt.getTime() < Date.now() - 60_000) {
