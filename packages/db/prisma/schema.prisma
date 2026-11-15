@@ -3017,6 +3017,8 @@ model ContentVersionMedia {
   versionId   String
   version     ContentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
   key         String         @unique
+  /// Arquivo guardado no Google Drive (pastas Programados/Publicados/Falhas); a chave fica "drive:<id>".
+  driveFileId String?
   fileName    String
   contentType String
   sizeBytes   Int
@@ -3123,6 +3125,11 @@ model SocialPost {
   attempts            Int              @default(0)
   nextAttemptAt       DateTime?
   /// Container de mídia do Instagram aguardando processamento (vídeo).
+  /// Perfis colaboradores do Instagram (collab), sem @, até 3.
+  collaborators       String[]  @default([])
+  /// Capa do vídeo: momento do vídeo (ms) ou imagem ("drive:<id>" ou chave do R2).
+  coverOffsetMs       Int?
+  coverKey            String?
   externalContainerId String?
   externalPostId      String?
   permalink           String?
@@ -3584,4 +3591,18 @@ model TrafficRecommendation {
   @@index([agencyId, status])
   @@index([agencyId, type, targetId])
   @@map("traffic_recommendation")
+}
+
+
+/// Pastas do Drive compartilhado para as mídias das publicações (criadas sozinhas ao primeiro envio).
+model SocialDriveFolder {
+  id          String   @id @default(cuid())
+  agencyId    String   @unique
+  rootId      String
+  scheduledId String
+  publishedId String
+  failedId    String
+  createdAt   DateTime @default(now())
+
+  @@map("social_drive_folder")
 }

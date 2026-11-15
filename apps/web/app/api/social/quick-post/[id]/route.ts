@@ -101,6 +101,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     throw error;
   }
 
+  // Collab e capa do vídeo (só Instagram).
+  const collaborators = (Array.isArray(body?.collaborators) ? body.collaborators : [])
+    .map((c: unknown) => (typeof c === "string" ? c.trim().replace(/^@/, "") : ""))
+    .filter((c: string) => /^[A-Za-z0-9._]{1,30}$/.test(c))
+    .slice(0, 3);
+  const coverOffsetMs = Number.isFinite(Number(body?.coverOffsetMs)) && body?.coverOffsetMs !== null && body?.coverOffsetMs !== "" ? Math.max(0, Math.round(Number(body.coverOffsetMs))) : null;
+  const coverKey = typeof body?.coverKey === "string" && /^(drive:[A-Za-z0-9_-]{10,80}|[\w\/.-]{10,300})$/.test(body.coverKey) ? body.coverKey : null;
+  if (collaborators.length || coverOffsetMs !== null || coverKey) {
+    await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey } });
+  }
+
   if (miniChat) {
     const igPost = await prisma.socialPost.findFirst({ where: { id: { in: ids }, platform: "INSTAGRAM" }, select: { id: true, clientId: true } });
     if (igPost) await createPendingPostRule({ agencyId: item.agencyId, clientId: igPost.clientId, socialPostId: igPost.id, caption, miniChat });

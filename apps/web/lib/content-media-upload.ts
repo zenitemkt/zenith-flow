@@ -94,3 +94,20 @@ export async function uploadContentMedia(contentId: string, original: File): Pro
   }
   return { ...base, key: body.key };
 }
+
+/**
+ * Publicações: sobe direto para o Drive compartilhado (pasta "1 - Programados"). Se o Drive não
+ * estiver conectado (409), cai no envio antigo para o R2.
+ */
+export async function uploadSocialMedia(contentId: string, original: File): Promise<UploadedMedia> {
+  const file = await prepareImageForUpload(original);
+  const base = { fileName: file.name, contentType: file.type, sizeBytes: file.size };
+  const res = await fetch("/api/social/drive-upload", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contentId, ...base }) });
+  const body = await res.json().catch(() => null);
+  if (res.status === 409) return uploadContentMedia(contentId, original);
+  if (!res.ok) throw new Error(body?.error ?? `Não foi possível preparar o envio de "${file.name}" ao Drive.`);
+  const put = await fetch(body.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file }).catch(() => null);
+  const saved = put?.ok ? await put.json().catch(() => null) : null;
+  if (!saved?.id) throw new Error(`Não foi possível enviar "${file.name}" (${formatBytes(file.size)}) ao Drive. Tente de novo.`);
+  return { ...base, key: `drive:${saved.id}` };
+}

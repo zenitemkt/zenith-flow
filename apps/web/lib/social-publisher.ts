@@ -12,6 +12,8 @@ import {
   type PublishResult,
 } from "@/lib/meta-social";
 import { signContentMediaRead } from "@/lib/content-media-server";
+import { withAgencyDrive } from "@/lib/drive-auth";
+import { deleteTempCopies, driveIdOfKey, moveSocialDriveFiles, publicUrlForDriveFile } from "@/lib/social-drive";
 
 /**
  * Motor do agendador de redes (2026-10-20). Roda pelo cron externo
@@ -80,6 +82,14 @@ function isTokenError(error: unknown): boolean {
   return code === 190 || code === 10 || code === 200;
 }
 
+/** Depois de publicar ou falhar de vez: apaga as cópias temporárias e move os arquivos no Drive. */
+async function settleDriveFiles(post: { id: string; agencyId: string; coverKey: string | null; version: { media: { driveFileId: string | null }[] } | null }, to: "published" | "failed") {
+  const ids = [...(post.version?.media ?? []).map((m) => m.driveFileId), driveIdOfKey(post.coverKey)].filter((x): x is string => Boolean(x));
+  if (!ids.length) return;
+  await deleteTempCopies(post.id, ids);
+  await withAgencyDrive(post.agencyId, () => moveSocialDriveFiles(post.agencyId, ids, to)).catch((error) => console.error("social_drive_settle_failed", post.id, error));
+}
+
 async function runPublish(post: SocialPost, budgetMs: number): Promise<"published" | "processing" | "retried" | "failed"> {
   const full = await prisma.socialPost.findUniqueOrThrow({
     where: { id: post.id },
@@ -94,19 +104,32 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       throw new Error("A conta foi desconectada. Conecte de novo no perfil do cliente.");
     }
     const token = decryptSecret(full.connection.accessTokenEnc);
-    const media = await Promise.all(
-      (full.version?.media ?? []).map(async (m) => ({
-        url: await signContentMediaRead(m.key, MEDIA_URL_TTL_SECONDS),
-        isVideo: m.contentType.startsWith("video/"),
-      })),
-    );
+    // Arquivo no Drive: cópia temporária no R2 só para a Meta baixar (apagada depois de publicar ou falhar).
+    const finishingContainer = full.platform === "INSTAGRAM" && Boolean(full.externalContainerId);
+    const media = finishingContainer
+      ? []
+      : await Promise.all(
+          (full.version?.media ?? []).map(async (m) => ({
+            url: m.driveFileId
+              ? await withAgencyDrive(full.agencyId, () => publicUrlForDriveFile(full.id, m.driveFileId!, m.contentType))
+              : await signContentMediaRead(m.key, MEDIA_URL_TTL_SECONDS),
+            isVideo: m.contentType.startsWith("video/"),
+          })),
+        );
+    const coverDriveId = driveIdOfKey(full.coverKey);
+    const coverUrl =
+      finishingContainer || !full.coverKey
+        ? null
+        : coverDriveId
+          ? await withAgencyDrive(full.agencyId, () => publicUrlForDriveFile(full.id, coverDriveId, "image/jpeg"))
+          : await signContentMediaRead(full.coverKey, MEDIA_URL_TTL_SECONDS);
     const caption = full.caption ?? "";
 
     let result: PublishResult;
     if (full.platform === "INSTAGRAM") {
       result = full.externalContainerId
         ? await finishInstagramContainer({ igUserId: full.connection.externalId, token, containerId: full.externalContainerId, budgetMs })
-        : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs });
+        : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs });
     } else if (full.platform === "FACEBOOK") {
       result =
         full.format === "STORY"
@@ -129,6 +152,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       },
     });
     if (full.platform === "INSTAGRAM") await activatePendingPostRules(full.id, result.externalPostId ?? null, result.permalink ?? null);
+    await settleDriveFiles(full, "published");
     await prisma.auditLog.create({
       data: {
         agencyId: full.agencyId,
@@ -188,6 +212,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       where: { id: full.id },
       data: { status: "FAILED", lastError: message, nextAttemptAt: null },
     });
+    await settleDriveFiles(full, "failed");
     await raiseSystemAlert({
       agencyId: full.agencyId,
       key: `social:post:${full.id}`,

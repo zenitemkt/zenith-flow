@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { signContentMediaRead } from "@/lib/content-media-server";
+import { driveMediaResponse } from "@/lib/social-drive";
 
 interface RouteParams {
   params: { token: string; mediaId: string };
@@ -19,9 +20,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const media = await prisma.contentVersionMedia.findFirst({
     where: { id: params.mediaId, versionId: approval.contentVersionId },
-    select: { key: true },
+    select: { key: true, driveFileId: true, contentType: true, version: { select: { contentItem: { select: { agencyId: true } } } } },
   });
   if (!media) return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
 
+  if (media.driveFileId) return driveMediaResponse(media.version.contentItem.agencyId, media.driveFileId, media.contentType);
   return NextResponse.redirect(await signContentMediaRead(media.key));
 }

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { CalendarClock, Facebook, Film, ImagePlus, Instagram, MessageCircle, X, Zap } from "lucide-react";
 import type { SocialPlatform, SocialPostFormat } from "@zenite-mkt/db";
 import { CONTENT_MEDIA_MAX_FILES, isVideoType, validateContentMediaFile } from "@/lib/content-media";
-import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-upload";
+import { uploadSocialMedia, type UploadedMedia } from "@/lib/content-media-upload";
 import { formatBytes } from "@/lib/media";
 import { quickPostMediaError } from "@/lib/social-quick-post";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
@@ -90,6 +90,11 @@ export function QuickPostForm({
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(() => activePlatforms(preset));
   const [format, setFormat] = useState<SocialPostFormat>("FEED");
   const [files, setFiles] = useState<File[]>([]);
+  // Collab (até 3 perfis) e capa do vídeo, só no Instagram.
+  const [collabText, setCollabText] = useState("");
+  const [coverMode, setCoverMode] = useState<"auto" | "frame" | "image">("auto");
+  const [coverSeconds, setCoverSeconds] = useState("0");
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
   const [date, setDate] = useState(startDate);
@@ -99,6 +104,11 @@ export function QuickPostForm({
   // Mini-chat do post: palavra-chave nos comentários → resposta pública + direct automático.
   const [miniChat, setMiniChat] = useState({ enabled: false, keyword: "", responseText: "", publicReplies: "", buttons: [{ text: "", url: "" }] });
   const miniChatAvailable = platforms.includes("INSTAGRAM") && format !== "STORY";
+  const collabAvailable = miniChatAvailable;
+  const collaborators = collabText.split(/[\s,;]+/).map((c) => c.trim().replace(/^@/, "")).filter(Boolean).slice(0, 3);
+  // Capa: Instagram, vídeo único (Reels ou vídeo no feed).
+  const coverAvailable = miniChatAvailable && files.length === 1 && isVideoType(files[0]!.type);
+  const [videoDuration, setVideoDuration] = useState(0);
   const [busy, setBusy] = useState<"schedule" | "now" | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -210,7 +220,7 @@ export function QuickPostForm({
         const media: UploadedMedia[] = [];
         for (const [index, file] of files.entries()) {
           setProgress(`Enviando arte ${index + 1} de ${files.length}...`);
-          media.push(await uploadContentMedia(contentId, file));
+          media.push(await uploadSocialMedia(contentId, file));
         }
         const version = await fetch(`/api/content/${contentId}/versions`, {
           method: "POST",
@@ -223,6 +233,11 @@ export function QuickPostForm({
         }
       }
 
+      let coverKey: string | null = null;
+      if (coverAvailable && coverMode === "image" && coverFile) {
+        setProgress("Enviando a capa...");
+        coverKey = (await uploadSocialMedia(contentId, coverFile)).key;
+      }
       setProgress(now ? "Publicando..." : "Agendando...");
       const res = await fetch(`/api/social/quick-post/${contentId}`, {
         method: "POST",
@@ -230,6 +245,9 @@ export function QuickPostForm({
         body: JSON.stringify({
           ...payload,
           now,
+          collaborators: collabAvailable ? collaborators : [],
+          coverOffsetMs: coverAvailable && coverMode === "frame" ? Math.round((Number(coverSeconds.replace(",", ".")) || 0) * 1000) : null,
+          coverKey,
           miniChat: miniChatAvailable && miniChat.enabled
             ? {
                 enabled: true,
@@ -458,6 +476,55 @@ export function QuickPostForm({
             className="w-full min-w-0 resize-y rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] disabled:bg-[#F9FAFB]"
           />
         </div>
+
+        {collabAvailable && (
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+            <label className="flex flex-col gap-1 text-sm font-medium text-[#101828]">
+              Collab no Instagram (opcional)
+              <input value={collabText} onChange={(e) => setCollabText(e.target.value)} placeholder="@perfil1, @perfil2" className={INPUT} />
+              <span className="text-xs font-normal text-[#667085]">Até 3 perfis, separados por vírgula. Cada um recebe o convite no Instagram e precisa aceitar para o post aparecer no perfil dele.</span>
+            </label>
+          </div>
+        )}
+
+        {coverAvailable && (
+          <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">
+            <p className="text-sm font-medium text-[#101828]">Capa do vídeo (Instagram)</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {([["auto", "Automática"], ["frame", "Momento do vídeo"], ["image", "Enviar imagem"]] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => setCoverMode(value)} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${coverMode === value ? "bg-[#101828] text-white" : "border border-[#D0D5DD] bg-white text-[#344054]"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {coverMode === "frame" && (
+              <div className="mt-2 flex flex-col gap-2">
+                {previewMedia[0]?.isVideo && (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video
+                    src={previewMedia[0].url}
+                    muted
+                    className="max-h-48 rounded-lg bg-black"
+                    ref={(el) => {
+                      if (el && Number.isFinite(Number(coverSeconds))) el.currentTime = Number(coverSeconds) || 0;
+                    }}
+                    onLoadedMetadata={(e) => setVideoDuration(e.currentTarget.duration)}
+                  />
+                )}
+                <label className="flex items-center gap-2 text-xs text-[#344054]">
+                  <input type="range" min={0} max={Math.max(1, Math.floor(videoDuration * 10) / 10)} step={0.1} value={Number(coverSeconds) || 0} onChange={(e) => setCoverSeconds(e.target.value)} className="flex-1 accent-[#FF2B00]" />
+                  <span className="w-16 text-right">{(Number(coverSeconds) || 0).toFixed(1)} s</span>
+                </label>
+              </div>
+            )}
+            {coverMode === "image" && (
+              <label className="mt-2 flex flex-col gap-1 text-xs text-[#667085]">
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} className="text-xs" />
+                Imagem vertical 9:16 (1080×1920) fica melhor. Vira JPEG antes de enviar.
+              </label>
+            )}
+          </div>
+        )}
 
         {miniChatAvailable && (
           <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">

@@ -276,9 +276,11 @@ async function createIgItemContainer(
   igUserId: string,
   token: string,
   item: PublishMedia,
-  opts: { caption?: string; format: IgFormat; carouselItem?: boolean },
+  opts: { caption?: string; format: IgFormat; carouselItem?: boolean; collaborators?: string[]; coverUrl?: string | null; thumbOffsetMs?: number | null },
 ): Promise<string> {
   const params: Record<string, string> = { access_token: token };
+  // Collab: até 3 perfis convidados (feed e Reels; Story e itens de carrossel não aceitam).
+  if (!opts.carouselItem && opts.format !== "STORY" && opts.collaborators?.length) params.collaborators = JSON.stringify(opts.collaborators.slice(0, 3));
   if (opts.carouselItem) {
     params.is_carousel_item = "true";
     if (item.isVideo) {
@@ -293,6 +295,9 @@ async function createIgItemContainer(
     params.media_type = "REELS";
     params.video_url = item.url;
     params.share_to_feed = "true";
+    // Capa: imagem enviada ou um momento do vídeo.
+    if (opts.coverUrl) params.cover_url = opts.coverUrl;
+    else if (opts.thumbOffsetMs != null) params.thumb_offset = String(Math.max(0, Math.round(opts.thumbOffsetMs)));
   } else {
     params.image_url = item.url;
   }
@@ -313,8 +318,11 @@ export async function publishToInstagram(input: {
   media: PublishMedia[];
   format: IgFormat;
   budgetMs: number;
+  collaborators?: string[];
+  coverUrl?: string | null;
+  thumbOffsetMs?: number | null;
 }): Promise<PublishResult> {
-  const { igUserId, token, caption, media, format, budgetMs } = input;
+  const { igUserId, token, caption, media, format, budgetMs, collaborators, coverUrl, thumbOffsetMs } = input;
   if (media.length === 0) throw new Error("O Instagram exige pelo menos uma imagem ou vídeo.");
   if (format === "STORY" && media.length > 1) throw new Error("Story aceita um arquivo só.");
   const started = Date.now();
@@ -322,7 +330,7 @@ export async function publishToInstagram(input: {
 
   let containerId: string;
   if (media.length === 1) {
-    containerId = await createIgItemContainer(igUserId, token, media[0]!, { caption, format });
+    containerId = await createIgItemContainer(igUserId, token, media[0]!, { caption, format, collaborators, coverUrl, thumbOffsetMs });
   } else {
     const children: string[] = [];
     for (const item of media) children.push(await createIgItemContainer(igUserId, token, item, { format, carouselItem: true }));
@@ -337,6 +345,7 @@ export async function publishToInstagram(input: {
         media_type: "CAROUSEL",
         children: children.join(","),
         caption,
+        ...(collaborators?.length ? { collaborators: JSON.stringify(collaborators.slice(0, 3)) } : {}),
       })
     ).id;
   }

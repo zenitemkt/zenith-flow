@@ -3,6 +3,7 @@ import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { signContentMediaRead } from "@/lib/content-media-server";
+import { driveMediaResponse } from "@/lib/social-drive";
 
 interface RouteParams {
   params: { id: string };
@@ -19,6 +20,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     where: { id: params.id },
     select: {
       key: true,
+      driveFileId: true,
+      contentType: true,
       version: { select: { contentItem: { select: { agencyId: true, client: { select: { workspaceId: true } } } } } },
     },
   });
@@ -31,5 +34,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Arquivo não encontrado." }, { status: 404 });
   }
 
+  if (media.driveFileId) return driveMediaResponse(item.agencyId, media.driveFileId, media.contentType);
   return NextResponse.redirect(await signContentMediaRead(media.key));
 }

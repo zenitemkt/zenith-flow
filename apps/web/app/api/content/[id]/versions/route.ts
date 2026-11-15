@@ -42,7 +42,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     const fileName = typeof m?.fileName === "string" ? m.fileName : "";
     const contentType = typeof m?.contentType === "string" ? m.contentType : "";
     const sizeBytes = Number(m?.sizeBytes);
-    if (!key.startsWith(prefix) || !fileName || validateContentMediaFile({ name: fileName, type: contentType, size: sizeBytes })) {
+    const fromDrive = /^drive:[A-Za-z0-9_-]{10,80}$/.test(key);
+    if ((!key.startsWith(prefix) && !fromDrive) || !fileName || validateContentMediaFile({ name: fileName, type: contentType, size: sizeBytes })) {
       return NextResponse.json({ error: "Arquivo da arte inválido. Envie de novo." }, { status: 400 });
     }
     media.push({ key, fileName, contentType, sizeBytes });
@@ -76,7 +77,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         assetUrl,
         notes,
         createdByUserId: session.user.id,
-        media: { create: media.map((m, position) => ({ ...m, position })) },
+        media: { create: media.map((m, position) => ({ ...m, position, driveFileId: m.key.startsWith("drive:") ? m.key.slice(6) : null })) },
       },
     });
 
