@@ -1,7 +1,8 @@
 "use client";
 
 import { confirmDialog } from "@/lib/dialogs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { registerUnsavedGuard } from "@/lib/unsaved-guard";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -200,12 +201,42 @@ export function SocialPublishPanel({
     .map((x) => x.replace(/^@/, "").trim())
     .filter(Boolean);
 
-  async function saveChanges() {
-    if (busy) return;
+  // O que estava salvo ao abrir (ou no último "Salvar"): base para saber se há alteração pendente.
+  const snapshot = () =>
+    JSON.stringify({
+      platforms: [...platforms].sort(),
+      format,
+      caption,
+      date,
+      times: platforms.map((p) => timeOf(p)),
+      collabText,
+      mode: cover.mode,
+      seconds: cover.seconds,
+      file: cover.file?.name ?? null,
+      savedKey: cover.savedKey ?? null,
+    });
+  const baseline = useRef<string | null>(null);
+  if (baseline.current === null) baseline.current = snapshot();
+  const latest = useRef<{ dirty: () => boolean; save: () => Promise<boolean> }>({ dirty: () => false, save: async () => true });
+  latest.current = {
+    dirty: () => editing && snapshot() !== baseline.current,
+    save: () => saveChanges(true),
+  };
+  useEffect(
+    () =>
+      registerUnsavedGuard(`social-panel-${contentId}`, {
+        dirty: () => latest.current.dirty(),
+        save: () => latest.current.save(),
+      }),
+    [contentId],
+  );
+
+  async function saveChanges(fromClose = false): Promise<boolean> {
+    if (busy) return false;
     setMessage(null);
     if (collabAvailable && collaborators.length > 3) {
       setMessage({ kind: "error", text: "Collab aceita no máximo 3 perfis." });
-      return;
+      return false;
     }
     if (
       coverAvailable &&
@@ -217,23 +248,24 @@ export function SocialPublishPanel({
         kind: "error",
         text: "Escolha a imagem da capa ou mude para Automática.",
       });
-      return;
+      return false;
     }
     const targets = scheduled.filter((p) => platforms.includes(p.platform));
     if (!targets.length) {
       setMessage({ kind: "error", text: "Marque ao menos uma rede agendada." });
-      return;
+      return false;
     }
     const when = targets
       .map((p) => `${LABEL[p.platform]} às ${timeOf(p.platform)}`)
       .join(" e ");
     if (
+      !fromClose &&
       !(await confirmDialog(
         `Salvar alterações? Fica para ${date.split("-").reverse().join("/")}: ${when}.`,
         { title: "Salvar agendamento", confirmLabel: "Salvar" },
       ))
     )
-      return;
+      return false;
     setBusy("schedule");
     let coverKey: string | null =
       cover.mode === "image" ? (cover.savedKey ?? null) : null;
@@ -243,7 +275,7 @@ export function SocialPublishPanel({
       } catch {
         setBusy(null);
         setMessage({ kind: "error", text: "Não foi possível enviar a capa." });
-        return;
+        return false;
       }
     }
     for (const p of targets) {
@@ -273,12 +305,14 @@ export function SocialPublishPanel({
           text: `${LABEL[p.platform]}: ${body?.error ?? "não foi possível salvar."}`,
         });
         router.refresh();
-        return;
+        return false;
       }
     }
     setBusy(null);
     setMessage({ kind: "ok", text: "Alterações salvas." });
+    baseline.current = snapshot();
     router.refresh();
+    return true;
   }
 
   function toggle(p: SocialPlatform) {

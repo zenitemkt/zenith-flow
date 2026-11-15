@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { confirmLeave } from "@/lib/unsaved-guard";
 
 /**
  * Cartão aberto por cima do quadro. No celular vira tela cheia; no desktop é
@@ -14,10 +15,18 @@ import { X } from "lucide-react";
  */
 export function ModalOverlay({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const close = async () => {
+    if (await confirmLeave()) router.back();
+  };
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") router.back();
+      // Com uma confirmação aberta por cima, o Esc é dela.
+      if (
+        event.key === "Escape" &&
+        !document.querySelector('[role="alertdialog"]')
+      )
+        void close();
     }
     document.addEventListener("keydown", onKeyDown);
     // Trava a rolagem do quadro por trás enquanto o cartão está aberto.
@@ -27,13 +36,14 @@ export function ModalOverlay({ children }: { children: ReactNode }) {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-stretch justify-center bg-[#101828]/50 sm:items-center sm:p-6"
       onClick={(event) => {
-        if (event.target === event.currentTarget) router.back();
+        if (event.target === event.currentTarget) void close();
       }}
       role="dialog"
       aria-modal="true"
@@ -42,7 +52,7 @@ export function ModalOverlay({ children }: { children: ReactNode }) {
         <div className="flex h-12 shrink-0 items-center justify-end border-b border-[#EEF0F3] px-3 sm:px-4">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => void close()}
             aria-label="Fechar"
             className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-[#475467] hover:bg-[#F6F7FB]"
           >
