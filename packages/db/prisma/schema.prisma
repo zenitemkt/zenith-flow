@@ -310,6 +310,7 @@ enum ClientStatus {
 }
 
 model Client {
+  competitors     Competitor[]
   id                     String         @id @default(cuid())
   agencyId               String
   agency                 Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
@@ -3672,4 +3673,70 @@ model ClientDriveFolder {
   createdAt   DateTime @default(now())
 
   @@map("client_drive_folder")
+}
+
+/// Concorrente de um cliente (ou o próprio perfil do cliente, como referência). Dados públicos do Instagram.
+model Competitor {
+  id           String    @id @default(cuid())
+  agencyId     String
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  igUsername   String
+  /// Perfil do próprio cliente, usado como base de comparação.
+  isOwn        Boolean   @default(false)
+  notes        String?
+  displayName  String?
+  biography    String?
+  website      String?
+  pictureUrl   String?
+  followers    Int?
+  follows      Int?
+  mediaCount   Int?
+  lastSyncAt   DateTime?
+  lastError    String?
+  aiReport     String?
+  aiReportAt   DateTime?
+  aiReportDays Int?
+  createdAt    DateTime  @default(now())
+
+  posts     CompetitorPost[]
+  snapshots CompetitorSnapshot[]
+
+  @@unique([clientId, igUsername])
+  @@index([agencyId])
+  @@map("competitor")
+}
+
+model CompetitorPost {
+  id               String     @id @default(cuid())
+  competitorId     String
+  competitor       Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  igMediaId        String     @unique
+  caption          String?
+  mediaType        String
+  mediaProductType String?
+  mediaUrl         String?
+  thumbnailUrl     String?
+  permalink        String?
+  likeCount        Int?
+  commentsCount    Int?
+  timestamp        DateTime
+  updatedAt        DateTime   @updatedAt
+
+  @@index([competitorId, timestamp])
+  @@map("competitor_post")
+}
+
+/// Foto diária do perfil: dá o histórico de crescimento (a API não guarda o passado).
+model CompetitorSnapshot {
+  id           String     @id @default(cuid())
+  competitorId String
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  day          DateTime   @db.Date
+  followers    Int?
+  follows      Int?
+  mediaCount   Int?
+
+  @@unique([competitorId, day])
+  @@map("competitor_snapshot")
 }
