@@ -61,7 +61,10 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
     const t = setInterval(() => router.refresh(), 10_000);
     return () => clearInterval(t);
   }, [router]);
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [selected, messages.length]);
+  useEffect(() => {
+    // Chrome novo devolve uma Promise aqui; com chaves o efeito não retorna nada.
+    void endRef.current?.scrollIntoView({ block: "end" });
+  }, [selected, messages.length]);
 
   const q = query.trim().toLowerCase();
   const list = items.filter((i) => (channel === "todos" || i.channel === channel) && (!q || `${i.name} ${i.sub} ${i.preview}`.toLowerCase().includes(q)));
