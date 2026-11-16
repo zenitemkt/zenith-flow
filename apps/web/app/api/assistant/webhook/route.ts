@@ -71,8 +71,10 @@ export async function POST(request: Request) {
 
       // Coexistência: mensagem enviada pela equipe pelo app do celular. A equipe assumiu, a assistente pausa.
       for (const echo of (value.message_echoes ?? []) as WaMessage[]) {
-        const conv = echo.to ? await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: echo.to } } }) : null;
-        if (!conv) continue;
+        if (!echo.to || partners.has(echo.to)) continue;
+        const conv =
+          (await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: echo.to } } })) ??
+          (await prisma.assistantConversation.create({ data: { agencyId, phone: echo.to, mode: "human" } }));
         await prisma.assistantMessage.upsert({ where: { waMessageId: echo.id }, create: { conversationId: conv.id, role: "partner", content: describe(echo).content, waMessageId: echo.id }, update: {} });
         await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "human", replyDueAt: null } });
       }
@@ -83,8 +85,6 @@ export async function POST(request: Request) {
           if (buttonId && /^(approve|deny)_/.test(buttonId)) await handlePartnerButton(agencyId, buttonId);
           continue;
         }
-        if (!enabled) continue;
-
         let conv = await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: message.from } } });
         const isNew = !conv;
         if (!conv) conv = await prisma.assistantConversation.create({ data: { agencyId, phone: message.from, profileName: profiles.get(message.from) || null } });
@@ -92,6 +92,11 @@ export async function POST(request: Request) {
         const stored = await prisma.assistantMessage.upsert({ where: { waMessageId: message.id }, create: { conversationId: conv.id, role: "user", content, mediaId, mediaType, waMessageId: message.id }, update: {} });
         if (stored.createdAt.getTime() < Date.now() - 60_000) continue; // reenvio da Meta, já tratado
 
+        // Desligada: a conversa aparece na caixa de Conversas, mas a assistente não responde.
+        if (!enabled) {
+          await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date() } });
+          continue;
+        }
         if (buttonId && /^(confirm|cancel)_/.test(buttonId)) {
           await handleLeadButton(agencyId, buttonId);
           continue;

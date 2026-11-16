@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { recordInboxMessage } from "@/lib/social-inbox";
 import { prisma, Prisma } from "@zenite-mkt/db";
 import {
   matchInstagramRule,
@@ -90,7 +91,27 @@ export async function POST(request: Request) {
       const message = event.message as
         | { mid?: string; text?: string; is_echo?: boolean; reply_to?: { story?: unknown }; quick_reply?: { payload?: string } }
         | undefined;
-      if (!message?.mid || message.is_echo) continue;
+      // Mensagem enviada pela conta (automação ou equipe pelo app): só vai para a caixa de conversas.
+      if (message?.mid && message.is_echo) {
+        const recipientId = (event.recipient as { id?: string } | undefined)?.id;
+        const echoTarget = recipientId ? await resolveTarget(igAccountId) : null;
+        if (echoTarget && recipientId) {
+          const fromBot = await prisma.instagramAutomationLog.findFirst({ where: { sentMessageId: message.mid }, select: { id: true } });
+          await recordInboxMessage({
+            agencyId: echoTarget.agencyId,
+            clientId: echoTarget.clientId,
+            channel: "INSTAGRAM",
+            accountId: igAccountId,
+            participantId: recipientId,
+            direction: "out",
+            author: fromBot ? "bot" : "team",
+            text: message.text ?? "[mídia]",
+            externalId: message.mid,
+          }).catch((error) => console.error("inbox_echo_failed", error));
+        }
+        continue;
+      }
+      if (!message?.mid) continue;
       const triggerType = message.reply_to?.story ? "story_reply" : "direct_message";
 
       const target = await resolveTarget(igAccountId);
@@ -106,6 +127,19 @@ export async function POST(request: Request) {
       if (!claimed) continue;
 
       const contact = await touchContact(target, senderId, true);
+      await recordInboxMessage({
+        agencyId: target.agencyId,
+        clientId: target.clientId,
+        channel: "INSTAGRAM",
+        accountId: igAccountId,
+        participantId: senderId,
+        participantName: contact.name,
+        participantUsername: contact.username,
+        direction: "in",
+        author: "contact",
+        text: message.text ?? (triggerType === "story_reply" ? "[resposta ao story]" : "[mídia]"),
+        externalId: message.mid,
+      }).catch((error) => console.error("inbox_record_failed", error));
       const continued = await continueFlowWithReply({
         target,
         contact,

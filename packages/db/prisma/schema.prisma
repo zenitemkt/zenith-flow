@@ -3606,3 +3606,37 @@ model SocialDriveFolder {
 
   @@map("social_drive_folder")
 }
+
+/// Caixa de conversas: Direct do Instagram (e Messenger no futuro). WhatsApp fica em assistant_*.
+model SocialInboxThread {
+  id                  String               @id @default(cuid())
+  agencyId            String
+  clientId            String?
+  channel             String // INSTAGRAM | MESSENGER
+  accountId           String // conta que recebe (IG messaging id / Página)
+  participantId       String // IGSID / PSID de quem conversa
+  participantName     String?
+  participantUsername String?
+  lastMessageAt       DateTime             @default(now())
+  lastInboundAt       DateTime?
+  createdAt           DateTime             @default(now())
+  messages            SocialInboxMessage[]
+
+  @@unique([channel, accountId, participantId])
+  @@index([agencyId, lastMessageAt])
+  @@map("social_inbox_thread")
+}
+
+model SocialInboxMessage {
+  id         String            @id @default(cuid())
+  threadId   String
+  thread     SocialInboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  direction  String // in | out
+  author     String // contact | bot | team
+  text       String
+  externalId String?           @unique
+  createdAt  DateTime          @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("social_inbox_message")
+}
