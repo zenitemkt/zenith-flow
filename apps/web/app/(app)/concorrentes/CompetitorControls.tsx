@@ -15,7 +15,7 @@ export function CompetitorFilters({ clients, clientId, days, competitorId }: { c
     sp.set("cliente", next.cliente ?? clientId);
     sp.set("dias", String(next.dias ?? days));
     if (competitorId && !next.cliente) sp.set("c", competitorId);
-    router.push(`/clientes/concorrentes?${sp.toString()}`);
+    router.push(`/concorrentes?${sp.toString()}`);
   };
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +58,7 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
     }
     setUsername("");
     setIsOwn(false);
-    router.push(`/clientes/concorrentes?cliente=${clientId}&c=${body.id}`);
+    router.push(`/concorrentes?cliente=${clientId}&c=${body.id}`);
     router.refresh();
   }
 
@@ -100,7 +100,7 @@ export function CompetitorActions({ competitorId, days, username, hasReport }: {
     setBusy("delete");
     await fetch(`/api/competitors/${competitorId}`, { method: "DELETE" });
     setBusy(null);
-    router.push("/clientes/concorrentes");
+    router.push("/concorrentes");
     router.refresh();
   }
 

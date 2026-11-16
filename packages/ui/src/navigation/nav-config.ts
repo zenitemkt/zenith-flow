@@ -14,6 +14,7 @@ import {
   Plug,
   Settings,
   BellRing,
+  Binoculars,
 } from "lucide-react";
 import type { NavigationGroup } from "./types";
 
@@ -123,7 +124,6 @@ export const navigationGroups: NavigationGroup[] = [
         comingSoon: false,
         children: [
           { id: "clients-portfolio", label: "Carteira", href: "/clientes/carteira", comingSoon: false },
-          { id: "clients-competitors", label: "Concorrentes", href: "/clientes/concorrentes", comingSoon: false },
           { id: "clients-risk", label: "Risco de churn", href: "/clientes/risco", comingSoon: false },
           { id: "clients-onboarding", label: "Onboarding", href: "/clientes/onboarding", comingSoon: false },
           { id: "clients-contracts", label: "Contratos", href: "/clientes/contratos", comingSoon: false },
@@ -134,6 +134,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "clients-marketing", label: "Marketing", href: "/clientes/marketing", comingSoon: false },
         ],
       },
+      { id: "competitors", label: "Análise de Concorrentes", icon: Binoculars, href: "/concorrentes", comingSoon: false },
     ],
   },
   {
