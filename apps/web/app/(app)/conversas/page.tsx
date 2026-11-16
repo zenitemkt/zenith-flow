@@ -14,7 +14,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: { 
 
   const [waConvs, igThreads] = await Promise.all([
     prisma.assistantConversation.findMany({
-      where: { agencyId, messages: { some: {} } },
+      where: { agencyId },
       orderBy: { updatedAt: "desc" },
       take: 150,
       include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
