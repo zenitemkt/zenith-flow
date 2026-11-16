@@ -142,7 +142,7 @@ export async function POST(request: Request) {
           await handleLeadButton(agencyId, buttonId);
           continue;
         }
-        if (isNew && config.notifications.onNewContact) {
+        if (isNew && config.notifications.onNewContact && !partners.has(message.from)) {
           await notifyPartners(config, `${config.name}: novo contato no WhatsApp, ${profiles.get(message.from) || "sem nome"} (+${message.from}).`).catch(() => null);
         }
         if (conv.mode === "bot") {
