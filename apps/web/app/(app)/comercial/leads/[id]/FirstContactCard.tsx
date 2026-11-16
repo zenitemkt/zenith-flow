@@ -53,8 +53,8 @@ export function FirstContactCard({ leadId, phone, suggestion, status }: { leadId
               <ExternalLink size={14} aria-hidden />
               Abrir no WhatsApp
             </a>
-            <button type="button" disabled={busy || status === "waiting"} onClick={() => void handoff()} className="flex h-9 items-center gap-1.5 rounded-lg bg-[#12B76A] px-3 text-xs font-semibold text-white disabled:opacity-60">
-              {status === "waiting" ? "Enviado: Milena assume na resposta" : busy ? "Marcando..." : "Já enviei: Milena assume"}
+            <button type="button" disabled={busy} onClick={() => void handoff()} className="flex h-9 items-center gap-1.5 rounded-lg bg-[#12B76A] px-3 text-xs font-semibold text-white disabled:opacity-60">
+              {busy ? "Marcando..." : status === "waiting" ? "Marcado: Milena assume na resposta (marcar de novo)" : "Já enviei: Milena assume"}
             </button>
           </div>
         </>
