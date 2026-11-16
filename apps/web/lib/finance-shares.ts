@@ -114,6 +114,21 @@ export function splitValueToBody(value: SplitFormValue): { partnerId: string; am
     .map((s) => ({ partnerId: s.partnerId, amount: s.cents! / 100 }));
 }
 
+/** Divisão padrão do cliente (pesos) → porcentagens no formulário, somando 100. */
+export function splitPercentFromShares(shares: ShareInput[]): SplitFormValue {
+  if (shares.length <= 1) return splitValueFromShares(shares);
+  const total = shares.reduce((acc, s) => acc + Math.abs(s.amountCents), 0) || 1;
+  const basis = shares.map((s) => Math.round((Math.abs(s.amountCents) / total) * 10000));
+  basis[0]! += 10000 - basis.reduce((a, b) => a + b, 0);
+  return { choice: "split", amounts: Object.fromEntries(shares.map((s, i) => [s.partnerId, centsToInput(basis[i]!)])) };
+}
+
+/** Partes iguais em centavos (o resto vai para os primeiros). */
+export function equalParts(totalCents: number, count: number): number[] {
+  const base = Math.floor(totalCents / count);
+  return Array.from({ length: count }, (_, i) => base + (i < totalCents - base * count ? 1 : 0));
+}
+
 /** Soma (centavos) do que já foi digitado no modo dividido. */
 export function splitTypedCents(value: SplitFormValue): number {
   return Object.values(value.amounts).reduce((acc, text) => acc + Math.max(0, amountInputToCents(text) ?? 0), 0);

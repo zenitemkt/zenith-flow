@@ -9,6 +9,7 @@ import { SOCIAL_NETWORKS, type SocialNetworkId } from "@/lib/clients";
 import {
   EMPTY_SPLIT,
   splitValueFromShares,
+  splitPercentFromShares,
   splitValueToBody,
   type SplitFormValue,
 } from "@/lib/finance-shares";
@@ -253,7 +254,7 @@ export function ClientFormModal({
         if (cancelled || !Array.isArray(body?.partners)) return;
         setPartners(body.partners);
         setSplit(
-          splitValueFromShares(
+          splitPercentFromShares(
             Array.isArray(body.clientShares) ? body.clientShares : [],
           ),
         );
@@ -514,7 +515,8 @@ export function ClientFormModal({
             value={split}
             onChange={setSplit}
             label="Quem recebe deste cliente"
-            hint="Um sócio só, ou dividido: informe quanto fica com cada um (ex.: de R$ 1.500, 1.000 e 500). Os recebimentos deste cliente já vêm divididos nessa proporção."
+            percent
+            hint="Um sócio só, ou dividido em porcentagem (ex.: 50% e 50%). Os recebimentos deste cliente já vêm divididos nessa proporção."
             idPrefix="client-split"
           />
         )}
