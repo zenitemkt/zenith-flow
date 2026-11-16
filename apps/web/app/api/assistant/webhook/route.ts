@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { raiseSystemAlert } from "@/lib/system-alerts";
 import { prisma } from "@zenite-mkt/db";
 import { loadAssistant } from "@/lib/assistant/agent";
 import { assistantAgencyId } from "@/lib/assistant/calendar";
@@ -57,7 +58,22 @@ function describe(m: WaMessage): { content: string; mediaId: string | null; medi
 
 export async function POST(request: Request) {
   const raw = await request.text();
-  if (!verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"))) return new Response("invalid signature", { status: 401 });
+  if (!verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"))) {
+    // Chave secreta do app errada: a Meta entrega, mas o sistema recusa. Avisa no sino para não ficar mudo.
+    const alertAgency = assistantAgencyId();
+    if (alertAgency && request.headers.get("x-hub-signature-256")) {
+      await raiseSystemAlert({
+        agencyId: alertAgency,
+        key: "assistant:webhook-signature",
+        category: "AUTOMATION",
+        severity: "CRITICAL",
+        title: "WhatsApp: mensagens recusadas pela assinatura",
+        detail: "A chave secreta do app (ASSISTANT_WA_APP_SECRET) não bate com o app da Meta que envia o webhook.",
+        href: "/automacoes/assistente",
+      }).catch(() => null);
+    }
+    return new Response("invalid signature", { status: 401 });
+  }
   const agencyId = assistantAgencyId();
   if (!agencyId) return NextResponse.json({ ok: true });
   const { enabled, config } = await loadAssistant(agencyId);
