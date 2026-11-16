@@ -25,7 +25,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
   const conv = await prisma.assistantConversation.upsert({
     where: { agencyId_phone: { agencyId, phone } },
     create: { agencyId, phone, leadId: lead.id, profileName: lead.name, mode: "bot", autoTakeoverAt: now },
-    update: { leadId: lead.id, mode: "bot", autoTakeoverAt: now, replyDueAt: null, failures: 0 },
+    update: { leadId: lead.id, profileName: lead.name, mode: "bot", autoTakeoverAt: now, replyDueAt: null, failures: 0 },
   });
   // Mensagens que a equipe já mandou antes do clique (e sem resposta do contato) passam a contar como da Milena.
   const firstReply = await prisma.assistantMessage.findFirst({ where: { conversationId: conv.id, role: "user" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } });

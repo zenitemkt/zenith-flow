@@ -26,6 +26,15 @@ export default async function ConversasPage({ searchParams }: { searchParams: { 
       include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
     }),
   ]);
+  // Nome do lead do CRM (pelo vínculo da conversa ou pelo telefone) tem prioridade sobre o perfil do WhatsApp.
+  const crmLeads = waConvs.length
+    ? await prisma.lead.findMany({
+        where: { agencyId, OR: [{ id: { in: waConvs.map((c) => c.leadId).filter((x): x is string => Boolean(x)) } }, { phone: { in: waConvs.map((c) => `+${c.phone}`) } }] },
+        select: { id: true, name: true, phone: true },
+      })
+    : [];
+  const leadNameById = new Map(crmLeads.map((l) => [l.id, l.name]));
+  const leadNameByPhone = new Map(crmLeads.filter((l) => l.phone).map((l) => [l.phone!.replace(/\D/g, ""), l.name]));
   const clientIds = Array.from(new Set(igThreads.map((t) => t.clientId).filter((x): x is string => Boolean(x))));
   const clients = clientIds.length ? await prisma.client.findMany({ where: { id: { in: clientIds } }, select: { id: true, name: true } }) : [];
   const clientName = new Map(clients.map((c) => [c.id, c.name]));
@@ -34,7 +43,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: { 
     ...waConvs.map((c) => ({
       key: `wa:${c.id}`,
       channel: "WHATSAPP" as const,
-      name: c.profileName || `+${c.phone}`,
+      name: (c.leadId && leadNameById.get(c.leadId)) || leadNameByPhone.get(c.phone) || c.profileName || `+${c.phone}`,
       sub: `+${c.phone}`,
       preview: c.messages[0]?.content ?? "",
       lastAt: (c.messages[0]?.createdAt ?? c.updatedAt).toISOString(),
