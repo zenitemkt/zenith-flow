@@ -60,6 +60,7 @@ async function fetchDiscovery(igUserId: string, token: string, username: string,
   if (!res.ok || !data.business_discovery) {
     const message: string = data?.error?.error_user_msg || data?.error?.message || `Erro ${res.status}`;
     if (/cannot be found|not found|does not exist|Invalid user id/i.test(message)) throw new Error(`@${username} não foi encontrado, ou é conta pessoal ou privada. Só contas comerciais e de criador podem ser analisadas.`);
+    if (data?.error?.code === 10 || /permission/i.test(message)) throw new Error("O Instagram conectado ainda não tem a permissão de leitura de outros perfis (instagram_manage_insights). Adicione a permissão no app da Meta e reconecte o Instagram do cliente.");
     throw new Error(`Instagram: ${message}`);
   }
   return data.business_discovery as Discovery;

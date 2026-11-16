@@ -45,7 +45,10 @@ export function buildMetaSocialAuthorizeUrl(state: string, extraScopes: readonly
   url.searchParams.set("client_id", requireEnv("META_APP_ID"));
   url.searchParams.set("redirect_uri", getMetaOAuthRedirectUri());
   url.searchParams.set("state", state);
-  url.searchParams.set("scope", [...META_SOCIAL_SCOPES, ...extraScopes].join(","));
+  // Permissões extras ligadas por variável (ex.: instagram_manage_insights para a Análise de Concorrentes):
+  // só entram depois de adicionadas ao app na Meta, senão a tela de autorização dá "Invalid Scopes".
+  const envScopes = (process.env.META_SOCIAL_EXTRA_SCOPES ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  url.searchParams.set("scope", Array.from(new Set([...META_SOCIAL_SCOPES, ...extraScopes, ...envScopes])).join(","));
   url.searchParams.set("response_type", "code");
   // Sempre mostra a tela de escolha de Páginas, mesmo que já tenha autorizado antes (pra incluir Páginas novas).
   url.searchParams.set("auth_type", "rerequest");
