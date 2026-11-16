@@ -14,6 +14,8 @@ import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
 import { AddLeadNoteForm } from "./AddLeadNoteForm";
 import { DeleteLeadButton } from "./DeleteLeadButton";
+import { MilenaStartButton } from "./MilenaStartButton";
+import { FORM_TEMPLATE_TEXT, firstName, topicOf } from "@/lib/assistant/form-outreach";
 import { LeadIntelligencePanel } from "./LeadIntelligencePanel";
 import { SubmissionAttribution } from "./SubmissionAttribution";
 import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
@@ -227,6 +229,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-col items-end gap-2">
           <LeadStatusActions leadId={lead.id} options={LEAD_STATUS_TRANSITIONS[lead.status]} />
+          {(lead.phone || lead.phones.length > 0) && <MilenaStartButton leadId={lead.id} preview={FORM_TEMPLATE_TEXT(firstName(lead.name), topicOf(lead.submissions[0]?.service))} />}
           {lead.status === "QUALIFICADO" && <ConvertLeadButton leadId={lead.id} />}
           {canManageTeam(membership.role) && <DeleteLeadButton leadId={lead.id} leadName={lead.name} />}
         </div>

@@ -133,7 +133,7 @@ ${c.extraInstructions ? `## Ajustes da equipe (têm prioridade sobre qualquer re
 ## Contexto desta conversa
 Agora: ${today} (Brasília).
 ${ctx.classification ? `Classificação atual: ${ctx.classification}.` : "Ainda não classificado."}
-${ctx.leadSummary ? `Dados do card no Zenite Flow:\n${ctx.leadSummary}` : "Sem card no Zenite Flow ainda."}
+${ctx.leadSummary ? `Dados do card no Zenite Flow:\n${ctx.leadSummary}\nSe aí tiver respostas de formulário (cidade, serviço, verba, equipe, Instagram), use com naturalidade: não pergunte de novo o que já foi respondido e retome como quem lembra do que a pessoa contou ("você comentou que..."), sem listar as respostas nem dizer que analisou um formulário.` : "Sem card no Zenite Flow ainda."}
 ${ctx.upcomingBooking ? `Reunião marcada: ${ctx.upcomingBooking}.` : ""}
 `.trim().replace(/ [—–] /g, ", ");
 }

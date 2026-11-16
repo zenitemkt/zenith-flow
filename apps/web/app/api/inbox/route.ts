@@ -30,7 +30,10 @@ export async function POST(request: Request) {
     }
     if (body?.action === "mode") {
       const mode = body.mode === "bot" ? "bot" : "human";
-      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, replyDueAt: null } });
+      // Devolvida para a Milena com mensagem do contato sem resposta: ela responde em seguida.
+      const last = mode === "bot" ? await prisma.assistantMessage.findFirst({ where: { conversationId: conv.id }, orderBy: { createdAt: "desc" } }) : null;
+      const pending = last?.role === "user" && conv.lastInboundAt && Date.now() - conv.lastInboundAt.getTime() < 24 * 3600_000;
+      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, replyDueAt: pending ? new Date() : null } });
       return NextResponse.json({ ok: true });
     }
     if (!text) return NextResponse.json({ error: "Escreva a mensagem." }, { status: 400 });
