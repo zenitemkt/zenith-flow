@@ -102,7 +102,7 @@ function PageRow({ page, canManage }: { page: MetaLeadPage; canManage: boolean }
                 disabled={busy !== null}
                 onClick={() =>
                   run("import", async () => {
-                    const r = await call("POST");
+                    const r = await call("POST", {});
                     setMessage(`${r.imported} importados, ${r.duplicate} já estavam no CRM${r.failed ? `, ${r.failed} com falha` : ""} (${r.forms} formulários).`);
                     router.refresh();
                   })
