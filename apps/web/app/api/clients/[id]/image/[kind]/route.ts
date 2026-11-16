@@ -22,6 +22,10 @@ function parseKind(kind: string): ImageKind | null {
 
 const KEY_FIELD = { avatar: "avatarKey", banner: "bannerKey" } as const;
 
+/** Imagens prontas em /public/presets: chave "preset:avatars/a3" ou "preset:banners/b2". */
+const PRESET_PREFIX = "preset:";
+const PRESET_RE = { avatar: /^a([1-9]|1[0-2])$/, banner: /^b[1-8]$/ } as const;
+
 async function authorize(clientId: string) {
   const session = await getServerSession();
   if (!session) return { error: NextResponse.json({ error: "Não autenticado." }, { status: 401 }) };
@@ -51,6 +55,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const key = auth.client[KEY_FIELD[kind]];
   if (!key) return NextResponse.json({ error: "Imagem não encontrada." }, { status: 404 });
+  // Imagem pronta do sistema (sem arquivo no R2).
+  if (key.startsWith(PRESET_PREFIX)) return NextResponse.redirect(new URL(`/presets/${key.slice(PRESET_PREFIX.length)}.svg`, _request.url));
 
   const url = await getSignedUrl(r2, new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }), { expiresIn: 300 });
   return NextResponse.redirect(url);
@@ -63,6 +69,18 @@ export async function POST(request: Request, { params }: RouteParams) {
   if ("error" in auth) return auth.error;
   if (isClientRole(auth.membership.role)) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
+  }
+
+  // Escolha de imagem pronta (JSON { preset: "a3" }).
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    const body = await request.json().catch(() => null);
+    const preset = typeof body?.preset === "string" ? body.preset : "";
+    if (!PRESET_RE[kind].test(preset)) return NextResponse.json({ error: "Imagem pronta inválida." }, { status: 400 });
+    const presetKey = `${PRESET_PREFIX}${kind === "avatar" ? "avatars" : "banners"}/${preset}`;
+    const old = auth.client[KEY_FIELD[kind]];
+    await prisma.client.update({ where: { id: auth.client.id }, data: { [KEY_FIELD[kind]]: presetKey } });
+    if (old && !old.startsWith(PRESET_PREFIX)) await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: old })).catch(() => undefined);
+    return NextResponse.json({ ok: true });
   }
 
   const formData = await request.formData().catch(() => null);
@@ -89,7 +107,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const previousKey = auth.client[KEY_FIELD[kind]];
   await prisma.client.update({ where: { id: auth.client.id }, data: { [KEY_FIELD[kind]]: key } });
-  if (previousKey) {
+  if (previousKey && !previousKey.startsWith(PRESET_PREFIX)) {
     await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: previousKey })).catch(() => undefined);
   }
 
@@ -119,7 +137,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   const key = auth.client[KEY_FIELD[kind]];
   if (key) {
     await prisma.client.update({ where: { id: auth.client.id }, data: { [KEY_FIELD[kind]]: null } });
-    await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key })).catch(() => undefined);
+    if (!key.startsWith(PRESET_PREFIX)) await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key })).catch(() => undefined);
   }
   return NextResponse.json({ ok: true });
 }

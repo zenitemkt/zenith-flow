@@ -3,6 +3,7 @@ import { getSessionCookie } from "better-auth/cookies";
 
 const PUBLIC_PATH_PREFIXES = [
   "/login",
+  "/presets/",
   "/signup",
   "/esqueci-senha",
   "/redefinir-senha",
