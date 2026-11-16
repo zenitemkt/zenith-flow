@@ -44,14 +44,14 @@ export default async function ConversasPage({ searchParams }: { searchParams: { 
     })),
     ...igThreads.map((t) => ({
       key: `ig:${t.id}`,
-      channel: "INSTAGRAM" as const,
-      name: t.participantName || (t.participantUsername ? `@${t.participantUsername}` : "Contato do Instagram"),
+      channel: t.channel === "MESSENGER" ? ("MESSENGER" as const) : ("INSTAGRAM" as const),
+      name: t.participantName || (t.participantUsername ? `@${t.participantUsername}` : t.channel === "MESSENGER" ? "Contato do Messenger" : "Contato do Instagram"),
       sub: t.participantUsername ? `@${t.participantUsername}` : "",
       preview: t.messages[0]?.text ?? "",
       lastAt: t.lastMessageAt.toISOString(),
       mode: null,
       classification: null,
-      account: (t.clientId && clientName.get(t.clientId)) || "Instagram",
+      account: (t.clientId && clientName.get(t.clientId)) || (t.channel === "MESSENGER" ? "Facebook" : "Instagram"),
     })),
   ].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 

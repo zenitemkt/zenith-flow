@@ -53,11 +53,27 @@ export async function subscribePageToLeads(pageId: string, pageToken: string): P
   await graph("POST", `/${appId}/subscriptions`, {
     object: "page",
     callback_url: leadsWebhookUrl(),
-    fields: "leadgen",
+    fields: "leadgen,messages,message_echoes",
     verify_token: leadsWebhookVerifyToken(),
     access_token: `${appId}|${appSecret()}`,
   });
-  await graph("POST", `/${pageId}/subscribed_apps`, { subscribed_fields: "leadgen", access_token: pageToken });
+  await graph("POST", `/${pageId}/subscribed_apps`, { subscribed_fields: "leadgen,messages,message_echoes", access_token: pageToken }).catch(() =>
+    graph("POST", `/${pageId}/subscribed_apps`, { subscribed_fields: "leadgen", access_token: pageToken }),
+  );
+}
+
+/** Messenger: assina as mensagens da Página (mantém leadgen se os leads estiverem ligados). */
+export async function subscribePageToMessages(pageId: string, pageToken: string, withLeads: boolean): Promise<void> {
+  const appId = process.env.META_APP_ID;
+  if (!appId) throw new Error("META_APP_ID não configurada.");
+  await graph("POST", `/${appId}/subscriptions`, {
+    object: "page",
+    callback_url: leadsWebhookUrl(),
+    fields: "leadgen,messages,message_echoes",
+    verify_token: leadsWebhookVerifyToken(),
+    access_token: `${appId}|${appSecret()}`,
+  });
+  await graph("POST", `/${pageId}/subscribed_apps`, { subscribed_fields: withLeads ? "leadgen,messages,message_echoes" : "messages,message_echoes", access_token: pageToken });
 }
 
 export interface LeadForm {
