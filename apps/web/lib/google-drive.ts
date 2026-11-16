@@ -141,6 +141,17 @@ export function shareDriveFileWithEmail(fileId: string, email: string, role: "wr
   });
 }
 
+/** Cria ou ajusta o acesso de um e-mail (editor ou leitor). */
+export async function setDrivePermission(fileId: string, email: string, role: "writer" | "reader") {
+  const list = await drive<{ permissions?: { id: string; emailAddress?: string; role: string }[] }>(
+    `/files/${fileId}/permissions?supportsAllDrives=true&fields=${encodeURIComponent("permissions(id,emailAddress,role)")}`,
+  );
+  const current = list.permissions?.find((p) => p.emailAddress?.toLowerCase() === email.toLowerCase());
+  if (!current) return shareDriveFileWithEmail(fileId, email, role);
+  if (current.role === role) return { id: current.id };
+  return drive<{ id: string }>(`/files/${fileId}/permissions/${current.id}?supportsAllDrives=true`, { method: "PATCH", body: JSON.stringify({ role }) });
+}
+
 export function renameDriveFile(fileId: string, name: string) {
   return drive<DriveFile>(`/files/${fileId}?supportsAllDrives=true&fields=id,name`, { method: "PATCH", body: JSON.stringify({ name }) });
 }

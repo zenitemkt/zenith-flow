@@ -1,5 +1,5 @@
 import { prisma } from "@zenite-mkt/db";
-import { createDriveFolder, getDriveFile, moveDriveFile, shareDriveFileWithEmail } from "@/lib/google-drive";
+import { createDriveFolder, getDriveFile, moveDriveFile, setDrivePermission } from "@/lib/google-drive";
 import { SocialDriveNotReady } from "@/lib/social-drive";
 
 /**
@@ -56,14 +56,18 @@ export async function syncClientDriveAccess(agencyId: string, clientId: string):
   const folder = await ensureClientDriveFolders(agencyId, clientId);
   const client = await prisma.client.findUnique({ where: { id: clientId }, select: { email: true, workspaceId: true } });
   const portal = client?.workspaceId
-    ? await prisma.membership.findMany({ where: { workspaceId: client.workspaceId, role: { in: ["CLIENT_ADMIN", "CLIENT_VIEWER"] } }, select: { email: true } })
+    ? await prisma.membership.findMany({ where: { workspaceId: client.workspaceId, role: { in: ["CLIENT_ADMIN", "CLIENT_VIEWER"] } }, select: { email: true, role: true } })
     : [];
-  const emails = Array.from(new Set([client?.email, ...portal.map((m) => m.email)].map((e) => e?.trim().toLowerCase()).filter((e): e is string => Boolean(e && e.includes("@")))));
-  const pending = emails.filter((e) => !folder.sharedEmails.includes(e));
+  // Visualizador do portal só lê a pasta; Aprovador e o e-mail do cadastro editam.
+  const roleOf = new Map<string, "writer" | "reader">();
+  for (const m of portal) roleOf.set(m.email.trim().toLowerCase(), m.role === "CLIENT_VIEWER" ? "reader" : "writer");
+  const cadastro = client?.email?.trim().toLowerCase();
+  if (cadastro?.includes("@") && !roleOf.has(cadastro)) roleOf.set(cadastro, "writer");
+  const pending = Array.from(roleOf.keys()).filter((e) => !folder.sharedEmails.includes(e));
   const shared: string[] = [];
   for (const email of pending) {
     try {
-      await shareDriveFileWithEmail(folder.rootId, email);
+      await setDrivePermission(folder.rootId, email, roleOf.get(email)!);
       shared.push(email);
     } catch (error) {
       console.error("client_drive_share_failed", email, error);
@@ -85,4 +89,13 @@ export async function moveClientDriveFiles(clientId: string, fileIds: string[], 
     const from = file?.parents?.find((p) => p !== target && stages.includes(p));
     if (from) await moveDriveFile(id, from, target).catch((error) => console.error("client_drive_move_failed", id, error));
   }
+}
+
+/** Papel do portal mudou: ajusta o acesso à pasta (Visualizador = leitor, Aprovador = editor). */
+export async function updateClientDriveRole(clientId: string, email: string, role: "CLIENT_ADMIN" | "CLIENT_VIEWER") {
+  const folder = await prisma.clientDriveFolder.findUnique({ where: { clientId } });
+  if (!folder) return;
+  await setDrivePermission(folder.rootId, email, role === "CLIENT_VIEWER" ? "reader" : "writer");
+  const normalized = email.trim().toLowerCase();
+  if (!folder.sharedEmails.includes(normalized)) await prisma.clientDriveFolder.update({ where: { id: folder.id }, data: { sharedEmails: { push: normalized } } });
 }

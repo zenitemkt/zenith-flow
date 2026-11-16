@@ -12,8 +12,8 @@ interface PortalMember {
 }
 
 const ROLE_LABELS: Record<PortalMember["role"], string> = {
-  CLIENT_ADMIN: "Admin",
-  CLIENT_VIEWER: "Cliente - Aprovador",
+  CLIENT_ADMIN: "Cliente - Aprovador",
+  CLIENT_VIEWER: "Cliente - Visualizador",
 };
 
 const STATUS_LABELS: Record<PortalMember["status"], string> = {
@@ -34,7 +34,18 @@ export function ClientPortalSection({
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<PortalMember["role"]>("CLIENT_VIEWER");
+  const [role, setRole] = useState<PortalMember["role"]>("CLIENT_ADMIN");
+  const [changing, setChanging] = useState<string | null>(null);
+
+  async function changeRole(memberId: string, next: PortalMember["role"]) {
+    setChanging(memberId);
+    setError(null);
+    const res = await fetch(`/api/clients/${clientId}/portal-invite`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ membershipId: memberId, role: next }) });
+    const body = await res.json().catch(() => null);
+    setChanging(null);
+    if (!res.ok) setError(body?.error ?? "Não foi possível trocar o papel.");
+    router.refresh();
+  }
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,7 +96,16 @@ export function ClientPortalSection({
               >
                 <div>
                   <p className="text-sm font-medium text-[#101828]">{member.email}</p>
-                  <p className="text-xs text-[#667085]">{ROLE_LABELS[member.role]}</p>
+                  <select
+                    aria-label={`Papel de ${member.email}`}
+                    value={member.role}
+                    disabled={changing === member.id}
+                    onChange={(e) => void changeRole(member.id, e.target.value as PortalMember["role"])}
+                    className="mt-1 h-8 rounded-md border border-[#D0D5DD] bg-white px-2 text-xs text-[#344054] outline-none focus:border-[#FF2B00] disabled:opacity-60"
+                  >
+                    <option value="CLIENT_ADMIN">{ROLE_LABELS.CLIENT_ADMIN}</option>
+                    <option value="CLIENT_VIEWER">{ROLE_LABELS.CLIENT_VIEWER}</option>
+                  </select>
                 </div>
                 <span className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-xs font-medium text-[#475467]">
                   {STATUS_LABELS[member.status]}
@@ -116,8 +136,8 @@ export function ClientPortalSection({
                 onChange={(e) => setRole(e.target.value as PortalMember["role"])}
                 className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
               >
-                <option value="CLIENT_VIEWER">Cliente - Aprovador</option>
-                <option value="CLIENT_ADMIN">Admin</option>
+                <option value="CLIENT_ADMIN">Cliente - Aprovador</option>
+                <option value="CLIENT_VIEWER">Cliente - Visualizador</option>
               </select>
             </div>
             <button

@@ -4,10 +4,12 @@ import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
 import { prisma } from "@zenite-mkt/db";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { PortalApprovalActions } from "./PortalApprovalActions";
+import { canClientAct } from "@/lib/rbac";
 import { EmptyState, PageHeader, panelClass } from "../_components/ui";
 
 export default async function PortalApprovalsPage() {
-  const { client } = await requirePortalContext();
+  const { client, membership } = await requirePortalContext();
+  const canAct = canClientAct(membership.role);
 
   const pendingApprovals = await prisma.contentApproval.findMany({
     where: { status: "PENDENTE", contentVersion: { contentItem: { clientId: client.id } } },
@@ -76,7 +78,7 @@ export default async function PortalApprovalsPage() {
                     </div>
                   )}
                   <div className="mt-auto">
-                    <PortalApprovalActions contentItemId={item.id} />
+                    {canAct ? <PortalApprovalActions contentItemId={item.id} /> : <p className="text-xs text-[#98A2B3]">Seu acesso é só de visualização.</p>}
                   </div>
                 </div>
               </article>

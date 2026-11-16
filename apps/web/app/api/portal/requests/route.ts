@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
-import { isClientRole } from "@/lib/rbac";
+import { canClientAct, isClientRole } from "@/lib/rbac";
 import { getOrCreateTaskProject } from "@/lib/task-projects";
 import { prisma } from "@zenite-mkt/db";
 
@@ -25,6 +25,9 @@ export async function POST(request: Request) {
   const membership = await getCurrentMembership(session.user.id);
   if (!membership || !isClientRole(membership.role)) {
     return NextResponse.json({ error: "Acesso restrito ao portal do cliente." }, { status: 403 });
+  }
+  if (!canClientAct(membership.role)) {
+    return NextResponse.json({ error: "Seu acesso é só de visualização." }, { status: 403 });
   }
 
   const client = await prisma.client.findUnique({ where: { workspaceId: membership.workspaceId } });

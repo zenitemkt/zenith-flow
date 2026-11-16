@@ -217,7 +217,7 @@ export function ClientFormModal({
   const [portalPassword, setPortalPassword] = useState("");
   const [portalRole, setPortalRole] = useState<
     "CLIENT_ADMIN" | "CLIENT_VIEWER"
-  >("CLIENT_VIEWER");
+  >("CLIENT_ADMIN");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -326,7 +326,7 @@ export function ClientFormModal({
     setPortalEnabled(false);
     setPortalEmail("");
     setPortalPassword("");
-    setPortalRole("CLIENT_VIEWER");
+    setPortalRole("CLIENT_ADMIN");
     setError(null);
     setAvatarFile(null);
     setBannerFile(null);
@@ -661,8 +661,8 @@ export function ClientFormModal({
                       }
                       className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
                     >
-                      <option value="CLIENT_VIEWER">Cliente - Aprovador</option>
-                      <option value="CLIENT_ADMIN">Admin</option>
+                      <option value="CLIENT_ADMIN">Cliente - Aprovador</option>
+                      <option value="CLIENT_VIEWER">Cliente - Visualizador</option>
                     </select>
                   </div>
                 </div>

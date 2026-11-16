@@ -1,4 +1,4 @@
-import { syncClientDriveAccess } from "@/lib/client-drive";
+import { syncClientDriveAccess, updateClientDriveRole } from "@/lib/client-drive";
 import { agencyHasDriveUser, withAgencyDrive } from "@/lib/drive-auth";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -93,4 +93,29 @@ export async function POST(request: Request, { params }: RouteParams) {
     { membershipId: created.id, inviteToken, inviteUrl: `/convite/${inviteToken}` },
     { status: 201 },
   );
+}
+
+/** Troca o papel de quem já tem acesso ao portal (e ajusta a pasta do Drive). */
+export async function PATCH(request: Request, { params }: RouteParams) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const membership = await getCurrentMembership(session.user.id);
+  if (!membership || isClientRole(membership.role)) return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
+  const client = await prisma.client.findUnique({ where: { id: params.id } });
+  if (!client || client.agencyId !== membership.agencyId || !client.workspaceId || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) {
+    return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
+  }
+  const body = await request.json().catch(() => null);
+  const role = body?.role === "CLIENT_ADMIN" || body?.role === "CLIENT_VIEWER" ? (body.role as "CLIENT_ADMIN" | "CLIENT_VIEWER") : null;
+  if (!role || typeof body?.membershipId !== "string") return NextResponse.json({ error: "Papel inválido." }, { status: 400 });
+  const member = await prisma.membership.findFirst({ where: { id: body.membershipId, workspaceId: client.workspaceId, role: { in: ["CLIENT_ADMIN", "CLIENT_VIEWER"] } } });
+  if (!member) return NextResponse.json({ error: "Acesso não encontrado." }, { status: 404 });
+  await prisma.membership.update({ where: { id: member.id }, data: { role } });
+  await prisma.auditLog.create({
+    data: { agencyId: membership.agencyId, actorUserId: session.user.id, actorType: "user", action: "portal.role_changed", resourceType: "membership", resourceId: member.id, metadata: { clientId: client.id, from: member.role, to: role } },
+  });
+  if (await agencyHasDriveUser(membership.agencyId).catch(() => false)) {
+    await withAgencyDrive(membership.agencyId, () => updateClientDriveRole(client.id, member.email, role)).catch((error) => console.error("client_drive_role_failed", error));
+  }
+  return NextResponse.json({ ok: true });
 }

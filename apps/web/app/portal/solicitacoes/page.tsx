@@ -2,11 +2,12 @@ import { requirePortalContext } from "@/lib/portal";
 import { prisma } from "@zenite-mkt/db";
 import { GRAPHIC_REQUEST_TAG } from "@/lib/portal-requests";
 import { NewPortalRequestModal } from "./NewPortalRequestModal";
+import { canClientAct } from "@/lib/rbac";
 import { EmptyState, PageHeader } from "../_components/ui";
 import { RequestList } from "../_components/RequestList";
 
 export default async function PortalRequestsPage() {
-  const { client } = await requirePortalContext();
+  const { client, membership } = await requirePortalContext();
 
   // Cotações gráficas (aba própria, "/portal/grafica") não aparecem aqui —
   // mesma Task por baixo, mas o cliente já vê elas separadas lá.
@@ -20,7 +21,7 @@ export default async function PortalRequestsPage() {
       <PageHeader
         title="Solicitações"
         description="Peça o que precisar à equipe e acompanhe o andamento por aqui."
-        actions={<NewPortalRequestModal />}
+        actions={canClientAct(membership.role) ? <NewPortalRequestModal /> : undefined}
       />
 
       {tasks.length === 0 ? (

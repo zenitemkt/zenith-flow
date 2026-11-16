@@ -8,8 +8,8 @@ export const ROLE_LABELS: Record<MembershipRole, string> = {
   ANALYST: "Analista",
   FINANCE: "Financeiro",
   HR: "RH",
-  CLIENT_ADMIN: "Cliente Admin",
-  CLIENT_VIEWER: "Cliente - Aprovador",
+  CLIENT_ADMIN: "Cliente - Aprovador",
+  CLIENT_VIEWER: "Cliente - Visualizador",
 };
 
 const TEAM_MANAGEMENT_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN"];
@@ -51,4 +51,9 @@ export function isClientRole(role: MembershipRole): boolean {
 /** Seção 32.1: "eNPS... acesso é restrito" — só quem cuida de gente vê resultado de equipe. */
 export function canViewEnps(role: MembershipRole): boolean {
   return hasRole(role, ENPS_VIEW_ROLES);
+}
+
+/** Portal: só o "Cliente - Aprovador" aprova, comenta e faz solicitações/cotações; o Visualizador só vê. */
+export function canClientAct(role: MembershipRole): boolean {
+  return role === "CLIENT_ADMIN";
 }
