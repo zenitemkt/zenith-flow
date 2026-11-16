@@ -18,6 +18,14 @@ export async function POST(request: Request) {
   if (kind === "wa") {
     const conv = await prisma.assistantConversation.findFirst({ where: { id, agencyId: membership.agencyId } });
     if (!conv) return NextResponse.json({ error: "Conversa não encontrada." }, { status: 404 });
+    if (body?.action === "clear") {
+      await prisma.assistantMessage.deleteMany({ where: { conversationId: conv.id } });
+      return NextResponse.json({ ok: true });
+    }
+    if (body?.action === "delete") {
+      await prisma.assistantConversation.delete({ where: { id: conv.id } });
+      return NextResponse.json({ ok: true });
+    }
     if (body?.action === "mode") {
       const mode = body.mode === "bot" ? "bot" : "human";
       await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, replyDueAt: null } });
@@ -41,6 +49,14 @@ export async function POST(request: Request) {
   if (kind === "ig") {
     const thread = await prisma.socialInboxThread.findFirst({ where: { id, agencyId: membership.agencyId } });
     if (!thread) return NextResponse.json({ error: "Conversa não encontrada." }, { status: 404 });
+    if (body?.action === "clear") {
+      await prisma.socialInboxMessage.deleteMany({ where: { threadId: thread.id } });
+      return NextResponse.json({ ok: true });
+    }
+    if (body?.action === "delete") {
+      await prisma.socialInboxThread.delete({ where: { id: thread.id } });
+      return NextResponse.json({ ok: true });
+    }
     if (!text) return NextResponse.json({ error: "Escreva a mensagem." }, { status: 400 });
     if (!thread.lastInboundAt || Date.now() - thread.lastInboundAt.getTime() > 24 * 3600_000) {
       return NextResponse.json({ error: "Passou de 24h desde a última mensagem do contato. O Instagram não deixa responder depois disso." }, { status: 400 });

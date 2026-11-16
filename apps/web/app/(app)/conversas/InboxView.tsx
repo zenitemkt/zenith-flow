@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, Instagram, MessageCircle, Search, Send, User } from "lucide-react";
+import { Bot, Eraser, Instagram, MessageCircle, Search, Send, Trash2, User } from "lucide-react";
+import { confirmDialog } from "@/lib/dialogs";
 
 export interface InboxItem {
   key: string;
@@ -93,6 +94,16 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
     return true;
   }
 
+  async function clearHistory() {
+    if (!(await confirmDialog("Apagar todas as mensagens desta conversa? O contato continua na lista. Isso não apaga nada no celular do contato.", { title: "Apagar histórico", confirmLabel: "Apagar histórico", danger: true }))) return;
+    await post({ action: "clear" });
+  }
+
+  async function deleteConversation() {
+    if (!(await confirmDialog("Apagar esta conversa inteira? Some da lista junto com as mensagens e as reuniões marcadas por ela. Se o contato escrever de novo, começa do zero.", { title: "Apagar conversa", confirmLabel: "Apagar conversa", danger: true }))) return;
+    if (await post({ action: "delete" })) router.push(href({ c: null }));
+  }
+
   async function send() {
     if (!text.trim() || busy) return;
     if (await post({ text })) setText("");
@@ -155,6 +166,12 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
                   {CHANNEL_STYLE[current.channel].label} · {current.account} {current.sub && `· ${current.sub}`}
                 </p>
               </div>
+              <button type="button" disabled={busy} onClick={() => void clearHistory()} title="Apagar histórico" aria-label="Apagar histórico" className="rounded-lg border border-[#D0D5DD] p-1.5 text-[#667085] hover:text-[#B42318] disabled:opacity-60">
+                <Eraser size={15} aria-hidden />
+              </button>
+              <button type="button" disabled={busy} onClick={() => void deleteConversation()} title="Apagar conversa" aria-label="Apagar conversa" className="rounded-lg border border-[#D0D5DD] p-1.5 text-[#667085] hover:text-[#B42318] disabled:opacity-60">
+                <Trash2 size={15} aria-hidden />
+              </button>
               {current.mode && (
                 <button
                   type="button"
