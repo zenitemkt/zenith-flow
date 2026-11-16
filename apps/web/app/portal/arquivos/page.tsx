@@ -13,6 +13,10 @@ function iconFor(contentType: string) {
 export default async function PortalArquivosPage() {
   const { client } = await requirePortalContext();
 
+  // Pasta raiz criada pelo sistema no Drive tem prioridade sobre o link digitado no cadastro.
+  const driveFolder = await prisma.clientDriveFolder.findUnique({ where: { clientId: client.id }, select: { rootId: true } });
+  const driveUrl = driveFolder ? `https://drive.google.com/drive/folders/${driveFolder.rootId}` : client.driveUrl;
+
   const assets = await prisma.mediaAsset.findMany({
     where: { clientId: client.id },
     orderBy: { createdAt: "desc" },
@@ -22,9 +26,9 @@ export default async function PortalArquivosPage() {
     <div className="flex flex-col gap-8">
       <PageHeader title="Arquivos" description="Tudo o que a equipe compartilhou com você, pronto pra baixar." />
 
-      {client.driveUrl && (
+      {driveUrl && (
         <a
-          href={client.driveUrl}
+          href={driveUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={`${panelClass} group flex items-center gap-4 px-5 py-4 transition-colors hover:border-[#FF7A1A]/40 sm:px-6`}
