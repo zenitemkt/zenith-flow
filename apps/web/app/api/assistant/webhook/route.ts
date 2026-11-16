@@ -121,8 +121,9 @@ export async function POST(request: Request) {
 
       for (const message of (value.messages ?? []) as WaMessage[]) {
         const buttonId = message.interactive?.button_reply?.id ?? message.button?.payload ?? null;
-        if (partners.has(message.from)) {
-          if (buttonId && /^(approve|deny)_/.test(buttonId)) await handlePartnerButton(agencyId, buttonId);
+        // Sócio: só a resposta aos botões de aprovação é tratada à parte; o resto vira conversa normal (permite testar a Milena).
+        if (partners.has(message.from) && buttonId && /^(approve|deny)_/.test(buttonId)) {
+          await handlePartnerButton(agencyId, buttonId);
           continue;
         }
         let conv = await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: message.from } } });

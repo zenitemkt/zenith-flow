@@ -69,7 +69,7 @@ export default async function AssistantPage() {
                 <li key={e.id} className="flex flex-wrap gap-2 rounded-lg bg-[#F9FAFB] px-3 py-1.5 text-[#344054]">
                   <span className="font-mono text-[#667085]">{new Date(e.createdAt.getTime() - 3 * 3600_000).toISOString().slice(5, 19).replace("T", " ")}</span>
                   {e.resourceId === "bad_signature" && <span className="font-semibold text-[#B42318]">assinatura recusada</span>}
-                  {m.messages?.length ? <span>mensagem de {m.messages.join(", ")}{m.messages.some((x) => partnerPhones.has(x.split(" ")[0] ?? "")) ? " (número de sócio: não vira conversa)" : ""}</span> : null}
+                  {m.messages?.length ? <span>mensagem de {m.messages.join(", ")}{m.messages.some((x) => partnerPhones.has(x.split(" ")[0] ?? "")) ? " (número de sócio)" : ""}</span> : null}
                   {m.echoes?.length ? <span>enviada pelo celular para {m.echoes.join(", ")}</span> : null}
                   {m.statuses ? <span>{m.statuses} status de entrega</span> : null}
                   {!m.messages?.length && !m.echoes?.length && !m.statuses ? <span>{(m.fields ?? []).join(", ") || "evento"}</span> : null}
