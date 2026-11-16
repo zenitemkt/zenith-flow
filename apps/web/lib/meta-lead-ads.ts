@@ -105,6 +105,52 @@ interface GraphLead {
 
 const LEAD_FIELDS = "id,created_time,form_id,ad_id,ad_name,campaign_name,platform,field_data";
 
+interface FormQuestion {
+  key?: string;
+  label?: string;
+  type?: string;
+  options?: Array<{ key?: string; value?: string }>;
+}
+
+/**
+ * Lê as perguntas do formulário e troca os códigos internos (pergunta_1, cidade_3) pelo texto
+ * da pergunta e da resposta. Vale para qualquer formulário, inclusive os criados pelo Gestor.
+ */
+async function loadForm(formId: string | undefined, token: string): Promise<{ name: string | null; questions: FormQuestion[] }> {
+  if (!formId) return { name: null, questions: [] };
+  return graph<{ name?: string; questions?: FormQuestion[] }>("GET", `/${formId}`, { fields: "name,questions{key,label,type,options}", access_token: token })
+    .then((f) => ({ name: f.name ?? null, questions: f.questions ?? [] }))
+    .catch(() => ({ name: null, questions: [] }));
+}
+
+function translateFieldData(fieldData: GraphLead["field_data"], questions: FormQuestion[]): GraphLead["field_data"] {
+  const byKey = new Map(questions.filter((q) => q.key).map((q) => [q.key!, q]));
+  return (fieldData ?? []).map((field) => {
+    const q = byKey.get(field.name);
+    if (!q) return field;
+    const options = new Map((q.options ?? []).filter((o) => o.key).map((o) => [o.key!, o.value ?? o.key!]));
+    return {
+      name: q.type === "CUSTOM" && q.label ? q.label : field.name,
+      values: (field.values ?? []).map((v) => options.get(v) ?? v),
+    };
+  });
+}
+
+async function buildLeadContent(lead: GraphLead, token: string, formNameHint?: string | null) {
+  const form = await loadForm(lead.form_id, token);
+  const formName = formNameHint ?? form.name;
+  const fields = mapLeadFields(translateFieldData(lead.field_data, form.questions));
+  const summary = [
+    formName ? `Formulário: ${formName}` : null,
+    lead.campaign_name ? `Campanha: ${lead.campaign_name}` : null,
+    lead.ad_name ? `Anúncio: ${lead.ad_name}` : null,
+    ...fields.extras,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { formName, fields, summary };
+}
+
 async function loadConnectionByPage(pageId: string) {
   return prisma.socialConnection.findFirst({ where: { platform: "FACEBOOK", externalId: pageId, leadsEnabled: true, status: "ACTIVE" } });
 }
@@ -130,6 +176,19 @@ export async function ingestMetaLead(input: {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       // Já visto: só tenta de novo se a vez anterior falhou.
       const existing = await prisma.metaLeadEvent.findUnique({ where: { leadgenId: input.leadgenId } });
+      // Importação de novo: atualiza as respostas já gravadas (corrige leads que entraram com códigos).
+      if (existing?.status === "imported" && existing.submissionId && input.origin === "import") {
+        const token = decryptSecret(connection.accessTokenEnc);
+        const lead = input.lead ?? (await graph<GraphLead>("GET", `/${input.leadgenId}`, { fields: LEAD_FIELDS, access_token: token }));
+        const { fields, summary } = await buildLeadContent(lead, token, input.formName);
+        await prisma.leadSubmission
+          .update({
+            where: { id: existing.submissionId },
+            data: { city: fields.city, service: fields.service, investment: fields.investment, employees: fields.employees, interest: fields.interest, summary: summary || null },
+          })
+          .catch(() => null);
+        return "duplicate";
+      }
       if (!existing || existing.status !== "failed") return "duplicate";
       event = await prisma.metaLeadEvent.update({ where: { id: existing.id }, data: { status: "pending", error: null } });
     } else throw error;
@@ -138,19 +197,8 @@ export async function ingestMetaLead(input: {
   try {
     const token = decryptSecret(connection.accessTokenEnc);
     const lead = input.lead ?? (await graph<GraphLead>("GET", `/${input.leadgenId}`, { fields: LEAD_FIELDS, access_token: token }));
-    const formName =
-      input.formName ??
-      (lead.form_id ? await graph<{ name?: string }>("GET", `/${lead.form_id}`, { fields: "name", access_token: token }).then((f) => f.name ?? null).catch(() => null) : null);
-    const fields = mapLeadFields(lead.field_data);
+    const { formName, fields, summary } = await buildLeadContent(lead, token, input.formName);
     const name = fields.name ?? fields.email ?? fields.phone ?? "Lead do formulário da Meta";
-    const summary = [
-      formName ? `Formulário: ${formName}` : null,
-      lead.campaign_name ? `Campanha: ${lead.campaign_name}` : null,
-      lead.ad_name ? `Anúncio: ${lead.ad_name}` : null,
-      ...fields.extras,
-    ]
-      .filter(Boolean)
-      .join("\n");
 
     const result = await prisma.$transaction((tx) =>
       upsertLeadSubmission(tx, {
