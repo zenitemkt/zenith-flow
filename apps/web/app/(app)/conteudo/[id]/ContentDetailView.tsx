@@ -318,6 +318,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                 collaborators: p.collaborators,
                 coverOffsetMs: p.coverOffsetMs,
                 coverKey: p.coverKey,
+                trialStrategy: p.trialStrategy,
               }))}
               media={latestMedia.map((m) => ({ url: `/api/content-media/${m.id}`, isVideo: m.contentType.startsWith("video/") }))}
               mediaCount={latestMedia.length}

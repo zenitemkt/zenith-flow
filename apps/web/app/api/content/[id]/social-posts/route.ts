@@ -66,8 +66,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     .slice(0, 3);
   const coverOffsetMs = body?.coverOffsetMs != null && body.coverOffsetMs !== "" && Number.isFinite(Number(body.coverOffsetMs)) ? Math.max(0, Math.round(Number(body.coverOffsetMs))) : null;
   const coverKey = typeof body?.coverKey === "string" && /^(drive:[A-Za-z0-9_-]{10,80}|[\w\/.-]{10,300})$/.test(body.coverKey) ? body.coverKey : null;
-  if (collaborators.length || coverOffsetMs !== null || coverKey) {
-    await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey } });
+  const trialStrategy = body?.trialStrategy === "MANUAL" || body?.trialStrategy === "SS_PERFORMANCE" ? (body.trialStrategy as string) : null;
+  if (collaborators.length || coverOffsetMs !== null || coverKey || trialStrategy) {
+    await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey, trialStrategy: format === "REEL" ? trialStrategy : null } });
   }
 
   if (!now) return NextResponse.json({ ok: true, scheduled: ids.length }, { status: 201 });

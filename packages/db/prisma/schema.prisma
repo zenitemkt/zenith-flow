@@ -3130,6 +3130,8 @@ model SocialPost {
   /// Capa do vídeo: momento do vídeo (ms) ou imagem ("drive:<id>" ou chave do R2).
   coverOffsetMs       Int?
   coverKey            String?
+  /// Reel de teste (só não seguidores): MANUAL = compartilha pelo app; SS_PERFORMANCE = compartilha sozinho se for bem.
+  trialStrategy       String?
   externalContainerId String?
   externalPostId      String?
   permalink           String?

@@ -129,7 +129,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
     if (full.platform === "INSTAGRAM") {
       result = full.externalContainerId
         ? await finishInstagramContainer({ igUserId: full.connection.externalId, token, containerId: full.externalContainerId, budgetMs })
-        : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs });
+        : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs, trialStrategy: full.trialStrategy });
     } else if (full.platform === "FACEBOOK") {
       result =
         full.format === "STORY"

@@ -13,6 +13,7 @@ import { quickPostMediaError } from "@/lib/social-quick-post";
 import { PlatformTimeFields } from "@/components/PlatformTimeFields";
 import { PostPreview, type PreviewProfile } from "@/components/PostPreview";
 import { useCoverPreview } from "@/components/VideoCoverPicker";
+import { TrialReelPicker, type TrialStrategy } from "@/components/TrialReelPicker";
 
 /** Cliente com Instagram/Facebook conectado — só esses aparecem na publicação direta. */
 export interface QuickPostClient {
@@ -96,6 +97,7 @@ export function QuickPostForm({
   const [coverMode, setCoverMode] = useState<"auto" | "frame" | "image">("auto");
   const [coverSeconds, setCoverSeconds] = useState("0");
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [trial, setTrial] = useState<TrialStrategy>("");
   const coverPreview = useCoverPreview({ mode: coverMode, seconds: Number(coverSeconds) || 0, file: coverFile });
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
@@ -250,6 +252,7 @@ export function QuickPostForm({
           collaborators: collabAvailable ? collaborators : [],
           coverOffsetMs: coverAvailable && coverMode === "frame" ? Math.round((Number(coverSeconds.replace(",", ".")) || 0) * 1000) : null,
           coverKey,
+          trialStrategy: platforms.includes("INSTAGRAM") && format === "REEL" ? trial || null : null,
           miniChat: miniChatAvailable && miniChat.enabled
             ? {
                 enabled: true,
@@ -488,6 +491,8 @@ export function QuickPostForm({
             </label>
           </div>
         )}
+
+        {platforms.includes("INSTAGRAM") && format === "REEL" && <TrialReelPicker value={trial} onChange={setTrial} />}
 
         {coverAvailable && (
           <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3">

@@ -32,6 +32,7 @@ import {
   type CoverValue,
 } from "@/components/VideoCoverPicker";
 import { uploadSocialMedia } from "@/lib/content-media-upload";
+import { TrialReelPicker, type TrialStrategy } from "@/components/TrialReelPicker";
 
 export interface PanelConnection {
   platform: SocialPlatform;
@@ -54,6 +55,7 @@ export interface PanelPost {
   collaborators: string[];
   coverOffsetMs: number | null;
   coverKey: string | null;
+  trialStrategy: string | null;
 }
 
 const ICON = {
@@ -196,6 +198,8 @@ export function SocialPublishPanel({
   const coverAvailable =
     igOn && format !== "STORY" && media.length === 1 && media[0]!.isVideo;
   const coverPreview = useCoverPreview(cover);
+  const [trial, setTrial] = useState<TrialStrategy>((igScheduled?.trialStrategy as TrialStrategy) ?? "");
+  const trialAvailable = igOn && format === "REEL";
   const collaborators = collabText
     .split(/[\s,;]+/)
     .map((x) => x.replace(/^@/, "").trim())
@@ -214,6 +218,7 @@ export function SocialPublishPanel({
       seconds: cover.seconds,
       file: cover.file?.name ?? null,
       savedKey: cover.savedKey ?? null,
+      trial,
     });
   const baseline = useRef<string | null>(null);
   if (baseline.current === null) baseline.current = snapshot();
@@ -295,6 +300,7 @@ export function SocialPublishPanel({
               ? Math.round(cover.seconds * 1000)
               : null,
           coverKey: coverAvailable ? coverKey : null,
+          trialStrategy: trialAvailable ? trial || null : null,
         }),
       });
       if (!res.ok) {
@@ -401,6 +407,7 @@ export function SocialPublishPanel({
             ? Math.round(cover.seconds * 1000)
             : null,
         coverKey,
+        trialStrategy: trialAvailable ? trial || null : null,
       }),
     });
     const body = await res.json().catch(() => null);
@@ -718,6 +725,8 @@ export function SocialPublishPanel({
           </span>
         </label>
       )}
+
+      {trialAvailable && <TrialReelPicker value={trial} onChange={setTrial} />}
 
       {coverAvailable && (
         <VideoCoverPicker

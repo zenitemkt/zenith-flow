@@ -108,7 +108,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     .slice(0, 3);
   const coverOffsetMs = Number.isFinite(Number(body?.coverOffsetMs)) && body?.coverOffsetMs !== null && body?.coverOffsetMs !== "" ? Math.max(0, Math.round(Number(body.coverOffsetMs))) : null;
   const coverKey = typeof body?.coverKey === "string" && /^(drive:[A-Za-z0-9_-]{10,80}|[\w\/.-]{10,300})$/.test(body.coverKey) ? body.coverKey : null;
-  if (collaborators.length || coverOffsetMs !== null || coverKey) {
+  const trialStrategy = body?.trialStrategy === "MANUAL" || body?.trialStrategy === "SS_PERFORMANCE" ? (body.trialStrategy as string) : null;
+  if (collaborators.length || coverOffsetMs !== null || coverKey || trialStrategy) {
+    await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM", format: "REEL" }, data: { trialStrategy } });
     await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey } });
   }
 

@@ -99,7 +99,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         publishAt,
         format,
         caption: format === "STORY" ? "" : caption,
-        ...(ig ? { collaborators, coverOffsetMs, coverKey } : {}),
+        ...(ig ? { collaborators, coverOffsetMs, coverKey, trialStrategy: format === "REEL" && (body?.trialStrategy === "MANUAL" || body?.trialStrategy === "SS_PERFORMANCE") ? body.trialStrategy : null } : {}),
         attempts: 0,
         nextAttemptAt: null,
         lastError: null,
