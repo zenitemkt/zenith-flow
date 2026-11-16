@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { raiseSystemAlert } from "@/lib/system-alerts";
-import { prisma } from "@zenite-mkt/db";
+import { Prisma, prisma } from "@zenite-mkt/db";
 import { loadAssistant } from "@/lib/assistant/agent";
 import { assistantAgencyId } from "@/lib/assistant/calendar";
 import { notifyPartners } from "@/lib/assistant/notify";
@@ -56,9 +56,33 @@ function describe(m: WaMessage): { content: string; mediaId: string | null; medi
   }
 }
 
+/** Diagnóstico: registra cada entrega da Meta (aparece no painel da assistente). */
+async function logWebhook(raw: string, signatureOk: boolean) {
+  const agencyId = assistantAgencyId();
+  if (!agencyId) return;
+  let summary: Record<string, unknown> = {};
+  try {
+    const payload = JSON.parse(raw);
+    const values = (payload?.entry ?? []).flatMap((e: { changes?: { field?: string; value?: Record<string, unknown> }[] }) => (e.changes ?? []).map((c) => ({ field: c.field, value: c.value ?? {} })));
+    summary = {
+      fields: values.map((v: { field?: string }) => v.field),
+      messages: values.flatMap((v: { value: Record<string, unknown> }) => ((v.value.messages as { from?: string; type?: string }[] | undefined) ?? []).map((m) => `${m.from} (${m.type})`)),
+      echoes: values.flatMap((v: { value: Record<string, unknown> }) => ((v.value.message_echoes as { to?: string }[] | undefined) ?? []).map((m) => m.to)),
+      statuses: values.reduce((n: number, v: { value: Record<string, unknown> }) => n + (((v.value.statuses as unknown[] | undefined) ?? []).length), 0),
+    };
+  } catch {
+    summary = { parseError: true };
+  }
+  await prisma.auditLog.create({
+    data: { agencyId, actorType: "system", action: "assistant.webhook", resourceType: "whatsapp", resourceId: signatureOk ? "ok" : "bad_signature", metadata: summary as Prisma.InputJsonValue },
+  });
+}
+
 export async function POST(request: Request) {
   const raw = await request.text();
-  if (!verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"))) {
+  const signatureOk = verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"));
+  await logWebhook(raw, signatureOk).catch(() => null);
+  if (!signatureOk) {
     // Chave secreta do app errada: a Meta entrega, mas o sistema recusa. Avisa no sino para não ficar mudo.
     const alertAgency = assistantAgencyId();
     if (alertAgency && request.headers.get("x-hub-signature-256")) {

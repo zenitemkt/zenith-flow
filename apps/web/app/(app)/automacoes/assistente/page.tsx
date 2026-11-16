@@ -25,6 +25,8 @@ export default async function AssistantPage() {
     }),
   ]);
   const config = mergeAssistantConfig(settings?.config);
+  const partnerPhones = new Set(config.notifications.partnerPhones.map((p) => p.replace(/\D/g, "")));
+  const webhookEvents = await prisma.auditLog.findMany({ where: { agencyId: membership.agencyId, action: "assistant.webhook" }, orderBy: { createdAt: "desc" }, take: 15 });
   const calendars = settings?.googleRefreshTokenEnc ? await listCalendars().catch(() => []) : [];
   const whatsappOk = hasEnv("ASSISTANT_WA_TOKEN", "ASSISTANT_WA_PHONE_NUMBER_ID", "ASSISTANT_WA_VERIFY_TOKEN");
 
@@ -53,6 +55,30 @@ export default async function AssistantPage() {
         <span className="font-semibold">Abrir simulador →</span>
       </Link>
       <AssistantSettingsForm initialEnabled={settings?.enabled ?? false} initialConfig={config} calendars={calendars} connections={connections} />
+
+      <section className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
+        <h2 className="text-sm font-semibold text-[#101828]">Entregas do WhatsApp (diagnóstico)</h2>
+        <p className="mb-3 text-xs text-[#667085]">O que a Meta mandou para o sistema. Se uma mensagem sua não aparece aqui, ela não saiu da Meta.</p>
+        {webhookEvents.length === 0 ? (
+          <p className="rounded-lg bg-[#F9FAFB] p-3 text-center text-xs text-[#98A2B3]">Nenhuma entrega registrada ainda.</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-xs">
+            {webhookEvents.map((e) => {
+              const m = (e.metadata ?? {}) as { fields?: string[]; messages?: string[]; echoes?: string[]; statuses?: number };
+              return (
+                <li key={e.id} className="flex flex-wrap gap-2 rounded-lg bg-[#F9FAFB] px-3 py-1.5 text-[#344054]">
+                  <span className="font-mono text-[#667085]">{new Date(e.createdAt.getTime() - 3 * 3600_000).toISOString().slice(5, 19).replace("T", " ")}</span>
+                  {e.resourceId === "bad_signature" && <span className="font-semibold text-[#B42318]">assinatura recusada</span>}
+                  {m.messages?.length ? <span>mensagem de {m.messages.join(", ")}{m.messages.some((x) => partnerPhones.has(x.split(" ")[0] ?? "")) ? " (número de sócio: não vira conversa)" : ""}</span> : null}
+                  {m.echoes?.length ? <span>enviada pelo celular para {m.echoes.join(", ")}</span> : null}
+                  {m.statuses ? <span>{m.statuses} status de entrega</span> : null}
+                  {!m.messages?.length && !m.echoes?.length && !m.statuses ? <span>{(m.fields ?? []).join(", ") || "evento"}</span> : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-[#E4E7EC] bg-white p-5">
