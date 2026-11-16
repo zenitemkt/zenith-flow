@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MetaApiError } from "./meta-ads";
-import { RetryableSocialError, finishInstagramContainer, isIgMediaNotReadyError } from "./meta-social";
+import { META_SOCIAL_SCOPES, RetryableSocialError, finishInstagramContainer, isIgMediaNotReadyError } from "./meta-social";
 
 const NOT_READY = {
   error: { message: "A mídia não está pronta para ser publicada. Aguarde um momento.", code: 9007, error_subcode: 2207027 },
@@ -29,6 +29,12 @@ function mockGraph(publishResponses: Response[]) {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+describe("Instagram — permissões da conexão social", () => {
+  it("pede a permissão adicional usada pelo Business Discovery via Business Manager", () => {
+    expect(META_SOCIAL_SCOPES).toEqual(expect.arrayContaining(["instagram_basic", "pages_read_engagement", "ads_read"]));
+  });
 });
 
 describe("Instagram — mídia ainda não pronta (9007)", () => {

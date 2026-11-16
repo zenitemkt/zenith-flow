@@ -32,6 +32,9 @@ export const META_SOCIAL_SCOPES = [
   "instagram_basic",
   "instagram_content_publish",
   "business_management",
+  // Business Discovery exige ads_read/ads_management quando a Página é administrada via Business Manager.
+  // A Zenite já usa ads_read no mesmo app para o módulo de tráfego.
+  "ads_read",
 ] as const;
 
 function requireEnv(name: "META_APP_ID"): string {

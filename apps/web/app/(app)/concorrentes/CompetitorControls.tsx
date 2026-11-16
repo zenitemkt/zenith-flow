@@ -76,7 +76,16 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
         Este é o perfil do próprio cliente (entra como base de comparação)
       </label>
       <p className="text-xs text-[#98A2B3]">Só contas comerciais ou de criador. Conta pessoal ou privada não pode ser lida.</p>
-      {error && <p className="rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">{error}</p>}
+      {error && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">
+          <p>{error}</p>
+          {/autorizada|reconecte/i.test(error) && (
+            <a href={`/api/social/meta/start?clientId=${clientId}`} className="rounded-lg border border-[#FDA29B] bg-white px-3 py-1.5 font-semibold text-[#B42318] hover:bg-[#FFF5F4]">
+              Reconectar Facebook/Instagram
+            </a>
+          )}
+        </div>
+      )}
     </form>
   );
 }

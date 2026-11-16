@@ -18,6 +18,12 @@
 
 ### Adicionado
 
+- **Concorrentes — Fase 2C**: temas recorrentes extraídos das legendas e classificação dos ganchos de abertura, com quantidade de posts, média de interações, desempenho relativo e exemplos na tela de cada perfil.
+
+- **Concorrentes — Fase 2B**: comparação do perfil do cliente com os concorrentes, com posição nas principais métricas, evolução de seguidores em gráfico e oportunidades de hashtags, formatos e horários ainda não explorados pelo cliente.
+
+- **Concorrentes — Fase 2A**: alertas automáticos após a sincronização diária para post acima da média, salto de seguidores, mudança de cadência e formato novo. Os avisos aparecem na Central de alertas, abrem diretamente o concorrente e se resolvem quando a condição deixa de existir.
+
 - **Clientes particulares de cada sócio**: cliente com "Quem recebe deste cliente" = um sócio só (ligado a um login) passa a ser só desse sócio. O outro sócio e o restante da equipe não veem o cliente nem nada dele: carteira, perfil, Operação, calendário, publicações, tarefas, recorrências, financeiro (inclusive lançamentos divididos), comercial (pipeline, propostas, campanhas, pendências, metas, relatórios), tráfego, automações, indicadores do início e exportações. Link direto responde "não encontrado". Clientes divididos (Zenite) e sem definição continuam visíveis para todos. Regra em `lib/client-access.ts`, também aplicada dentro de `lib/finance-scope.ts`.
 
 - **Novo ícone da marca**: o "z" branco com ponto laranja sobre fundo grafite agora é o favicon da aba do navegador e o logo do menu lateral, do cabeçalho mobile e da proposta pública (`app/icon.svg`, `public/logo-z.svg` — vetor, nítido em qualquer tamanho). O ícone também deixou de passar pelo login no middleware, então aparece na tela de login.
@@ -47,6 +53,8 @@
 - **Operação > Publicação (publicar na hora)**: a aba saiu do "em breve". Escolhe o cliente, as redes, o formato, a arte e a legenda e publica imediatamente — sem data/hora e sem passar pelo Calendário. Mesmo fluxo da publicação direta (cria a peça já aprovada, com histórico e Kanban); depois de publicar dá pra abrir o cartão ou fazer outra. Embaixo, as últimas 15 publicações com status, erro e link do post. O formulário virou um componente só (`operacao/_components/QuickPostForm.tsx`), usado também pelo modal do Calendário; a busca dos clientes conectados foi para `lib/quick-post-clients.ts`.
 
 ### Corrigido
+
+- **Análise de concorrentes sem permissão**: a conexão social agora solicita `ads_read`, necessária para consultar perfis quando a Página é administrada pelo Business Manager. O erro informa as permissões corretas e ganhou um botão direto para reconectar Facebook/Instagram.
 
 - **Campanhas da Meta sem cliente**: as campanhas sincronizadas entravam como "Própria agência" e não apareciam no filtro do cliente (Raio-X). A coluna Cliente da lista de Campanhas virou um seletor; a sincronização nunca troca o cliente escolhido, e campanhas novas herdam o cliente das outras campanhas da Meta quando todas são do mesmo.
 - **Traqueamento: "visitantes únicos" ignorava o filtro de tráfego não humano**: o cartão contava todos os visitantes do período; com o filtro ligado, agora só conta quem teve ao menos uma sessão humana (sessões, eventos e páginas já eram filtrados). As fontes de tráfego ganharam nomes legíveis: os códigos que a Meta preenche sozinha (`an`, `fb`, `ig`, `msg`) viram "Meta Ads — Audience Network (an)" etc., e visitas vindas de buscador aparecem como "Busca orgânica (Google)".

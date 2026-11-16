@@ -1,3 +1,39 @@
+## 2026-11-16 — Business Discovery em Páginas administradas pelo Business Manager
+
+**Problema**: cadastrar concorrente retornava código 10 da Graph API. O sistema dizia que faltava `instagram_manage_insights`, mas a documentação atual do `business_discovery` exige `instagram_basic` + `pages_read_engagement`; quando a Página chega por papel no Business Manager, exige também `ads_read` ou `ads_management`.
+
+**Decisão**: incluir `ads_read` no mesmo OAuth social. O app já usa essa permissão no módulo de tráfego. A mensagem de erro passa a informar as três permissões corretas e oferece reconexão direta. Tokens existentes não ganham escopo retroativamente, por isso precisam ser reconectados uma vez.
+
+## 2026-11-16 — Concorrentes Fase 2C: temas e ganchos
+
+**Decisão 1 — regras locais antes de IA**: temas e ganchos são calculados em `competitor-analytics.ts`, junto das demais métricas. Não há chamada externa, custo por análise ou persistência derivada. Alterar a regra recalcula todos os perfis de forma consistente ao abrir a tela.
+
+**Decisão 2 — tema exige recorrência**: cada post procura, na primeira linha, a palavra que mais se repete no conjunto de legendas. A palavra precisa aparecer em ao menos dois posts. Sem palavra recorrente, o post fica em “Outros”; isso evita transformar cada frase isolada em um tema falso.
+
+**Decisão 3 — gancho é a primeira linha**: a classificação segue uma ordem determinística: pergunta, número no início, erro/alerta, prova social, oferta, promessa e outro. Cada grupo mostra quantidade, participação, média de interações e relação com a média geral. O resultado descreve correlação do histórico, sem afirmar causalidade.
+
+**Decisão 4 — seção editorial compacta**: temas e ganchos aparecem lado a lado depois dos melhores posts, usando listas e barras comparativas. Não foi criada aba ou biblioteca de gráfico nova.
+
+## 2026-11-16 — Concorrentes Fase 2B: cliente x concorrentes
+
+**Decisão 1 — comparação calculada na leitura**: os dados já existem em `Competitor`, posts e snapshots. `compareClientWithCompetitors` é uma função pura, sem tabela ou cache novo. A página continua filtrada por agência e cliente antes de entregar os perfis ao cálculo.
+
+**Decisão 2 — posições comparáveis**: engajamento, cadência e média de interações usam `analyzeCompetitor` para todos os perfis no mesmo período e com a mesma fonte. Empates compartilham a mesma posição. Sem seguidores, o engajamento do cliente aparece sem posição em vez de assumir zero.
+
+**Decisão 3 — diferenças precisam de sinal mínimo**: hashtag só aparece se estiver em pelo menos três concorrentes e ausente no cliente. Formato precisa ter participação agregada ao menos 20 pontos percentuais maior. Horários são agrupados em madrugada, manhã, tarde e noite, e só aparecem quando os concorrentes publicaram naquela faixa e o cliente não.
+
+**Decisão 4 — SVG sem dependência**: o histórico de seguidores usa os snapshots existentes e um SVG responsivo, com uma série por perfil. Cada linha começa no primeiro snapshot disponível daquele perfil; períodos anteriores ao cadastro não são inventados.
+
+## 2026-11-16 — Concorrentes Fase 2A: alertas inteligentes
+
+**Decisão 1 — usar a Central de alertas existente**: os movimentos usam categoria `AUTOMATION`, gravidade `INFO` e prefixo `competitor:`. Não foi criada tabela, tela ou canal paralelo. A chave de cada regra é estável (`viral:<post>`, `growth:<concorrente>:<dia>`, `cadence:<concorrente>`, `format:<concorrente>:<formato>`), portanto o mecanismo central deduplica, reabre e resolve automaticamente.
+
+**Decisão 2 — calcular depois da sincronização diária**: `/api/cron/competitors-sync` primeiro atualiza perfis/posts/snapshots e depois chama `generateCompetitorAlerts` para cada agência que possui concorrentes. Uma falha de alerta é registrada e não invalida a sincronização já concluída.
+
+**Decisão 3 — comparar períodos sem misturá-los**: cadência compara os últimos 7 dias com a média semanal dos 30 dias anteriores. Crescimento compara o último intervalo com as taxas históricas anteriores dos últimos 30 dias, normalizando lacunas de snapshots por número de dias. Formato novo observa posts recentes e procura o mesmo formato nos 90 dias anteriores ao post. Perfis `isOwn` ficam fora porque a Fase 2A trata movimentos dos concorrentes.
+
+**Decisão 4 — alerta leva ao contexto**: todos os avisos abrem `/concorrentes?c=<id>`. O tipo “Movimentos dos concorrentes” é configurável junto dos demais tipos na Central de alertas.
+
 ## 2026-11-13 — Story no Facebook; story sem título nem legenda
 
 **Pedido**: desativar título e legenda quando o formato é Story; depois, em vez de bloquear o Facebook em Story (dava "Story no Facebook ainda não é suportado"), passar a publicar.

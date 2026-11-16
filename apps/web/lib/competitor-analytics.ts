@@ -35,6 +35,33 @@ const CTAS: [string, RegExp][] = [
   ["Seguir o perfil", /segu(e|ir|a) (a gente|o perfil|n[oó]s|para)|ativ(e|a) (as )?notifica/i],
 ];
 
+export type HookType = "Pergunta" | "Número" | "Promessa" | "Erro ou alerta" | "Prova social" | "Oferta" | "Outro";
+
+const firstLineOf = (caption: string | null) => (caption ?? "").split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? "";
+
+/** Classifica a abertura da legenda com regras simples e explicáveis. */
+export function classifyHook(caption: string | null): HookType {
+  const line = firstLineOf(caption);
+  if (!line) return "Outro";
+  if (line.includes("?")) return "Pergunta";
+  if (/^\s*(?:[\p{Extended_Pictographic}\s]+)?\d+\b/u.test(line)) return "Número";
+  const normalized = line.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\b(pare de|erros?|evite|nunca faca|cuidado|nao faca)\b/.test(normalized)) return "Erro ou alerta";
+  if (/\b(depoimento|case|caso real|antes e depois|cliente[s]?|resultado[s]?)\b|\d+\s*%/.test(normalized)) return "Prova social";
+  if (/\b(oferta|promocao|desconto|condicao especial|ultimas vagas|vagas abertas|compre|contrate)\b/.test(normalized)) return "Oferta";
+  if (/\b(como|aprenda|descubra|saiba|transforme|aumente|melhore|conquiste|alcance)\b/.test(normalized)) return "Promessa";
+  return "Outro";
+}
+
+function meaningfulWords(text: string): string[] {
+  const clean = text.replace(/[#@][\p{L}\p{N}_.]+/gu, " ").replace(/https?:\S+/g, " ").toLowerCase();
+  return (clean.match(/[\p{L}]{4,}/gu) ?? []).filter((word) => !STOPWORDS.has(word));
+}
+
+function capitalize(value: string): string {
+  return value ? value[0]!.toLocaleUpperCase("pt-BR") + value.slice(1) : value;
+}
+
 /** Hora e dia em Brasília (UTC-3). */
 const sp = (d: Date) => new Date(d.getTime() - 3 * 3600_000);
 const avg = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
@@ -89,6 +116,49 @@ export function analyzeCompetitor(posts: AnalyticsPost[], followers: number | nu
     .sort((a, b) => b.uses - a.uses || b.avgEngagement - a.avgEngagement)
     .slice(0, 20);
 
+  // Temas recorrentes: uma palavra recorrente da primeira linha representa o assunto do post.
+  const recurringWords = new Map<string, number>();
+  for (const post of list) {
+    for (const word of new Set(meaningfulWords(post.caption ?? ""))) recurringWords.set(word, (recurringWords.get(word) ?? 0) + 1);
+  }
+  const themeGroups = new Map<string, { engagements: number[]; examples: string[] }>();
+  const hookGroups = new Map<HookType, { engagements: number[]; examples: string[] }>();
+  for (const post of list) {
+    const firstLine = firstLineOf(post.caption);
+    const lineWords = meaningfulWords(firstLine);
+    const recurring = lineWords
+      .map((word, position) => ({ word, position, frequency: recurringWords.get(word) ?? 0 }))
+      .filter((item) => item.frequency >= 2)
+      .sort((a, b) => b.frequency - a.frequency || a.position - b.position)[0]?.word;
+    const theme = recurring ? capitalize(recurring) : "Outros";
+    const themeEntry = themeGroups.get(theme) ?? { engagements: [], examples: [] };
+    themeEntry.engagements.push(engagementOf(post));
+    if (firstLine && themeEntry.examples.length < 2) themeEntry.examples.push(firstLine.slice(0, 120));
+    themeGroups.set(theme, themeEntry);
+
+    const hook = classifyHook(post.caption);
+    const hookEntry = hookGroups.get(hook) ?? { engagements: [], examples: [] };
+    hookEntry.engagements.push(engagementOf(post));
+    if (firstLine && hookEntry.examples.length < 2) hookEntry.examples.push(firstLine.slice(0, 120));
+    hookGroups.set(hook, hookEntry);
+  }
+  const themes = Array.from(themeGroups, ([name, group]) => ({
+    name,
+    count: group.engagements.length,
+    share: list.length ? (group.engagements.length / list.length) * 100 : 0,
+    avgEngagement: avg(group.engagements),
+    lift: lift(avg(group.engagements)),
+    examples: group.examples,
+  })).sort((a, b) => (a.name === "Outros" ? 1 : b.name === "Outros" ? -1 : b.count - a.count || b.avgEngagement - a.avgEngagement));
+  const hooks = Array.from(hookGroups, ([name, group]) => ({
+    name,
+    count: group.engagements.length,
+    share: list.length ? (group.engagements.length / list.length) * 100 : 0,
+    avgEngagement: avg(group.engagements),
+    lift: lift(avg(group.engagements)),
+    examples: group.examples,
+  })).sort((a, b) => b.avgEngagement - a.avgEngagement || b.count - a.count);
+
   // Dias e horários (Brasília)
   const byDay = Array.from({ length: 7 }, () => [] as number[]);
   const grid = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => [] as number[]));
@@ -119,6 +189,8 @@ export function analyzeCompetitor(posts: AnalyticsPost[], followers: number | nu
     hiddenLikes: list.filter((p) => p.likeCount === null).length,
     formatMix,
     topHashtags,
+    themes,
+    hooks,
     hashtagShare: list.length ? (withHashtag / list.length) * 100 : 0,
     hashtagsPerPost: list.length ? hashtagTotal / list.length : 0,
     topMentions: Array.from(mentions, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 8),

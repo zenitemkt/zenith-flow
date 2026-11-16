@@ -5,7 +5,9 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 import { analyzeCompetitor } from "@/lib/competitor-analytics";
+import { compareClientWithCompetitors } from "@/lib/competitor-comparison";
 import { AddCompetitorForm, CompetitorActions, CompetitorFilters } from "./CompetitorControls";
+import { ClientCompetitorComparison } from "./CompetitorComparison";
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +61,17 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     return { p, stats, growth, snapshotDays: p.snapshots.length };
   });
   const current = rows.find((r) => r.p.id === searchParams.c) ?? rows[0] ?? null;
+  const comparison = compareClientWithCompetitors(profiles.map((profile) => ({
+    id: profile.id,
+    username: profile.igUsername,
+    isOwn: profile.isOwn,
+    followers: profile.followers,
+    posts: profile.posts,
+    snapshots: profile.snapshots,
+  })), days);
   const href = (id: string) => `/concorrentes?cliente=${clientId}&dias=${days}&c=${id}`;
   const maxHeat = current ? Math.max(1, ...current.stats.heatmap.flat()) : 1;
+  const maxHookAverage = current ? Math.max(1, ...current.stats.hooks.map((hook) => hook.avgEngagement)) : 1;
 
   return (
     <div className="flex flex-col gap-5">
@@ -74,9 +85,18 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
 
       <AddCompetitorForm clientId={clientId} />
 
+      {comparison ? (
+        <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
+      ) : rows.length > 0 ? (
+        <section className={`${CARD} border-dashed`}>
+          <h2 className={H2}>Comparar o cliente com os concorrentes</h2>
+          <p className="text-sm text-[#667085]">Adicione o Instagram do cliente acima e marque “Este é o perfil do próprio cliente”. O ranking, o gráfico e as oportunidades aparecerão aqui.</p>
+        </section>
+      ) : null}
+
       {rows.length > 0 && (
         <section className={`${CARD} overflow-x-auto`}>
-          <h2 className={H2}>Comparativo ({days} dias)</h2>
+          <h2 className={H2}>Todos os perfis ({days} dias)</h2>
           <table className="w-full min-w-[760px]">
             <thead>
               <tr>
@@ -196,6 +216,51 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                   ))}
                 </div>
               </section>
+
+              <div className="grid gap-5 lg:grid-cols-2">
+                <section className={CARD}>
+                  <h2 className={H2}>Temas recorrentes</h2>
+                  <p className="mb-3 text-xs text-[#667085]">Assuntos identificados pela primeira linha e pelas palavras que se repetem nas legendas.</p>
+                  {current.stats.themes.length === 0 ? (
+                    <p className="text-sm text-[#98A2B3]">Não há legendas suficientes para identificar temas.</p>
+                  ) : (
+                    <div className="flex flex-col">
+                      {current.stats.themes.map((theme) => (
+                        <div key={theme.name} className="border-t border-[#F2F4F7] py-2.5 first:border-0 first:pt-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-[#101828]">{theme.name} <span className="font-normal text-[#667085]">· {theme.count} posts ({dec(theme.share, 0)}%)</span></p>
+                            <span className="flex items-center gap-2 text-xs text-[#667085]">média {int(theme.avgEngagement)} <Lift value={theme.lift} /></span>
+                          </div>
+                          {theme.examples[0] && <p className="mt-1 line-clamp-1 text-[11px] text-[#98A2B3]">Ex.: “{theme.examples[0]}”</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className={CARD}>
+                  <h2 className={H2}>Ganchos que mais rendem</h2>
+                  <p className="mb-3 text-xs text-[#667085]">Classificação da primeira linha. A barra compara a média de interações.</p>
+                  {current.stats.hooks.length === 0 ? (
+                    <p className="text-sm text-[#98A2B3]">Não há legendas suficientes para classificar ganchos.</p>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {current.stats.hooks.map((hook, index) => (
+                        <div key={hook.name}>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                            <p className="font-semibold text-[#101828]">{index + 1}. {hook.name} <span className="font-normal text-[#667085]">· {hook.count} posts</span></p>
+                            <span className="flex items-center gap-2 text-xs text-[#667085]">média {int(hook.avgEngagement)} <Lift value={hook.lift} /></span>
+                          </div>
+                          <div className="mt-1.5 h-1.5 rounded-full bg-[#F2F4F7]">
+                            <div className="h-1.5 rounded-full bg-[#FF2B00]" style={{ width: `${Math.max(3, (hook.avgEngagement / maxHookAverage) * 100)}%` }} />
+                          </div>
+                          {hook.examples[0] && <p className="mt-1 line-clamp-1 text-[11px] text-[#98A2B3]">“{hook.examples[0]}”</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
 
               <div className="grid gap-5 lg:grid-cols-2">
                 <section className={CARD}>
