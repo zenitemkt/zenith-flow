@@ -27,6 +27,10 @@ export async function POST(_request: Request, { params }: { params: { id: string
     create: { agencyId, phone, leadId: lead.id, profileName: lead.name, mode: "bot", autoTakeoverAt: now },
     update: { leadId: lead.id, mode: "bot", autoTakeoverAt: now, replyDueAt: null, failures: 0 },
   });
+  // Mensagens que a equipe já mandou antes do clique (e sem resposta do contato) passam a contar como da Milena.
+  const firstReply = await prisma.assistantMessage.findFirst({ where: { conversationId: conv.id, role: "user" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } });
+  await prisma.assistantMessage.updateMany({ where: { conversationId: conv.id, role: "partner", ...(firstReply ? { createdAt: { lt: firstReply.createdAt } } : {}) }, data: { role: "assistant" } });
+
   // Contato iniciado: oportunidade vai para "Em andamento" (só avança, nunca volta) e o lead sai de "Novo".
   await prisma.$transaction(async (tx) => {
     const opportunity = await latestOpenOpportunity(tx, agencyId, lead.id);
