@@ -1,9 +1,9 @@
 -- Token da extensão: apenas o hash é persistido; o segredo aparece uma vez ao gerar.
-ALTER TABLE "Agency"
+ALTER TABLE "agency"
   ADD COLUMN "competitorAdsTokenHash" TEXT,
   ADD COLUMN "competitorAdsTokenCreatedAt" TIMESTAMP(3);
 
-CREATE UNIQUE INDEX "Agency_competitorAdsTokenHash_key" ON "Agency"("competitorAdsTokenHash");
+CREATE UNIQUE INDEX "agency_competitorAdsTokenHash_key" ON "agency"("competitorAdsTokenHash");
 
 CREATE TABLE "competitor_ad" (
   "id" TEXT NOT NULL,
