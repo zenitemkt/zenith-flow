@@ -70,7 +70,7 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
     const c = params.c === undefined ? selected : params.c;
     if (c) sp.set("c", c);
     const s = sp.toString();
-    return `/comercial/conversas${s ? `?${s}` : ""}`;
+    return `/conversas${s ? `?${s}` : ""}`;
   };
 
   async function post(payload: Record<string, unknown>) {

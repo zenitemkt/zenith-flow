@@ -67,7 +67,6 @@ export const navigationGroups: NavigationGroup[] = [
         comingSoon: false,
         children: [
           { id: "commercial-pipeline", label: "Pipeline", href: "/comercial/pipeline", comingSoon: false },
-          { id: "commercial-inbox", label: "Conversas", href: "/comercial/conversas", comingSoon: false },
           { id: "commercial-leads", label: "Leads", href: "/comercial/leads", comingSoon: false },
           { id: "commercial-pendencies", label: "Pendências", href: "/comercial/pendencias", comingSoon: false },
           { id: "commercial-proposals", label: "Propostas", href: "/comercial/propostas", comingSoon: false },
@@ -162,6 +161,7 @@ export const navigationGroups: NavigationGroup[] = [
     id: "communication",
     label: "Comunicação e recursos",
     items: [
+      { id: "inbox", label: "Conversas", icon: MessageSquare, href: "/conversas", comingSoon: false },
       { id: "chat", label: "Chat", icon: MessageSquare, href: "/chat", comingSoon: true },
       { id: "client-portal", label: "Portal do Cliente", icon: Globe, href: "/portal", comingSoon: true },
       { id: "academy", label: "Academy", icon: GraduationCap, href: "/academy", comingSoon: true },
