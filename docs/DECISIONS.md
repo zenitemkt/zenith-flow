@@ -1258,3 +1258,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: tabela `SystemAlert` própria (não reaproveita `CommercialAlert`, que é presa a um lead), com chave única por agência para deduplicar e resolução automática. Alertas por evento nascem no próprio código que já registra a falha. O site é checado só 2x por dia pelo cron da Vercel (plano Hobby permite 1x/dia por job; são dois jobs), cerca de 170 requisições por varredura, para não pesar no plano gratuito. Aviso por WhatsApp/e-mail ficou de fora por decisão do usuário.
 
 **Consequência**: queda do site causada por fator externo no meio do dia só aparece na varredura seguinte. Alvo do monitor vem de `SITE_MONITOR_URL` (padrão hubzenite.com.br) e `SITE_MONITOR_AGENCY_ID`/`SITE_LEADS_AGENCY_ID`; para monitorar sites de clientes, o próximo passo é guardar o alvo por agência.
+
+## 2026-11-16 — Demo com artes da Zenite
+
+**Contexto**: as artes de exemplo do painel de demonstração (degradê com título) pareciam falsas. Kevin pediu artes mais bonitas, e pegar de banco de imagens pago (Designi) não seria permitido sem licença. A sugestão dele foi usar as artes da própria Zenite.
+
+**Decisão**: o demo lê, no servidor, as publicações agendadas e publicadas (feed e story, só imagem) do cliente da Zenite e usa a imagem e a legenda nos posts fictícios. O cliente vem de `DEMO_PORTAL_SOURCE_CLIENT_ID` ou, sem ela, do primeiro cliente da agência com "Zenite" no nome. As imagens passam por uma rota própria (`/api/portal/demo-media/:id`) que só atende login demo e só mídia desse cliente, em vez de liberar o acesso do demo às rotas de mídia normais. Nada é gravado: aprovar ou mudar datas no demo continua só no navegador.
+
+**Consequência**: quem vê o demo vê também artes agendadas da Zenite que ainda não foram ao ar. Se o cliente da Zenite não tiver "Zenite" no nome, ou houver mais de um, é preciso definir `DEMO_PORTAL_SOURCE_CLIENT_ID` na Vercel. Sem artes, o demo volta para as de exemplo.

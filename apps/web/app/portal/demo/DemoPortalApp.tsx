@@ -7,11 +7,12 @@ import { usePathname } from "next/navigation";
 import { toDataURL } from "qrcode";
 import { CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Download, FileText, Film, ImageIcon, Link2, MapPin, Paperclip, PencilLine, QrCode, Receipt, RotateCcw, Type, X } from "lucide-react";
 import { PageHeader, ghostButtonClass, inputClass, panelClass, primaryButtonClass, rowClass } from "../_components/ui";
-import { DEMO_TRAFFIC, buildDemoState, leadsByMonth, localDate, localDateTime, type DemoCampaign, type DemoInvoice, type DemoPost, type DemoRequest, type DemoState, type PostStatus, type RequestStatus, type TrafficPeriod } from "./demo-data";
+import type { DemoRealArtSet } from "@/lib/portal-demo";
+import { DEMO_TRAFFIC, buildDemoState, demoArtSignature, leadsByMonth, localDate, localDateTime, type DemoCampaign, type DemoInvoice, type DemoPost, type DemoRequest, type DemoState, type PostStatus, type RequestStatus, type TrafficPeriod } from "./demo-data";
 
 const DemoMap = dynamic(() => import("./DemoMap").then((m) => m.DemoMap), { ssr: false, loading: () => <div className="h-[380px] animate-pulse rounded-2xl bg-white/[0.04]" /> });
 
-const STORAGE_KEY = "zf-portal-demo-v2";
+const STORAGE_KEY = "zf-portal-demo-v3";
 const SITE_URL = "https://hubzenite.com.br";
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const num = (v: number) => v.toLocaleString("pt-BR");
@@ -26,14 +27,14 @@ const when = (at: string) => {
 type Update = (fn: (s: DemoState) => DemoState) => void;
 
 /** Estado da demonstração: só no navegador; "Resetar painel" volta ao original. */
-function useDemoState() {
+function useDemoState(art?: DemoRealArtSet) {
   const [state, setState] = useState<DemoState | null>(null);
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as DemoState;
-        if (parsed?.version === 2) {
+        if (parsed?.version === 3 && parsed.artSig === demoArtSignature(art)) {
           setState(parsed);
           return;
         }
@@ -41,7 +42,8 @@ function useDemoState() {
     } catch {
       /* sem armazenamento: usa o original */
     }
-    setState(buildDemoState());
+    setState(buildDemoState(new Date(), art));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- as artes vêm do servidor uma vez por carregamento
   }, []);
   const update: Update = (fn) =>
     setState((prev) => {
@@ -60,7 +62,7 @@ function useDemoState() {
     } catch {
       /* ignora */
     }
-    setState(buildDemoState());
+    setState(buildDemoState(new Date(), art));
   };
   return { state, update, reset };
 }
@@ -1072,9 +1074,9 @@ function Finance({ s, update }: { s: DemoState; update: Update }) {
 }
 
 /* ---------------- App ---------------- */
-export function DemoPortalApp() {
+export function DemoPortalApp({ art }: { art?: DemoRealArtSet }) {
   const pathname = usePathname();
-  const { state, update, reset } = useDemoState();
+  const { state, update, reset } = useDemoState(art);
   const [confirmReset, setConfirmReset] = useState(false);
   if (!state) return <div className="h-64 animate-pulse rounded-[22px] bg-white/[0.03]" />;
 

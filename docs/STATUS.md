@@ -6,6 +6,7 @@
 
 - **Portal de demonstração, rodada 2 (2026-11-16)**: tudo em `app/portal/demo/` (`demo-data.ts`, `DemoPortalApp.tsx`, `DemoMap.tsx`), mais o menu próprio do demo em `PortalShell.tsx` (prop `demo`, vinda de `layout.tsx`). Portal real sem mudança. `/portal/aprovacoes` no demo abre o Início; `/portal/grafica` abre Solicitações na seção Peças gráficas. Dependência nova: `qrcode` (+ `@types/qrcode`). Ver CHANGELOG.
   - Testado: `tsc --noEmit` (sem erros novos), `eslint app/portal`, gerador de dados conferido (contagens de posts e tickets) e `next build`.
+  - Artes reais: `lib/portal-demo.ts` (lista de e-mails demo, cliente de origem, carga das artes) e `app/api/portal/demo-media/[id]/route.ts`. Cliente de origem = `DEMO_PORTAL_SOURCE_CLIENT_ID` ou o primeiro cliente da agência com "Zenite"/"Zênite" no nome. Ver `docs/DECISIONS.md` (2026-11-16, "Demo com artes da Zenite").
   - **Não testado ao vivo**: tela não aberta no navegador (o login demo só existe em produção). Na cotação de peças gráficas, o valor é fixo nos dados do demo (não há tela de admin para lançar o preço).
 
 - **Story no Facebook (2026-11-13)**: `publishFacebookStory` (`lib/meta-social.ts`) chamado por `lib/social-publisher.ts`; travas removidas de `social-scheduling.ts` e `social-quick-post.ts`. `QuickPostForm.tsx` e `SocialPublishPanel.tsx`: com Story, título e legenda ficam desativados e não são enviados. Ver `docs/DECISIONS.md` (2026-11-13, "Story no Facebook").

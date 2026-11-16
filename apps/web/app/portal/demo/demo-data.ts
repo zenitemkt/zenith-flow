@@ -1,3 +1,5 @@
+import type { DemoRealArtSet } from "@/lib/portal-demo";
+
 /**
  * Painel de demonstração do portal: tudo fictício, gerado a partir da data de hoje e guardado só
  * no navegador (localStorage). Nada aqui toca o banco do CRM. "Resetar painel" volta a este estado.
@@ -71,7 +73,9 @@ export interface DemoFile {
   date: string;
 }
 export interface DemoState {
-  version: 2;
+  version: 3;
+  /** Quais artes reais montaram o estado: se mudarem, o demo é refeito. */
+  artSig: string;
   generatedAt: string;
   posts: DemoPost[];
   requests: DemoRequest[];
@@ -146,7 +150,9 @@ const FEED_TIMES = ["10:00", "12:30", "19:00", "11:00"];
 const STORY_TIMES = ["08:30", "17:00", "18:30", "20:00"];
 
 /** Planejamento de três meses (anterior, atual e próximo): 2 ou 3 dias de post por semana, às vezes FEED e STORIE no mesmo dia. */
-function buildPosts(now: Date): DemoPost[] {
+function buildPosts(now: Date, art?: DemoRealArtSet): DemoPost[] {
+  const feedArt = [...(art?.feed ?? [])].reverse();
+  const storyArt = [...(art?.story ?? [])].reverse();
   const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 2, 0);
   const nowKey = localDateTime(now);
@@ -184,21 +190,40 @@ function buildPosts(now: Date): DemoPost[] {
       status = future < 2 || future % 2 === 1 ? "scheduled" : "pending";
       future++;
     }
-    const caption =
+    const fallbackCaption =
       slot.kind === "FEED"
         ? `${topic}! ✨\n\nNossa equipe preparou condições especiais para este mês. Chame no WhatsApp e garanta seu horário.\n\n#Americana #Saude #Demonstracao`
         : `${topic} 👉 Responda este story ou toque no link para falar com a gente.`;
+    // Arte real da Zenite (da mais antiga para a mais nova, repetindo se faltar); sem ela, a arte de exemplo.
+    const pool = slot.kind === "FEED" ? feedArt : storyArt;
+    const real = pool.length ? pool[(slot.kind === "FEED" ? fi - 1 : si - 1) % pool.length] : undefined;
+    // Arte real sem legenda: texto neutro (os temas de exemplo não combinam com a arte de verdade).
+    const neutral = slot.kind === "FEED" ? ["Conteúdo da semana", "✨ Conteúdo preparado pela equipe para o seu perfil.\n\nChame no WhatsApp e saiba mais."] : ["Story do dia", "👉 Responda este story ou toque no link para falar com a gente."];
+    const caption = real ? real.caption || neutral[1]! : fallbackCaption;
+    const name = real ? titleFromCaption(real.caption) || neutral[0]! : topic;
     return {
       id: `p${idx + 1}`,
-      title: `[${slot.kind}] ${topic}`,
+      title: `[${slot.kind}] ${name}`,
       kind: slot.kind,
       channel: slot.kind === "FEED" ? "Instagram e Facebook" : "Instagram",
       caption,
-      image: artImage(topic, c1, c2, tag, slot.kind === "STORIE"),
+      image: real?.src ?? artImage(topic, c1, c2, tag, slot.kind === "STORIE"),
       status,
       at,
     };
   });
+}
+
+/** Título curto a partir da primeira linha da legenda (sem hashtags), cortado numa palavra. */
+function titleFromCaption(caption: string): string {
+  const line = caption
+    .split("\n")
+    .map((l) => l.replace(/#[\p{L}\p{N}_]+/gu, "").trim())
+    .find((l) => l.length > 2);
+  if (!line) return "";
+  if (line.length <= 44) return line;
+  const cut = line.slice(0, 44);
+  return `${cut.slice(0, cut.lastIndexOf(" ") > 20 ? cut.lastIndexOf(" ") : 44).trim()}…`;
 }
 
 type RequestSeed = Omit<DemoRequest, "id" | "ticket" | "createdAt" | "updates" | "links" | "attachments" | "deadline"> & {
@@ -263,7 +288,11 @@ function buildRequests(now: Date): { requests: DemoRequest[]; graphics: DemoRequ
   return { requests, graphics };
 }
 
-export function buildDemoState(now = new Date()): DemoState {
+export function demoArtSignature(art?: DemoRealArtSet): string {
+  return art ? `${art.feed.length}:${art.story.length}:${art.feed[0]?.src ?? ""}:${art.story[0]?.src ?? ""}` : "";
+}
+
+export function buildDemoState(now = new Date(), art?: DemoRealArtSet): DemoState {
   const t = now;
   const month = (offset: number) => {
     const d = new Date(t.getFullYear(), t.getMonth() + offset, 1);
@@ -322,9 +351,10 @@ export function buildDemoState(now = new Date()): DemoState {
   });
 
   return {
-    version: 2,
+    version: 3,
+    artSig: demoArtSignature(art),
     generatedAt: t.toISOString(),
-    posts: buildPosts(t),
+    posts: buildPosts(t, art),
     ...buildRequests(t),
     campaigns,
     invoices: [invoice(1, -3, { day: 4, method: "Pix" }), invoice(2, -2, { day: 5, method: "Boleto" }), invoice(3, -1, { day: 3, method: "Cartão de crédito" }), invoice(4, 0, null)],
