@@ -211,7 +211,6 @@ export default async function LeadDetailPage({ params }: PageProps) {
         status: (leadConv?.lastInboundAt ? "active" : leadConv?.autoTakeoverAt ? "waiting" : "none") as "none" | "waiting" | "active",
         suggestion: suggestOpener({
           leadName: lead.name,
-          senderName: session.user.name ?? null,
           service: latestSubmission?.service ?? null,
           city: latestSubmission?.city ?? null,
           summary: latestSubmission?.summary ?? null,

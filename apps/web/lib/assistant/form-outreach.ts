@@ -14,18 +14,21 @@ export const waPhone = (raw: string | null | undefined) => {
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
-/** Sugestão de primeira mensagem a partir das respostas do formulário (a pessoa edita antes de mandar). */
-export function suggestOpener(input: { leadName: string | null; senderName: string | null; service: string | null; city: string | null; summary: string | null }) {
+/**
+ * Sugestão de primeira mensagem, já como a Milena (a equipe envia pelo celular e a Milena segue
+ * dali sem se apresentar de novo). Usa as respostas do formulário e termina com uma pergunta fácil.
+ */
+export function suggestOpener(input: { leadName: string | null; service: string | null; city: string | null; summary: string | null }) {
   const name = firstName(input.leadName);
-  const sender = firstName(input.senderName);
   const instagram = input.summary?.match(/@[A-Za-z0-9._]{2,30}/)?.[0] ?? null;
   const service = input.service?.trim() ? lower(input.service.trim()) : null;
   const city = input.city?.trim() && !/^cidade\s*\d+$/i.test(input.city.trim()) ? input.city.trim() : null;
 
-  const hello = `Oi${name ? `, ${name}` : ""}, tudo bem? Aqui é ${sender ? `o ${sender}` : "a equipe"}, da Zenite.`;
+  const hello = `Oi${name ? `, ${name}` : ""}, tudo bem? Aqui é a Milena, do pré-vendas da Zenite.`;
   const interest = service
     ? `Vi que você se interessou por ${service}${city ? ` pro seu negócio aí em ${city}` : ""}.`
-    : `Vi que você preencheu nosso formulário${city ? ` aí de ${city}` : ""}.`;
-  const look = instagram ? ` Já dei uma olhada no ${instagram}.` : "";
-  return `${hello} ${interest}${look} Posso te fazer umas perguntas rápidas pra entender melhor o que você precisa?`;
+    : `Recebi seu contato pelo nosso formulário${city ? ` aí de ${city}` : ""}.`;
+  const look = instagram ? ` Dei uma olhada no ${instagram}.` : "";
+  const question = instagram ? " Me conta: hoje seus clientes chegam mais pelo Instagram ou por indicação?" : " Me conta: hoje como seus clientes costumam chegar até você?";
+  return `${hello} ${interest}${look}${question}`;
 }

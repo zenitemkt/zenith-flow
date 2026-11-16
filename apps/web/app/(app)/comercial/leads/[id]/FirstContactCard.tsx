@@ -41,7 +41,7 @@ export function FirstContactCard({ leadId, phone, suggestion, status }: { leadId
       ) : (
         <>
           <p className="mt-1 text-xs text-[#667085]">
-            Mande pelo WhatsApp Business do número comercial (19 93619-6876). Ajuste o texto se quiser, envie e clique em &quot;Já enviei&quot;: quando a pessoa responder, a Milena assume já sabendo as respostas do formulário.
+            Mande pelo WhatsApp Business do número comercial (19 93619-6876). Ajuste o texto se quiser, envie e clique em &quot;Já enviei&quot;: a mensagem conta como da Milena, e quando a pessoa responder ela segue a conversa sozinha.
           </p>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} className="mt-3 w-full resize-y rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
           <div className="mt-2 flex flex-wrap gap-2">
