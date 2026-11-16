@@ -80,6 +80,8 @@ Em `competitor-analytics.ts`, acrescentar:
 - Nova seção na tela mostrando quais ganchos rendem mais.
 
 ### 2D. Anúncios da Meta (via extensão)
+**Status: implementada em 2026-11-16.**
+
 O usuário tem a extensão `meta-ad-library-downloader` (pasta `G:\Projetos\meta-ad-library-downloader`), que já lê a Biblioteca de Anúncios no navegador. A API oficial da Biblioteca não entrega anúncios comerciais no Brasil, só políticos, por isso o caminho é a extensão.
 
 - Criar `CompetitorAd` no schema: `competitorId`, `adArchiveId` (único), `startedAt`, `lastSeenAt`, `active`, `platforms` (string[]), `bodyText`, `headline`, `linkUrl`, `ctaLabel`, `creativeUrls` (string[]), `format`.

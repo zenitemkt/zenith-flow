@@ -8,6 +8,7 @@ import { analyzeCompetitor } from "@/lib/competitor-analytics";
 import { compareClientWithCompetitors } from "@/lib/competitor-comparison";
 import { AddCompetitorForm, CompetitorActions, CompetitorFilters } from "./CompetitorControls";
 import { ClientCompetitorComparison } from "./CompetitorComparison";
+import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
 
 export const dynamic = "force-dynamic";
 
@@ -52,8 +53,13 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
   const profiles = await prisma.competitor.findMany({
     where: { agencyId, clientId },
     orderBy: [{ isOwn: "desc" }, { followers: "desc" }],
-    include: { posts: { where: { timestamp: { gte: since } } }, snapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } } },
+    include: {
+      posts: { where: { timestamp: { gte: since } } },
+      snapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } },
+      ads: { orderBy: [{ active: "desc" }, { startedAt: "desc" }, { lastSeenAt: "desc" }] },
+    },
   });
+  const agencyIntegration = await prisma.agency.findUnique({ where: { id: agencyId }, select: { competitorAdsTokenHash: true } });
   const rows = profiles.map((p) => {
     const stats = analyzeCompetitor(p.posts, p.followers, days);
     const first = p.snapshots.find((s) => s.followers !== null)?.followers ?? null;
@@ -84,6 +90,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       </div>
 
       <AddCompetitorForm clientId={clientId} />
+
+      <CompetitorAdsIntegration configured={Boolean(agencyIntegration?.competitorAdsTokenHash)} competitorId={current?.p.id ?? null} username={current?.p.igUsername ?? null} />
 
       {comparison ? (
         <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
@@ -169,6 +177,42 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
               <Stat label="Engajamento" value={pct(current.stats.engagementRate)} hint="por post, sobre seguidores" />
               <Stat label="Intervalo entre posts" value={`${dec(current.stats.avgGapDays)} dias`} hint={`maior pausa: ${dec(current.stats.longestGapDays, 0)} dias`} />
             </div>
+          </section>
+
+          <section className={CARD}>
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div><h2 className="text-sm font-semibold text-[#101828]">Anúncios na Meta</h2><p className="text-xs text-[#667085]">Capturados pela extensão na Biblioteca de Anúncios.</p></div>
+              <span className="text-xs text-[#667085]">{current.p.ads.filter((ad) => ad.active).length} ativos · {current.p.ads.length} guardados</span>
+            </div>
+            {current.p.ads.length === 0 ? (
+              <p className="rounded-lg bg-[#F9FAFB] px-3 py-5 text-center text-sm text-[#667085]">Nenhum anúncio enviado para este perfil. Configure a extensão acima, abra a Biblioteca da Meta e envie os anúncios carregados.</p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {current.p.ads.map((ad) => {
+                  const start = ad.startedAt ?? ad.createdAt;
+                  const end = ad.active ? new Date() : ad.lastSeenAt;
+                  const daysOnline = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86_400_000));
+                  return (
+                    <article key={ad.id} className="overflow-hidden rounded-lg border border-[#EAECF0]">
+                      {ad.creativeUrls[0] && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ad.creativeUrls[0]} alt="" referrerPolicy="no-referrer" loading="lazy" className="aspect-video w-full bg-[#F2F4F7] object-cover" />
+                      )}
+                      <div className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div><p className="text-2xl font-semibold text-[#101828]">{daysOnline} <span className="text-sm font-normal text-[#667085]">dias no ar</span></p><p className="text-[11px] text-[#98A2B3]">ID {ad.adArchiveId}</p></div>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ad.active ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"}`}>{ad.active ? "Ativo" : "Não apareceu na última carga"}</span>
+                        </div>
+                        {ad.headline && <p className="mt-2 text-sm font-semibold text-[#101828]">{ad.headline}</p>}
+                        {ad.bodyText && <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-[#667085]">{ad.bodyText}</p>}
+                        <div className="mt-2 flex flex-wrap gap-1.5">{ad.platforms.map((platform) => <span key={platform} className="rounded-full bg-[#F2F4F7] px-2 py-0.5 text-[11px] text-[#475467]">{platform}</span>)}{ad.format && <span className="rounded-full bg-[#FFF4ED] px-2 py-0.5 text-[11px] text-[#C4320A]">{ad.format}</span>}</div>
+                        {ad.linkUrl && <a href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-semibold text-[#FF2B00] hover:underline">Abrir destino do anúncio</a>}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {current.stats.posts === 0 ? (

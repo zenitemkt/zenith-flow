@@ -4,6 +4,10 @@
 
 ## Implementado
 
+- **Concorrentes — Fase 2D, anúncios da Meta via extensão (2026-11-16)**: a tela `/concorrentes` gera e revoga uma chave de integração da agência, recebe lotes autenticados da extensão Media Saver, mantém o histórico por ID da Biblioteca, identifica anúncios que deixaram de aparecer e destaca há quantos dias cada criativo está no ar. Anúncios inéditos criam alertas `competitor:newad:*` na Central de alertas. A chave é persistida no servidor apenas como hash SHA-256 e exibida completa uma única vez.
+  - A extensão `G:\Projetos\meta-ad-library-downloader` ganhou leitura dos cards da Biblioteca de Anúncios, configuração do portal/chave/concorrente e envio manual do lote. Ela limpa a coleta ao trocar de pesquisa para não misturar concorrentes.
+  - Testado: 32 testes de Concorrentes/Meta social, lint do portal, validação do schema Prisma e verificação completa da extensão.
+
 - **Correção da leitura de concorrentes via Instagram (2026-11-16)**: o OAuth social passou a pedir `ads_read`, exigido junto de `instagram_basic` e `pages_read_engagement` quando a Página/Instagram é administrada pelo Business Manager. A mensagem deixou de atribuir todo erro a `instagram_manage_insights` e agora oferece o botão “Reconectar Facebook/Instagram” no próprio erro. Conexões antigas precisam ser refeitas uma vez depois do deploy.
   - Testado: `meta-social.test.ts` (5/5), conjunto de Concorrentes e Meta social (28/28) e lint. Typecheck global segue bloqueado apenas pelo problema preexistente de `qrcode` no portal demo.
 

@@ -1,3 +1,13 @@
+## 2026-11-16 — Concorrentes Fase 2D: anúncios via extensão
+
+**Decisão 1 — extensão como fonte, não a API oficial**: a Biblioteca de Anúncios oficial não fornece o catálogo comercial brasileiro necessário. A extensão lê somente os cards já carregados pelo usuário no navegador e envia um lote explícito ao Zenite MKT.
+
+**Decisão 2 — credencial pública sem segredo no banco**: cada agência possui uma chave revogável com prefixo identificável. O navegador guarda a chave localmente, o servidor persiste somente seu hash SHA-256 e a rota pública aceita exclusivamente `Authorization: Bearer`. Gerar outra chave invalida a anterior.
+
+**Decisão 3 — histórico estável por anúncio**: `CompetitorAd` é único por concorrente e `adArchiveId`. Reenvios atualizam `lastSeenAt` e os metadados sem duplicar; IDs ausentes no lote atual passam para inativos, mas não são apagados. Um alerta é aberto apenas na primeira inclusão daquele ID.
+
+**Decisão 4 — longevidade é o principal sinal**: a interface destaca dias no ar calculados desde `startedAt`; na falta dessa data, usa a primeira captura. Isso é apresentado como sinal de persistência do criativo, não como prova isolada de desempenho financeiro.
+
 ## 2026-11-16 — Business Discovery em Páginas administradas pelo Business Manager
 
 **Problema**: cadastrar concorrente retornava código 10 da Graph API. O sistema dizia que faltava `instagram_manage_insights`, mas a documentação atual do `business_discovery` exige `instagram_basic` + `pages_read_engagement`; quando a Página chega por papel no Business Manager, exige também `ads_read` ou `ads_management`.

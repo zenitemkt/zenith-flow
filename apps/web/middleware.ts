@@ -44,6 +44,8 @@ const PUBLIC_PATH_PREFIXES = [
 ];
 
 function isPublicPath(pathname: string): boolean {
+  // A extensão não tem cookie de sessão; esta rota usa bearer token próprio da agência.
+  if (/^\/api\/competitors\/[^/]+\/ads$/.test(pathname)) return true;
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
