@@ -40,9 +40,12 @@ const CHANNEL_STYLE = {
 const CLASS_LABEL: Record<string, string> = { icp: "No perfil", fora_icp: "Fora do perfil", vendedor: "Vendedor", indefinido: "Em triagem" };
 
 function when(iso: string) {
+  // Sempre no fuso de Brasília (servidor e navegador iguais, sem erro de hidratação).
   const d = new Date(iso);
-  const today = new Date().toDateString() === d.toDateString();
-  return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", ...(today ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "2-digit" }) });
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const sp = new Date(d.getTime() - 3 * 3600_000);
+  return `${pad(sp.getUTCDate())}/${pad(sp.getUTCMonth() + 1)} ${pad(sp.getUTCHours())}:${pad(sp.getUTCMinutes())}`;
 }
 
 export function InboxView({ items, selected, messages, channel }: { items: InboxItem[]; selected: string | null; messages: InboxMessage[]; channel: string }) {
