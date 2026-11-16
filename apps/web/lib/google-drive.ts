@@ -133,6 +133,14 @@ export function createDriveFolder(name: string, parentId: string) {
   return drive<DriveFile>(`/files?supportsAllDrives=true&fields=${encodeURIComponent(FILE_FIELDS)}`, { method: "POST", body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parentId] }) });
 }
 
+/** Dá acesso de editor a um e-mail (o Google avisa a pessoa por e-mail). */
+export function shareDriveFileWithEmail(fileId: string, email: string, role: "writer" | "reader" = "writer") {
+  return drive<{ id: string }>(`/files/${fileId}/permissions?supportsAllDrives=true&sendNotificationEmail=true`, {
+    method: "POST",
+    body: JSON.stringify({ type: "user", role, emailAddress: email }),
+  });
+}
+
 export function renameDriveFile(fileId: string, name: string) {
   return drive<DriveFile>(`/files/${fileId}?supportsAllDrives=true&fields=id,name`, { method: "PATCH", body: JSON.stringify({ name }) });
 }

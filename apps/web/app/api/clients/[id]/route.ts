@@ -1,3 +1,5 @@
+import { syncClientDriveAccess } from "@/lib/client-drive";
+import { agencyHasDriveUser, withAgencyDrive } from "@/lib/drive-auth";
 import { NextResponse } from "next/server";
 import { ShareError } from "@/lib/finance-shares";
 import { readClientShares, replaceClientShares } from "@/lib/finance-partners";
@@ -83,6 +85,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     },
   });
 
+  // Pasta do cliente no Drive: cria se faltar e dá acesso de editor aos e-mails do cliente.
+  if (await agencyHasDriveUser(membership.agencyId).catch(() => false)) {
+    await withAgencyDrive(membership.agencyId, () => syncClientDriveAccess(membership.agencyId, client.id)).catch((error) => console.error("client_drive_sync_failed", error));
+  }
   return NextResponse.json({ ok: true });
 }
 

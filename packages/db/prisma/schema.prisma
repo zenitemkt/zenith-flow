@@ -3665,6 +3665,10 @@ model ClientDriveFolder {
   reworkId    String
   approvedId  String
   publishedId String
+  /// "0 - Materiais brutos (fotos e vídeos)": o que o cliente manda para editar.
+  rawId       String?
+  /// E-mails do cliente que já receberam acesso de editor à pasta.
+  sharedEmails String[] @default([])
   createdAt   DateTime @default(now())
 
   @@map("client_drive_folder")
