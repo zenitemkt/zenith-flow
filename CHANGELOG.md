@@ -4,6 +4,15 @@
 
 ### Alterado
 
+- **Portal de demonstração (logins demo)**: só o painel fictício mudou; o portal dos clientes reais continua igual.
+  - **Início** mostra as artes aguardando aprovação direto na tela (carrossel quando passam de 3). Ao clicar abre a janela com Aprovar, Pedir ajuste, Alterar legenda e Mudar data/hora. Aprovada ou com ajuste pedido, a arte sai da fila. Aba Aprovações saiu do menu.
+  - **Calendário** com o planejamento de três meses: [FEED] e [STORIE], 2 ou 3 dias por semana, às vezes os dois no mesmo dia em horários diferentes, com o horário em cada item. Cores: verde publicado, azul agendado (só muda data e hora), laranja aguardando aprovação, amarelo em ajuste.
+  - **Solicitações**: duas seções (Solicitações digitais e Peças gráficas, que saiu do menu), ticket #15003 em diante, 15 digitais (11 concluídas, 3 em andamento, 1 aguardando), filtro por situação, data limite, links de referência e anexos. Em peças gráficas, cotação da impressão (terceirizada) para o cliente aprovar ou recusar.
+  - **Menu**: Início, Calendário, Solicitações, Tráfego pago, Financeiro, Arquivos.
+  - **Tráfego pago**: três raios verdes (Americana 4 km, Santa Bárbara d'Oeste 2 km, Nova Odessa 2,8 km) e bairros excluídos em vermelho; filtro Mês passado / 7 dias / Hoje no resumo; Leads por mês com o número em cada barra e o mês embaixo.
+  - **Financeiro**: QR Code de verdade (biblioteca `qrcode`, leva a hubzenite.com.br) com a marca no centro; faturas pagas com botão Recibo / NF (abre o documento para imprimir ou salvar em PDF, marcado como demonstração).
+  - Estado salvo no navegador passou para `zf-portal-demo-v2`: quem já tinha mexido no demo começa do zero.
+
 - **Story no Facebook e story sem título nem legenda**: o agendador passa a publicar story na Página do Facebook (foto via `/photos` sem publicar + `/photo_stories`; vídeo via `/video_stories` em três fases), com as mesmas permissões do feed. Some o erro "Story no Facebook ainda não é suportado". Na publicação direta (Calendário/Operação) e no painel de publicação do cartão, escolher Story desativa o título e a legenda (nenhuma das duas APIs aceita texto em story). A pré-visualização do Facebook em Story fica vertical. `publishFacebookStory` em `lib/meta-social.ts`.
 
 ### Adicionado

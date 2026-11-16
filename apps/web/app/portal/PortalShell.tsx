@@ -18,6 +18,16 @@ const NAV_ITEMS = [
   { href: "/portal/financeiro", label: "Financeiro" },
 ];
 
+/** Painel de demonstração: aprovações ficam no Início, peças gráficas dentro de Solicitações e Arquivos por último. */
+const DEMO_NAV_ITEMS = [
+  { href: "/portal", label: "Início" },
+  { href: "/portal/calendario", label: "Calendário" },
+  { href: "/portal/solicitacoes", label: "Solicitações" },
+  { href: "/portal/trafego", label: "Tráfego pago" },
+  { href: "/portal/financeiro", label: "Financeiro" },
+  { href: "/portal/arquivos", label: "Arquivos" },
+];
+
 function isActive(pathname: string, href: string) {
   if (href === "/portal") return pathname === "/portal";
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -26,12 +36,15 @@ function isActive(pathname: string, href: string) {
 export function PortalShell({
   agencyName,
   clientName,
+  demo = false,
   children,
 }: {
   agencyName: string;
   clientName: string;
+  demo?: boolean;
   children: ReactNode;
 }) {
+  const navItems = demo ? DEMO_NAV_ITEMS : NAV_ITEMS;
   const pathname = usePathname();
   const router = useRouter();
   const mobileNavRef = useRef<HTMLElement | null>(null);
@@ -94,7 +107,7 @@ export function PortalShell({
 
           <nav aria-label="Portal do cliente" className="hidden flex-1 justify-center lg:flex">
             <div className="flex items-center gap-0.5 rounded-full border border-white/[0.07] bg-white/[0.03] p-1">
-              {NAV_ITEMS.map((item) => navLink(item, false))}
+              {navItems.map((item) => navLink(item, false))}
             </div>
           </nav>
 
@@ -113,7 +126,7 @@ export function PortalShell({
           aria-label="Portal do cliente"
           className="flex gap-1 overflow-x-auto px-4 pb-3 [scrollbar-width:none] sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
         >
-          {NAV_ITEMS.map((item) => navLink(item, true))}
+          {navItems.map((item) => navLink(item, true))}
         </nav>
       </header>
 

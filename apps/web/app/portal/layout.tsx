@@ -10,7 +10,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const demo = DEMO_EMAILS.includes(session.user.email.toLowerCase());
 
   return (
-    <PortalShell agencyName={membership.agency.name} clientName={client.name}>
+    <PortalShell agencyName={membership.agency.name} clientName={client.name} demo={demo}>
       {demo ? <DemoPortalApp /> : children}
     </PortalShell>
   );
