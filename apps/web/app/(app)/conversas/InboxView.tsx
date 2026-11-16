@@ -94,16 +94,6 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
     return true;
   }
 
-  const [connectResult, setConnectResult] = useState<string | null>(null);
-  async function connectMessenger() {
-    setBusy(true);
-    setConnectResult(null);
-    const res = await fetch("/api/inbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "connect-messenger" }) });
-    const body = await res.json().catch(() => null);
-    setBusy(false);
-    setConnectResult(res.ok ? (body?.results ?? []).join("\n") : body?.error ?? "Não foi possível ligar.");
-  }
-
   async function clearHistory() {
     if (!(await confirmDialog("Apagar todas as mensagens desta conversa? O contato continua na lista. Isso não apaga nada no celular do contato.", { title: "Apagar histórico", confirmLabel: "Apagar histórico", danger: true }))) return;
     await post({ action: "clear" });
@@ -137,16 +127,7 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
           </div>
         </div>
         <ul className="flex-1 overflow-y-auto">
-          {list.length === 0 && channel !== "MESSENGER" && <li className="p-4 text-center text-xs text-[#98A2B3]">Nenhuma conversa.</li>}
-          {channel === "MESSENGER" && (
-            <li className="flex flex-col gap-2 p-4 text-center text-xs text-[#667085]">
-              {list.length === 0 && <span>Nenhuma conversa do Messenger ainda.</span>}
-              <button type="button" disabled={busy} onClick={() => void connectMessenger()} className="mx-auto rounded-lg border border-[#D0D5DD] px-3 py-1.5 font-semibold text-[#344054] disabled:opacity-60">
-                {busy ? "Ligando..." : "Ligar mensagens do Messenger"}
-              </button>
-              {connectResult && <span className="whitespace-pre-line text-left">{connectResult}</span>}
-            </li>
-          )}
+          {list.length === 0 && <li className="p-4 text-center text-xs text-[#98A2B3]">Nenhuma conversa.</li>}
           {list.map((i) => {
             const st = CHANNEL_STYLE[i.channel];
             return (

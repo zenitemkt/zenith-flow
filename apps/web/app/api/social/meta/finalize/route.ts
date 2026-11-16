@@ -5,6 +5,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { encryptSecret } from "@/lib/crypto-secrets";
 import { fetchMetaPages } from "@/lib/meta-social";
+import { subscribePageToMessages } from "@/lib/meta-lead-ads";
 import { SOCIAL_OAUTH_PENDING_COOKIE, decodeSocialOAuthPending } from "@/lib/social-oauth-pending";
 
 /** Liga a Página escolhida (e o Instagram vinculado a ela) ao cliente. */
@@ -76,6 +77,10 @@ export async function POST(request: Request) {
       },
     });
   });
+
+  // Messenger: as mensagens da Página entram em Conversas sozinhas, sem botão.
+  const fb = await prisma.socialConnection.findUnique({ where: { clientId_platform: { clientId, platform: "FACEBOOK" } }, select: { leadsEnabled: true } });
+  await subscribePageToMessages(page.id, page.accessToken, fb?.leadsEnabled ?? false).catch((error) => console.error("messenger_subscribe_failed", error));
 
   const response = NextResponse.json({ ok: true, instagram: Boolean(page.instagram && includeInstagram) });
   response.cookies.delete(SOCIAL_OAUTH_PENDING_COOKIE);
