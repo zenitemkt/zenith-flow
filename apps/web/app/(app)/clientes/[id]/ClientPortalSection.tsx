@@ -13,7 +13,7 @@ interface PortalMember {
 
 const ROLE_LABELS: Record<PortalMember["role"], string> = {
   CLIENT_ADMIN: "Admin",
-  CLIENT_VIEWER: "Visualizador",
+  CLIENT_VIEWER: "Cliente - Aprovador",
 };
 
 const STATUS_LABELS: Record<PortalMember["status"], string> = {
@@ -116,7 +116,7 @@ export function ClientPortalSection({
                 onChange={(e) => setRole(e.target.value as PortalMember["role"])}
                 className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
               >
-                <option value="CLIENT_VIEWER">Visualizador</option>
+                <option value="CLIENT_VIEWER">Cliente - Aprovador</option>
                 <option value="CLIENT_ADMIN">Admin</option>
               </select>
             </div>

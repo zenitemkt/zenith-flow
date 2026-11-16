@@ -9,7 +9,7 @@ export const ROLE_LABELS: Record<MembershipRole, string> = {
   FINANCE: "Financeiro",
   HR: "RH",
   CLIENT_ADMIN: "Cliente Admin",
-  CLIENT_VIEWER: "Cliente Viewer",
+  CLIENT_VIEWER: "Cliente - Aprovador",
 };
 
 const TEAM_MANAGEMENT_ROLES: MembershipRole[] = ["SUPER_ADMIN", "AGENCY_ADMIN"];

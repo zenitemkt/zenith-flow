@@ -661,7 +661,7 @@ export function ClientFormModal({
                       }
                       className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
                     >
-                      <option value="CLIENT_VIEWER">Visualizador</option>
+                      <option value="CLIENT_VIEWER">Cliente - Aprovador</option>
                       <option value="CLIENT_ADMIN">Admin</option>
                     </select>
                   </div>
