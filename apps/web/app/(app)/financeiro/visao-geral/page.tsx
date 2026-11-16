@@ -10,6 +10,7 @@ import { loadFinanceViewer, parseScope, scopeEntryWhere, scopeOptions } from "@/
 import { ScopePills } from "../ScopePills";
 import { partnerChoices, loadPartnerLogins } from "../partner-choices";
 import { ManagePartnersButton } from "../ManagePartnersButton";
+import { ResetFinanceButton } from "../ResetFinanceButton";
 import { PartnerTotalsTable } from "../PartnerTotalsTable";
 
 const MONTH_LABELS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -140,6 +141,7 @@ export default async function VisaoGeralPage({ searchParams }: { searchParams: {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ManagePartnersButton partners={partnerChoices(viewer)} canManage={canManage} logins={logins} />
+          {canManage && <ResetFinanceButton />}
           <Link
             href="/financeiro/caixa"
             className="rounded-lg border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] hover:bg-[#F9FAFB]"
