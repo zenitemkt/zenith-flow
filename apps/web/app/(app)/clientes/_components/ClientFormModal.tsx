@@ -1,5 +1,6 @@
 "use client";
 
+import { ComboInput } from "@/components/ComboInput";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
@@ -486,20 +487,17 @@ export function ClientFormModal({
           }}
         />
         <div className="flex flex-col gap-1.5">
-          <FormField
-            label="Ramo de atuação"
-            name="segment"
-            list="client-segments"
-            autoComplete="off"
+          <label htmlFor="client-segment" className="text-sm font-medium text-[#344054]">
+            Ramo de atuação
+          </label>
+          <ComboInput
+            id="client-segment"
             value={values.segmentName}
-            onChange={(e) => update("segmentName", e.target.value)}
+            onChange={(v) => update("segmentName", v)}
+            options={segments}
             placeholder="Escolha um ramo ou digite um novo"
+            className="h-11 w-full rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
           />
-          <datalist id="client-segments">
-            {segments.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </div>
         <FormField
           label="Pasta do cliente no Google Drive"

@@ -1,5 +1,6 @@
 "use client";
 
+import { ComboInput } from "@/components/ComboInput";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -177,18 +178,15 @@ export function DraftStepBuilder({
         {newType === "CONDICAO" && (
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
-              <input
-                value={conditionField}
-                onChange={(e) => setConditionField(e.target.value)}
-                placeholder="campo"
-                list="condition-fields"
-                className="h-9 flex-1 rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
-              />
-              <datalist id="condition-fields">
-                {fields.map((f) => (
-                  <option key={f} value={f} />
-                ))}
-              </datalist>
+              <div className="flex-1">
+                <ComboInput
+                  value={conditionField}
+                  onChange={setConditionField}
+                  options={fields}
+                  placeholder="campo"
+                  className="h-9 w-full rounded-md border border-[#D0D5DD] px-2 text-xs outline-none focus:border-[#FF2B00]"
+                />
+              </div>
               <select
                 value={conditionOperator}
                 onChange={(e) => setConditionOperator(e.target.value as ConditionOperator)}

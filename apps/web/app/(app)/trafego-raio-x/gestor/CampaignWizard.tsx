@@ -1,5 +1,6 @@
 "use client";
 
+import { ComboInput } from "@/components/ComboInput";
 import { confirmDialog } from "@/lib/dialogs";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -744,12 +745,7 @@ function AdSetCard({ adset: a, index, label, budgetPerAdSet, defaultCities, onCh
           </div>
           <label className={LABEL}>
             Nicho (opcional)
-            <input value={a.niche} onChange={(e) => { const niche = e.target.value; onChange((x) => ({ ...x, niche, form: { ...x.form, questions: x.form.questions.map((q) => (niche.trim() && q.label.startsWith("Qual é o segmento") ? { label: "Qual é o @ do Instagram da sua empresa?", options: [] } : !niche.trim() && q.label.startsWith("Qual é o @ do Instagram") ? { label: "Qual é o segmento da sua empresa? (Ex: Clínica Estética, Lanchonete)", options: [] } : q)) } })); }} list="traffic-niches" placeholder="Deixe vazio para empresários em geral" className={INPUT} />
-            <datalist id="traffic-niches">
-              {NICHE_PRESETS.map((p) => (
-                <option key={p.niche} value={p.niche} />
-              ))}
-            </datalist>
+            <ComboInput value={a.niche} options={NICHE_PRESETS.map((p) => p.niche)} onChange={(niche) => { onChange((x) => ({ ...x, niche, form: { ...x.form, questions: x.form.questions.map((q) => (niche.trim() && q.label.startsWith("Qual é o segmento") ? { label: "Qual é o @ do Instagram da sua empresa?", options: [] } : !niche.trim() && q.label.startsWith("Qual é o @ do Instagram") ? { label: "Qual é o segmento da sua empresa? (Ex: Clínica Estética, Lanchonete)", options: [] } : q)) } })); }} placeholder="Deixe vazio para empresários em geral" className={INPUT} />
           </label>
           {budgetPerAdSet && (
             <label className={LABEL}>
