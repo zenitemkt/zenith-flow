@@ -224,7 +224,7 @@ export function QuickPostForm({
         const media: UploadedMedia[] = [];
         for (const [index, file] of files.entries()) {
           setProgress(`Enviando arte ${index + 1} de ${files.length}...`);
-          media.push(await uploadSocialMedia(contentId, file));
+          media.push(await uploadSocialMedia(contentId, file, "approved"));
         }
         const version = await fetch(`/api/content/${contentId}/versions`, {
           method: "POST",
@@ -240,7 +240,7 @@ export function QuickPostForm({
       let coverKey: string | null = null;
       if (coverAvailable && coverMode === "image" && coverFile) {
         setProgress("Enviando a capa...");
-        coverKey = (await uploadSocialMedia(contentId, coverFile)).key;
+        coverKey = (await uploadSocialMedia(contentId, coverFile, "approved")).key;
       }
       setProgress(now ? "Publicando..." : "Agendando...");
       const res = await fetch(`/api/social/quick-post/${contentId}`, {

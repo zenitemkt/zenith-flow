@@ -3644,3 +3644,28 @@ model SocialInboxMessage {
   @@index([threadId, createdAt])
   @@map("social_inbox_message")
 }
+
+/// Pasta "Clientes (Zenite Flow)" no Drive compartilhado (uma por agência).
+model DriveClientsRoot {
+  id        String   @id @default(cuid())
+  agencyId  String   @unique
+  rootId    String
+  createdAt DateTime @default(now())
+
+  @@map("drive_clients_root")
+}
+
+/// Pasta de cada cliente no Drive, com as etapas dos arquivos produzidos.
+model ClientDriveFolder {
+  id          String   @id @default(cuid())
+  agencyId    String
+  clientId    String   @unique
+  rootId      String
+  awaitingId  String
+  reworkId    String
+  approvedId  String
+  publishedId String
+  createdAt   DateTime @default(now())
+
+  @@map("client_drive_folder")
+}

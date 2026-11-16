@@ -7,7 +7,7 @@ import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
 import { CONTENT_MEDIA_MAX_FILES, isVideoType, validateContentMediaFile } from "@/lib/content-media";
-import { uploadContentMedia, type UploadedMedia } from "@/lib/content-media-upload";
+import { uploadSocialMedia, type UploadedMedia } from "@/lib/content-media-upload";
 import { formatBytes } from "@/lib/media";
 
 export function NewVersionModal({ contentId }: { contentId: string }) {
@@ -63,7 +63,7 @@ export function NewVersionModal({ contentId }: { contentId: string }) {
         const media: UploadedMedia[] = [];
         for (const [index, file] of files.entries()) {
           setProgress(`Enviando arquivo ${index + 1} de ${files.length}...`);
-          media.push(await uploadContentMedia(contentId, file));
+          media.push(await uploadSocialMedia(contentId, file));
         }
         setProgress("Salvando versão...");
         const response = await fetch(`/api/content/${contentId}/versions`, {

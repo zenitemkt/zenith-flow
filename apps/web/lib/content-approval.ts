@@ -1,3 +1,5 @@
+import { moveClientDriveFiles, type ClientDriveStage } from "@/lib/client-drive";
+import { withAgencyDrive } from "@/lib/drive-auth";
 import { prisma, type ApprovalStatus } from "@zenite-mkt/db";
 import { autoScheduleAfterApproval } from "@/lib/social-scheduling";
 
@@ -60,6 +62,17 @@ export async function applyApprovalDecision({
 
   // Agendador de redes: cliente com "agendar sozinho ao aprovar" ligado já entra na fila de publicação.
   if (decision === "APROVADO") await autoScheduleAfterApproval(contentItem.id).catch(() => undefined);
+  await moveVersionFiles(contentItem.id, contentVersionId, decision === "APROVADO" ? "approved" : "rework").catch((error) => console.error("client_drive_approval_move_failed", error));
 
   return nextStatus;
+}
+
+/** Arquivos da versão (no Drive) mudam de etapa na pasta do cliente. */
+async function moveVersionFiles(contentItemId: string, versionId: string, to: ClientDriveStage) {
+  const item = await prisma.contentItem.findUnique({ where: { id: contentItemId }, select: { agencyId: true, clientId: true } });
+  if (!item?.clientId) return;
+  const media = await prisma.contentVersionMedia.findMany({ where: { versionId, driveFileId: { not: null } }, select: { driveFileId: true } });
+  const ids = media.map((m) => m.driveFileId!).filter(Boolean);
+  if (!ids.length) return;
+  await withAgencyDrive(item.agencyId, () => moveClientDriveFiles(item.clientId!, ids, to));
 }

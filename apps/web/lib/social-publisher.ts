@@ -14,6 +14,7 @@ import {
 import { signContentMediaRead } from "@/lib/content-media-server";
 import { withAgencyDrive } from "@/lib/drive-auth";
 import { deleteTempCopies, driveIdOfKey, moveSocialDriveFiles, publicUrlForDriveFile } from "@/lib/social-drive";
+import { moveClientDriveFiles } from "@/lib/client-drive";
 
 /**
  * Motor do agendador de redes (2026-10-20). Roda pelo cron externo
@@ -83,11 +84,13 @@ function isTokenError(error: unknown): boolean {
 }
 
 /** Depois de publicar ou falhar de vez: apaga as cópias temporárias e move os arquivos no Drive. */
-async function settleDriveFiles(post: { id: string; agencyId: string; coverKey: string | null; version: { media: { driveFileId: string | null }[] } | null }, to: "published" | "failed") {
+async function settleDriveFiles(post: { id: string; agencyId: string; clientId: string; coverKey: string | null; version: { media: { driveFileId: string | null }[] } | null }, to: "published" | "failed") {
   const ids = [...(post.version?.media ?? []).map((m) => m.driveFileId), driveIdOfKey(post.coverKey)].filter((x): x is string => Boolean(x));
   if (!ids.length) return;
   await deleteTempCopies(post.id, ids);
   await withAgencyDrive(post.agencyId, () => moveSocialDriveFiles(post.agencyId, ids, to)).catch((error) => console.error("social_drive_settle_failed", post.id, error));
+  // Pasta do cliente: publicado vai para "4 - Publicados"; falha continua onde estava.
+  if (to === "published") await withAgencyDrive(post.agencyId, () => moveClientDriveFiles(post.clientId, ids, "published")).catch((error) => console.error("client_drive_settle_failed", post.id, error));
 }
 
 async function runPublish(post: SocialPost, budgetMs: number): Promise<"published" | "processing" | "retried" | "failed"> {

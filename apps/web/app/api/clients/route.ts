@@ -6,6 +6,8 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { readDriveUrl, readSocialLinks, resolveSegmentId } from "@/lib/clients-server";
 import { prisma, type MembershipRole } from "@zenite-mkt/db";
+import { ensureClientDriveFolders } from "@/lib/client-drive";
+import { agencyHasDriveUser, withAgencyDrive } from "@/lib/drive-auth";
 
 const PORTAL_ROLES: MembershipRole[] = ["CLIENT_ADMIN", "CLIENT_VIEWER"];
 
@@ -163,5 +165,9 @@ export async function POST(request: Request) {
     return created;
   });
 
+  // Pasta do cliente no Drive (com as etapas). Sem Drive conectado, é criada no primeiro envio de arquivo.
+  if (await agencyHasDriveUser(membership.agencyId).catch(() => false)) {
+    await withAgencyDrive(membership.agencyId, () => ensureClientDriveFolders(membership.agencyId, client.id)).catch((error) => console.error("client_drive_create_failed", error));
+  }
   return NextResponse.json({ id: client.id }, { status: 201 });
 }

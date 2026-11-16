@@ -488,7 +488,10 @@ export function ClientFormModal({
           }}
         />
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="client-segment" className="text-sm font-medium text-[#344054]">
+          <label
+            htmlFor="client-segment"
+            className="text-sm font-medium text-[#344054]"
+          >
             Ramo de atuação
           </label>
           <ComboInput
@@ -500,15 +503,23 @@ export function ClientFormModal({
             className="h-11 w-full rounded-lg border border-[#D0D5DD] px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
           />
         </div>
-        <FormField
-          label="Pasta do cliente no Google Drive"
-          name="driveUrl"
-          type="url"
-          inputMode="url"
-          value={values.driveUrl}
-          onChange={(e) => update("driveUrl", e.target.value)}
-          placeholder="https://drive.google.com/drive/folders/..."
-        />
+        {mode === "create" ? (
+          <p className="rounded-lg bg-[#F9FAFB] px-3 py-2 text-xs text-[#667085]">
+            A pasta do cliente no Google Drive é criada sozinha ao salvar, com
+            &quot;Aguardando aprovação&quot;, &quot;Retrabalho&quot;,
+            &quot;Aprovado&quot; e &quot;Publicados&quot;.
+          </p>
+        ) : (
+          <FormField
+            label="Pasta do cliente no Google Drive"
+            name="driveUrl"
+            type="url"
+            inputMode="url"
+            value={values.driveUrl}
+            onChange={(e) => update("driveUrl", e.target.value)}
+            placeholder="https://drive.google.com/drive/folders/..."
+          />
+        )}
         {partners.length > 0 && (
           <PartnerSplitFields
             partners={partners}
