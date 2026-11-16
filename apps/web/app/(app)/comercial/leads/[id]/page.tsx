@@ -14,8 +14,8 @@ import { LeadStatusActions } from "./LeadStatusActions";
 import { ConvertLeadButton } from "./ConvertLeadButton";
 import { AddLeadNoteForm } from "./AddLeadNoteForm";
 import { DeleteLeadButton } from "./DeleteLeadButton";
-import { MilenaStartButton } from "./MilenaStartButton";
-import { FORM_TEMPLATE_TEXT, firstName, topicOf } from "@/lib/assistant/form-outreach";
+import { FirstContactCard } from "./FirstContactCard";
+import { suggestOpener, waPhone } from "@/lib/assistant/form-outreach";
 import { LeadIntelligencePanel } from "./LeadIntelligencePanel";
 import { SubmissionAttribution } from "./SubmissionAttribution";
 import { getHiddenClientIds, visibleByOptionalClientWhere } from "@/lib/client-access";
@@ -196,6 +196,29 @@ export default async function LeadDetailPage({ params }: PageProps) {
     ]),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
+  // Primeiro contato manual: sugestão de mensagem e entrega para a Milena quando o lead responder.
+  const leadWaPhone = waPhone(lead.phone ?? lead.phones[0]?.value);
+  const leadConv = leadWaPhone
+    ? await prisma.assistantConversation.findUnique({
+        where: { agencyId_phone: { agencyId: membership.agencyId, phone: leadWaPhone } },
+        select: { autoTakeoverAt: true, lastInboundAt: true },
+      })
+    : null;
+  const latestSubmission = lead.submissions[0];
+  const firstContact = leadWaPhone
+    ? {
+        phone: leadWaPhone,
+        status: (leadConv?.lastInboundAt ? "active" : leadConv?.autoTakeoverAt ? "waiting" : "none") as "none" | "waiting" | "active",
+        suggestion: suggestOpener({
+          leadName: lead.name,
+          senderName: session.user.name ?? null,
+          service: latestSubmission?.service ?? null,
+          city: latestSubmission?.city ?? null,
+          summary: latestSubmission?.summary ?? null,
+        }),
+      }
+    : null;
+
   return (
     <div className="flex flex-col gap-6">
       <Link href="/comercial/leads" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
@@ -229,11 +252,12 @@ export default async function LeadDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-col items-end gap-2">
           <LeadStatusActions leadId={lead.id} options={LEAD_STATUS_TRANSITIONS[lead.status]} />
-          {(lead.phone || lead.phones.length > 0) && <MilenaStartButton leadId={lead.id} preview={FORM_TEMPLATE_TEXT(firstName(lead.name), topicOf(lead.submissions[0]?.service))} />}
           {lead.status === "QUALIFICADO" && <ConvertLeadButton leadId={lead.id} />}
           {canManageTeam(membership.role) && <DeleteLeadButton leadId={lead.id} leadName={lead.name} />}
         </div>
       </div>
+
+      {firstContact && <FirstContactCard leadId={lead.id} phone={firstContact.phone} suggestion={firstContact.suggestion} status={firstContact.status} />}
 
       <LeadIntelligencePanel
         intelligence={intelligence}

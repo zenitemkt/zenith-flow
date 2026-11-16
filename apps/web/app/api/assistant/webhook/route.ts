@@ -116,7 +116,9 @@ export async function POST(request: Request) {
           (await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: echo.to } } })) ??
           (await prisma.assistantConversation.create({ data: { agencyId, phone: echo.to, mode: "human" } }));
         await prisma.assistantMessage.upsert({ where: { waMessageId: echo.id }, create: { conversationId: conv.id, role: "partner", content: describe(echo).content, waMessageId: echo.id }, update: {} });
-        await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "human", replyDueAt: null } });
+        // Primeira mensagem manual marcada com "Já enviei": a Milena continua pronta para assumir.
+        const handoff = conv.autoTakeoverAt && Date.now() - conv.autoTakeoverAt.getTime() < 7 * 24 * 3600_000;
+        if (!handoff) await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "human", replyDueAt: null } });
       }
 
       for (const message of (value.messages ?? []) as WaMessage[]) {
@@ -146,7 +148,9 @@ export async function POST(request: Request) {
           await notifyPartners(config, `${config.name}: novo contato no WhatsApp, ${profiles.get(message.from) || "sem nome"} (+${message.from}).`).catch(() => null);
         }
         if (conv.mode === "bot") {
-          await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date(), replyDueAt: replyAt(config.replyDelaySeconds) } });
+          await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date(), replyDueAt: replyAt(config.replyDelaySeconds), autoTakeoverAt: null } });
+        } else {
+          await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date() } });
         }
       }
     }

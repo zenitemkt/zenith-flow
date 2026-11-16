@@ -3300,6 +3300,8 @@ model AssistantConversation {
   classification String? // icp | fora_icp | vendedor | indefinido
   replyDueAt     DateTime?
   lastInboundAt  DateTime?
+  /// Primeira mensagem mandada pela equipe no celular; a Milena assume quando o contato responder.
+  autoTakeoverAt DateTime?
   failures       Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
