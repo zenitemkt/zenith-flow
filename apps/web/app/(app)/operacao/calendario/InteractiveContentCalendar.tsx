@@ -231,6 +231,10 @@ export function InteractiveContentCalendar({
                 {cells.map((day, idx) => {
                   const dayItems = day ? itemsByDay.get(day) ?? [] : [];
                   const pendingCount = dayItems.filter((item) => isPending(item.status)).length;
+                  const dayPosts = day ? postsByDay.get(day) ?? [] : [];
+                  // Peça que já tem publicação neste dia aparece só pelas publicações (horário + rede), sem título repetido.
+                  const postedItemIds = new Set(dayPosts.map((post) => post.contentItemId));
+                  const visibleItems = dayItems.filter((item) => !postedItemIds.has(item.id));
                   const cellKey = day ? new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10) : null;
                   const isToday = cellKey === todayKey;
                   const canPost = cellKey !== null && cellKey >= todayKey;
@@ -268,7 +272,7 @@ export function InteractiveContentCalendar({
                             {day}
                           </p>
                           <div className="flex flex-col gap-1">
-                            {dayItems.map((item) => {
+                            {visibleItems.map((item) => {
                               const bucket = contentCalendarBucket(item.status);
                               const BucketIcon = CALENDAR_BUCKET_ICON[bucket];
                               return (
@@ -283,7 +287,7 @@ export function InteractiveContentCalendar({
                                 </Link>
                               );
                             })}
-                            {(postsByDay.get(day) ?? []).map((post) => {
+                            {dayPosts.map((post) => {
                               const PostIcon = post.platform === "INSTAGRAM" ? Instagram : post.platform === "FACEBOOK" ? Facebook : MapPin;
                               const className = `flex items-center gap-1 truncate rounded border px-1.5 py-1 text-[11px] font-medium ${
                                 post.late ? "border-[#F79009]/40 bg-[#FEF3C7] text-[#92600A]" : POST_STATUS_CLASS[post.status]
