@@ -345,3 +345,7 @@ Pedido do usuário, 2026-09-07 (verificado por leitura de código, não suposiç
 
 `SocialPost.connectionId` é opcional: Instagram/Facebook usam `SocialConnection`; Google usa `googleBusinessLocationId` → `GoogleBusinessLocation`. `googleCallToAction` e `googleCallToActionUrl` guardam o botão opcional.
 
+# Concorrentes — desempenho do site (Fase 3C)
+
+`Competitor.websiteScore` guarda a última nota Lighthouse mobile em escala 0–100. `websiteScoreAt` registra a medição bem-sucedida e `websiteScoreError` guarda a última falha sem apagar a nota anterior.
+

@@ -110,6 +110,8 @@ O usuário tem a extensão `meta-ad-library-downloader` (pasta `G:\Projetos\meta
 - Snapshot diário da nota, para ver a evolução.
 
 ### 3C. Site do concorrente
+**Status: implementada em 2026-11-17.**
+
 - PageSpeed Insights API (gratuita, sem chave para uso leve): nota de performance do site do concorrente.
 - Guardar `websiteScore` e a data da medição. Útil como argumento comercial.
 

@@ -4,6 +4,8 @@
 
 ## Implementado
 
+- **Concorrentes — Fase 3C, desempenho dos sites (2026-11-17)**: perfis que informam site no Instagram recebem uma nota mobile de 0 a 100 pela API PageSpeed Insights. A tela compara cliente e concorrentes com barras, classificação e data da medição. A equipe pode medir um perfil pelo botão no card; o cron `/api/cron/competitors-pagespeed` atualiza diariamente os sites mais antigos dentro do tempo disponível. Falhas ficam isoladas no perfil e a última nota válida é preservada. `GOOGLE_PAGESPEED_API_KEY` é opcional e recomendada se o volume crescer.
+
 - **Google Business Profile — publicação preparada (2026-11-17)**: publicação rápida e calendário aceitam Google junto de Instagram/Facebook, com texto, uma foto e botão opcional. O publicador renova o OAuth, envia a atualização e salva o retorno. O envio real depende apenas da aprovação do protocolo `4-4339000042452` e da conexão das localizações.
 
 - **Google Business Profile — Central de Avaliações pronta para conexão (2026-11-17)**: `/automacoes/avaliacoes-google` reúne indicadores, filtros por cliente/nota/status, fila manual, rascunho, aprovação, histórico append-only e regras configuráveis. Notas de 1 a 3 sempre ficam com a equipe; 4 e 5 podem receber modelo automático, com opção de exigir comentário. Avaliações negativas geram alertas configuráveis. A ingestão é idempotente por localização + ID externo e preserva decisões humanas quando o Google atualizar uma avaliação.

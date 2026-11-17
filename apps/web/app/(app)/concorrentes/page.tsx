@@ -11,6 +11,7 @@ import { ClientCompetitorComparison } from "./CompetitorComparison";
 import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
 import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
 import { GoogleReviewsComparison, GoogleReviewsPanel } from "./CompetitorGoogleReviews";
+import { CompetitorWebsiteScores } from "./CompetitorWebsiteScores";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       <CompetitorMonthlyReports clientId={clientId} targetMonth={monthKey(targetMonth)} targetLabel={monthLabel(targetMonth)} reports={monthlyReports} />
 
       <GoogleReviewsComparison days={days} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
+
+      <CompetitorWebsiteScores profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
 
       {comparison ? (
         <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />

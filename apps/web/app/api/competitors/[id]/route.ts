@@ -4,6 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canSeeClient } from "@/lib/client-access";
 import { analyzeTopPostsWithAI, syncCompetitor } from "@/lib/competitors";
+import { syncCompetitorWebsite } from "@/lib/competitor-pagespeed";
 
 export const maxDuration = 60;
 
@@ -25,6 +26,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const days = [30, 90, 180, 365].includes(Number(body?.days)) ? Number(body.days) : 90;
       return NextResponse.json({ ok: true, report: await analyzeTopPostsWithAI(ctx.competitor.id, days) });
     }
+    if (body?.action === "website") return NextResponse.json({ ok: true, ...(await syncCompetitorWebsite(ctx.competitor.id)) });
     return NextResponse.json({ ok: true, ...(await syncCompetitor(ctx.competitor.id, body?.deep === true)) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Falha." }, { status: 502 });

@@ -425,3 +425,9 @@
 - Atualização padrão permite texto, uma foto e botão opcional.
 - Publicador real, renovação OAuth, auditoria e tratamento de falhas ficam preparados para a aprovação externa.
 
+# 2026-11-17 — Análise de Concorrentes Fase 3C
+
+- Comparação da velocidade mobile dos sites com nota do Google PageSpeed.
+- Medição manual por perfil e atualização automática diária.
+- Falha da medição não interrompe Instagram, avaliações ou relatórios e não apaga a última nota válida.
+

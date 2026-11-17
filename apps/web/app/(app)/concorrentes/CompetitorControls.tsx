@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Gauge, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
 
 const SELECT = "h-10 rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
@@ -93,11 +93,11 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
 /** Atualizar agora, analisar com IA e remover. */
 export function CompetitorActions({ competitorId, days, username, hasReport }: { competitorId: string; days: number; username: string; hasReport: boolean }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<"sync" | "ai" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"sync" | "website" | "ai" | "delete" | null>(null);
 
-  async function run(kind: "sync" | "ai") {
+  async function run(kind: "sync" | "website" | "ai") {
     setBusy(kind);
-    const res = await fetch(`/api/competitors/${competitorId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kind === "ai" ? { action: "analyze", days } : { action: "sync", deep: true }) });
+    const res = await fetch(`/api/competitors/${competitorId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kind === "ai" ? { action: "analyze", days } : kind === "website" ? { action: "website" } : { action: "sync", deep: true }) });
     const body = await res.json().catch(() => null);
     setBusy(null);
     if (!res.ok) await alertDialog(body?.error ?? "Não foi possível concluir.", { title: kind === "ai" ? "Análise não gerada" : "Não atualizou" });
@@ -118,6 +118,9 @@ export function CompetitorActions({ competitorId, days, username, hasReport }: {
     <div className="flex flex-wrap gap-2">
       <button type="button" disabled={busy !== null} onClick={() => void run("sync")} className={BTN}>
         <RefreshCw size={14} aria-hidden /> {busy === "sync" ? "Atualizando..." : "Atualizar agora"}
+      </button>
+      <button type="button" disabled={busy !== null} onClick={() => void run("website")} className={BTN}>
+        <Gauge size={14} aria-hidden /> {busy === "website" ? "Medindo site..." : "Medir site"}
       </button>
       <button type="button" disabled={busy !== null} onClick={() => void run("ai")} className="flex h-9 items-center gap-1.5 rounded-lg bg-[#101828] px-3 text-xs font-semibold text-white disabled:opacity-60">
         <Sparkles size={14} aria-hidden /> {busy === "ai" ? "Analisando (até 1 min)..." : hasReport ? "Refazer análise com IA" : "Analisar melhores posts com IA"}
