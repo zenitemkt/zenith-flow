@@ -314,6 +314,7 @@ enum ClientStatus {
 
 model Client {
   competitors     Competitor[]
+  competitorReports CompetitorReport[]
   id                     String         @id @default(cuid())
   agencyId               String
   agency                 Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
@@ -3767,4 +3768,20 @@ model CompetitorSnapshot {
 
   @@unique([competitorId, day])
   @@map("competitor_snapshot")
+}
+
+/// Relatório executivo mensal gerado a partir dos dados públicos dos perfis acompanhados.
+model CompetitorReport {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month       DateTime
+  content     String   @db.Text
+  generatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([clientId, month])
+  @@index([clientId, generatedAt])
+  @@map("competitor_report")
 }

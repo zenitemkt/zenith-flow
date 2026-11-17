@@ -4,6 +4,11 @@
 
 ## Implementado
 
+- **Concorrentes — Fase 3A, relatório mensal (2026-11-17)**: cada cliente com perfil próprio e ao menos um concorrente pode gerar o fechamento do último mês concluído em `/concorrentes`. O relatório cruza posts, crescimento, formatos, temas, ganchos, rankings, diferenças e anúncios capturados; a Claude devolve resumo, mudanças, evidências, posição do cliente, limites e exatamente cinco ações. `CompetitorReport` mantém um registro por cliente/mês. Refazer atualiza aquele fechamento sem duplicar. O cron `/api/cron/competitor-reports` fecha o mês anterior no primeiro dia de cada mês e ignora relatórios já existentes.
+  - O portal ganhou `/portal/relatorios`, com histórico mensal e leitura executiva. A aba existe apenas para `CLIENT_ADMIN`; `CLIENT_VIEWER` é redirecionado e não recebe o item de navegação.
+  - Segurança: geração interna valida sessão, agência e acesso particular ao cliente; consulta do portal deriva o cliente do workspace da sessão; conteúdo é validado antes de persistir; auditoria registra geração e regeneração sem guardar o prompt integral.
+  - Testado: 34 testes unitários de Concorrentes aprovados, incluindo mês de Brasília e resposta incompleta; schema Prisma válido, lint, typecheck e build de produção aprovados. O teste de banco para isolamento e unicidade foi criado, mas depende de `DATABASE_URL` de teste.
+
 - **Concorrentes — data local e escala comparável no gráfico (2026-11-17)**: snapshots diários agora usam a data civil de `America/Sao_Paulo`, evitando que atualizações após 21h apareçam como o dia seguinte por causa do UTC. A evolução de seguidores passou a comparar a variação percentual desde o primeiro registro do período; a legenda preserva o total atual e a variação de cada perfil, permitindo comparar contas de tamanhos muito diferentes.
   - Testado: dois casos de fronteira de fuso (antes e depois da meia-noite de Brasília), 18 testes de concorrentes aprovados e lint sem erro novo.
 

@@ -1,3 +1,15 @@
+## 2026-11-17 — Concorrentes Fase 3A: relatório mensal
+
+**Decisão 1 — mês encerrado, não janela móvel**: o fechamento usa o mês civil anterior em `America/Sao_Paulo`. A geração manual e o cron trabalham com a mesma chave `clientId + month`; isso torna a operação idempotente e mantém meses anteriores consultáveis.
+
+**Decisão 2 — JSON validado dentro do campo textual**: `CompetitorReport.content` segue a especificação de texto, mas guarda JSON validado para a interface não depender de títulos livres produzidos pela IA. A resposta exige resumo, evidências, posição, limitações e cinco ações completas. Conteúdo incompleto não é persistido.
+
+**Decisão 3 — fonte pública e explicável**: o prompt recebe somente agregações dos perfis cadastrados, posts públicos, snapshots e anúncios enviados pela extensão. Alcance, impressão, venda, investimento e causalidade são proibidos quando não existem na fonte. O relatório exibe contagem das fontes e limitações.
+
+**Decisão 4 — portal apenas para Cliente Admin**: a aba e a rota `/portal/relatorios` ficam restritas a `CLIENT_ADMIN`, conforme o escopo da Fase 3A. `CLIENT_VIEWER` continua sem acesso. O cliente é sempre derivado do workspace da sessão.
+
+**Decisão 5 — cron mensal e botão usam o mesmo domínio**: o cron do dia 1 pula relatórios existentes e respeita orçamento de execução. O botão pode regenerar o mês encerrado e gera audit log. Ambos chamam `generateMonthlyCompetitorReport`, evitando regras divergentes.
+
 ## 2026-11-17 — Concorrentes: dia de Brasília e crescimento comparável
 
 **Decisão 1 — snapshot segue a data civil da operação**: a chave diária continua persistida como meia-noite UTC, mas o ano, mês e dia são extraídos em `America/Sao_Paulo`. Assim, a restrição única existente continua válida sem permitir que uma atualização noturna seja atribuída ao dia seguinte.

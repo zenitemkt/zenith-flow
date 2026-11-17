@@ -10,7 +10,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const art = demo ? await loadDemoRealArt(membership.agencyId, client.id) : null;
 
   return (
-    <PortalShell agencyName={membership.agency.name} clientName={client.name} demo={demo}>
+    <PortalShell agencyName={membership.agency.name} clientName={client.name} demo={demo} role={membership.role}>
       {demo ? <DemoPortalApp art={art ?? undefined} /> : children}
     </PortalShell>
   );

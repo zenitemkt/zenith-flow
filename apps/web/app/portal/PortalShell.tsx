@@ -6,6 +6,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { LogOut } from "lucide-react";
 import { ZenithArc, ZenithGrain } from "@zenite-mkt/ui";
 import { authClient } from "@/lib/auth-client";
+import type { MembershipRole } from "@zenite-mkt/db";
 
 const NAV_ITEMS = [
   { href: "/portal", label: "Início" },
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/portal/grafica", label: "Peças gráficas" },
   { href: "/portal/arquivos", label: "Arquivos" },
   { href: "/portal/trafego", label: "Tráfego pago" },
+  { href: "/portal/relatorios", label: "Relatórios", adminOnly: true },
   { href: "/portal/financeiro", label: "Financeiro" },
 ];
 
@@ -37,14 +39,16 @@ export function PortalShell({
   agencyName,
   clientName,
   demo = false,
+  role,
   children,
 }: {
   agencyName: string;
   clientName: string;
   demo?: boolean;
+  role: MembershipRole;
   children: ReactNode;
 }) {
-  const navItems = demo ? DEMO_NAV_ITEMS : NAV_ITEMS;
+  const navItems = (demo ? DEMO_NAV_ITEMS : NAV_ITEMS).filter((item) => !("adminOnly" in item && item.adminOnly) || role === "CLIENT_ADMIN");
   const pathname = usePathname();
   const router = useRouter();
   const mobileNavRef = useRef<HTMLElement | null>(null);

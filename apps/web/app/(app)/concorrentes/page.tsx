@@ -9,6 +9,8 @@ import { compareClientWithCompetitors } from "@/lib/competitor-comparison";
 import { AddCompetitorForm, CompetitorActions, CompetitorFilters } from "./CompetitorControls";
 import { ClientCompetitorComparison } from "./CompetitorComparison";
 import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
+import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
+import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +62,15 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     },
   });
   const agencyIntegration = await prisma.agency.findUnique({ where: { id: agencyId }, select: { competitorAdsTokenHash: true } });
+  const reportRows = await prisma.competitorReport.findMany({ where: { clientId }, orderBy: { month: "desc" }, take: 12 });
+  const monthlyReports = reportRows.flatMap((report) => {
+    try {
+      return [{ id: report.id, monthLabel: monthLabel(report.month), generatedLabel: report.generatedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }), content: parseMonthlyCompetitorReport(report.content) }];
+    } catch {
+      return [];
+    }
+  });
+  const targetMonth = previousClosedMonth();
   const rows = profiles.map((p) => {
     const stats = analyzeCompetitor(p.posts, p.followers, days);
     const first = p.snapshots.find((s) => s.followers !== null)?.followers ?? null;
@@ -92,6 +103,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       <AddCompetitorForm clientId={clientId} />
 
       <CompetitorAdsIntegration configured={Boolean(agencyIntegration?.competitorAdsTokenHash)} competitorId={current?.p.id ?? null} username={current?.p.igUsername ?? null} />
+
+      <CompetitorMonthlyReports clientId={clientId} targetMonth={monthKey(targetMonth)} targetLabel={monthLabel(targetMonth)} reports={monthlyReports} />
 
       {comparison ? (
         <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />

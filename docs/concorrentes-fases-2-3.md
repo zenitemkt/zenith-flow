@@ -95,6 +95,8 @@ O usuário tem a extensão `meta-ad-library-downloader` (pasta `G:\Projetos\meta
 ## FASE 3
 
 ### 3A. Relatório mensal
+**Status: implementada em 2026-11-17.**
+
 - Nova tabela `CompetitorReport`: `clientId`, `month`, `content` (texto gerado pela Claude), `generatedAt`.
 - Cron mensal (dia 1) ou botão na tela: junta os dados dos concorrentes e do cliente no mês e pede à Claude um relatório com: o que mudou no mercado, o que funcionou para os concorrentes, onde o cliente está à frente ou atrás e um plano de 5 ações para o mês.
 - Mostrar no portal do cliente (`apps/web/app/portal/`), em aba nova, só para quem tem papel `CLIENT_ADMIN` ("Cliente - Aprovador").

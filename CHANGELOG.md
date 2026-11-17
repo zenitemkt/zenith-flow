@@ -403,3 +403,10 @@
 - **Confirmação personalizada de exclusão de Lead (2026-09-26)**: a lista e o detalhe deixam de usar window.confirm/window.alert e passam a compartilhar um modal responsivo do design system, com aviso das consequências, estados de carregamento/erro, foco contido e fechamento por Esc.
 
 - **Contato contínuo, múltiplas identidades e recompra no CRM (2026-09-26)**: Leads passam a ser reconhecidos por qualquer e-mail ou telefone normalizado já conhecido. Novos dados enriquecem o mesmo cartão sem apagar valores anteriores; cada preenchimento fica no histórico e abre uma nova oportunidade na primeira etapa, permitindo múltiplas conversões do mesmo contato. O painel passa a calcular conversão por oportunidades ganhas.
+# 2026-11-17 — Análise de Concorrentes Fase 3A
+
+- Relatório mensal por cliente com resumo executivo, evidências, comparação e plano de cinco ações.
+- Geração manual do último mês encerrado e fechamento automático no primeiro dia do mês.
+- Histórico no banco sem duplicidade por cliente e mês.
+- Nova aba Relatórios no portal, exclusiva para Cliente Admin.
+- Auditoria, escopo de agência/workspace, fontes e limitações explícitas.
