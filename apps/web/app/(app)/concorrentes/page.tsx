@@ -10,6 +10,7 @@ import { AddCompetitorForm, CompetitorActions, CompetitorFilters } from "./Compe
 import { ClientCompetitorComparison } from "./CompetitorComparison";
 import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
 import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
+import { GoogleReviewsComparison, GoogleReviewsPanel } from "./CompetitorGoogleReviews";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       posts: { where: { timestamp: { gte: since } } },
       snapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } },
       ads: { orderBy: [{ active: "desc" }, { startedAt: "desc" }, { lastSeenAt: "desc" }] },
+      googleSnapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } },
     },
   });
   const agencyIntegration = await prisma.agency.findUnique({ where: { id: agencyId }, select: { competitorAdsTokenHash: true } });
@@ -105,6 +107,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       <CompetitorAdsIntegration configured={Boolean(agencyIntegration?.competitorAdsTokenHash)} competitorId={current?.p.id ?? null} username={current?.p.igUsername ?? null} />
 
       <CompetitorMonthlyReports clientId={clientId} targetMonth={monthKey(targetMonth)} targetLabel={monthLabel(targetMonth)} reports={monthlyReports} />
+
+      <GoogleReviewsComparison days={days} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
 
       {comparison ? (
         <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
@@ -191,6 +195,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
               <Stat label="Intervalo entre posts" value={`${dec(current.stats.avgGapDays)} dias`} hint={`maior pausa: ${dec(current.stats.longestGapDays, 0)} dias`} />
             </div>
           </section>
+
+          <GoogleReviewsPanel competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
 
           <section className={CARD}>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">

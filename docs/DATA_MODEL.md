@@ -329,3 +329,5 @@ Pedido do usuário, 2026-09-07 (verificado por leitura de código, não suposiç
 ## Análise de concorrentes
 
 `CompetitorReport` pertence a um `Client`, é único por `clientId + month` e guarda o fechamento mensal validado no campo textual `content`. A relação usa exclusão em cascata porque o relatório não possui finalidade fora do cliente. `generatedAt` informa quando a IA produziu ou refez o fechamento; `createdAt` preserva quando aquele mês entrou no histórico.
+
+`Competitor` também pode guardar um vínculo opcional com Google Places (`googlePlaceId`, nome, endereço, nota, quantidade e estado da última sincronização). `CompetitorGoogleSnapshot` registra uma foto por perfil e data civil de São Paulo, com `@@unique([competitorId, day])`. Os snapshots são apagados em cascata com o perfil e reiniciados quando o estabelecimento vinculado muda, evitando séries históricas misturadas.

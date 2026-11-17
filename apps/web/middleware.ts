@@ -28,6 +28,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/cron/meta-sync",
   "/api/cron/competitors-sync",
   "/api/cron/competitor-reports",
+  "/api/cron/competitors-google-sync",
   // Mini-chat de Instagram: chamado pela Meta (webhook) e por quem clica no botão da DM, nunca com cookie de
   // sessão. Webhook protegido por assinatura (x-hub-signature-256) + verify token no handshake, não por login.
   "/api/instagram/webhook",

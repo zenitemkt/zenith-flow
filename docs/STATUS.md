@@ -4,6 +4,10 @@
 
 ## Implementado
 
+- **Concorrentes — Fase 3B, avaliações no Google (2026-11-17)**: cada perfil pode ser vinculado a um estabelecimento pesquisado pelo nome e cidade na API oficial Google Places. A tela mostra nota, quantidade de avaliações, posição comparativa e novas avaliações no período. Um snapshot diário preserva a evolução e o cron `/api/cron/competitors-google-sync` atualiza os locais vinculados às 07:15 de Brasília. A pesquisa usa apenas identificação, nome e endereço; nota e volume são consultados somente no vínculo e na atualização diária. Textos de avaliações não são coletados.
+  - Requer `GOOGLE_PLACES_API_KEY` com Places API (New) e faturamento ativos no Google Cloud. Sem a variável, Instagram, anúncios e relatórios continuam funcionando, e a seção mostra a configuração ausente.
+  - Testado: schema Prisma formatado e cliente gerado, typecheck limpo, lint sem erro novo, build de produção aprovado e testes unitários da integração criados. A API real não foi chamada porque a chave de produção ainda precisa ser configurada.
+
 - **Concorrentes — Fase 3A, relatório mensal (2026-11-17)**: cada cliente com perfil próprio e ao menos um concorrente pode gerar o fechamento do último mês concluído em `/concorrentes`. O relatório cruza posts, crescimento, formatos, temas, ganchos, rankings, diferenças e anúncios capturados; a Claude devolve resumo, mudanças, evidências, posição do cliente, limites e exatamente cinco ações. `CompetitorReport` mantém um registro por cliente/mês. Refazer atualiza aquele fechamento sem duplicar. O cron `/api/cron/competitor-reports` fecha o mês anterior no primeiro dia de cada mês e ignora relatórios já existentes.
   - O portal ganhou `/portal/relatorios`, com histórico mensal e leitura executiva. A aba existe apenas para `CLIENT_ADMIN`; `CLIENT_VIEWER` é redirecionado e não recebe o item de navegação.
   - Segurança: geração interna valida sessão, agência e acesso particular ao cliente; consulta do portal deriva o cliente do workspace da sessão; conteúdo é validado antes de persistir; auditoria registra geração e regeneração sem guardar o prompt integral.

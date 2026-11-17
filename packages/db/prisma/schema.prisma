@@ -133,11 +133,11 @@ enum MembershipStatus {
 }
 
 model Agency {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                          String    @id @default(cuid())
+  name                        String
+  slug                        String    @unique
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
   /// Hash SHA-256 do token usado pela extensão para enviar anúncios de concorrentes.
   competitorAdsTokenHash      String?   @unique
   competitorAdsTokenCreatedAt DateTime?
@@ -313,43 +313,43 @@ enum ClientStatus {
 }
 
 model Client {
-  competitors     Competitor[]
-  competitorReports CompetitorReport[]
-  id                     String         @id @default(cuid())
+  competitors            Competitor[]
+  competitorReports      CompetitorReport[]
+  id                     String             @id @default(cuid())
   agencyId               String
-  agency                 Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency                 Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   /// Criado somente na ativação (seção 10: "ao ativar: ... criar portal").
   /// Antes disso o cliente não tem escopo de acesso próprio.
-  workspaceId            String?        @unique
-  workspace              Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  workspaceId            String?            @unique
+  workspace              Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   name                   String
   document               String?
   email                  String?
   phone                  String?
   whatsapp               String?
-  status                 ClientStatus   @default(PROSPECT)
+  status                 ClientStatus       @default(PROSPECT)
   /// Seção 32.3: "clientes encerrados mantêm motivo [já em ClientStatusHistory.reason],
   /// concorrente quando informado... elegibilidade." MRR perdido fica de fora —
   /// não há modelo de receita recorrente ainda (mesmo bloqueio da seção 29).
   competitorName         String?
-  reactivationEligible   Boolean        @default(true)
+  reactivationEligible   Boolean            @default(true)
   /// Pasta do cliente no Google Drive (logos, artes, materiais) — a Biblioteca
   /// de conteúdo virou atalho pra essa pasta em vez de upload próprio (2026-09-24).
   driveUrl               String?
   /// Ramo de atuação — lista própria da agência, cresce conforme entram clientes.
   segmentId              String?
-  segment                ClientSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  segment                ClientSegment?     @relation(fields: [segmentId], references: [id], onDelete: SetNull)
   /// Chaves no bucket R2 (logo e banner do cartão) — servidas por /api/clients/:id/image/:kind.
   avatarKey              String?
   bannerKey              String?
   /// Redes sociais: { instagram, facebook, tiktok, youtube, linkedin, site, whatsapp } → URL.
   socialLinks            Json?
   /// Agendador de redes: ao aprovar no portal, cria a publicação sozinha (se houver rede conectada e data).
-  autoScheduleOnApproval Boolean        @default(false)
+  autoScheduleOnApproval Boolean            @default(false)
   /// Horário padrão (HH:MM, São Paulo) usado no agendamento automático.
-  defaultPublishTime     String         @default("10:00")
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
+  defaultPublishTime     String             @default("10:00")
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   contacts                 ClientContact[]
   statusHistory            ClientStatusHistory[]
@@ -3131,7 +3131,7 @@ model SocialPost {
   nextAttemptAt       DateTime?
   /// Container de mídia do Instagram aguardando processamento (vídeo).
   /// Perfis colaboradores do Instagram (collab), sem @, até 3.
-  collaborators       String[]  @default([])
+  collaborators       String[]         @default([])
   /// Capa do vídeo: momento do vídeo (ms) ou imagem ("drive:<id>" ou chave do R2).
   coverOffsetMs       Int?
   coverKey            String?
@@ -3602,7 +3602,6 @@ model TrafficRecommendation {
   @@map("traffic_recommendation")
 }
 
-
 /// Pastas do Drive compartilhado para as mídias das publicações (criadas sozinhas ao primeiro envio).
 model SocialDriveFolder {
   id          String   @id @default(cuid())
@@ -3662,54 +3661,76 @@ model DriveClientsRoot {
 
 /// Pasta de cada cliente no Drive, com as etapas dos arquivos produzidos.
 model ClientDriveFolder {
-  id          String   @id @default(cuid())
-  agencyId    String
-  clientId    String   @unique
-  rootId      String
-  awaitingId  String
-  reworkId    String
-  approvedId  String
-  publishedId String
+  id           String   @id @default(cuid())
+  agencyId     String
+  clientId     String   @unique
+  rootId       String
+  awaitingId   String
+  reworkId     String
+  approvedId   String
+  publishedId  String
   /// "0 - Materiais brutos (fotos e vídeos)": o que o cliente manda para editar.
-  rawId       String?
+  rawId        String?
   /// E-mails do cliente que já receberam acesso de editor à pasta.
   sharedEmails String[] @default([])
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 
   @@map("client_drive_folder")
 }
 
 /// Concorrente de um cliente (ou o próprio perfil do cliente, como referência). Dados públicos do Instagram.
 model Competitor {
-  id           String    @id @default(cuid())
-  agencyId     String
-  clientId     String
-  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  igUsername   String
+  id                 String    @id @default(cuid())
+  agencyId           String
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  igUsername         String
   /// Perfil do próprio cliente, usado como base de comparação.
-  isOwn        Boolean   @default(false)
-  notes        String?
-  displayName  String?
-  biography    String?
-  website      String?
-  pictureUrl   String?
-  followers    Int?
-  follows      Int?
-  mediaCount   Int?
-  lastSyncAt   DateTime?
-  lastError    String?
-  aiReport     String?
-  aiReportAt   DateTime?
-  aiReportDays Int?
-  createdAt    DateTime  @default(now())
+  isOwn              Boolean   @default(false)
+  notes              String?
+  displayName        String?
+  biography          String?
+  website            String?
+  pictureUrl         String?
+  followers          Int?
+  follows            Int?
+  mediaCount         Int?
+  lastSyncAt         DateTime?
+  lastError          String?
+  aiReport           String?
+  aiReportAt         DateTime?
+  aiReportDays       Int?
+  googlePlaceId      String?
+  googlePlaceName    String?
+  googlePlaceAddress String?
+  googleRating       Float?
+  googleReviewCount  Int?
+  googleLastSyncAt   DateTime?
+  googleLastError    String?
+  createdAt          DateTime  @default(now())
 
-  posts     CompetitorPost[]
-  snapshots CompetitorSnapshot[]
-  ads       CompetitorAd[]
+  posts           CompetitorPost[]
+  snapshots       CompetitorSnapshot[]
+  ads             CompetitorAd[]
+  googleSnapshots CompetitorGoogleSnapshot[]
 
   @@unique([clientId, igUsername])
   @@index([agencyId])
   @@map("competitor")
+}
+
+/// Foto diária da reputação pública do estabelecimento no Google.
+model CompetitorGoogleSnapshot {
+  id           String     @id @default(cuid())
+  competitorId String
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  day          DateTime   @db.Date
+  rating       Float?
+  reviewCount  Int?
+
+  @@unique([competitorId, day])
+  @@index([competitorId, day])
+  @@map("competitor_google_snapshot")
 }
 
 /// Anúncio público capturado na Biblioteca de Anúncios da Meta pela extensão da agência.

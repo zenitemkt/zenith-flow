@@ -1323,6 +1323,14 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 
 **Consequência**: queda do site causada por fator externo no meio do dia só aparece na varredura seguinte. Alvo do monitor vem de `SITE_MONITOR_URL` (padrão hubzenite.com.br) e `SITE_MONITOR_AGENCY_ID`/`SITE_LEADS_AGENCY_ID`; para monitorar sites de clientes, o próximo passo é guardar o alvo por agência.
 
+## 2026-11-17 — Google Places na análise de concorrentes
+
+**Contexto**: a Fase 3B precisa comparar reputação pública sem transformar cada abertura da tela numa consulta paga e sem armazenar o conteúdo das avaliações.
+
+**Decisão**: a pesquisa por nome e cidade usa Text Search apenas durante o vínculo e pede somente ID, nome e endereço. O vínculo e o cron diário usam Place Details para nota e quantidade. Textos, autores e conteúdo das avaliações ficam fora do sistema. Cada perfil tem no máximo um local vinculado; trocar ou desvincular apaga os snapshots antigos para não misturar estabelecimentos. A data do snapshot segue `America/Sao_Paulo`, como o histórico do Instagram.
+
+**Consequência**: a comparação só aparece para perfis vinculados. A integração exige uma chave do Google Cloud com Places API (New) e faturamento ativos e pode gerar cobrança depois da franquia mensal do Google. Falha do Google fica isolada no perfil e não impede o restante da análise de concorrentes.
+
 ## 2026-11-16 — Demo com artes da Zenite
 
 **Contexto**: as artes de exemplo do painel de demonstração (degradê com título) pareciam falsas. Kevin pediu artes mais bonitas, e pegar de banco de imagens pago (Designi) não seria permitido sem licença. A sugestão dele foi usar as artes da própria Zenite.

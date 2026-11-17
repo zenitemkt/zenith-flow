@@ -102,6 +102,8 @@ O usuário tem a extensão `meta-ad-library-downloader` (pasta `G:\Projetos\meta
 - Mostrar no portal do cliente (`apps/web/app/portal/`), em aba nova, só para quem tem papel `CLIENT_ADMIN` ("Cliente - Aprovador").
 
 ### 3B. Avaliações no Google
+**Status: implementada em 2026-11-17.**
+
 - API do Google Places (Place Details), com cota gratuita mensal. Precisa de `GOOGLE_PLACES_API_KEY`.
 - Campos novos em `Competitor`: `googlePlaceId`, `googleRating`, `googleReviewCount`.
 - Busca o lugar pelo nome e cidade, guarda nota e número de avaliações, e inclui no comparativo.
