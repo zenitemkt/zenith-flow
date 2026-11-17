@@ -20,6 +20,8 @@ import { MetaPixelIdForm } from "./MetaPixelIdForm";
 import { Ga4MeasurementIdForm } from "./Ga4MeasurementIdForm";
 import { SendTestMetaEventButton } from "./SendTestMetaEventButton";
 import { getHiddenClientIds, visibleByClientWhere, visibleByOptionalClientWhere } from "@/lib/client-access";
+import { googleBusinessConfigured } from "@/lib/google-business";
+import { GoogleBusinessIntegration } from "./GoogleBusinessIntegration";
 
 const SITE_LEAD_SOURCE = "Site Zenite Hub";
 
@@ -47,7 +49,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 interface PageProps {
-  searchParams: { meta?: string };
+  searchParams: { meta?: string; googleBusiness?: string };
 }
 
 export default async function IntegracoesPage({ searchParams }: PageProps) {
@@ -98,6 +100,7 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
   const metaConnection = await prisma.adAccountConnection.findUnique({
     where: { agencyId_platform: { agencyId: membership.agencyId, platform: "META" } },
   });
+  const googleBusinessConnection = await prisma.googleBusinessConnection.findUnique({ where: { agencyId: membership.agencyId }, include: { _count: { select: { locations: true } } } });
 
   const [
     totalEvents,
@@ -193,6 +196,8 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
           comportamento no site fica em <span className="font-medium">Traqueamento</span>, ao lado.
         </p>
       </div>
+
+      <Suspense><GoogleBusinessIntegration configured={googleBusinessConfigured()} canManage={canManage} connection={googleBusinessConnection ? { email: googleBusinessConnection.googleAccountEmail, status: googleBusinessConnection.status, lastValidatedAt: googleBusinessConnection.lastValidatedAt?.toISOString() ?? null, locationCount: googleBusinessConnection._count.locations } : null} /></Suspense>
 
       <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
         <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">

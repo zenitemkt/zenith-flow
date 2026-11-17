@@ -149,6 +149,8 @@ model Agency {
   clientSegments               ClientSegment[]
   commercialGoals              CommercialGoal[]
   socialConnections            SocialConnection[]
+  googleBusinessConnection     GoogleBusinessConnection?
+  googleBusinessLocations      GoogleBusinessLocation[]
   instagramAutomationRules     InstagramAutomationRule[]
   assistantSettings            AssistantSettings?
   assistantConversations       AssistantConversation[]
@@ -359,6 +361,7 @@ model Client {
   recurringTaskTemplates   RecurringTaskTemplate[]
   contentItems             ContentItem[]
   socialConnections        SocialConnection[]
+  googleBusinessLocations  GoogleBusinessLocation[]
   socialPosts              SocialPost[]
   instagramAutomationRules InstagramAutomationRule[]
   instagramAutomationLogs  InstagramAutomationLog[]
@@ -3091,6 +3094,56 @@ model SocialConnection {
   @@unique([clientId, platform])
   @@index([agencyId])
   @@map("social_connection")
+}
+
+enum GoogleBusinessConnectionStatus {
+  ACTIVE
+  ERROR
+  REVOKED
+}
+
+/// Autorização OAuth da agência para administrar os Perfis da Empresa explicitamente autorizados.
+model GoogleBusinessConnection {
+  id                 String                         @id @default(cuid())
+  agencyId           String                         @unique
+  agency             Agency                         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  googleAccountEmail String?
+  refreshTokenEnc    String
+  scopes             String[]                       @default([])
+  status             GoogleBusinessConnectionStatus @default(ACTIVE)
+  lastValidatedAt    DateTime?
+  lastError          String?
+  connectedByUserId  String?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+
+  locations GoogleBusinessLocation[]
+
+  @@map("google_business_connection")
+}
+
+/// Localização do Google Business Profile escolhida explicitamente para um cliente.
+model GoogleBusinessLocation {
+  id           String                   @id @default(cuid())
+  agencyId     String
+  agency       Agency                   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId     String                   @unique
+  client       Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  connectionId String
+  connection   GoogleBusinessConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  accountId    String
+  locationId   String
+  name         String
+  address      String?
+  verified     Boolean?
+  lastSyncAt   DateTime?
+  lastError    String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@unique([agencyId, locationId])
+  @@index([agencyId])
+  @@map("google_business_location")
 }
 
 enum SocialPostStatus {

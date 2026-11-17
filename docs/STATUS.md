@@ -4,6 +4,9 @@
 
 ## Implementado
 
+- **Google Business Profile — fundação da integração (2026-11-17)**: a aba Integrações ganhou um cartão operacional com estado de aprovação/configuração, conexão OAuth, conta autorizada, quantidade de localizações vinculadas e desconexão confirmada. `GoogleBusinessConnection` guarda o refresh token cifrado por agência e `GoogleBusinessLocation` reserva o vínculo único entre cliente e localização. O OAuth usa `state` assinado, acesso offline, escopo `business.manage`, RBAC administrativo, auditoria e isolamento por agência. Enquanto o protocolo Google `4-4339000042452` está em análise, a interface informa o bloqueio sem oferecer um botão inoperante.
+  - Ainda não implementado nesta fatia: descoberta/vínculo de localizações, ingestão de avaliações, regras de resposta, Pub/Sub e publicação no Google. Esses módulos dependem da aprovação e serão adicionados sobre a fundação criada.
+
 - **Concorrentes — Fase 3B, avaliações no Google (2026-11-17)**: cada perfil pode ser vinculado a um estabelecimento pesquisado pelo nome e cidade na API oficial Google Places. A tela mostra nota, quantidade de avaliações, posição comparativa e novas avaliações no período. Um snapshot diário preserva a evolução e o cron `/api/cron/competitors-google-sync` atualiza os locais vinculados às 07:15 de Brasília. A pesquisa usa apenas identificação, nome e endereço; nota e volume são consultados somente no vínculo e na atualização diária. Textos de avaliações não são coletados.
   - Requer `GOOGLE_PLACES_API_KEY` com Places API (New) e faturamento ativos no Google Cloud. Sem a variável, Instagram, anúncios e relatórios continuam funcionando, e a seção mostra a configuração ausente.
   - Testado: schema Prisma formatado e cliente gerado, typecheck limpo, lint sem erro novo, build de produção aprovado e testes unitários da integração criados. A API real não foi chamada porque a chave de produção ainda precisa ser configurada.

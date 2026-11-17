@@ -1323,6 +1323,14 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 
 **Consequência**: queda do site causada por fator externo no meio do dia só aparece na varredura seguinte. Alvo do monitor vem de `SITE_MONITOR_URL` (padrão hubzenite.com.br) e `SITE_MONITOR_AGENCY_ID`/`SITE_LEADS_AGENCY_ID`; para monitorar sites de clientes, o próximo passo é guardar o alvo por agência.
 
+## 2026-11-17 — Fundação separada para Google Business Profile
+
+**Contexto**: Google Places atende dados públicos da Fase 3B, enquanto Google Business Profile usa OAuth e administra apenas localizações autorizadas. A solicitação do projeto `zenite-search-console` está em análise pelo Google.
+
+**Decisão**: manter as integrações separadas. `GoogleBusinessConnection` é única por agência e guarda somente o refresh token cifrado e metadados operacionais. `GoogleBusinessLocation` vincula uma localização a um único cliente e impede que a mesma localização seja usada duas vezes na agência. O cartão em Integrações permanece funcional como diagnóstico durante a aprovação e habilita o OAuth somente quando Client ID e Client Secret existem no ambiente.
+
+**Consequência**: nenhuma chamada administrativa ao Google acontece antes da aprovação. Desconectar remove em cascata os vínculos e interrompe futuras automações; dados públicos de concorrentes permanecem independentes no Places. Avaliações e publicações entram em fatias posteriores sem exigir troca da fundação OAuth.
+
 ## 2026-11-17 — Google Places na análise de concorrentes
 
 **Contexto**: a Fase 3B precisa comparar reputação pública sem transformar cada abertura da tela numa consulta paga e sem armazenar o conteúdo das avaliações.
