@@ -36,7 +36,7 @@ CREATE UNIQUE INDEX "google_business_connection_agencyId_key" ON "google_busines
 CREATE UNIQUE INDEX "google_business_location_clientId_key" ON "google_business_location"("clientId");
 CREATE UNIQUE INDEX "google_business_location_agencyId_locationId_key" ON "google_business_location"("agencyId", "locationId");
 CREATE INDEX "google_business_location_agencyId_idx" ON "google_business_location"("agencyId");
-ALTER TABLE "google_business_connection" ADD CONSTRAINT "google_business_connection_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "google_business_location" ADD CONSTRAINT "google_business_location_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "Agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "google_business_location" ADD CONSTRAINT "google_business_location_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "google_business_connection" ADD CONSTRAINT "google_business_connection_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "google_business_location" ADD CONSTRAINT "google_business_location_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES "agency"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "google_business_location" ADD CONSTRAINT "google_business_location_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "google_business_location" ADD CONSTRAINT "google_business_location_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "google_business_connection"("id") ON DELETE CASCADE ON UPDATE CASCADE;

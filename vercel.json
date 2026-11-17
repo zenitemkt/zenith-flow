@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then npm run migrate:deploy --workspace=packages/db; fi && npm run build --workspace=apps/web",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then if [ \"$VERCEL_GIT_COMMIT_MESSAGE\" = \"Corrige migration do Google Meu Negócio\" ]; then npx prisma migrate resolve --rolled-back 20261117194500_google_business_foundation --schema packages/db/prisma/schema.prisma; fi && npm run migrate:deploy --workspace=packages/db; fi && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/.next",
   "crons": [
     { "path": "/api/cron/meta-sync", "schedule": "0 9 * * *" },
