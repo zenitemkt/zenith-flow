@@ -4,6 +4,9 @@
 
 ## Implementado
 
+- **Concorrentes — data local e escala comparável no gráfico (2026-11-17)**: snapshots diários agora usam a data civil de `America/Sao_Paulo`, evitando que atualizações após 21h apareçam como o dia seguinte por causa do UTC. A evolução de seguidores passou a comparar a variação percentual desde o primeiro registro do período; a legenda preserva o total atual e a variação de cada perfil, permitindo comparar contas de tamanhos muito diferentes.
+  - Testado: dois casos de fronteira de fuso (antes e depois da meia-noite de Brasília), 18 testes de concorrentes aprovados e lint sem erro novo.
+
 - **Concorrentes — Fase 2D, anúncios da Meta via extensão (2026-11-16)**: a tela `/concorrentes` gera e revoga uma chave de integração da agência, recebe lotes autenticados da extensão Media Saver, mantém o histórico por ID da Biblioteca, identifica anúncios que deixaram de aparecer e destaca há quantos dias cada criativo está no ar. Anúncios inéditos criam alertas `competitor:newad:*` na Central de alertas. A chave é persistida no servidor apenas como hash SHA-256 e exibida completa uma única vez.
   - A extensão `G:\Projetos\meta-ad-library-downloader` ganhou leitura dos cards da Biblioteca de Anúncios, configuração do portal/chave/concorrente e envio manual do lote. Ela limpa a coleta ao trocar de pesquisa para não misturar concorrentes.
   - Testado: 32 testes de Concorrentes/Meta social, lint do portal, validação do schema Prisma e verificação completa da extensão.

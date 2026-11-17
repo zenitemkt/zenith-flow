@@ -1,4 +1,5 @@
 import { prisma } from "@zenite-mkt/db";
+import { competitorSnapshotDay } from "@/lib/competitor-snapshot-day";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { META_GRAPH_API_VERSION } from "@/lib/meta-ads";
 import { analyzeCompetitor, engagementOf, formatOf } from "@/lib/competitor-analytics";
@@ -98,7 +99,7 @@ export async function syncCompetitor(competitorId: string, deep = false) {
       };
       await prisma.competitorPost.upsert({ where: { igMediaId: m.id }, create: { competitorId, igMediaId: m.id, ...data }, update: data });
     }
-    const day = new Date(new Date().toISOString().slice(0, 10));
+    const day = competitorSnapshotDay();
     const snapshot = { followers: profile.followers_count ?? null, follows: profile.follows_count ?? null, mediaCount: profile.media_count ?? null };
     await prisma.competitorSnapshot.upsert({ where: { competitorId_day: { competitorId, day } }, create: { competitorId, day, ...snapshot }, update: snapshot });
     await prisma.competitor.update({

@@ -1,3 +1,9 @@
+## 2026-11-17 — Concorrentes: dia de Brasília e crescimento comparável
+
+**Decisão 1 — snapshot segue a data civil da operação**: a chave diária continua persistida como meia-noite UTC, mas o ano, mês e dia são extraídos em `America/Sao_Paulo`. Assim, a restrição única existente continua válida sem permitir que uma atualização noturna seja atribuída ao dia seguinte.
+
+**Decisão 2 — comparar variação, não volumes incompatíveis**: o gráfico usa como base o primeiro snapshot disponível de cada perfil no período e plota sua variação percentual. O total bruto mais recente permanece na legenda. Isso mantém as linhas legíveis quando um perfil possui centenas de seguidores e outro possui milhares.
+
 ## 2026-11-16 — Concorrentes Fase 2D: anúncios via extensão
 
 **Decisão 1 — extensão como fonte, não a API oficial**: a Biblioteca de Anúncios oficial não fornece o catálogo comercial brasileiro necessário. A extensão lê somente os cards já carregados pelo usuário no navegador e envia um lote explícito ao Zenite MKT.

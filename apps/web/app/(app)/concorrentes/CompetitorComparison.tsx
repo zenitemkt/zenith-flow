@@ -45,15 +45,21 @@ function FollowersChart({ profiles }: { profiles: ChartProfile[] }) {
   const bottom = 42;
   const minDate = Math.min(...all.map((point) => point.day.getTime()));
   const maxDate = Math.max(...all.map((point) => point.day.getTime()));
-  const rawMin = Math.min(...all.map((point) => point.followers));
-  const rawMax = Math.max(...all.map((point) => point.followers));
-  const padding = Math.max(10, (rawMax - rawMin) * 0.08);
-  const minFollowers = Math.max(0, rawMin - padding);
-  const maxFollowers = rawMax + padding;
+  const growth = (profile: (typeof series)[number], followers: number) => {
+    const base = profile.points[0]?.followers ?? 0;
+    return base > 0 ? ((followers - base) / base) * 100 : 0;
+  };
+  const changes = series.flatMap((profile) => profile.points.map((point) => growth(profile, point.followers)));
+  const rawMin = Math.min(0, ...changes);
+  const rawMax = Math.max(0, ...changes);
+  const padding = Math.max(0.25, (rawMax - rawMin) * 0.12);
+  const minChange = rawMin - padding;
+  const maxChange = rawMax + padding;
   const x = (date: Date) => left + ((date.getTime() - minDate) / Math.max(1, maxDate - minDate)) * (width - left - right);
-  const y = (followers: number) => top + ((maxFollowers - followers) / Math.max(1, maxFollowers - minFollowers)) * (height - top - bottom);
-  const ticks = Array.from({ length: 5 }, (_, index) => minFollowers + ((maxFollowers - minFollowers) * index) / 4).reverse();
+  const y = (change: number) => top + ((maxChange - change) / Math.max(0.01, maxChange - minChange)) * (height - top - bottom);
+  const ticks = Array.from({ length: 5 }, (_, index) => minChange + ((maxChange - minChange) * index) / 4).reverse();
   const dateLabel = (timestamp: number) => new Date(timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const percent = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%`;
 
   return (
     <div>
@@ -62,15 +68,15 @@ function FollowersChart({ profiles }: { profiles: ChartProfile[] }) {
           {ticks.map((tick) => (
             <g key={tick}>
               <line x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} stroke="#EAECF0" strokeWidth="1" />
-              <text x={left - 10} y={y(tick) + 4} textAnchor="end" fill="#667085" fontSize="11">{number(tick)}</text>
+              <text x={left - 10} y={y(tick) + 4} textAnchor="end" fill="#667085" fontSize="11">{percent(tick)}</text>
             </g>
           ))}
           {series.map((profile) => {
-            const path = profile.points.map((point, index) => `${index === 0 ? "M" : "L"} ${x(point.day)} ${y(point.followers)}`).join(" ");
+            const path = profile.points.map((point, index) => `${index === 0 ? "M" : "L"} ${x(point.day)} ${y(growth(profile, point.followers))}`).join(" ");
             return (
               <g key={profile.id}>
                 {profile.points.length > 1 && <path d={path} fill="none" stroke={profile.color} strokeWidth={profile.isOwn ? 3 : 2} strokeLinecap="round" strokeLinejoin="round" />}
-                {profile.points.map((point) => <circle key={point.day.toISOString()} cx={x(point.day)} cy={y(point.followers)} r={profile.isOwn ? 3.5 : 2.5} fill={profile.color} />)}
+                {profile.points.map((point) => <circle key={point.day.toISOString()} cx={x(point.day)} cy={y(growth(profile, point.followers))} r={profile.isOwn ? 3.5 : 2.5} fill={profile.color} />)}
               </g>
             );
           })}
@@ -82,7 +88,7 @@ function FollowersChart({ profiles }: { profiles: ChartProfile[] }) {
         {series.map((profile) => (
           <span key={profile.id} className="flex items-center gap-1.5 text-xs text-[#475467]">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: profile.color }} />
-            @{profile.username}{profile.isOwn ? " (cliente)" : ""}
+            @{profile.username}{profile.isOwn ? " (cliente)" : ""} · {number(profile.points.at(-1)?.followers ?? 0)} · {percent(growth(profile, profile.points.at(-1)?.followers ?? 0))}
           </span>
         ))}
       </div>
@@ -114,7 +120,7 @@ export function ClientCompetitorComparison({ comparison, profiles, days }: { com
 
       <div className="border-t border-[#EAECF0] pt-4">
         <h3 className="mb-1 text-sm font-semibold text-[#101828]">Evolução de seguidores</h3>
-        <p className="mb-3 text-xs text-[#667085]">O histórico começa no dia em que cada perfil foi cadastrado.</p>
+        <p className="mb-3 text-xs text-[#667085]">Variação percentual desde o primeiro registro do período. A legenda mostra o total atual e a variação.</p>
         <FollowersChart profiles={profiles} />
       </div>
 
