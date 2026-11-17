@@ -8,7 +8,6 @@
     "generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "migrate:recover-google-business": "prisma migrate resolve --rolled-back 20261117194500_google_business_foundation",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
     "test": "vitest run"
