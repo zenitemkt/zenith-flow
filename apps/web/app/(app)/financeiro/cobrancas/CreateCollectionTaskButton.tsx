@@ -2,23 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 export function CreateCollectionTaskButton({ entryId }: { entryId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const guardSubmit = useSubmitGuard();
+
   async function handleClick() {
-    setError(null);
-    setLoading(true);
-    const response = await fetch(`/api/finance/entries/${entryId}/collection-task`, { method: "POST" });
-    setLoading(false);
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar a tarefa.");
-      return;
-    }
-    router.refresh();
+    await guardSubmit(async () => {
+      setError(null);
+      setLoading(true);
+      const response = await fetch(`/api/finance/entries/${entryId}/collection-task`, { method: "POST" });
+      setLoading(false);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        setError(body?.error ?? "Não foi possível criar a tarefa.");
+        return;
+      }
+      router.refresh();
+    });
   }
 
   return (

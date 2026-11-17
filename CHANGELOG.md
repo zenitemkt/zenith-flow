@@ -4,6 +4,7 @@
 
 ### Alterado
 
+- **Cartão duplicado por clique duplo**: a trava dos formulários de criação (`useSubmitGuard`) segura mais 1 segundo depois de concluir. A "Nova publicação" (Calendário/Operação), que confirmava antes de travar e por isso criava dois cartões com clique duplo em Agendar/Publicar, passa a travar já na confirmação. "Criar tarefa de cobrança" e o cadastro de cliente também ganharam a trava.
 - **Conversas > retomada no WhatsApp**: conversa com a última fala nossa há 12 h ou mais mostra, acima da caixa de resposta, a mesma mensagem de retomada do Lead (editável). Com a janela de 24 h aberta, "Enviar mensagem" sai pelo sistema em nome da Milena (a conversa continua com ela); fechada, "Enviar pelo WhatsApp" abre o wa.me com o texto pronto. A lista ganha o "!" vermelho com 2+ dias sem resposta.
 - **Calendário editorial sem título repetido**: a peça que já tem publicação (Instagram/Facebook/Google) no mesmo dia aparece só pelas linhas de publicação, com horário e rede. O título da peça continua no dia só quando ainda não há publicação (aguardando aprovação, em produção etc.).
 - **Leads > Última atividade** passa a contar a conversa de WhatsApp (não só o site), mostra o tempo relativo ("há 2 dias", data exata ao passar o mouse) e um "!" vermelho quando a última mensagem foi nossa e o lead está sem responder há 2 dias ou mais. Novo filtro "Sem resposta no WhatsApp (2+ dias)". Ordenar por última atividade usa o mesmo valor.

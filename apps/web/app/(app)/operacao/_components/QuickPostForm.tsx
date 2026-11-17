@@ -2,6 +2,7 @@
 
 import { confirmDialog } from "@/lib/dialogs";
 import { useEffect, useMemo, useState } from "react";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarClock, Facebook, Film, ImagePlus, Instagram, MapPin, MessageCircle, X, Zap } from "lucide-react";
@@ -116,6 +117,7 @@ export function QuickPostForm({
   const coverAvailable = miniChatAvailable && files.length === 1 && isVideoType(files[0]!.type);
   const [videoDuration, setVideoDuration] = useState(0);
   const [busy, setBusy] = useState<"schedule" | "now" | null>(null);
+  const guardSubmit = useSubmitGuard();
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ text: string; contentId: string } | null>(null);
@@ -177,7 +179,12 @@ export function QuickPostForm({
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   }
 
+  // Trava síncrona cobrindo a confirmação: clique duplo em Agendar/Publicar abria duas confirmações e criava dois cartões.
   async function submit(now: boolean) {
+    await guardSubmit(() => submitUnguarded(now));
+  }
+
+  async function submitUnguarded(now: boolean) {
     if (busy) return;
     setError(null);
     if (!client) return setError("Escolha o cliente.");

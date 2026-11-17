@@ -2,6 +2,7 @@
 
 import { ComboInput } from "@/components/ComboInput";
 import { useEffect, useState, type FormEvent } from "react";
+import { useSubmitGuard } from "@/lib/useSubmitGuard";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
@@ -220,6 +221,7 @@ export function ClientFormModal({
   >("CLIENT_ADMIN");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const guardSubmit = useSubmitGuard();
 
   function update<
     K extends
@@ -339,6 +341,10 @@ export function ClientFormModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    await guardSubmit(() => saveClient());
+  }
+
+  async function saveClient() {
     setError(null);
     setLoading(true);
 
