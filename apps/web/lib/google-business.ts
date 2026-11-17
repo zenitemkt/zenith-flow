@@ -48,3 +48,52 @@ export async function fetchGoogleAccountEmail(accessToken: string): Promise<stri
   const body = await response.json() as { email?: string };
   return body.email ?? null;
 }
+
+export async function refreshGoogleBusinessAccessToken(refreshToken: string): Promise<string> {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ refresh_token: refreshToken, client_id: requireEnv("GOOGLE_BUSINESS_CLIENT_ID"), client_secret: requireEnv("GOOGLE_BUSINESS_CLIENT_SECRET"), grant_type: "refresh_token" }),
+  });
+  if (!response.ok) throw new Error(`O Google recusou a renovação do acesso (${response.status}). Reconecte o Google Meu Negócio.`);
+  const body = await response.json() as { access_token?: string };
+  if (!body.access_token) throw new Error("O Google não devolveu uma credencial de acesso válida.");
+  return body.access_token;
+}
+
+export function googleBusinessLocationParent(accountId: string, locationId: string): string {
+  if (locationId.startsWith("accounts/")) return locationId;
+  const account = accountId.startsWith("accounts/") ? accountId : `accounts/${accountId}`;
+  const location = locationId.startsWith("locations/") ? locationId : `locations/${locationId}`;
+  return `${account}/${location}`;
+}
+
+export interface GoogleBusinessLocalPostInput {
+  parent: string;
+  summary: string;
+  mediaUrl?: string | null;
+  callToAction?: string | null;
+  callToActionUrl?: string | null;
+}
+
+export async function publishGoogleBusinessLocalPost(accessToken: string, input: GoogleBusinessLocalPostInput) {
+  const callToAction = input.callToAction
+    ? { actionType: input.callToAction, ...(input.callToAction === "CALL" ? {} : { url: input.callToActionUrl }) }
+    : undefined;
+  const response = await fetch(`https://mybusiness.googleapis.com/v4/${input.parent}/localPosts`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      languageCode: "pt-BR",
+      summary: input.summary,
+      topicType: "STANDARD",
+      ...(input.mediaUrl ? { media: [{ mediaFormat: "PHOTO", sourceUrl: input.mediaUrl }] } : {}),
+      ...(callToAction ? { callToAction } : {}),
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`O Google recusou a publicação (${response.status})${detail ? `: ${detail.slice(0, 240)}` : "."}`);
+  }
+  return await response.json() as { name?: string; searchUrl?: string };
+}

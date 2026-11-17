@@ -15,6 +15,7 @@ import { signContentMediaRead } from "@/lib/content-media-server";
 import { withAgencyDrive } from "@/lib/drive-auth";
 import { deleteTempCopies, driveIdOfKey, moveSocialDriveFiles, publicUrlForDriveFile } from "@/lib/social-drive";
 import { moveClientDriveFiles } from "@/lib/client-drive";
+import { googleBusinessLocationParent, publishGoogleBusinessLocalPost, refreshGoogleBusinessAccessToken } from "@/lib/google-business";
 
 /**
  * Motor do agendador de redes (2026-10-20). Roda pelo cron externo
@@ -98,15 +99,15 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
     where: { id: post.id },
     include: {
       connection: true,
+      googleBusinessLocation: { include: { connection: true } },
       version: { include: { media: { orderBy: { position: "asc" } } } },
     },
   });
 
   try {
-    if (full.connection.status === "REVOKED" || !full.connection.accessTokenEnc) {
+    if (full.platform !== "GOOGLE_BUSINESS" && (!full.connection || full.connection.status === "REVOKED" || !full.connection.accessTokenEnc)) {
       throw new Error("A conta foi desconectada. Conecte de novo no perfil do cliente.");
     }
-    const token = decryptSecret(full.connection.accessTokenEnc);
     // Arquivo no Drive: cópia temporária no R2 só para a Meta baixar (apagada depois de publicar ou falhar).
     const finishingContainer = full.platform === "INSTAGRAM" && Boolean(full.externalContainerId);
     const media = finishingContainer
@@ -130,16 +131,31 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
 
     let result: PublishResult;
     if (full.platform === "INSTAGRAM") {
+      const connection = full.connection!;
+      const token = decryptSecret(connection.accessTokenEnc!);
       result = full.externalContainerId
-        ? await finishInstagramContainer({ igUserId: full.connection.externalId, token, containerId: full.externalContainerId, budgetMs })
-        : await publishToInstagram({ igUserId: full.connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs, trialStrategy: full.trialStrategy });
+        ? await finishInstagramContainer({ igUserId: connection.externalId, token, containerId: full.externalContainerId, budgetMs })
+        : await publishToInstagram({ igUserId: connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs, trialStrategy: full.trialStrategy });
     } else if (full.platform === "FACEBOOK") {
+      const connection = full.connection!;
+      const token = decryptSecret(connection.accessTokenEnc!);
       result =
         full.format === "STORY"
-          ? await publishFacebookStory({ pageId: full.connection.externalId, token, media })
-          : await publishToFacebookPage({ pageId: full.connection.externalId, token, caption, media });
+          ? await publishFacebookStory({ pageId: connection.externalId, token, media })
+          : await publishToFacebookPage({ pageId: connection.externalId, token, caption, media });
     } else {
-      throw new Error("Google Meu Negócio ainda não está disponível.");
+      const location = full.googleBusinessLocation;
+      if (!location || location.connection.status !== "ACTIVE") throw new Error("O Google Meu Negócio deste cliente não está conectado.");
+      const token = await refreshGoogleBusinessAccessToken(decryptSecret(location.connection.refreshTokenEnc));
+      const published = await publishGoogleBusinessLocalPost(token, {
+        parent: googleBusinessLocationParent(location.accountId, location.locationId),
+        summary: caption,
+        mediaUrl: media[0]?.isVideo ? null : media[0]?.url,
+        callToAction: full.googleCallToAction,
+        callToActionUrl: full.googleCallToActionUrl,
+      });
+      if (!published.name) throw new Error("O Google publicou, mas não devolveu o identificador da atualização.");
+      result = { externalPostId: published.name, permalink: published.searchUrl ?? null };
     }
 
     await prisma.socialPost.update({
@@ -185,7 +201,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
     }
 
     const message = friendlyError(error);
-    if (isTokenError(error)) {
+    if (isTokenError(error) && full.connectionId) {
       await prisma.socialConnection.update({
         where: { id: full.connectionId },
         data: { status: "ERROR", lastError: "Acesso expirado ou removido. Reconecte no perfil do cliente." },

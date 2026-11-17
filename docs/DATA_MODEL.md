@@ -341,3 +341,7 @@ Pedido do usuário, 2026-09-07 (verificado por leitura de código, não suposiç
 - `GoogleBusinessReview`: avaliação única por localização + ID externo, ligada à agência, cliente e localização.
 - `GoogleBusinessReviewResponse`: histórico append-only de importação, rascunho, aprovação, envio, falha ou descarte.
 - Remover uma localização elimina suas avaliações em cascata; desconectar a conta segue a confirmação destrutiva já existente.
+# Publicações no Google Business Profile (2026-11-17)
+
+`SocialPost.connectionId` é opcional: Instagram/Facebook usam `SocialConnection`; Google usa `googleBusinessLocationId` → `GoogleBusinessLocation`. `googleCallToAction` e `googleCallToActionUrl` guardam o botão opcional.
+

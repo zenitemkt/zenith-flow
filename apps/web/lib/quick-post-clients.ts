@@ -11,7 +11,10 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
   const connected = await prisma.client.findMany({
     where: { AND: [visibleClientWhere(hidden)],
       agencyId,
-      socialConnections: { some: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } } },
+      OR: [
+        { socialConnections: { some: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } } } },
+        { googleBusinessLocations: { some: { connection: { status: "ACTIVE" } } } },
+      ],
     },
     select: {
       id: true,
@@ -23,6 +26,11 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
         select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
         orderBy: { platform: "desc" },
       },
+      googleBusinessLocations: {
+        where: { connection: { status: "ACTIVE" } },
+        select: { name: true, verified: true },
+        take: 1,
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -32,13 +40,10 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
     name: c.name,
     defaultPublishTime: c.defaultPublishTime,
     hasAvatar: Boolean(c.avatarKey),
-    connections: c.socialConnections.map((conn) => ({
-      platform: conn.platform,
-      name: conn.name,
-      username: conn.username,
-      pictureUrl: conn.pictureUrl,
-      active: conn.status === "ACTIVE",
-    })),
+    connections: [
+      ...c.socialConnections.map((conn) => ({ platform: conn.platform, name: conn.name, username: conn.username, pictureUrl: conn.pictureUrl, active: conn.status === "ACTIVE" })),
+      ...c.googleBusinessLocations.map((location) => ({ platform: "GOOGLE_BUSINESS" as const, name: location.name, username: null, pictureUrl: null, active: location.verified !== false })),
+    ],
   }));
 
   if (activeClientId && !clients.some((c) => c.id === activeClientId)) {

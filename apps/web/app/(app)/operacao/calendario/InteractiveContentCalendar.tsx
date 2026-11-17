@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2, Plus } from "lucide-react";
+import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays, CheckCircle2, MapPin, Plus } from "lucide-react";
 import { WEEKDAY_LABELS, buildMonthCells } from "@/lib/content-calendar";
 import {
   CONTENT_CALENDAR_BUCKET_CLASS,
@@ -284,7 +284,7 @@ export function InteractiveContentCalendar({
                               );
                             })}
                             {(postsByDay.get(day) ?? []).map((post) => {
-                              const PostIcon = post.platform === "INSTAGRAM" ? Instagram : Facebook;
+                              const PostIcon = post.platform === "INSTAGRAM" ? Instagram : post.platform === "FACEBOOK" ? Facebook : MapPin;
                               const className = `flex items-center gap-1 truncate rounded border px-1.5 py-1 text-[11px] font-medium ${
                                 post.late ? "border-[#F79009]/40 bg-[#FEF3C7] text-[#92600A]" : POST_STATUS_CLASS[post.status]
                               }`;
@@ -295,7 +295,8 @@ export function InteractiveContentCalendar({
                                   <span className="truncate">{post.title}</span>
                                 </>
                               );
-                              const title = `${post.time} · ${post.platform === "INSTAGRAM" ? "Instagram" : "Facebook"} · ${post.title} · ${post.clientName} · ${post.late ? "atrasado — ainda não saiu" : POST_STATUS_LABEL[post.status]}`;
+                              const platformLabel = post.platform === "INSTAGRAM" ? "Instagram" : post.platform === "FACEBOOK" ? "Facebook" : "Google";
+                              const title = `${post.time} · ${platformLabel} · ${post.title} · ${post.clientName} · ${post.late ? "atrasado — ainda não saiu" : POST_STATUS_LABEL[post.status]}`;
                               return post.contentItemId ? (
                                 <Link key={post.id} href={`/conteudo/${post.contentItemId}`} className={className} title={title}>
                                   {content}

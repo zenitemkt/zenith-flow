@@ -416,3 +416,9 @@
 - Regras seguras: 1–3 estrelas sempre manuais; 4–5 configuráveis para automação.
 - Modelos com variáveis, tom de voz, fila, filtros, rascunho, aprovação e histórico.
 - Ingestão idempotente e alertas de avaliações negativas preparados para o conector oficial.
+# 2026-11-17 — Publicação no Google Meu Negócio
+
+- Operação e Calendário passam a aceitar Google junto de Instagram e Facebook.
+- Atualização padrão permite texto, uma foto e botão opcional.
+- Publicador real, renovação OAuth, auditoria e tratamento de falhas ficam preparados para a aprovação externa.
+

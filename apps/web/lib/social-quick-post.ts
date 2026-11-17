@@ -49,5 +49,7 @@ export function quickPostMediaError(input: {
   if (input.format === "STORY" && count !== 1) return "Story aceita exatamente um arquivo.";
   if (input.format === "REEL" && (count !== 1 || !hasVideo)) return "Reels precisa de um único vídeo.";
   if (input.platforms.includes("FACEBOOK") && count > 1 && hasVideo) return "O Facebook não aceita carrossel com vídeo.";
+  if (input.platforms.includes("GOOGLE_BUSINESS") && input.format !== "FEED") return "O Google aceita esta publicação apenas no formato Feed.";
+  if (input.platforms.includes("GOOGLE_BUSINESS") && (count > 1 || hasVideo)) return "O Google aceita no máximo uma imagem nesta publicação.";
   return null;
 }

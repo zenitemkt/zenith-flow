@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildGoogleBusinessAuthorizeUrl, getGoogleBusinessRedirectUri, googleBusinessConfigured } from "./google-business";
+import { buildGoogleBusinessAuthorizeUrl, getGoogleBusinessRedirectUri, googleBusinessConfigured, googleBusinessLocationParent, publishGoogleBusinessLocalPost } from "./google-business";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -19,5 +19,17 @@ describe("Google Business OAuth", () => {
     vi.stubEnv("GOOGLE_BUSINESS_CLIENT_ID", "");
     vi.stubEnv("GOOGLE_BUSINESS_CLIENT_SECRET", "");
     expect(googleBusinessConfigured()).toBe(false);
+  });
+  it("normaliza a localização no formato esperado pela API", () => {
+    expect(googleBusinessLocationParent("123", "456")).toBe("accounts/123/locations/456");
+    expect(googleBusinessLocationParent("accounts/123", "locations/456")).toBe("accounts/123/locations/456");
+  });
+
+  it("monta uma publicação padrão com foto e botão", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ name: "accounts/1/locations/2/localPosts/3", searchUrl: "https://google.com/post" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    await publishGoogleBusinessLocalPost("token", { parent: "accounts/1/locations/2", summary: "Novidade", mediaUrl: "https://cdn.test/foto.jpg", callToAction: "LEARN_MORE", callToActionUrl: "https://hubzenite.com.br" });
+    const request = fetchMock.mock.calls[0]!;
+    expect(request[0]).toBe("https://mybusiness.googleapis.com/v4/accounts/1/locations/2/localPosts");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Heart, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Heart, MapPin, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
 import type { SocialPlatform, SocialPostFormat } from "@zenite-mkt/db";
 
 export interface PreviewMedia {
@@ -19,7 +19,7 @@ export interface PreviewProfile {
   avatarUrl?: string | null;
 }
 
-const NETWORK_LABEL: Record<string, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook" };
+const NETWORK_LABEL: Record<string, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook", GOOGLE_BUSINESS: "Google" };
 /** O Instagram mostra ~125 caracteres da legenda antes do "mais". */
 const IG_CUT = 125;
 const FB_CUT = 240;
@@ -243,6 +243,11 @@ function FacebookPost({ profile, media, caption, whenLabel }: { profile: Preview
   );
 }
 
+function GooglePost({ profile, media, caption }: { profile: PreviewProfile; media: PreviewMedia[]; caption: string }) {
+  const first = media[0];
+  return <div className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white"><div className="flex items-center gap-2.5 px-3 py-3"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F2F4F7]"><MapPin size={18} className="text-[#4285F4]" /></span><div className="min-w-0 flex-1"><p className="truncate text-[13px] font-semibold text-[#101828]">{profile.name}</p><p className="text-[11px] text-[#667085]">Atualização no Google</p></div></div>{caption && <div className="px-3 pb-3"><Caption text={caption} cut={FB_CUT} /></div>}{first && <Media item={first} className="block max-h-[420px] w-full object-cover" />}<div className="border-t border-[#EEF0F3] px-3 py-2 text-center text-xs font-semibold text-[#1A73E8]">Ver perfil da empresa</div></div>;
+}
+
 /**
  * Simulação de como a publicação vai aparecer (Instagram feed/Reels/Story e
  * Facebook). É aproximada: serve para ver enquadramento da arte e quanto da
@@ -267,7 +272,7 @@ export function PostPreview({
   /** Capa escolhida para o vídeo único (só Instagram). */
   igCover?: { imageUrl: string | null; seconds: number | null } | null;
 }) {
-  const networks: SocialPlatform[] = platforms.filter((p) => p === "INSTAGRAM" || p === "FACEBOOK");
+  const networks: SocialPlatform[] = platforms.filter((p) => p === "INSTAGRAM" || p === "FACEBOOK" || p === "GOOGLE_BUSINESS");
   const [picked, setPicked] = useState<SocialPlatform | null>(null);
   if (networks.length === 0) return null;
   const platform = picked && networks.includes(picked) ? picked : networks[0]!;
@@ -300,6 +305,7 @@ export function PostPreview({
       {platform === "INSTAGRAM" && format !== "FEED" && <VerticalFrame profile={profile} media={igMedia} caption={text} story={format === "STORY"} />}
       {platform === "FACEBOOK" && format === "STORY" && <VerticalFrame profile={profile} media={media} caption="" story />}
       {platform === "FACEBOOK" && format !== "STORY" && <FacebookPost profile={profile} media={media} caption={text} whenLabel={whenLabel} />}
+      {platform === "GOOGLE_BUSINESS" && <GooglePost profile={profile} media={media.slice(0, 1)} caption={text} />}
 
       <p className="text-center text-[11px] leading-4 text-[#98A2B3]">Simulação aproximada: o visual final pode variar um pouco em cada aparelho.</p>
     </div>

@@ -5,7 +5,7 @@ import { prisma, type SocialPlatform, type SocialPostFormat } from "@zenite-mkt/
  * cartão (Agendar / Publicar agora) e pelo agendamento automático quando o
  * cliente aprova no portal.
  */
-export const SCHEDULABLE_PLATFORMS: SocialPlatform[] = ["INSTAGRAM", "FACEBOOK"];
+export const SCHEDULABLE_PLATFORMS: SocialPlatform[] = ["INSTAGRAM", "FACEBOOK", "GOOGLE_BUSINESS"];
 export const CAPTION_MAX = 2200;
 
 export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
@@ -71,6 +71,8 @@ export async function scheduleContentPosts(input: {
   publishAtByPlatform?: PublishAtByPlatform;
   userId: string | null;
   autoScheduled?: boolean;
+  googleCallToAction?: unknown;
+  googleCallToActionUrl?: unknown;
 }): Promise<string[]> {
   const item = await prisma.contentItem.findUnique({
     where: { id: input.contentItemId },
@@ -105,11 +107,19 @@ export async function scheduleContentPosts(input: {
   if (platforms.includes("FACEBOOK") && media.length > 1 && hasVideo) {
     throw new ScheduleError("O Facebook não aceita carrossel com vídeo.");
   }
+  if (platforms.includes("GOOGLE_BUSINESS") && (input.format === "REEL" || input.format === "STORY")) {
+    throw new ScheduleError("O Google aceita esta publicação apenas no formato Feed.");
+  }
+  const googleCallToAction = ["BOOK", "ORDER", "SHOP", "LEARN_MORE", "SIGN_UP", "CALL"].includes(String(input.googleCallToAction)) ? String(input.googleCallToAction) : null;
+  const googleCallToActionUrl = typeof input.googleCallToActionUrl === "string" && /^https:\/\//i.test(input.googleCallToActionUrl) ? input.googleCallToActionUrl.slice(0, 2000) : null;
+  if (googleCallToAction && googleCallToAction !== "CALL" && !googleCallToActionUrl) throw new ScheduleError("Informe um link HTTPS para o botão do Google.");
 
+  const socialPlatforms = platforms.filter((platform) => platform !== "GOOGLE_BUSINESS");
   const connections = await prisma.socialConnection.findMany({
-    where: { clientId: item.clientId, platform: { in: platforms }, status: "ACTIVE" },
+    where: { clientId: item.clientId, platform: { in: socialPlatforms }, status: "ACTIVE" },
   });
-  const missing = platforms.filter((p) => !connections.some((c) => c.platform === p));
+  const googleLocation = platforms.includes("GOOGLE_BUSINESS") ? await prisma.googleBusinessLocation.findFirst({ where: { clientId: item.clientId, agencyId: item.agencyId, connection: { status: "ACTIVE" } } }) : null;
+  const missing = platforms.filter((p) => p === "GOOGLE_BUSINESS" ? !googleLocation : !connections.some((c) => c.platform === p));
   if (missing.length > 0) {
     throw new ScheduleError(`Conecte ${missing.map((p) => PLATFORM_LABELS[p]).join(" e ")} no perfil do cliente antes de agendar.`);
   }
@@ -149,6 +159,12 @@ export async function scheduleContentPosts(input: {
           });
       ids.push(post.id);
     }
+    if (googleLocation) {
+      const data = { versionId: version?.id ?? null, connectionId: null, googleBusinessLocationId: googleLocation.id, format: "FEED" as const, caption: input.caption || null, googleCallToAction, googleCallToActionUrl, publishAt: publishAtOf("GOOGLE_BUSINESS"), status: "SCHEDULED" as const, attempts: 0, nextAttemptAt: null, lastError: null, externalContainerId: null, autoScheduled: input.autoScheduled ?? false };
+      const existing = await tx.socialPost.findFirst({ where: { contentItemId: item.id, platform: "GOOGLE_BUSINESS", status: { in: ["SCHEDULED", "FAILED"] } }, select: { id: true } });
+      const post = existing ? await tx.socialPost.update({ where: { id: existing.id }, data }) : await tx.socialPost.create({ data: { ...data, agencyId: item.agencyId, clientId: item.clientId, contentItemId: item.id, platform: "GOOGLE_BUSINESS", createdByUserId: input.userId } });
+      ids.push(post.id);
+    }
 
     if (item.status === "APROVADO") {
       await tx.contentItem.update({ where: { id: item.id }, data: { status: "AGENDADO" } });
@@ -171,9 +187,9 @@ export async function scheduleContentPosts(input: {
         resourceType: "content_item",
         resourceId: item.id,
         metadata: {
-          platforms: connections.map((c) => c.platform),
+          platforms,
           publishAt: input.publishAt.toISOString(),
-          publishAtByPlatform: Object.fromEntries(connections.map((c) => [c.platform, publishAtOf(c.platform).toISOString()])),
+          publishAtByPlatform: Object.fromEntries(platforms.map((platform) => [platform, publishAtOf(platform).toISOString()])),
           format: input.format,
         },
       },

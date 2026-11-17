@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const platforms = [
     ...new Set(
       (Array.isArray(body?.platforms) ? body.platforms : []).filter(
-        (p: unknown): p is SocialPlatform => p === "INSTAGRAM" || p === "FACEBOOK",
+        (p: unknown): p is SocialPlatform => p === "INSTAGRAM" || p === "FACEBOOK" || p === "GOOGLE_BUSINESS",
       ),
     ),
   ] as SocialPlatform[];
@@ -51,11 +51,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
   // Confere as conexões antes de criar a peça, pra não sobrar cartão pela metade.
+  const metaPlatforms = platforms.filter((platform) => platform !== "GOOGLE_BUSINESS");
   const connections = await prisma.socialConnection.findMany({
-    where: { clientId: client.id, platform: { in: platforms }, status: "ACTIVE" },
+    where: { clientId: client.id, platform: { in: metaPlatforms }, status: "ACTIVE" },
     select: { platform: true },
   });
-  const missing = platforms.filter((p) => !connections.some((c) => c.platform === p));
+  const googleLocation = platforms.includes("GOOGLE_BUSINESS") ? await prisma.googleBusinessLocation.findFirst({ where: { clientId: client.id, agencyId: membership.agencyId, connection: { status: "ACTIVE" } }, select: { id: true } }) : null;
+  const missing = platforms.filter((p) => p === "GOOGLE_BUSINESS" ? !googleLocation : !connections.some((c) => c.platform === p));
   if (missing.length > 0) {
     return NextResponse.json(
       { error: `Conecte ${missing.map((p) => PLATFORM_LABELS[p]).join(" e ")} no perfil do cliente antes de agendar.` },
@@ -65,7 +67,7 @@ export async function POST(request: Request) {
 
   const date = spDateOf(publishAt);
   const title = quickPostTitle({ title: typeof body?.title === "string" ? body.title : "", caption, platforms, date });
-  const channel = platforms.includes("INSTAGRAM") ? "INSTAGRAM" : "FACEBOOK";
+  const channel = platforms.includes("INSTAGRAM") ? "INSTAGRAM" : platforms.includes("FACEBOOK") ? "FACEBOOK" : "OUTRO";
 
   const item = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quick-post:${membership.agencyId}:${client.id}:${title}`}))`;

@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const body = await request.json().catch(() => null);
   const platforms = (Array.isArray(body?.platforms) ? body.platforms : []).filter(
-    (p: unknown): p is SocialPlatform => p === "INSTAGRAM" || p === "FACEBOOK",
+    (p: unknown): p is SocialPlatform => p === "INSTAGRAM" || p === "FACEBOOK" || p === "GOOGLE_BUSINESS",
   );
   const format = FORMATS.includes(body?.format) ? (body.format as SocialPostFormat) : "FEED";
   const caption = typeof body?.caption === "string" ? body.caption.trim() : "";
@@ -94,6 +94,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       publishAt,
       publishAtByPlatform: now ? undefined : parsePublishAtByPlatform(body?.publishAtByPlatform),
       userId: session.user.id,
+      googleCallToAction: body?.googleCallToAction,
+      googleCallToActionUrl: body?.googleCallToActionUrl,
     });
   } catch (error) {
     await prisma.contentItem.update({ where: { id: item.id }, data: { status: "PRODUCAO" } });

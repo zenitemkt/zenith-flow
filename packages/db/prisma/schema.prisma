@@ -3146,6 +3146,7 @@ model GoogleBusinessLocation {
   updatedAt    DateTime                 @updatedAt
 
   reviews GoogleBusinessReview[]
+  posts   SocialPost[]
 
   @@unique([agencyId, locationId])
   @@index([agencyId])
@@ -3258,46 +3259,52 @@ enum SocialPostFormat {
 
 /// Uma publicação numa rede. Mídia vem da versão (`versionId`); legenda é congelada no agendamento.
 model SocialPost {
-  id                  String           @id @default(cuid())
-  agencyId            String
-  agency              Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  clientId            String
-  client              Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  contentItemId       String?
-  contentItem         ContentItem?     @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
-  versionId           String?
-  version             ContentVersion?  @relation(fields: [versionId], references: [id], onDelete: SetNull)
-  connectionId        String
-  connection          SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  platform            SocialPlatform
-  format              SocialPostFormat @default(FEED)
-  caption             String?
-  publishAt           DateTime
-  status              SocialPostStatus @default(SCHEDULED)
-  attempts            Int              @default(0)
-  nextAttemptAt       DateTime?
+  id                       String                  @id @default(cuid())
+  agencyId                 String
+  agency                   Agency                  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId                 String
+  client                   Client                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contentItemId            String?
+  contentItem              ContentItem?            @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  versionId                String?
+  version                  ContentVersion?         @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  connectionId             String?
+  connection               SocialConnection?       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  googleBusinessLocationId String?
+  googleBusinessLocation   GoogleBusinessLocation? @relation(fields: [googleBusinessLocationId], references: [id], onDelete: Cascade)
+  platform                 SocialPlatform
+  format                   SocialPostFormat        @default(FEED)
+  caption                  String?
+  /// Google Business Profile: CTA opcional para posts STANDARD.
+  googleCallToAction       String?
+  googleCallToActionUrl    String?
+  publishAt                DateTime
+  status                   SocialPostStatus        @default(SCHEDULED)
+  attempts                 Int                     @default(0)
+  nextAttemptAt            DateTime?
   /// Container de mídia do Instagram aguardando processamento (vídeo).
   /// Perfis colaboradores do Instagram (collab), sem @, até 3.
-  collaborators       String[]         @default([])
+  collaborators            String[]                @default([])
   /// Capa do vídeo: momento do vídeo (ms) ou imagem ("drive:<id>" ou chave do R2).
-  coverOffsetMs       Int?
-  coverKey            String?
+  coverOffsetMs            Int?
+  coverKey                 String?
   /// Reel de teste (só não seguidores): MANUAL = compartilha pelo app; SS_PERFORMANCE = compartilha sozinho se for bem.
-  trialStrategy       String?
-  externalContainerId String?
-  externalPostId      String?
-  permalink           String?
-  lastError           String?
-  publishedAt         DateTime?
+  trialStrategy            String?
+  externalContainerId      String?
+  externalPostId           String?
+  permalink                String?
+  lastError                String?
+  publishedAt              DateTime?
   /// true = criado sozinho quando o cliente aprovou no portal.
-  autoScheduled       Boolean          @default(false)
-  createdByUserId     String?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  autoScheduled            Boolean                 @default(false)
+  createdByUserId          String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   @@index([status, publishAt])
   @@index([agencyId, publishAt])
   @@index([contentItemId])
+  @@index([googleBusinessLocationId])
   @@map("social_post")
 }
 
