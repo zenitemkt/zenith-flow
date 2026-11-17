@@ -12,6 +12,7 @@ import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
 import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
 import { GoogleReviewsComparison, GoogleReviewsPanel } from "./CompetitorGoogleReviews";
 import { CompetitorWebsiteScores } from "./CompetitorWebsiteScores";
+import { CompetitorWebsiteEditor } from "./CompetitorWebsiteEditor";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -114,7 +115,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
 
       <GoogleReviewsComparison days={days} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
 
-      <CompetitorWebsiteScores profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
+      <CompetitorWebsiteScores profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.websiteOverride ?? profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
 
       {comparison ? (
         <ClientCompetitorComparison comparison={comparison} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
@@ -187,7 +188,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                   {current.p.biography && <p className="max-w-xl whitespace-pre-line text-xs text-[#667085]">{current.p.biography}</p>}
                   <p className="mt-1 text-[11px] text-[#98A2B3]">
                     {current.p.lastSyncAt ? `Atualizado em ${current.p.lastSyncAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}` : "Ainda não atualizado"}
-                    {current.p.website ? ` · ${current.p.website}` : ""}
+                    {(current.p.websiteOverride ?? current.p.website) ? ` · ${current.p.websiteOverride ?? current.p.website}` : ""}
                   </p>
                 </div>
               </div>
@@ -195,6 +196,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
             </div>
             {current.p.lastError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">Última atualização falhou: {current.p.lastError}</p>}
             {!current.p.isOwn && current.p.category === "REFERENCE" && <p className="mt-3 rounded-lg bg-[#F4F3FF] px-3 py-2 text-xs text-[#5925DC]">Este perfil serve como referência de mercado. Os dados e análises continuam disponíveis, mas ele não participa de rankings, posições ou gráficos de disputa.</p>}
+            <CompetitorWebsiteEditor competitorId={current.p.id} instagramWebsite={current.p.website} websiteOverride={current.p.websiteOverride} />
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               <Stat label="Seguidores" value={current.p.followers !== null ? int(current.p.followers) : "—"} hint={current.growth !== null && current.snapshotDays > 1 ? `${current.growth >= 0 ? "+" : ""}${int(current.growth)} no período` : "histórico começa agora"} />
               <Stat label="Posts no período" value={String(current.stats.posts)} hint={`${dec(current.stats.postsPerWeek)} por semana`} />

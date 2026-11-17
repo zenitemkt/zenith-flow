@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPageSpeedScore, normalizeWebsiteUrl } from "./competitor-pagespeed";
+import { effectiveCompetitorWebsite, fetchPageSpeedScore, normalizeWebsiteUrl } from "./competitor-pagespeed";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,6 +10,11 @@ describe("PageSpeed dos concorrentes", () => {
   it("normaliza domínio sem protocolo e recusa protocolos estranhos", () => {
     expect(normalizeWebsiteUrl("exemplo.com.br")).toBe("https://exemplo.com.br/");
     expect(normalizeWebsiteUrl("ftp://exemplo.com.br")).toBeNull();
+  });
+
+  it("prioriza o site oficial manual e volta ao link da bio quando ele é removido", () => {
+    expect(effectiveCompetitorWebsite({ website: "https://linktr.ee/perfil", websiteOverride: "empresa.com.br" })).toBe("https://empresa.com.br/");
+    expect(effectiveCompetitorWebsite({ website: "https://linktr.ee/perfil", websiteOverride: null })).toBe("https://linktr.ee/perfil");
   });
 
   it("converte a nota decimal do Lighthouse para 0 a 100", async () => {

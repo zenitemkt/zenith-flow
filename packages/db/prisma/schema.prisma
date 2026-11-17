@@ -3852,6 +3852,8 @@ model Competitor {
   displayName        String?
   biography          String?
   website            String?
+  /// Site oficial definido manualmente. Quando preenchido, tem prioridade sobre o link da bio.
+  websiteOverride    String?
   /// Nota Lighthouse mobile (0-100) da página inicial informada pelo Instagram.
   websiteScore       Int?
   websiteScoreAt     DateTime?

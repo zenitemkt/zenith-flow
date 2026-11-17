@@ -4,7 +4,7 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canSeeClient } from "@/lib/client-access";
 import { analyzeTopPostsWithAI, syncCompetitor } from "@/lib/competitors";
-import { syncCompetitorWebsite } from "@/lib/competitor-pagespeed";
+import { effectiveCompetitorWebsite, normalizeWebsiteUrl, syncCompetitorWebsite } from "@/lib/competitor-pagespeed";
 
 export const maxDuration = 60;
 
@@ -44,6 +44,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const ctx = await load(params.id);
   if ("error" in ctx) return ctx.error;
   const body = await request.json().catch(() => null);
+  if (body && Object.prototype.hasOwnProperty.call(body, "websiteOverride")) {
+    if (body.websiteOverride !== null && typeof body.websiteOverride !== "string") return NextResponse.json({ error: "Informe um site válido." }, { status: 400 });
+    const raw = typeof body.websiteOverride === "string" ? body.websiteOverride.trim() : "";
+    const websiteOverride = raw ? normalizeWebsiteUrl(raw) : null;
+    if (raw && !websiteOverride) return NextResponse.json({ error: "Informe um endereço válido, como https://empresa.com.br." }, { status: 400 });
+    const updated = await prisma.competitor.update({
+      where: { id: ctx.competitor.id },
+      data: { websiteOverride, websiteScore: null, websiteScoreAt: null, websiteScoreError: null },
+      select: { website: true, websiteOverride: true },
+    });
+    return NextResponse.json({ ok: true, website: effectiveCompetitorWebsite(updated), websiteOverride: updated.websiteOverride });
+  }
   const role = body?.role;
   if (role !== "OWN" && role !== "DIRECT" && role !== "REFERENCE") return NextResponse.json({ error: "Escolha um papel válido para o perfil." }, { status: 400 });
   await prisma.$transaction(async (tx) => {
