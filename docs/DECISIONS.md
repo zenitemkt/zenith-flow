@@ -62,6 +62,16 @@
 
 **Decisão 4 — alerta leva ao contexto**: todos os avisos abrem `/concorrentes?c=<id>`. O tipo “Movimentos dos concorrentes” é configurável junto dos demais tipos na Central de alertas.
 
+## 2026-11-17 — Retomada manual de conversa parada no WhatsApp
+
+**Pedido**: quando a Milena assume e o lead para de responder, ver em Leads há quanto tempo (com um "!" vermelho em 2 dias) e ter, no lead, um botão que abre o wa.me com uma mensagem amigável pronta, para o admin só apertar Enter. Envio automático pela API fica para depois.
+
+**Decisão 1 — manual pelo celular, não pela API**: depois de 24 h sem mensagem do lead, a API do WhatsApp só aceita modelo aprovado pela Meta. Pelo app do número comercial (wa.me) não existe essa janela, então a retomada sai como texto livre e sem custo de modelo.
+
+**Decisão 2 — a mensagem conta como da Milena**: o eco da coexistência pausava a Milena (`mode = human`) a cada mensagem mandada pelo celular. Abrir o wa.me pelo cartão chama `POST /api/leads/:id/follow-up`, que marca `autoTakeoverAt` (mesmo mecanismo do "Já enviei"). Assim o eco entra como fala da assistente e ela segue quando o lead responder. Se a conversa já estava com a equipe (`mode = human`), nada muda. Cada abertura vira `auditLog` `assistant.follow_up`; a contagem desde a última resposta do lead troca o texto sugerido na segunda tentativa.
+
+**Decisão 3 — regra do sinal**: precisa de retomada quando a última mensagem real (fora as "[sistema] ...") foi da Milena ou da equipe há 48 h ou mais (`FOLLOW_UP_AFTER_HOURS`) e o lead não está Desqualificado nem Convertido. "Última atividade" em Leads = o mais recente entre o tracking do site e a última mensagem do WhatsApp. O snapshot comercial (alertas, score) continua só com o site.
+
 ## 2026-11-13 — Story no Facebook; story sem título nem legenda
 
 **Pedido**: desativar título e legenda quando o formato é Story; depois, em vez de bloquear o Facebook em Story (dava "Story no Facebook ainda não é suportado"), passar a publicar.

@@ -4,6 +4,9 @@
 
 ### Alterado
 
+- **Leads > Última atividade** passa a contar a conversa de WhatsApp (não só o site), mostra o tempo relativo ("há 2 dias", data exata ao passar o mouse) e um "!" vermelho quando a última mensagem foi nossa e o lead está sem responder há 2 dias ou mais. Novo filtro "Sem resposta no WhatsApp (2+ dias)". Ordenar por última atividade usa o mesmo valor.
+- **Lead > Retomar conversa no WhatsApp**: cartão com uma mensagem amigável pronta e editável ("Oi, Maria! Vi que ainda não conseguiu ver minha mensagem 😊 Ficou alguma dúvida?…"; na segunda tentativa o texto muda) e o botão "Abrir no WhatsApp" (wa.me), para o admin só apertar Enter. A mensagem conta como da Milena, que continua a conversa quando o lead responder.
+
 - **Portal de demonstração (logins demo)**: só o painel fictício mudou; o portal dos clientes reais continua igual.
   - **Início** mostra as artes aguardando aprovação direto na tela (carrossel quando passam de 3). Ao clicar abre a janela com Aprovar, Pedir ajuste, Alterar legenda e Mudar data/hora. Aprovada ou com ajuste pedido, a arte sai da fila. Aba Aprovações saiu do menu.
   - **Calendário** com o planejamento de três meses: [FEED] e [STORIE], 2 ou 3 dias por semana, às vezes os dois no mesmo dia em horários diferentes, com o horário em cada item. Cores: verde publicado, azul agendado (só muda data e hora), laranja aguardando aprovação, amarelo em ajuste.

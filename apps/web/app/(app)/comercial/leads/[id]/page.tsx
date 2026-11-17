@@ -15,6 +15,9 @@ import { ConvertLeadButton } from "./ConvertLeadButton";
 import { AddLeadNoteForm } from "./AddLeadNoteForm";
 import { DeleteLeadButton } from "./DeleteLeadButton";
 import { FirstContactCard } from "./FirstContactCard";
+import { FollowUpCard } from "./FollowUpCard";
+import { followUpState, suggestFollowUp, timeAgo } from "@/lib/assistant/follow-up";
+import { getLeadWhatsappActivity } from "@/lib/assistant/follow-up-data";
 import { suggestOpener, waPhone } from "@/lib/assistant/form-outreach";
 import { LeadIntelligencePanel } from "./LeadIntelligencePanel";
 import { SubmissionAttribution } from "./SubmissionAttribution";
@@ -218,6 +221,22 @@ export default async function LeadDetailPage({ params }: PageProps) {
       }
     : null;
 
+  // Retomada: a última fala no WhatsApp foi nossa e o lead sumiu.
+  const waActivity = leadWaPhone ? (await getLeadWhatsappActivity(membership.agencyId, [lead])).get(lead.id) : undefined;
+  const followUp = followUpState(waActivity, lead.status);
+  let followUpCard: { silentLabel: string; needsFollowUp: boolean; previousFollowUps: number; suggestion: string } | null = null;
+  if (leadWaPhone && waActivity && followUp.awaitingReply) {
+    const lastReply = await prisma.assistantMessage.findFirst({
+      where: { conversationId: waActivity.conversationId, role: "user", NOT: { content: { startsWith: "[sistema]" } } },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    const previousFollowUps = await prisma.auditLog.count({
+      where: { agencyId: membership.agencyId, action: "assistant.follow_up", resourceType: "lead", resourceId: lead.id, ...(lastReply ? { createdAt: { gt: lastReply.createdAt } } : {}) },
+    });
+    followUpCard = { silentLabel: timeAgo(waActivity.lastMessageAt), needsFollowUp: followUp.needsFollowUp, previousFollowUps, suggestion: suggestFollowUp(lead.name, previousFollowUps) };
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <Link href="/comercial/leads" className="w-fit text-sm font-medium text-[#667085] hover:text-[#FF2B00]">
@@ -256,7 +275,8 @@ export default async function LeadDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {firstContact && <FirstContactCard leadId={lead.id} phone={firstContact.phone} suggestion={firstContact.suggestion} status={firstContact.status} />}
+      {followUpCard && leadWaPhone && <FollowUpCard leadId={lead.id} phone={leadWaPhone} {...followUpCard} />}
+      {firstContact && !followUpCard && <FirstContactCard leadId={lead.id} phone={firstContact.phone} suggestion={firstContact.suggestion} status={firstContact.status} />}
 
       <LeadIntelligencePanel
         intelligence={intelligence}

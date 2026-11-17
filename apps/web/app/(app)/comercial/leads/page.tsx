@@ -9,6 +9,8 @@ import { NewLeadModal } from "./NewLeadModal";
 import { DeleteLeadRowButton } from "./DeleteLeadRowButton";
 import { canManageTeam } from "@/lib/rbac";
 import { getLeadCommercialSnapshots } from "@/lib/commercial-intelligence";
+import { FOLLOW_UP_AFTER_HOURS, followUpState, timeAgo } from "@/lib/assistant/follow-up";
+import { getLeadWhatsappActivity } from "@/lib/assistant/follow-up-data";
 
 export default async function LeadsPage({ searchParams }: { searchParams: { page?: string; signal?: string; source?: string; sort?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
@@ -30,17 +32,30 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
     where: { agencyId: membership.agencyId },
     orderBy: { createdAt: "desc" },
     take: LEADS_INTELLIGENCE_LIMIT,
+    include: { phones: { select: { value: true }, orderBy: { firstSeenAt: "asc" } } },
   });
-  const snapshots = await getLeadCommercialSnapshots(membership.agencyId, allLeads.map((lead) => lead.id));
+  const [snapshots, waActivity] = await Promise.all([
+    getLeadCommercialSnapshots(membership.agencyId, allLeads.map((lead) => lead.id)),
+    getLeadWhatsappActivity(membership.agencyId, allLeads),
+  ]);
+  const now = new Date();
   const sources = Array.from(new Set(allLeads.map((lead) => lead.source).filter((value): value is string => Boolean(value)))).sort();
-  const filtered = allLeads.map((lead) => ({ lead, snapshot: snapshots.get(lead.id) })).filter(({ lead, snapshot }) => {
+  const filtered = allLeads.map((lead) => {
+    const snapshot = snapshots.get(lead.id);
+    const wa = waActivity.get(lead.id);
+    // Última atividade = o mais recente entre o site (tracking) e a conversa de WhatsApp.
+    const siteAt = snapshot?.lastActivityAt ?? null;
+    const lastActivityAt = wa && (!siteAt || wa.lastMessageAt > siteAt) ? wa.lastMessageAt : siteAt;
+    return { lead, snapshot, lastActivityAt, followUp: followUpState(wa, lead.status, now) };
+  }).filter(({ lead, snapshot, followUp }) => {
     if (searchParams.source && lead.source !== searchParams.source) return false;
+    if (searchParams.signal === "no-reply" && !followUp.needsFollowUp) return false;
     if (searchParams.signal === "hot" && snapshot?.temperature !== "ALTO") return false;
     if (searchParams.signal === "returning" && (snapshot?.visitsCount ?? 0) < 2) return false;
     if (searchParams.signal === "abandoned" && (!snapshot || snapshot.formStartsCount <= snapshot.formSubmitsCount)) return false;
     if (searchParams.signal === "client-return" && !(lead.convertedClientId && snapshot?.lastActivityAt)) return false;
     return true;
-  }).sort((a, b) => searchParams.sort === "score" ? (b.snapshot?.score ?? 0) - (a.snapshot?.score ?? 0) : searchParams.sort === "activity" ? (b.snapshot?.lastActivityAt?.getTime() ?? 0) - (a.snapshot?.lastActivityAt?.getTime() ?? 0) : b.lead.createdAt.getTime() - a.lead.createdAt.getTime());
+  }).sort((a, b) => searchParams.sort === "score" ? (b.snapshot?.score ?? 0) - (a.snapshot?.score ?? 0) : searchParams.sort === "activity" ? (b.lastActivityAt?.getTime() ?? 0) - (a.lastActivityAt?.getTime() ?? 0) : b.lead.createdAt.getTime() - a.lead.createdAt.getTime());
   const total = filtered.length;
   const pageCount = pageCountFor(total);
   const rows = filtered.slice((page - 1) * DEFAULT_PAGE_SIZE, page * DEFAULT_PAGE_SIZE);
@@ -60,7 +75,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
 
       {/* Priorização comercial */}
       <form className="flex flex-wrap gap-3 rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <select name="signal" defaultValue={searchParams.signal ?? ""} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="">Todos os sinais</option><option value="hot">Leads quentes</option><option value="returning">Retornos recentes</option><option value="abandoned">Formulário abandonado</option><option value="client-return">Cliente com novo interesse</option></select>
+        <select name="signal" defaultValue={searchParams.signal ?? ""} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="">Todos os sinais</option><option value="hot">Leads quentes</option><option value="returning">Retornos recentes</option><option value="abandoned">Formulário abandonado</option><option value="client-return">Cliente com novo interesse</option><option value="no-reply">Sem resposta no WhatsApp ({FOLLOW_UP_AFTER_HOURS / 24}+ dias)</option></select>
         <select name="source" defaultValue={searchParams.source ?? ""} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="">Todas as origens</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select>
         <select name="sort" defaultValue={searchParams.sort ?? "recent"} className="h-10 rounded-lg border border-[#D0D5DD] px-3 text-sm"><option value="recent">Cadastro mais recente</option><option value="score">Maior interesse</option><option value="activity">Última atividade</option></select>
         <button className="h-10 rounded-lg bg-[#101828] px-4 text-sm font-semibold text-white">Aplicar</button>
@@ -90,7 +105,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ lead, snapshot }) => (
+              {rows.map(({ lead, snapshot, lastActivityAt, followUp }) => (
                 <tr key={lead.id} className="border-t border-[#EEF0F3] hover:bg-[#F9FAFB]">
                   <td className="px-4 py-3">
                     <Link href={`/comercial/leads/${lead.id}`} className="font-medium text-[#101828] hover:text-[#FF2B00]">
@@ -109,7 +124,25 @@ export default async function LeadsPage({ searchParams }: { searchParams: { page
                     )}
                   </td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${snapshot?.temperature === "ALTO" ? "bg-[#ECFDF3] text-[#027A48]" : snapshot?.temperature === "MEDIO" ? "bg-[#FFFAEB] text-[#B54708]" : "bg-[#F2F4F7] text-[#475467]"}`}>{snapshot?.score ?? 0}/100</span></td>
-                  <td className="px-4 py-3 text-xs text-[#667085]">{snapshot?.lastActivityAt ? snapshot.lastActivityAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}</td>
+                  <td className="px-4 py-3 text-xs text-[#667085]">
+                    {lastActivityAt ? (
+                      <span className="inline-flex items-center gap-1.5" title={lastActivityAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}>
+                        {timeAgo(lastActivityAt, now)}
+                        {followUp.needsFollowUp && (
+                          <Link
+                            href={`/comercial/leads/${lead.id}`}
+                            title={`Sem resposta no WhatsApp ${timeAgo(lastActivityAt, now)}. Abra o lead para retomar a conversa.`}
+                            aria-label="Sem resposta no WhatsApp: retomar conversa"
+                            className="flex h-4 w-4 items-center justify-center rounded-full bg-[#D92D20] text-[10px] font-bold leading-none text-white"
+                          >
+                            !
+                          </Link>
+                        )}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   {canDeleteLeads && (
                     <td className="px-4 py-3 text-right">
                       <DeleteLeadRowButton leadId={lead.id} leadName={lead.name} />

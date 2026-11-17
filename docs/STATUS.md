@@ -1,6 +1,6 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-11-16.
+Última atualização: 2026-11-17.
 
 ## Implementado
 
@@ -39,6 +39,10 @@
 
 - **Concorrentes — Fase 2A, alertas inteligentes (2026-11-16)**: após a sincronização diária, o sistema avalia apenas perfis concorrentes (não o perfil próprio) e abre alertas informativos para post com engajamento ≥ 3x a média de 90 dias (mínimo de 10 posts), salto diário de seguidores ≥ 50 e ≥ 3x a média de 30 dias, cadência semanal dobrada/reduzida pela metade e formato não usado nos 90 dias anteriores. As chaves `competitor:*` deduplicam os avisos; condições que deixaram de existir são resolvidas automaticamente. Cada aviso abre `/concorrentes?c=<id>` e o tipo pode ser desligado na Central de alertas. Sem migration.
   - Testado: Vitest específico (`competitor-alerts.test.ts`, 7/7) e lint. O código novo passa no TypeScript; o typecheck/build global segue bloqueado pelo problema preexistente `Cannot find module 'qrcode'` em `app/portal/demo/DemoPortalApp.tsx`. A suíte ampla teve 100 testes aprovados e 94 testes de integração bloqueados porque `DATABASE_URL` não está disponível nesta sessão.
+
+- **Retomar conversa parada no WhatsApp (2026-11-17)**: `lib/assistant/follow-up.ts` (regra de 48 h, tempo relativo, mensagem sugerida) e `lib/assistant/follow-up-data.ts` (última mensagem real de cada conversa, ligada ao lead por `leadId` ou celular). Leads: "Última atividade" passa a ser o mais recente entre site e WhatsApp, em tempo relativo, com "!" vermelho quando a última fala foi nossa há 2+ dias; filtro "Sem resposta no WhatsApp". Lead: cartão `FollowUpCard.tsx` com o texto e "Abrir no WhatsApp" (wa.me), que chama `POST /api/leads/:id/follow-up`. Ver `docs/DECISIONS.md` (2026-11-17, "Retomada manual").
+  - Testado: `vitest` (`lib/assistant/follow-up.test.ts`, 5), `tsc --noEmit`, `lint` e `next build`.
+  - **Não testado ao vivo**: a consulta `DISTINCT ON` não rodou contra um banco (o Postgres local estava desligado) e o eco da Meta depois do envio pelo celular não foi conferido. Primeiro teste: abrir um lead parado, mandar e ver em Conversas se a mensagem aparece como da Milena e se ela responde quando o lead voltar.
 
 - **Portal de demonstração, rodada 2 (2026-11-16)**: tudo em `app/portal/demo/` (`demo-data.ts`, `DemoPortalApp.tsx`, `DemoMap.tsx`), mais o menu próprio do demo em `PortalShell.tsx` (prop `demo`, vinda de `layout.tsx`). Portal real sem mudança. `/portal/aprovacoes` no demo abre o Início; `/portal/grafica` abre Solicitações na seção Peças gráficas. Dependência nova: `qrcode` (+ `@types/qrcode`). Ver CHANGELOG.
   - Testado: `tsc --noEmit` (sem erros novos), `eslint app/portal`, gerador de dados conferido (contagens de posts e tickets) e `next build`.
