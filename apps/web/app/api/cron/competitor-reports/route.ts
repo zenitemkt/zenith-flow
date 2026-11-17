@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   const month = previousClosedMonth();
   const clients = await prisma.client.findMany({
-    where: { competitors: { some: { isOwn: true } }, AND: { competitors: { some: { isOwn: false } } } },
+    where: { competitors: { some: { isOwn: true } }, AND: { competitors: { some: { isOwn: false, category: "DIRECT" } } } },
     select: { id: true, agencyId: true },
     orderBy: { id: "asc" },
   });

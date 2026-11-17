@@ -92,7 +92,7 @@ async function reportSource(clientId: string, agencyId: string, month: Date) {
       competitors: {
         orderBy: [{ isOwn: "desc" }, { igUsername: "asc" }],
         select: {
-          id: true, igUsername: true, isOwn: true, followers: true,
+          id: true, igUsername: true, isOwn: true, category: true, followers: true,
           posts: { where: { timestamp: { gte: month, lt: end } }, orderBy: { timestamp: "asc" } },
           snapshots: { where: { day: { gte: month, lt: end } }, orderBy: { day: "asc" }, select: { day: true, followers: true } },
           ads: { where: { OR: [{ createdAt: { gte: month, lt: end } }, { startedAt: { gte: month, lt: end } }] }, select: { active: true, startedAt: true, lastSeenAt: true, headline: true, bodyText: true, format: true } },
@@ -102,7 +102,7 @@ async function reportSource(clientId: string, agencyId: string, month: Date) {
   });
   if (!client) throw new Error("Cliente não encontrado.");
   const own = client.competitors.find((profile) => profile.isOwn);
-  const rivals = client.competitors.filter((profile) => !profile.isOwn);
+  const rivals = client.competitors.filter((profile) => !profile.isOwn && profile.category === "DIRECT");
   if (!own) throw new Error("Cadastre o perfil do próprio cliente como base de comparação.");
   if (rivals.length === 0) throw new Error("Cadastre pelo menos um concorrente antes de gerar o relatório.");
   const analyzed = client.competitors.map((profile) => {
@@ -112,6 +112,7 @@ async function reportSource(clientId: string, agencyId: string, month: Date) {
     return {
       username: profile.igUsername,
       isOwn: profile.isOwn,
+      role: profile.isOwn ? "CLIENT" : profile.category,
       followers: profile.followers,
       followerChange: first !== null && last !== null ? last - first : null,
       posts: stats.posts,
@@ -125,7 +126,7 @@ async function reportSource(clientId: string, agencyId: string, month: Date) {
       ads: profile.ads.map((ad) => ({ active: ad.active, format: ad.format, opening: ad.headline ?? firstLine(ad.bodyText), daysObserved: Math.max(1, Math.ceil((ad.lastSeenAt.getTime() - (ad.startedAt ?? month).getTime()) / 86_400_000)) })),
     };
   });
-  const comparison = compareClientWithCompetitors(client.competitors.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, followers: profile.followers, posts: profile.posts, snapshots: profile.snapshots })), days);
+  const comparison = compareClientWithCompetitors(client.competitors.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, category: profile.category, followers: profile.followers, posts: profile.posts, snapshots: profile.snapshots })), days);
   const clientPosts = own.posts.length;
   const competitorPosts = rivals.reduce((total, profile) => total + profile.posts.length, 0);
   const ads = rivals.reduce((total, profile) => total + profile.ads.length, 0);
@@ -150,7 +151,8 @@ async function callClaude(source: unknown): Promise<MonthlyCompetitorReportConte
 Regras:
 - Diferencie fato observado de interpretação.
 - Não invente alcance, impressões, vendas, investimento, público ou causalidade.
-- Compare o perfil marcado como isOwn com os concorrentes.
+- Compare o perfil CLIENT somente com os perfis DIRECT. Perfis REFERENCE servem para inspiração e nunca entram em ranking, posição ou disputa.
+- Use perfis REFERENCE apenas para destacar práticas, temas e estruturas que podem inspirar o cliente.
 - Se a amostra for pequena, diga isso nas limitações.
 - Produza exatamente 5 ações práticas, proporcionais a uma empresa com equipe pequena.
 - Cada evidência deve citar perfil, quantidade ou métrica presente na fonte.

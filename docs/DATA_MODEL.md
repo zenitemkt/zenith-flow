@@ -349,3 +349,7 @@ Pedido do usuário, 2026-09-07 (verificado por leitura de código, não suposiç
 
 `Competitor.websiteScore` guarda a última nota Lighthouse mobile em escala 0–100. `websiteScoreAt` registra a medição bem-sucedida e `websiteScoreError` guarda a última falha sem apagar a nota anterior.
 
+# Categorias da Análise de Concorrentes
+
+`Competitor.category` usa `DIRECT` ou `REFERENCE`. `isOwn` continua identificando o perfil do próprio cliente. Registros antigos recebem `DIRECT` na migration. A referência preserva posts, snapshots, anúncios, Google e PageSpeed, mas é excluída das agregações competitivas.
+

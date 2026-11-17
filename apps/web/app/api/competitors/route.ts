@@ -19,7 +19,8 @@ export async function POST(request: Request) {
   if (!client || !(await canSeeClient(membership.agencyId, session.user.id, client.id))) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   const existing = await prisma.competitor.findUnique({ where: { clientId_igUsername: { clientId, igUsername } } });
   if (existing) return NextResponse.json({ error: "Esse perfil já está cadastrado para este cliente." }, { status: 409 });
-  const competitor = await prisma.competitor.create({ data: { agencyId: membership.agencyId, clientId, igUsername, isOwn: body?.isOwn === true, notes: typeof body?.notes === "string" ? body.notes.slice(0, 500) : null } });
+  const role = body?.role === "OWN" || body?.role === "REFERENCE" ? body.role : "DIRECT";
+  const competitor = await prisma.competitor.create({ data: { agencyId: membership.agencyId, clientId, igUsername, isOwn: role === "OWN", category: role === "REFERENCE" ? "REFERENCE" : "DIRECT", notes: typeof body?.notes === "string" ? body.notes.slice(0, 500) : null } });
   try {
     await syncCompetitor(competitor.id, true);
   } catch (error) {
@@ -27,5 +28,6 @@ export async function POST(request: Request) {
     await prisma.competitor.delete({ where: { id: competitor.id } });
     return NextResponse.json({ error: error instanceof Error ? error.message : "Não consegui ler esse perfil." }, { status: 400 });
   }
+  if (role === "OWN") await prisma.competitor.updateMany({ where: { clientId, id: { not: competitor.id }, isOwn: true }, data: { isOwn: false, category: "DIRECT" } });
   return NextResponse.json({ id: competitor.id }, { status: 201 });
 }

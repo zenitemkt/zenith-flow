@@ -9,6 +9,7 @@ export interface ComparisonProfile {
   id: string;
   username: string;
   isOwn: boolean;
+  category?: "DIRECT" | "REFERENCE";
   followers: number | null;
   posts: AnalyticsPost[];
   snapshots: ComparisonSnapshot[];
@@ -49,10 +50,11 @@ function timeRangeOf(date: Date): (typeof TIME_RANGES)[number] {
 }
 
 export function compareClientWithCompetitors(profiles: ComparisonProfile[], periodDays: number) {
-  const own = profiles.find((profile) => profile.isOwn);
+  const competitiveProfiles = profiles.filter((profile) => profile.isOwn || profile.category !== "REFERENCE");
+  const own = competitiveProfiles.find((profile) => profile.isOwn);
   if (!own) return null;
-  const competitors = profiles.filter((profile) => !profile.isOwn);
-  const analyzed = profiles.map((profile) => ({ profile, stats: analyzeCompetitor(profile.posts, profile.followers, periodDays) }));
+  const competitors = competitiveProfiles.filter((profile) => !profile.isOwn);
+  const analyzed = competitiveProfiles.map((profile) => ({ profile, stats: analyzeCompetitor(profile.posts, profile.followers, periodDays) }));
   const ownAnalyzed = analyzed.find(({ profile }) => profile.id === own.id)!;
 
   const metrics = [

@@ -1363,3 +1363,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: separar o conector do domínio. `ingestGoogleBusinessReview()` recebe um payload normalizado e idempotente; a Central trabalha sobre dados internos. Avaliações de 1 a 3 estrelas nunca entram em resposta automática. Quatro e cinco estrelas só entram quando a agência ativa a regra, e podem exigir comentário. “Aprovar” antes do conector significa colocar em fila (`APPROVED`), não fingir que foi publicado.
 
 **Segurança**: política só pode ser alterada por administradores; equipe autenticada prepara respostas; tudo respeita `agencyId`, clientes particulares, auditoria e histórico append-only. A atualização do Google não sobrescreve status/resposta já decididos pela equipe.
+## 2026-11-17 — Referência de mercado não é concorrente direto
+
+**Contexto**: a agência acompanha empresas locais que disputam o mesmo cliente e grandes marcas do nicho usadas como inspiração. Misturar os dois grupos distorcia rankings e fazia uma referência nacional parecer uma concorrente real.
+
+**Decisão**: manter três papéis visíveis: perfil do cliente, concorrente direto e referência de mercado. O banco preserva `isOwn` para o cliente e adiciona `Competitor.category` para separar `DIRECT` de `REFERENCE`. Somente cliente e diretos entram em posições, gráficos, comparativos, oportunidades e alertas. Referências permanecem nas análises individuais e podem fornecer inspiração ao relatório mensal, sempre identificadas como fora da disputa.
+
+**Consequência**: todos os registros anteriores migram como diretos, sem mudança silenciosa de resultado. A equipe pode reclassificar um perfil no card. Marcar um novo perfil como cliente remove essa marca do anterior para manter uma única base de comparação.
+

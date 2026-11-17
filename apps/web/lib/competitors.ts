@@ -151,7 +151,8 @@ export async function analyzeTopPostsWithAI(competitorId: string, periodDays: nu
   const weekday = (d: Date) => new Date(d.getTime() - 3 * 3600_000).toLocaleString("pt-BR", { timeZone: "UTC", weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   const describe = (p: (typeof top)[number], i: number) =>
     `POST ${i + 1} (${p.format}, ${weekday(p.timestamp)}): ${p.likeCount ?? "curtidas ocultas"} curtidas, ${p.commentsCount ?? 0} comentários, ${p.lift.toFixed(1)}x a média do perfil.\nLegenda: ${(p.caption ?? "(sem legenda)").slice(0, 1200)}`;
-  const context = `Perfil analisado: @${competitor.igUsername} (${competitor.followers ?? "?"} seguidores)${competitor.isOwn ? ", que é o PRÓPRIO cliente" : `, concorrente do cliente "${competitor.client.name}"`}.
+  const profileRole = competitor.isOwn ? "PRÓPRIO cliente" : competitor.category === "REFERENCE" ? "REFERÊNCIA DE MERCADO, usada para inspiração e fora dos rankings" : `concorrente direto do cliente "${competitor.client.name}"`;
+  const context = `Perfil analisado: @${competitor.igUsername} (${competitor.followers ?? "?"} seguidores), ${profileRole}.
 Período: últimos ${periodDays} dias, ${stats.posts} posts, média de ${Math.round(stats.avgEngagement)} interações por post (curtidas + comentários).
 Formatos: ${stats.formatMix.map((f) => `${f.name} ${f.count} posts, média ${Math.round(f.avgEngagement)}`).join("; ")}.
 Hashtags mais usadas: ${stats.topHashtags.slice(0, 10).map((h) => `${h.tag} (${h.uses}x)`).join(", ") || "nenhuma"}.

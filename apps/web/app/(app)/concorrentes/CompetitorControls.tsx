@@ -40,7 +40,7 @@ export function CompetitorFilters({ clients, clientId, days, competitorId }: { c
 export function AddCompetitorForm({ clientId }: { clientId: string }) {
   const router = useRouter();
   const [username, setUsername] = useState("");
-  const [isOwn, setIsOwn] = useState(false);
+  const [role, setRole] = useState<"OWN" | "DIRECT" | "REFERENCE">("DIRECT");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
     if (!username.trim() || busy) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/competitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, username, isOwn }) });
+    const res = await fetch("/api/competitors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, username, role }) });
     const body = await res.json().catch(() => null);
     setBusy(false);
     if (!res.ok) {
@@ -57,7 +57,7 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
       return;
     }
     setUsername("");
-    setIsOwn(false);
+    setRole("DIRECT");
     router.push(`/concorrentes?cliente=${clientId}&c=${body.id}`);
     router.refresh();
   }
@@ -71,10 +71,18 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
           {busy ? "Buscando dados..." : "Adicionar"}
         </button>
       </div>
-      <label className="flex items-center gap-2 text-xs text-[#475467]">
-        <input type="checkbox" checked={isOwn} onChange={(e) => setIsOwn(e.target.checked)} className="h-4 w-4 accent-[#FF2B00]" />
-        Este é o perfil do próprio cliente (entra como base de comparação)
-      </label>
+      <fieldset className="grid gap-2 sm:grid-cols-3">
+        <legend className="sr-only">Papel do perfil na análise</legend>
+        {([
+          ["OWN", "Perfil do cliente", "Base usada para comparar"],
+          ["DIRECT", "Concorrente direto", "Entra em rankings e disputa"],
+          ["REFERENCE", "Referência de mercado", "Inspira, sem afetar rankings"],
+        ] as const).map(([value, title, description]) => (
+          <label key={value} className={`cursor-pointer rounded-lg border px-3 py-2.5 ${role === value ? "border-[#FF2B00] bg-[#FFF4ED]" : "border-[#D0D5DD] bg-white"}`}>
+            <span className="flex items-start gap-2"><input type="radio" name="competitor-role" value={value} checked={role === value} onChange={() => setRole(value)} className="mt-0.5 h-4 w-4 accent-[#FF2B00]" /><span><span className="block text-xs font-semibold text-[#101828]">{title}</span><span className="mt-0.5 block text-[11px] leading-4 text-[#667085]">{description}</span></span></span>
+          </label>
+        ))}
+      </fieldset>
       <p className="text-xs text-[#98A2B3]">Só contas comerciais ou de criador. Conta pessoal ou privada não pode ser lida.</p>
       {error && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">
@@ -91,9 +99,18 @@ export function AddCompetitorForm({ clientId }: { clientId: string }) {
 }
 
 /** Atualizar agora, analisar com IA e remover. */
-export function CompetitorActions({ competitorId, days, username, hasReport }: { competitorId: string; days: number; username: string; hasReport: boolean }) {
+export function CompetitorActions({ competitorId, days, username, hasReport, currentRole }: { competitorId: string; days: number; username: string; hasReport: boolean; currentRole: "OWN" | "DIRECT" | "REFERENCE" }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<"sync" | "website" | "ai" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"sync" | "website" | "ai" | "role" | "delete" | null>(null);
+
+  async function changeRole(role: "OWN" | "DIRECT" | "REFERENCE") {
+    setBusy("role");
+    const res = await fetch(`/api/competitors/${competitorId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    const body = await res.json().catch(() => null);
+    setBusy(null);
+    if (!res.ok) await alertDialog(body?.error ?? "Não foi possível alterar o papel do perfil.", { title: "Papel não alterado" });
+    router.refresh();
+  }
 
   async function run(kind: "sync" | "website" | "ai") {
     setBusy(kind);
@@ -116,6 +133,9 @@ export function CompetitorActions({ competitorId, days, username, hasReport }: {
   const BTN = "flex h-9 items-center gap-1.5 rounded-lg border border-[#D0D5DD] bg-white px-3 text-xs font-semibold text-[#344054] disabled:opacity-60";
   return (
     <div className="flex flex-wrap gap-2">
+      <select aria-label="Papel do perfil" value={currentRole} disabled={busy !== null} onChange={(event) => void changeRole(event.target.value as "OWN" | "DIRECT" | "REFERENCE")} className="h-9 rounded-lg border border-[#D0D5DD] bg-white px-2 text-xs font-semibold text-[#344054] outline-none focus:border-[#FF2B00] disabled:opacity-60">
+        <option value="OWN">Perfil do cliente</option><option value="DIRECT">Concorrente direto</option><option value="REFERENCE">Referência de mercado</option>
+      </select>
       <button type="button" disabled={busy !== null} onClick={() => void run("sync")} className={BTN}>
         <RefreshCw size={14} aria-hidden /> {busy === "sync" ? "Atualizando..." : "Atualizar agora"}
       </button>

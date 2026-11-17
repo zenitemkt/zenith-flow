@@ -80,8 +80,9 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     const growth = first !== null && p.followers !== null ? p.followers - first : null;
     return { p, stats, growth, snapshotDays: p.snapshots.length };
   });
+  const competitiveProfiles = profiles.filter((profile) => profile.isOwn || profile.category === "DIRECT");
   const current = rows.find((r) => r.p.id === searchParams.c) ?? rows[0] ?? null;
-  const comparison = compareClientWithCompetitors(profiles.map((profile) => ({
+  const comparison = compareClientWithCompetitors(competitiveProfiles.map((profile) => ({
     id: profile.id,
     username: profile.igUsername,
     isOwn: profile.isOwn,
@@ -109,12 +110,12 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
 
       <CompetitorMonthlyReports clientId={clientId} targetMonth={monthKey(targetMonth)} targetLabel={monthLabel(targetMonth)} reports={monthlyReports} />
 
-      <GoogleReviewsComparison days={days} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
+      <GoogleReviewsComparison days={days} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
 
-      <CompetitorWebsiteScores profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
+      <CompetitorWebsiteScores profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
 
       {comparison ? (
-        <ClientCompetitorComparison comparison={comparison} profiles={profiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
+        <ClientCompetitorComparison comparison={comparison} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
       ) : rows.length > 0 ? (
         <section className={`${CARD} border-dashed`}>
           <h2 className={H2}>Comparar o cliente com os concorrentes</h2>
@@ -144,7 +145,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                       <Link href={href(p.id)} className="font-medium hover:underline">
                         @{p.igUsername}
                       </Link>
-                      {p.isOwn && <span className="ml-1.5 rounded-full bg-[#EFF8FF] px-1.5 py-0.5 text-[10px] font-medium text-[#175CD3]">Cliente</span>}
+                      {p.isOwn ? <span className="ml-1.5 rounded-full bg-[#EFF8FF] px-1.5 py-0.5 text-[10px] font-medium text-[#175CD3]">Cliente</span> : p.category === "REFERENCE" ? <span className="ml-1.5 rounded-full bg-[#F4F3FF] px-1.5 py-0.5 text-[10px] font-medium text-[#5925DC]">Referência</span> : <span className="ml-1.5 rounded-full bg-[#FFF4ED] px-1.5 py-0.5 text-[10px] font-medium text-[#C4320A]">Direto</span>}
                     </td>
                     <td className={TD}>{p.followers !== null ? int(p.followers) : "—"}</td>
                     <td className={TD}>{growth === null ? "—" : `${growth >= 0 ? "+" : ""}${int(growth)}`}</td>
@@ -178,6 +179,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                     <a href={`https://instagram.com/${current.p.igUsername}`} target="_blank" rel="noopener noreferrer" className="text-sm font-normal text-[#FF2B00] hover:underline">
                       @{current.p.igUsername}
                     </a>
+                    {current.p.isOwn ? <span className="ml-2 rounded-full bg-[#EFF8FF] px-2 py-0.5 text-[10px] font-medium text-[#175CD3]">Perfil do cliente</span> : current.p.category === "REFERENCE" ? <span className="ml-2 rounded-full bg-[#F4F3FF] px-2 py-0.5 text-[10px] font-medium text-[#5925DC]">Referência de mercado</span> : <span className="ml-2 rounded-full bg-[#FFF4ED] px-2 py-0.5 text-[10px] font-medium text-[#C4320A]">Concorrente direto</span>}
                   </p>
                   {current.p.biography && <p className="max-w-xl whitespace-pre-line text-xs text-[#667085]">{current.p.biography}</p>}
                   <p className="mt-1 text-[11px] text-[#98A2B3]">
@@ -186,9 +188,10 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                   </p>
                 </div>
               </div>
-              <CompetitorActions competitorId={current.p.id} days={days} username={current.p.igUsername} hasReport={Boolean(current.p.aiReport)} />
+              <CompetitorActions competitorId={current.p.id} days={days} username={current.p.igUsername} hasReport={Boolean(current.p.aiReport)} currentRole={current.p.isOwn ? "OWN" : current.p.category === "REFERENCE" ? "REFERENCE" : "DIRECT"} />
             </div>
             {current.p.lastError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">Última atualização falhou: {current.p.lastError}</p>}
+            {!current.p.isOwn && current.p.category === "REFERENCE" && <p className="mt-3 rounded-lg bg-[#F4F3FF] px-3 py-2 text-xs text-[#5925DC]">Este perfil serve como referência de mercado. Os dados e análises continuam disponíveis, mas ele não participa de rankings, posições ou gráficos de disputa.</p>}
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               <Stat label="Seguidores" value={current.p.followers !== null ? int(current.p.followers) : "—"} hint={current.growth !== null && current.snapshotDays > 1 ? `${current.growth >= 0 ? "+" : ""}${int(current.growth)} no período` : "histórico começa agora"} />
               <Stat label="Posts no período" value={String(current.stats.posts)} hint={`${dec(current.stats.postsPerWeek)} por semana`} />

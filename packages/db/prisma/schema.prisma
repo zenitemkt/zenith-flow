@@ -3833,14 +3833,21 @@ model ClientDriveFolder {
 }
 
 /// Concorrente de um cliente (ou o próprio perfil do cliente, como referência). Dados públicos do Instagram.
+enum CompetitorCategory {
+  DIRECT
+  REFERENCE
+}
+
 model Competitor {
-  id                 String    @id @default(cuid())
+  id                 String             @id @default(cuid())
   agencyId           String
   clientId           String
-  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client             Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
   igUsername         String
   /// Perfil do próprio cliente, usado como base de comparação.
-  isOwn              Boolean   @default(false)
+  isOwn              Boolean            @default(false)
+  /// Direto participa da disputa; referência serve apenas como benchmark e inspiração.
+  category           CompetitorCategory @default(DIRECT)
   notes              String?
   displayName        String?
   biography          String?
@@ -3865,7 +3872,7 @@ model Competitor {
   googleReviewCount  Int?
   googleLastSyncAt   DateTime?
   googleLastError    String?
-  createdAt          DateTime  @default(now())
+  createdAt          DateTime           @default(now())
 
   posts           CompetitorPost[]
   snapshots       CompetitorSnapshot[]
@@ -3874,6 +3881,7 @@ model Competitor {
 
   @@unique([clientId, igUsername])
   @@index([agencyId])
+  @@index([clientId, category])
   @@map("competitor")
 }
 

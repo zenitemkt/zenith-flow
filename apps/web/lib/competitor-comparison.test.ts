@@ -41,6 +41,20 @@ describe("compareClientWithCompetitors", () => {
     expect(result.rankings.every((ranking) => ranking.rank >= 1 && ranking.total === 3)).toBe(true);
   });
 
+  it("ignora referências de mercado em rankings e oportunidades", () => {
+    const reference = profile("referencia", false, { followers: 100, captions: ["#referencia", "#referencia"] });
+    reference.category = "REFERENCE";
+    const result = compareClientWithCompetitors([
+      profile("cliente", true, { captions: ["Conteúdo próprio"] }),
+      profile("direto", false, { captions: ["#direto"] }),
+      reference,
+    ], 30)!;
+
+    expect(result.competitors.map((item) => item.id)).toEqual(["direto"]);
+    expect(result.rankings.every((ranking) => ranking.total === 2)).toBe(true);
+    expect(result.opportunities.hashtags.some((item) => item.tag === "#referencia")).toBe(false);
+  });
+
   it("lista hashtag usada por tres concorrentes e ausente no cliente", () => {
     const result = compareClientWithCompetitors([
       profile("cliente", true, { captions: ["Sem hashtag"] }),

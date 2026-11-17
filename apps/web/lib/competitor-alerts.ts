@@ -142,7 +142,7 @@ export function detectCompetitorAlerts(competitor: CompetitorAlertInput, now = n
 /** Gera e reconcilia os alertas de concorrentes de uma agência após a sincronização diária. */
 export async function generateCompetitorAlerts(agencyId: string, now = new Date()) {
   const competitors = await prisma.competitor.findMany({
-    where: { agencyId, isOwn: false },
+    where: { agencyId, isOwn: false, category: "DIRECT" },
     select: {
       id: true,
       igUsername: true,

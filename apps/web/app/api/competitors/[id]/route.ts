@@ -39,3 +39,16 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   await prisma.competitor.delete({ where: { id: ctx.competitor.id } });
   return NextResponse.json({ ok: true });
 }
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const ctx = await load(params.id);
+  if ("error" in ctx) return ctx.error;
+  const body = await request.json().catch(() => null);
+  const role = body?.role;
+  if (role !== "OWN" && role !== "DIRECT" && role !== "REFERENCE") return NextResponse.json({ error: "Escolha um papel válido para o perfil." }, { status: 400 });
+  await prisma.$transaction(async (tx) => {
+    if (role === "OWN") await tx.competitor.updateMany({ where: { clientId: ctx.competitor.clientId, id: { not: ctx.competitor.id }, isOwn: true }, data: { isOwn: false, category: "DIRECT" } });
+    await tx.competitor.update({ where: { id: ctx.competitor.id }, data: { isOwn: role === "OWN", category: role === "REFERENCE" ? "REFERENCE" : "DIRECT" } });
+  });
+  return NextResponse.json({ ok: true });
+}

@@ -433,3 +433,9 @@
 - Medição manual por perfil e atualização automática diária.
 - Falha da medição não interrompe Instagram, avaliações ou relatórios e não apaga a última nota válida.
 
+# 2026-11-17 — Concorrente direto e referência de mercado
+
+- Cadastro de perfil passa a pedir seu papel na análise.
+- Referências ficam fora de rankings, gráficos, comparativos, oportunidades e alertas competitivos.
+- Perfil do cliente e concorrentes diretos continuam formando a disputa; o papel pode ser alterado depois.
+
