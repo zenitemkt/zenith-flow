@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bot, Eraser, Instagram, MessageCircle, Search, Send, Trash2, User } from "lucide-react";
+import { AlertCircle, Bot, Clock, Eraser, ExternalLink, Instagram, MessageCircle, Search, Send, Trash2, User } from "lucide-react";
 import { confirmDialog } from "@/lib/dialogs";
 
 export interface InboxItem {
@@ -16,6 +16,8 @@ export interface InboxItem {
   mode: "bot" | "human" | null;
   classification: string | null;
   account: string;
+  /** WhatsApp: a última fala foi nossa e o contato está sem responder há 2+ dias. */
+  needsFollowUp: boolean;
 }
 
 export interface InboxMessage {
@@ -49,7 +51,57 @@ function when(iso: string) {
   return `${pad(sp.getUTCDate())}/${pad(sp.getUTCMonth() + 1)} ${pad(sp.getUTCHours())}:${pad(sp.getUTCMinutes())}`;
 }
 
-export function InboxView({ items, selected, messages, channel }: { items: InboxItem[]; selected: string | null; messages: InboxMessage[]; channel: string }) {
+/** Retomada da conversa de WhatsApp parada (mesma mensagem do cartão no Lead). */
+export interface InboxFollowUp {
+  phone: string;
+  suggestion: string;
+  silentLabel: string;
+  needsFollowUp: boolean;
+  /** Janela de 24 h aberta: dá para enviar pelo sistema; fechada, só pelo celular (wa.me). */
+  windowOpen: boolean;
+  previousFollowUps: number;
+}
+
+function FollowUpBar({ followUp, busy, onSend, onOpen }: { followUp: InboxFollowUp; busy: boolean; onSend: (text: string) => void; onOpen: () => void }) {
+  const [text, setText] = useState(followUp.suggestion);
+  const [open, setOpen] = useState(followUp.needsFollowUp);
+  const tone = followUp.needsFollowUp ? "border-[#FDA29B] bg-[#FEF3F2]" : "border-[#E4E7EC] bg-[#F9FAFB]";
+  return (
+    <div className={`mb-2 rounded-lg border px-3 py-2 ${tone}`}>
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-1.5 text-left text-xs font-semibold text-[#101828]">
+        {followUp.needsFollowUp ? <AlertCircle size={14} className="text-[#D92D20]" aria-hidden /> : <Clock size={14} className="text-[#667085]" aria-hidden />}
+        Sem resposta {followUp.silentLabel}: enviar mensagem de retomada
+        {followUp.previousFollowUps > 0 && <span className="font-normal text-[#667085]">({followUp.previousFollowUps} já enviada{followUp.previousFollowUps === 1 ? "" : "s"})</span>}
+        <span className="ml-auto text-[11px] font-normal text-[#667085]">{open ? "Fechar" : "Abrir"}</span>
+      </button>
+      {open && (
+        <>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} className="mt-2 w-full resize-y rounded-lg border border-[#D0D5DD] bg-white px-3 py-2 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" />
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {followUp.windowOpen ? (
+              <button type="button" disabled={busy || !text.trim()} onClick={() => onSend(text)} className="flex h-8 items-center gap-1.5 rounded-lg bg-[#12B76A] px-3 text-xs font-semibold text-white disabled:opacity-60">
+                <Send size={13} aria-hidden />
+                Enviar mensagem
+              </button>
+            ) : (
+              <a href={`https://wa.me/${followUp.phone}?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer" onClick={onOpen} className="flex h-8 items-center gap-1.5 rounded-lg bg-[#12B76A] px-3 text-xs font-semibold text-white">
+                <ExternalLink size={13} aria-hidden />
+                Enviar pelo WhatsApp
+              </a>
+            )}
+            <span className="text-[11px] text-[#667085]">
+              {followUp.windowOpen
+                ? "Sai em nome da Milena e ela continua a conversa."
+                : "Passou de 24 h desde a última mensagem do contato: o WhatsApp só deixa enviar pelo celular. Abre o WhatsApp com o texto pronto, é só apertar Enter."}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function InboxView({ items, selected, messages, followUp = null, channel }: { items: InboxItem[]; selected: string | null; messages: InboxMessage[]; followUp?: InboxFollowUp | null; channel: string }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [text, setText] = useState("");
@@ -138,6 +190,11 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
                       <st.Icon size={13} aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-[#101828]">{i.name}</span>
+                    {i.needsFollowUp && (
+                      <span title="Sem resposta há 2 dias ou mais" aria-label="Sem resposta há 2 dias ou mais" className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#D92D20] text-[10px] font-bold leading-none text-white">
+                        !
+                      </span>
+                    )}
                     <span className="shrink-0 text-[11px] text-[#98A2B3]">{when(i.lastAt)}</span>
                   </div>
                   <p className="truncate pl-8 text-xs text-[#667085]">{i.preview}</p>
@@ -207,6 +264,20 @@ export function InboxView({ items, selected, messages, channel }: { items: Inbox
             </div>
             <footer className="border-t border-[#EEF0F3] p-3">
               {error && <p className="mb-2 rounded-lg bg-[#FEF3F2] px-3 py-1.5 text-xs text-[#B42318]">{error}</p>}
+              {followUp && current.channel === "WHATSAPP" && (
+                <FollowUpBar
+                  key={selected}
+                  followUp={followUp}
+                  busy={busy}
+                  onSend={(t) => void post({ action: "follow-up", text: t })}
+                  onOpen={() => {
+                    // O link abre direto; o registro vai em paralelo (sem bloquear a nova aba).
+                    void fetch("/api/inbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: selected, action: "follow-up-open" }), keepalive: true })
+                      .catch(() => null)
+                      .finally(() => router.refresh());
+                  }}
+                />
+              )}
               {current.mode === "bot" && <p className="mb-2 text-[11px] text-[#667085]">A Milena está respondendo. Se você mandar mensagem, a conversa passa para a equipe.</p>}
               <div className="flex items-end gap-2">
                 <textarea

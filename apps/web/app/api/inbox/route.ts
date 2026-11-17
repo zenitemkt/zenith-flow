@@ -36,9 +36,30 @@ export async function POST(request: Request) {
       await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, replyDueAt: pending ? new Date() : null } });
       return NextResponse.json({ ok: true });
     }
+    const followUpAudit = (via: "wa.me" | "api") =>
+      prisma.auditLog.create({
+        data: { agencyId: membership.agencyId, actorUserId: session.user.id, actorType: "user", action: "assistant.follow_up", resourceType: conv.leadId ? "lead" : "assistant_conversation", resourceId: conv.leadId ?? conv.id, metadata: { phone: conv.phone, conversationId: conv.id, via } },
+      });
+    // Retomada pelo celular (wa.me): a mensagem que vai chegar pelo eco conta como da Milena e não pausa a assistente.
+    if (body?.action === "follow-up-open") {
+      if (conv.mode === "bot") await prisma.assistantConversation.update({ where: { id: conv.id }, data: { autoTakeoverAt: new Date() } });
+      await followUpAudit("wa.me");
+      return NextResponse.json({ ok: true });
+    }
     if (!text) return NextResponse.json({ error: "Escreva a mensagem." }, { status: 400 });
     if (!conv.lastInboundAt || Date.now() - conv.lastInboundAt.getTime() > 24 * 3600_000) {
       return NextResponse.json({ error: "Passou de 24h desde a última mensagem do contato. O WhatsApp só deixa responder com modelo aprovado." }, { status: 400 });
+    }
+    // Retomada pelo sistema (janela de 24 h aberta): sai em nome da Milena e a conversa continua com ela.
+    if (body?.action === "follow-up") {
+      try {
+        const waMessageId = await sendText(conv.phone, text);
+        await prisma.assistantMessage.create({ data: { conversationId: conv.id, role: conv.mode === "bot" ? "assistant" : "partner", content: text, waMessageId } });
+        await followUpAudit("api");
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Falha ao enviar." }, { status: 502 });
+      }
+      return NextResponse.json({ ok: true });
     }
     try {
       const waMessageId = await sendText(conv.phone, text);

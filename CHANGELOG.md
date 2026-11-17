@@ -4,6 +4,7 @@
 
 ### Alterado
 
+- **Conversas > retomada no WhatsApp**: conversa com a última fala nossa há 12 h ou mais mostra, acima da caixa de resposta, a mesma mensagem de retomada do Lead (editável). Com a janela de 24 h aberta, "Enviar mensagem" sai pelo sistema em nome da Milena (a conversa continua com ela); fechada, "Enviar pelo WhatsApp" abre o wa.me com o texto pronto. A lista ganha o "!" vermelho com 2+ dias sem resposta.
 - **Calendário editorial sem título repetido**: a peça que já tem publicação (Instagram/Facebook/Google) no mesmo dia aparece só pelas linhas de publicação, com horário e rede. O título da peça continua no dia só quando ainda não há publicação (aguardando aprovação, em produção etc.).
 - **Leads > Última atividade** passa a contar a conversa de WhatsApp (não só o site), mostra o tempo relativo ("há 2 dias", data exata ao passar o mouse) e um "!" vermelho quando a última mensagem foi nossa e o lead está sem responder há 2 dias ou mais. Novo filtro "Sem resposta no WhatsApp (2+ dias)". Ordenar por última atividade usa o mesmo valor.
 - **Lead > Retomar conversa no WhatsApp**: cartão com uma mensagem amigável pronta e editável ("Oi, Maria! Vi que ainda não conseguiu ver minha mensagem 😊 Ficou alguma dúvida?…"; na segunda tentativa o texto muda) e o botão "Abrir no WhatsApp" (wa.me), para o admin só apertar Enter. A mensagem conta como da Milena, que continua a conversa quando o lead responder.
