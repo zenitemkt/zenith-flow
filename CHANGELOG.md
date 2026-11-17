@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Análise de Concorrentes — Fase 3D
+
+- Geração de dez sugestões de pauta baseada nas lacunas do cliente e nos padrões vencedores de concorrentes e referências.
+- Cada ideia traz formato, gancho, início da legenda, justificativa e perfis que sustentaram a recomendação.
+- Envio individual ao calendário editorial como rascunho, com data sugerida editável e vínculo automático ao cliente.
+
 ### Alterado
 
 - **Cartão duplicado por clique duplo**: a trava dos formulários de criação (`useSubmitGuard`) segura mais 1 segundo depois de concluir. A "Nova publicação" (Calendário/Operação), que confirmava antes de travar e por isso criava dois cartões com clique duplo em Agendar/Publicar, passa a travar já na confirmação. "Criar tarefa de cobrança" e o cadastro de cliente também ganharam a trava.

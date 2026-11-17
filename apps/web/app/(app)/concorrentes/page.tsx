@@ -13,6 +13,7 @@ import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
 import { GoogleReviewsComparison, GoogleReviewsPanel } from "./CompetitorGoogleReviews";
 import { CompetitorWebsiteScores } from "./CompetitorWebsiteScores";
 import { CompetitorWebsiteEditor } from "./CompetitorWebsiteEditor";
+import { CompetitorContentIdeas } from "./CompetitorContentIdeas";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +113,8 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       <CompetitorAdsIntegration configured={Boolean(agencyIntegration?.competitorAdsTokenHash)} competitorId={current?.p.id ?? null} username={current?.p.igUsername ?? null} />
 
       <CompetitorMonthlyReports clientId={clientId} targetMonth={monthKey(targetMonth)} targetLabel={monthLabel(targetMonth)} reports={monthlyReports} />
+
+      <CompetitorContentIdeas clientId={clientId} clientName={clients.find((client) => client.id === clientId)?.name ?? "o cliente"} days={days} />
 
       <GoogleReviewsComparison days={days} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
 

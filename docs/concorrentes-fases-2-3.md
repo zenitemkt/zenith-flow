@@ -116,6 +116,8 @@ O usuário tem a extensão `meta-ad-library-downloader` (pasta `G:\Projetos\meta
 - Guardar `websiteScore` e a data da medição. Útil como argumento comercial.
 
 ### 3D. Sugestões de pauta
+**Status: implementada em 2026-11-17.**
+
 - Botão "Gerar ideias de conteúdo" que cruza os temas e ganchos vencedores dos concorrentes com o que o cliente ainda não publicou, e devolve 10 ideias prontas (formato, gancho e legenda inicial).
 - Enviar as ideias direto para o calendário de conteúdo como rascunho (`ContentItem` com status inicial), já ligadas ao cliente.
 

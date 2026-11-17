@@ -4,6 +4,8 @@
 
 ## Implementado
 
+- **Concorrentes — Fase 3D, sugestões de pauta (2026-11-17)**: a análise cruza temas, formatos, ganchos e posts vencedores de concorrentes diretos e referências com o histórico recente do perfil do cliente. A Claude devolve exatamente dez ideias estruturadas com título, formato, gancho, início de legenda, justificativa e fontes. A equipe escolhe a data e envia cada pauta ao calendário como `ContentItem` em `IDEIA`, vinculada ao cliente. A resposta é validada no servidor e não é persistida até a equipe escolher uma pauta.
+
 - **Concorrentes diretos e referências de mercado (2026-11-17)**: cada perfil agora tem um papel explícito: perfil do cliente, concorrente direto ou referência. Apenas cliente + diretos entram em rankings, gráficos de disputa, comparativos de Instagram/Google/site, oportunidades e alertas competitivos. Referências mantêm toda a análise individual e podem inspirar o relatório mensal sem alterar posições. Perfis antigos foram preservados como diretos e o papel pode ser corrigido no próprio card.
 
 - **Concorrentes — Fase 3C, desempenho dos sites (2026-11-17)**: perfis que informam site no Instagram recebem uma nota mobile de 0 a 100 pela API PageSpeed Insights. A tela compara cliente e concorrentes com barras, classificação e data da medição. A equipe pode medir um perfil pelo botão no card; o cron `/api/cron/competitors-pagespeed` atualiza diariamente os sites mais antigos dentro do tempo disponível. Falhas ficam isoladas no perfil e a última nota válida é preservada. `GOOGLE_PAGESPEED_API_KEY` é opcional e recomendada se o volume crescer.
