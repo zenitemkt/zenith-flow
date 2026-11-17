@@ -8,12 +8,15 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 const SELECT = "h-10 rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]";
 
 /** Cliente e período da análise (ficam na URL). */
-export function CompetitorFilters({ clients, clientId, days, competitorId }: { clients: { id: string; name: string }[]; clientId: string; days: number; competitorId: string | null }) {
+export type CompetitorTableType = "competitive" | "client" | "direct" | "reference" | "all";
+
+export function CompetitorFilters({ clients, clientId, days, competitorId, tableType }: { clients: { id: string; name: string }[]; clientId: string; days: number; competitorId: string | null; tableType: CompetitorTableType }) {
   const router = useRouter();
   const go = (next: { cliente?: string; dias?: number }) => {
     const sp = new URLSearchParams();
     sp.set("cliente", next.cliente ?? clientId);
     sp.set("dias", String(next.dias ?? days));
+    if (tableType !== "competitive") sp.set("tipo", tableType);
     if (competitorId && !next.cliente) sp.set("c", competitorId);
     router.push(`/concorrentes?${sp.toString()}`);
   };
@@ -34,6 +37,17 @@ export function CompetitorFilters({ clients, clientId, days, competitorId }: { c
       </select>
     </div>
   );
+}
+
+export function CompetitorTableFilter({ value, clientId, days, competitorId }: { value: CompetitorTableType; clientId: string; days: number; competitorId: string | null }) {
+  const router = useRouter();
+  function change(next: CompetitorTableType) {
+    const sp = new URLSearchParams({ cliente: clientId, dias: String(days) });
+    if (competitorId) sp.set("c", competitorId);
+    if (next !== "competitive") sp.set("tipo", next);
+    router.push(`/concorrentes?${sp.toString()}`);
+  }
+  return <select aria-label="Filtrar perfis por tipo" value={value} onChange={(event) => change(event.target.value as CompetitorTableType)} className="h-9 rounded-lg border border-[#D0D5DD] bg-white px-3 text-xs font-semibold text-[#344054] outline-none focus:border-[#FF2B00]"><option value="competitive">Cliente + diretos</option><option value="client">Somente cliente</option><option value="direct">Somente diretos</option><option value="reference">Referências de mercado</option><option value="all">Todos os perfis</option></select>;
 }
 
 /** Cadastro de um perfil: concorrente ou o próprio cliente (base de comparação). */

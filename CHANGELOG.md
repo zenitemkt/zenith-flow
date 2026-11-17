@@ -439,3 +439,9 @@
 - Referências ficam fora de rankings, gráficos, comparativos, oportunidades e alertas competitivos.
 - Perfil do cliente e concorrentes diretos continuam formando a disputa; o papel pode ser alterado depois.
 
+# 2026-11-17 — Filtro da tabela de concorrentes
+
+- A tabela mostra por padrão o perfil do cliente e os concorrentes diretos.
+- Novo filtro permite exibir somente cliente, somente diretos, referências ou todos os perfis.
+- A seleção permanece ao abrir um perfil ou trocar o período da análise.
+

@@ -6,7 +6,7 @@ import { isClientRole } from "@/lib/rbac";
 import { getHiddenClientIds, visibleClientWhere } from "@/lib/client-access";
 import { analyzeCompetitor } from "@/lib/competitor-analytics";
 import { compareClientWithCompetitors } from "@/lib/competitor-comparison";
-import { AddCompetitorForm, CompetitorActions, CompetitorFilters } from "./CompetitorControls";
+import { AddCompetitorForm, CompetitorActions, CompetitorFilters, CompetitorTableFilter, type CompetitorTableType } from "./CompetitorControls";
 import { ClientCompetitorComparison } from "./CompetitorComparison";
 import { CompetitorAdsIntegration } from "./CompetitorAdsIntegration";
 import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
@@ -40,7 +40,7 @@ function Lift({ value }: { value: number }) {
   return <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>{dec(value)}x a média</span>;
 }
 
-export default async function ConcorrentesPage({ searchParams }: { searchParams: { cliente?: string; c?: string; dias?: string } }) {
+export default async function ConcorrentesPage({ searchParams }: { searchParams: { cliente?: string; c?: string; dias?: string; tipo?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   if (isClientRole(membership.role)) redirect("/");
@@ -50,6 +50,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
   if (clients.length === 0) return <p className="text-sm text-[#667085]">Cadastre um cliente para analisar os concorrentes dele.</p>;
 
   const days = [30, 90, 180, 365].includes(Number(searchParams.dias)) ? Number(searchParams.dias) : 90;
+  const tableType: CompetitorTableType = ["client", "direct", "reference", "all"].includes(searchParams.tipo ?? "") ? searchParams.tipo as CompetitorTableType : "competitive";
   const since = new Date(Date.now() - days * 86_400_000);
   const picked = searchParams.c ? await prisma.competitor.findFirst({ where: { id: searchParams.c, agencyId }, select: { clientId: true } }) : null;
   const clientId = clients.find((c) => c.id === (picked?.clientId ?? searchParams.cliente))?.id ?? clients[0]!.id;
@@ -81,6 +82,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     return { p, stats, growth, snapshotDays: p.snapshots.length };
   });
   const competitiveProfiles = profiles.filter((profile) => profile.isOwn || profile.category === "DIRECT");
+  const visibleRows = rows.filter(({ p }) => tableType === "all" || (tableType === "competitive" && (p.isOwn || p.category === "DIRECT")) || (tableType === "client" && p.isOwn) || (tableType === "direct" && !p.isOwn && p.category === "DIRECT") || (tableType === "reference" && !p.isOwn && p.category === "REFERENCE"));
   const current = rows.find((r) => r.p.id === searchParams.c) ?? rows[0] ?? null;
   const comparison = compareClientWithCompetitors(competitiveProfiles.map((profile) => ({
     id: profile.id,
@@ -90,7 +92,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     posts: profile.posts,
     snapshots: profile.snapshots,
   })), days);
-  const href = (id: string) => `/concorrentes?cliente=${clientId}&dias=${days}&c=${id}`;
+  const href = (id: string) => `/concorrentes?cliente=${clientId}&dias=${days}&c=${id}${tableType === "competitive" ? "" : `&tipo=${tableType}`}`;
   const maxHeat = current ? Math.max(1, ...current.stats.heatmap.flat()) : 1;
   const maxHookAverage = current ? Math.max(1, ...current.stats.hooks.map((hook) => hook.avgEngagement)) : 1;
 
@@ -101,7 +103,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
           <h1 className="text-lg font-semibold text-[#101828]">Análise de Concorrentes</h1>
           <p className="text-sm text-[#667085]">O que os concorrentes de cada cliente postam no Instagram, o que funciona para eles e como o cliente se compara. Atualiza sozinho todo dia.</p>
         </div>
-        <CompetitorFilters clients={clients} clientId={clientId} days={days} competitorId={current?.p.id ?? null} />
+        <CompetitorFilters clients={clients} clientId={clientId} days={days} competitorId={current?.p.id ?? null} tableType={tableType} />
       </div>
 
       <AddCompetitorForm clientId={clientId} />
@@ -125,7 +127,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
 
       {rows.length > 0 && (
         <section className={`${CARD} overflow-x-auto`}>
-          <h2 className={H2}>Todos os perfis ({days} dias)</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-[#101828]">Perfis exibidos ({visibleRows.length}) <span className="font-normal text-[#98A2B3]">· {days} dias</span></h2><CompetitorTableFilter value={tableType} clientId={clientId} days={days} competitorId={current?.p.id ?? null} /></div>
           <table className="w-full min-w-[760px]">
             <thead>
               <tr>
@@ -137,7 +139,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ p, stats, growth }) => {
+              {visibleRows.map(({ p, stats, growth }) => {
                 const bestDay = [...stats.days].filter((d) => d.count > 0).sort((a, b) => b.avgEngagement - a.avgEngagement)[0];
                 return (
                   <tr key={p.id} className={`border-t border-[#F2F4F7] ${current?.p.id === p.id ? "bg-[#FFF4ED]" : ""}`}>
@@ -160,6 +162,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
               })}
             </tbody>
           </table>
+          {visibleRows.length === 0 && <p className="py-8 text-center text-sm text-[#667085]">Nenhum perfil deste tipo foi cadastrado para o cliente.</p>}
           <p className="mt-2 text-[11px] text-[#98A2B3]">Engajamento = (curtidas + comentários) por post, dividido pelos seguidores. O Instagram não mostra alcance nem visualizações de outras contas. Crescimento conta a partir do dia em que o perfil foi cadastrado.</p>
         </section>
       )}
