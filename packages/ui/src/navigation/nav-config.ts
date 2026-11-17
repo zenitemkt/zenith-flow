@@ -151,6 +151,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "automations-overview", label: "Visão geral", href: "/automacoes", comingSoon: false },
           { id: "automations-blog", label: "Blog automático", href: "/automacoes/blog", comingSoon: false },
           { id: "automations-instagram", label: "Instagram", href: "/automacoes/instagram", comingSoon: false },
+          { id: "automations-google-reviews", label: "Avaliações Google", href: "/automacoes/avaliacoes-google", comingSoon: false },
           { id: "automations-assistant", label: "Assistente virtual", href: "/automacoes/assistente", comingSoon: false },
         ],
       },

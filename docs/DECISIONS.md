@@ -1346,3 +1346,10 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 **Decisão**: o demo lê, no servidor, as publicações agendadas e publicadas (feed e story, só imagem) do cliente da Zenite e usa a imagem e a legenda nos posts fictícios. O cliente vem de `DEMO_PORTAL_SOURCE_CLIENT_ID` ou, sem ela, do primeiro cliente da agência com "Zenite" no nome. As imagens passam por uma rota própria (`/api/portal/demo-media/:id`) que só atende login demo e só mídia desse cliente, em vez de liberar o acesso do demo às rotas de mídia normais. Nada é gravado: aprovar ou mudar datas no demo continua só no navegador.
 
 **Consequência**: quem vê o demo vê também artes agendadas da Zenite que ainda não foram ao ar. Se o cliente da Zenite não tiver "Zenite" no nome, ou houver mais de um, é preciso definir `DEMO_PORTAL_SOURCE_CLIENT_ID` na Vercel. Sem artes, o demo volta para as de exemplo.
+## 2026-11-17 — Avaliações Google preparadas antes da aprovação externa
+
+**Contexto**: a aprovação do Google Business Profile pode levar dias, mas as regras comerciais, a experiência e o modelo de dados não dependem da chamada externa.
+
+**Decisão**: separar o conector do domínio. `ingestGoogleBusinessReview()` recebe um payload normalizado e idempotente; a Central trabalha sobre dados internos. Avaliações de 1 a 3 estrelas nunca entram em resposta automática. Quatro e cinco estrelas só entram quando a agência ativa a regra, e podem exigir comentário. “Aprovar” antes do conector significa colocar em fila (`APPROVED`), não fingir que foi publicado.
+
+**Segurança**: política só pode ser alterada por administradores; equipe autenticada prepara respostas; tudo respeita `agencyId`, clientes particulares, auditoria e histórico append-only. A atualização do Google não sobrescreve status/resposta já decididos pela equipe.

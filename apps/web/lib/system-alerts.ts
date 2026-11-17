@@ -21,6 +21,7 @@ export const SYSTEM_ALERT_TYPES = [
   { id: "ads-creative", category: "INTEGRATION", label: "Criativo de anúncio com problema", description: "Criativo reprovado pela Meta, que falhou ao subir, ou campanha que não subiu.", prefixes: ["ads:creative:", "ads:campaign:"] },
   { id: "traffic-recommendations", category: "AUTOMATION", label: "Recomendações de tráfego", description: "Sugestões diárias do Tráfego - Raio X: pausar anúncio caro, ajustar verba, trocar criativo cansado ou reprovado.", prefixes: ["traffic:rec:"] },
   { id: "social-connection", category: "INTEGRATION", label: "Conexão de rede social expirou", description: "Acesso a um perfil expirou ou foi removido.", prefixes: ["social:connection:"] },
+  { id: "google-reviews", category: "INTEGRATION", label: "Avaliações negativas no Google", description: "Avaliações de 1 a 3 estrelas aguardando resposta manual.", prefixes: ["google-review:"] },
   { id: "competitor", category: "AUTOMATION", label: "Movimentos dos concorrentes", description: "Posts acima da média, saltos de seguidores, mudanças de cadência e novos formatos.", prefixes: ["competitor:"] },
 ] as const;
 export type SystemAlertTypeId = (typeof SYSTEM_ALERT_TYPES)[number]["id"];

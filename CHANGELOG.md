@@ -410,3 +410,9 @@
 - Histórico no banco sem duplicidade por cliente e mês.
 - Nova aba Relatórios no portal, exclusiva para Cliente Admin.
 - Auditoria, escopo de agência/workspace, fontes e limitações explícitas.
+# 2026-11-17 — Central de Avaliações Google
+
+- Nova área em Automações para avaliações do Google Business Profile.
+- Regras seguras: 1–3 estrelas sempre manuais; 4–5 configuráveis para automação.
+- Modelos com variáveis, tom de voz, fila, filtros, rascunho, aprovação e histórico.
+- Ingestão idempotente e alertas de avaliações negativas preparados para o conector oficial.

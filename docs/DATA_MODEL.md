@@ -335,3 +335,9 @@ Pedido do usuário, 2026-09-07 (verificado por leitura de código, não suposiç
 ## Google Business Profile
 
 `GoogleBusinessConnection` representa a autorização OAuth administrativa da agência, única por `agencyId`. O refresh token é cifrado com o cofre de integrações; status, escopos, conta e validação são metadados auditáveis. `GoogleBusinessLocation` pertence simultaneamente à conexão, agência e cliente. `clientId` único garante uma localização configurada por cliente e `@@unique([agencyId, locationId])` impede vínculos duplicados dentro da mesma agência.
+## Google Business Profile — avaliações
+
+- `GoogleBusinessReviewPolicy`: uma política por agência; define triagem, modelos e alertas.
+- `GoogleBusinessReview`: avaliação única por localização + ID externo, ligada à agência, cliente e localização.
+- `GoogleBusinessReviewResponse`: histórico append-only de importação, rascunho, aprovação, envio, falha ou descarte.
+- Remover uma localização elimina suas avaliações em cascata; desconectar a conta segue a confirmação destrutiva já existente.

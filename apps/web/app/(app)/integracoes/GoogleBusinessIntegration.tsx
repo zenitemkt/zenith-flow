@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, CheckCircle2, ExternalLink, Unplug } from "lucide-react";
+import { Building2, CheckCircle2, ExternalLink, Settings2, Unplug } from "lucide-react";
+import Link from "next/link";
 import { useToast } from "@zenite-mkt/ui";
 import { confirmDialog } from "@/lib/dialogs";
 
@@ -42,7 +43,7 @@ export function GoogleBusinessIntegration({ configured, canManage, connection }:
         <div className="mb-2 flex flex-wrap items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFF4ED] text-[#FF2B00]"><Building2 size={18} /></span><div><h2 className="text-sm font-semibold text-[#101828]">Google Business Profile</h2><p className="text-[11px] text-[#98A2B3]">Antigo Google Meu Negócio</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${active ? "bg-[#ECFDF3] text-[#027A48]" : configured ? "bg-[#F2F4F7] text-[#667085]" : "bg-[#FFFAEB] text-[#B54708]"}`}>{active ? "Conectada" : configured ? "Não conectada" : "Aguardando aprovação"}</span></div>
         {connection ? <p className="max-w-2xl text-sm text-[#667085]">Conta <span className="font-medium text-[#344054]">{connection.email ?? "Google autorizada"}</span>. {connection.locationCount === 0 ? "Nenhuma localização vinculada a cliente ainda." : `${connection.locationCount} localização(ões) vinculada(s).`}</p> : <p className="max-w-2xl text-sm text-[#667085]">Conectará avaliações, respostas, publicações e métricas das localizações autorizadas. A análise pública de concorrentes continuará usando Google Places separadamente.</p>}
       </div>
-      {canManage && (connection ? <button disabled={busy} onClick={() => void disconnect()} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#B42318] disabled:opacity-60"><Unplug size={14} />{busy ? "Desconectando..." : "Desconectar"}</button> : configured ? <a href="/api/integrations/google-business/start" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-[#101828] px-3 text-xs font-semibold text-white">Conectar com Google <ExternalLink size={14} /></a> : null)}
+      <div className="flex flex-wrap gap-2"><Link href="/automacoes/avaliacoes-google" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#344054]"><Settings2 size={14} />Configurar avaliações</Link>{canManage && (connection ? <button disabled={busy} onClick={() => void disconnect()} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#D0D5DD] px-3 text-xs font-semibold text-[#B42318] disabled:opacity-60"><Unplug size={14} />{busy ? "Desconectando..." : "Desconectar"}</button> : configured ? <a href="/api/integrations/google-business/start" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-[#101828] px-3 text-xs font-semibold text-white">Conectar com Google <ExternalLink size={14} /></a> : null)}</div>
     </div>
     <div className="grid gap-px bg-[#EEF0F3] sm:grid-cols-3">
       <div className="bg-[#F9FAFB] p-4"><p className="flex items-center gap-1.5 text-xs font-semibold text-[#344054]"><CheckCircle2 size={14} className={active ? "text-[#12B76A]" : "text-[#98A2B3]"} />Avaliações</p><p className="mt-1 text-xs text-[#667085]">Leitura, fila manual e respostas autorizadas.</p></div>

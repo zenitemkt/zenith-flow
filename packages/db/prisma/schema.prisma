@@ -142,99 +142,102 @@ model Agency {
   competitorAdsTokenHash      String?   @unique
   competitorAdsTokenCreatedAt DateTime?
 
-  workspaces                   Workspace[]
-  memberships                  Membership[]
-  auditLogs                    AuditLog[]
-  clients                      Client[]
-  clientSegments               ClientSegment[]
-  commercialGoals              CommercialGoal[]
-  socialConnections            SocialConnection[]
-  googleBusinessConnection     GoogleBusinessConnection?
-  googleBusinessLocations      GoogleBusinessLocation[]
-  instagramAutomationRules     InstagramAutomationRule[]
-  assistantSettings            AssistantSettings?
-  assistantConversations       AssistantConversation[]
-  assistantBookings            AssistantBooking[]
-  instagramAutomationLogs      InstagramAutomationLog[]
-  instagramContacts            InstagramContact[]
-  instagramFlowSessions        InstagramFlowSession[]
-  metaLeadEvents               MetaLeadEvent[]
-  socialPosts                  SocialPost[]
-  onboardingTemplates          OnboardingTemplate[]
-  projects                     Project[]
-  recurringTaskTemplates       RecurringTaskTemplate[]
-  vendors                      Vendor[]
-  contentItems                 ContentItem[]
-  commentThreads               CommentThread[]
-  employees                    Employee[]
-  positions                    Position[]
-  jobs                         Job[]
-  candidates                   Candidate[]
-  leaveRequests                LeaveRequest[]
-  timesheets                   Timesheet[]
-  timeEntries                  TimeEntry[]
-  financeCategories            FinanceCategory[]
-  financeEntries               FinanceEntry[]
-  financePartners              FinancePartner[]
-  partnerPayouts               PartnerPayout[]
-  mediaAssets                  MediaAsset[]
-  healthScoreSnapshots         HealthScoreSnapshot[]
-  churnRiskSnapshots           ChurnRiskSnapshot[]
-  retentionPlans               RetentionPlan[]
-  surveyCampaigns              SurveyCampaign[]
-  npsSnapshots                 NpsSnapshot[]
-  enpsCampaigns                EnpsCampaign[]
-  enpsSnapshots                EnpsSnapshot[]
-  leads                        Lead[]
-  commercialAlerts             CommercialAlert[]
-  systemAlerts                 SystemAlert[]
-  adCreativeFolders            AdCreativeFolder[]
-  adCreatives                  AdCreative[]
-  trafficSettings              TrafficSettings?
-  trafficCampaigns             TrafficCampaign[]
-  systemAlertSettings          SystemAlertSettings?
-  leadEmails                   LeadEmail[]
-  leadPhones                   LeadPhone[]
-  leadSubmissions              LeadSubmission[]
-  pipelineStages               PipelineStage[]
-  opportunities                Opportunity[]
-  proposals                    Proposal[]
+  workspaces                    Workspace[]
+  memberships                   Membership[]
+  auditLogs                     AuditLog[]
+  clients                       Client[]
+  clientSegments                ClientSegment[]
+  commercialGoals               CommercialGoal[]
+  socialConnections             SocialConnection[]
+  googleBusinessConnection      GoogleBusinessConnection?
+  googleBusinessLocations       GoogleBusinessLocation[]
+  googleBusinessReviewPolicy    GoogleBusinessReviewPolicy?
+  googleBusinessReviews         GoogleBusinessReview[]
+  googleBusinessReviewResponses GoogleBusinessReviewResponse[]
+  instagramAutomationRules      InstagramAutomationRule[]
+  assistantSettings             AssistantSettings?
+  assistantConversations        AssistantConversation[]
+  assistantBookings             AssistantBooking[]
+  instagramAutomationLogs       InstagramAutomationLog[]
+  instagramContacts             InstagramContact[]
+  instagramFlowSessions         InstagramFlowSession[]
+  metaLeadEvents                MetaLeadEvent[]
+  socialPosts                   SocialPost[]
+  onboardingTemplates           OnboardingTemplate[]
+  projects                      Project[]
+  recurringTaskTemplates        RecurringTaskTemplate[]
+  vendors                       Vendor[]
+  contentItems                  ContentItem[]
+  commentThreads                CommentThread[]
+  employees                     Employee[]
+  positions                     Position[]
+  jobs                          Job[]
+  candidates                    Candidate[]
+  leaveRequests                 LeaveRequest[]
+  timesheets                    Timesheet[]
+  timeEntries                   TimeEntry[]
+  financeCategories             FinanceCategory[]
+  financeEntries                FinanceEntry[]
+  financePartners               FinancePartner[]
+  partnerPayouts                PartnerPayout[]
+  mediaAssets                   MediaAsset[]
+  healthScoreSnapshots          HealthScoreSnapshot[]
+  churnRiskSnapshots            ChurnRiskSnapshot[]
+  retentionPlans                RetentionPlan[]
+  surveyCampaigns               SurveyCampaign[]
+  npsSnapshots                  NpsSnapshot[]
+  enpsCampaigns                 EnpsCampaign[]
+  enpsSnapshots                 EnpsSnapshot[]
+  leads                         Lead[]
+  commercialAlerts              CommercialAlert[]
+  systemAlerts                  SystemAlert[]
+  adCreativeFolders             AdCreativeFolder[]
+  adCreatives                   AdCreative[]
+  trafficSettings               TrafficSettings?
+  trafficCampaigns              TrafficCampaign[]
+  systemAlertSettings           SystemAlertSettings?
+  leadEmails                    LeadEmail[]
+  leadPhones                    LeadPhone[]
+  leadSubmissions               LeadSubmission[]
+  pipelineStages                PipelineStage[]
+  opportunities                 Opportunity[]
+  proposals                     Proposal[]
   /// Chave pública (não-secreta) do coletor de tracking — ver seção "Tracking"
   /// abaixo. Gerada sob demanda na primeira visita a `/integracoes`.
-  trackingWriteKey             String?                       @unique
+  trackingWriteKey              String?                        @unique
   /// Measurement ID do GA4 (seção 37, Etapa 3 do plano de Traqueamento,
   /// 2026-10-04) — formato `G-XXXXXXXXXX`, dado público (vai embutido no
   /// `gtag.js` do site). Não é uma conexão OAuth como `AdAccountConnection`
   /// — GA4 por tag no navegador só precisa desse ID pra funcionar.
-  ga4MeasurementId             String?
+  ga4MeasurementId              String?
   /// Liga/desliga a entrada server-to-server do formulário público do Zenite Hub.
   /// A credencial continua exclusivamente nas variáveis protegidas da Vercel.
-  siteLeadIntegrationEnabled   Boolean                       @default(true)
+  siteLeadIntegrationEnabled    Boolean                        @default(true)
   /// Blog automático (Blueprint de Automações, seção 5) — se true (padrão), a
   /// rotina agendada aprova e publica sozinha; se false, todo rascunho fica
   /// pendente até um admin aprovar pela tela, mesmo que a validação mecânica
   /// passe. Configurável por agência porque nem todo cliente vai querer
   /// publicação 100% automática.
-  blogAutoPublish              Boolean                       @default(true)
+  blogAutoPublish               Boolean                        @default(true)
   /// Texto livre com tom de voz/gírias específicas desta agência — anexado ao
   /// final das regras de escrita globais (`GET /api/admin/agent-rules`) só
   /// quando preenchido. Seção 2.3 do Blueprint: "marcas de tom pessoal
   /// configuradas por cliente".
-  blogVoiceNotes               String?                       @db.Text
-  trackingVisitors             TrackingVisitor[]
-  trackingEvents               TrackingEvent[]
-  trackingConsents             TrackingConsent[]
-  campaigns                    Campaign[]
-  adAccountConnections         AdAccountConnection[]
-  eventDeliveries              EventDelivery[]
-  commercialMetaEvents         CommercialMetaEvent[]
-  workflows                    Workflow[]
-  operationStages              OperationStage[]
-  blogDrafts                   BlogDraft[]
-  contentAutomationConnections ContentAutomationConnection[]
-  blogPageViewCounts           BlogPageViewCount[]
-  searchConsoleConnection      SearchConsoleConnection?
-  trafficRecommendations       TrafficRecommendation[]
+  blogVoiceNotes                String?                        @db.Text
+  trackingVisitors              TrackingVisitor[]
+  trackingEvents                TrackingEvent[]
+  trackingConsents              TrackingConsent[]
+  campaigns                     Campaign[]
+  adAccountConnections          AdAccountConnection[]
+  eventDeliveries               EventDelivery[]
+  commercialMetaEvents          CommercialMetaEvent[]
+  workflows                     Workflow[]
+  operationStages               OperationStage[]
+  blogDrafts                    BlogDraft[]
+  contentAutomationConnections  ContentAutomationConnection[]
+  blogPageViewCounts            BlogPageViewCount[]
+  searchConsoleConnection       SearchConsoleConnection?
+  trafficRecommendations        TrafficRecommendation[]
 
   @@map("agency")
 }
@@ -362,6 +365,7 @@ model Client {
   contentItems             ContentItem[]
   socialConnections        SocialConnection[]
   googleBusinessLocations  GoogleBusinessLocation[]
+  googleBusinessReviews    GoogleBusinessReview[]
   socialPosts              SocialPost[]
   instagramAutomationRules InstagramAutomationRule[]
   instagramAutomationLogs  InstagramAutomationLog[]
@@ -3141,9 +3145,99 @@ model GoogleBusinessLocation {
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
 
+  reviews GoogleBusinessReview[]
+
   @@unique([agencyId, locationId])
   @@index([agencyId])
   @@map("google_business_location")
+}
+
+enum GoogleBusinessReviewStatus {
+  PENDING_AUTO
+  PENDING_MANUAL
+  DRAFT
+  APPROVED
+  REPLIED
+  IGNORED
+  FAILED
+}
+
+enum GoogleBusinessReviewResponseAction {
+  IMPORTED
+  DRAFT_SAVED
+  APPROVED
+  SENT
+  FAILED
+  IGNORED
+}
+
+/// Regra da agência para triagem e resposta de avaliações. Existe antes da conexão real com o Google.
+model GoogleBusinessReviewPolicy {
+  id                    String   @id @default(cuid())
+  agencyId              String   @unique
+  agency                Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  autoReplyEnabled      Boolean  @default(false)
+  autoReplyFourStars    Boolean  @default(true)
+  autoReplyFiveStars    Boolean  @default(true)
+  manualAtOrBelow       Int      @default(3)
+  responseTone          String   @default("Profissional, cordial e específico")
+  fourStarTemplate      String   @db.Text
+  fiveStarTemplate      String   @db.Text
+  notifyLowRatings      Boolean  @default(true)
+  requireCommentForAuto Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("google_business_review_policy")
+}
+
+/// Avaliação importada de uma localização autorizada. O ID externo garante ingestão idempotente.
+model GoogleBusinessReview {
+  id               String                     @id @default(cuid())
+  agencyId         String
+  agency           Agency                     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId         String
+  client           Client                     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  locationId       String
+  location         GoogleBusinessLocation     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  externalReviewId String
+  reviewerName     String?
+  reviewerPhotoUrl String?
+  starRating       Int
+  comment          String?                    @db.Text
+  reviewedAt       DateTime
+  status           GoogleBusinessReviewStatus @default(PENDING_MANUAL)
+  replyText        String?                    @db.Text
+  repliedAt        DateTime?
+  googleUpdatedAt  DateTime?
+  lastError        String?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  responses GoogleBusinessReviewResponse[]
+
+  @@unique([locationId, externalReviewId])
+  @@index([agencyId, status, reviewedAt])
+  @@index([clientId, reviewedAt])
+  @@map("google_business_review")
+}
+
+/// Histórico append-only de cada decisão ou tentativa de resposta.
+model GoogleBusinessReviewResponse {
+  id          String                             @id @default(cuid())
+  agencyId    String
+  agency      Agency                             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reviewId    String
+  review      GoogleBusinessReview               @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  action      GoogleBusinessReviewResponseAction
+  text        String?                            @db.Text
+  actorUserId String?
+  error       String?
+  createdAt   DateTime                           @default(now())
+
+  @@index([agencyId, createdAt])
+  @@index([reviewId, createdAt])
+  @@map("google_business_review_response")
 }
 
 enum SocialPostStatus {
