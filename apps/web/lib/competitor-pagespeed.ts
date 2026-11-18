@@ -73,9 +73,21 @@ export async function syncCompetitorWebsite(competitorId: string) {
   }
 }
 
-export async function syncAllCompetitorWebsites(budgetMs = 50_000) {
+/** Mesmas opções de `syncAllGooglePlaces`: directOnly pula referências, staleBefore é o fallback mensal, clientId é o botão "atualizar todos". */
+export async function syncAllCompetitorWebsites(budgetMs = 50_000, options: { clientId?: string; directOnly?: boolean; staleBefore?: Date } = {}) {
   const started = Date.now();
-  const profiles = await prisma.competitor.findMany({ where: { OR: [{ website: { not: null } }, { websiteOverride: { not: null } }] }, orderBy: { websiteScoreAt: { sort: "asc", nulls: "first" } }, select: { id: true } });
+  const profiles = await prisma.competitor.findMany({
+    where: {
+      ...(options.clientId ? { clientId: options.clientId } : {}),
+      AND: [
+        { OR: [{ website: { not: null } }, { websiteOverride: { not: null } }] },
+        options.directOnly ? { OR: [{ isOwn: true }, { category: "DIRECT" as const }] } : {},
+        options.staleBefore ? { OR: [{ websiteScoreAt: null }, { websiteScoreAt: { lt: options.staleBefore } }] } : {},
+      ],
+    },
+    orderBy: { websiteScoreAt: { sort: "asc", nulls: "first" } },
+    select: { id: true },
+  });
   let ok = 0;
   let failed = 0;
   for (const profile of profiles) {

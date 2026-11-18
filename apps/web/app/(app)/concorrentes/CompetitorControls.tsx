@@ -153,9 +153,11 @@ export function CompetitorActions({ competitorId, days, username, hasReport, cur
       <button type="button" disabled={busy !== null} onClick={() => void run("sync")} className={BTN}>
         <RefreshCw size={14} aria-hidden /> {busy === "sync" ? "Atualizando..." : "Atualizar agora"}
       </button>
-      <button type="button" disabled={busy !== null} onClick={() => void run("website")} className={BTN}>
-        <Gauge size={14} aria-hidden /> {busy === "website" ? "Medindo site..." : "Medir site"}
-      </button>
+      {currentRole !== "REFERENCE" && (
+        <button type="button" disabled={busy !== null} onClick={() => void run("website")} className={BTN}>
+          <Gauge size={14} aria-hidden /> {busy === "website" ? "Medindo site..." : "Medir site"}
+        </button>
+      )}
       <button type="button" disabled={busy !== null} onClick={() => void run("ai")} className="flex h-9 items-center gap-1.5 rounded-lg bg-[#101828] px-3 text-xs font-semibold text-white disabled:opacity-60">
         <Sparkles size={14} aria-hidden /> {busy === "ai" ? "Analisando (até 1 min)..." : hasReport ? "Refazer análise com IA" : "Analisar melhores posts com IA"}
       </button>

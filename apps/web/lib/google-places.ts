@@ -79,9 +79,25 @@ export async function syncGooglePlace(competitorId: string) {
   }
 }
 
-export async function syncAllGooglePlaces(budgetMs = 50_000) {
+/**
+ * `directOnly`: pula referências de mercado (elas não têm Google). `staleBefore`: só quem não
+ * é atualizado há mais tempo que isso (usado no fallback mensal, pra não repetir quem já foi
+ * atualizado manualmente há pouco). `clientId`: restringe a um cliente (botão "atualizar todos").
+ */
+export async function syncAllGooglePlaces(budgetMs = 50_000, options: { clientId?: string; directOnly?: boolean; staleBefore?: Date } = {}) {
   const started = Date.now();
-  const rows = await prisma.competitor.findMany({ where: { googlePlaceId: { not: null } }, orderBy: { googleLastSyncAt: { sort: "asc", nulls: "first" } }, select: { id: true } });
+  const rows = await prisma.competitor.findMany({
+    where: {
+      googlePlaceId: { not: null },
+      ...(options.clientId ? { clientId: options.clientId } : {}),
+      AND: [
+        options.directOnly ? { OR: [{ isOwn: true }, { category: "DIRECT" as const }] } : {},
+        options.staleBefore ? { OR: [{ googleLastSyncAt: null }, { googleLastSyncAt: { lt: options.staleBefore } }] } : {},
+      ],
+    },
+    orderBy: { googleLastSyncAt: { sort: "asc", nulls: "first" } },
+    select: { id: true },
+  });
   let updated = 0, failed = 0;
   for (const row of rows) {
     if (Date.now() - started > budgetMs) break;

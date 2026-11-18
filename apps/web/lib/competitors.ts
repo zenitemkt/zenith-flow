@@ -122,9 +122,14 @@ export async function syncCompetitor(competitorId: string, deep = false) {
   }
 }
 
+/** Diário, só cliente + concorrentes diretos. Referências só atualizam manualmente (botão "Atualizar agora"). */
 export async function syncAllCompetitors(budgetMs = 45_000) {
   const started = Date.now();
-  const list = await prisma.competitor.findMany({ orderBy: { lastSyncAt: { sort: "asc", nulls: "first" } }, select: { id: true } });
+  const list = await prisma.competitor.findMany({
+    where: { OR: [{ isOwn: true }, { category: "DIRECT" }] },
+    orderBy: { lastSyncAt: { sort: "asc", nulls: "first" } },
+    select: { id: true },
+  });
   let ok = 0;
   let failed = 0;
   for (const c of list) {

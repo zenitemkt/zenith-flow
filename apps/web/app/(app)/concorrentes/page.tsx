@@ -18,6 +18,7 @@ import { GoogleProfileCard, WebsiteSeoCard } from "./CompetitorSeoPanel";
 import { CompetitorContentIdeas } from "./CompetitorContentIdeas";
 import { CompetitorTabs, type CompetitorTab } from "./CompetitorTabs";
 import { CompetitorProfileSwitcher } from "./CompetitorProfileSwitcher";
+import { CompetitorBulkSyncButton } from "./CompetitorBulkSyncButton";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export const dynamic = "force-dynamic";
 const int = (v: number) => Math.round(v).toLocaleString("pt-BR");
 const dec = (v: number, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (v: number | null) => (v === null ? "—" : `${dec(v, 2)}%`);
+const dateShort = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
 const CARD = "rounded-xl border border-[#E4E7EC] bg-white p-4";
 const H2 = "mb-3 text-sm font-semibold text-[#101828]";
 const TH = "px-2 py-1.5 text-left text-xs font-medium text-[#667085]";
@@ -195,7 +197,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
           {rows.length > 0 && (
             <section className={`${CARD} overflow-x-auto`}>
               <div className="mb-1 flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-[#101828]">Nota geral ({visibleRows.length}) <span className="font-normal text-[#98A2B3]">· {days} dias</span></h2><CompetitorTableFilter value={tableType} clientId={clientId} days={days} competitorId={current?.p.id ?? null} /></div>
-              <p className="mb-3 text-[11px] text-[#98A2B3]">Média de Instagram, nota do Google, velocidade e SEO do site, considerando só os canais que o perfil tem medidos. É uma estimativa para comparar perfis, não uma nota oficial.</p>
+              <p className="mb-3 text-[11px] text-[#98A2B3]">Média de Instagram, nota do Google, velocidade e SEO do site, considerando só os canais que o perfil tem medidos. É uma estimativa para comparar perfis, não uma nota oficial. Instagram atualiza sozinho todo dia (só cliente e diretos); Google e site só pelos botões &quot;Atualizar todos&quot; nas abas Google e Site, ou automaticamente no dia 1 se passar 30 dias sem isso.</p>
               <table className="w-full min-w-[720px]">
                 <thead>
                   <tr>
@@ -213,9 +215,15 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                       </td>
                       <td className={TD}><ScoreBadge score={overall.score} /></td>
                       <td className={TD}>{p.followers !== null ? pct(rows.find((r) => r.p.id === p.id)!.stats.engagementRate) : "—"}</td>
-                      <td className={TD}>{p.googleRating?.toLocaleString("pt-BR", { minimumFractionDigits: 1 }) ?? "—"}</td>
+                      <td className={TD}>
+                        {p.googleRating?.toLocaleString("pt-BR", { minimumFractionDigits: 1 }) ?? "—"}
+                        {p.googleLastSyncAt && <div className="text-[10px] font-normal text-[#98A2B3]">{dateShort(p.googleLastSyncAt)}</div>}
+                      </td>
                       <td className={TD}>{p.websiteScore ?? "—"}</td>
-                      <td className={TD}>{p.websiteSeoScore ?? "—"}</td>
+                      <td className={TD}>
+                        {p.websiteSeoScore ?? "—"}
+                        {p.websiteScoreAt && <div className="text-[10px] font-normal text-[#98A2B3]">{dateShort(p.websiteScoreAt)}</div>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -525,20 +533,38 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
       {tab === "google" && current && (
         <>
           {profileHeader}
-          <GoogleReviewsPanel key={current.p.id} competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
-          <GoogleProfileCard googleLinked={Boolean(current.p.googlePlaceId)} googleProfileChecks={current.p.googleProfileChecks as never} />
+          {!current.p.isOwn && current.p.category === "REFERENCE" ? (
+            <section className={CARD}>
+              <p className="text-sm text-[#667085]">Referências de mercado só têm o Instagram analisado. Google não se aplica a esse perfil.</p>
+            </section>
+          ) : (
+            <>
+              <div className="flex justify-end"><CompetitorBulkSyncButton clientId={clientId} kind="google" label="Atualizar Google de todos os diretos" /></div>
+              <GoogleReviewsPanel key={current.p.id} competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
+              <GoogleProfileCard googleLinked={Boolean(current.p.googlePlaceId)} googleProfileChecks={current.p.googleProfileChecks as never} />
+            </>
+          )}
         </>
       )}
 
       {tab === "site" && current && (
         <>
           {profileHeader}
-          <CompetitorWebsiteEditor key={current.p.id} competitorId={current.p.id} instagramWebsite={current.p.website} websiteOverride={current.p.websiteOverride} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Stat label="Velocidade (mobile)" value={current.p.websiteScore !== null ? `${current.p.websiteScore}/100` : "Ainda não medido"} hint={current.p.websiteScoreAt ? `Medido em ${current.p.websiteScoreAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}` : current.p.websiteScoreError ?? undefined} />
-            <Stat label="SEO (PageSpeed)" value={current.p.websiteSeoScore !== null ? `${current.p.websiteSeoScore}/100` : "Ainda não medido"} />
-          </div>
-          <WebsiteSeoCard website={current.p.websiteOverride ?? current.p.website} seoScore={current.p.websiteSeoScore} seoChecks={current.p.seoChecks as never} seoCheckedAt={current.p.seoCheckedAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null} seoError={current.p.seoError} />
+          {!current.p.isOwn && current.p.category === "REFERENCE" ? (
+            <section className={CARD}>
+              <p className="text-sm text-[#667085]">Referências de mercado só têm o Instagram analisado. Site não se aplica a esse perfil.</p>
+            </section>
+          ) : (
+            <>
+              <div className="flex justify-end"><CompetitorBulkSyncButton clientId={clientId} kind="site" label="Atualizar site de todos os diretos" /></div>
+              <CompetitorWebsiteEditor key={current.p.id} competitorId={current.p.id} instagramWebsite={current.p.website} websiteOverride={current.p.websiteOverride} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Stat label="Velocidade (mobile)" value={current.p.websiteScore !== null ? `${current.p.websiteScore}/100` : "Ainda não medido"} hint={current.p.websiteScoreAt ? `Medido em ${current.p.websiteScoreAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" })}` : current.p.websiteScoreError ?? undefined} />
+                <Stat label="SEO (PageSpeed)" value={current.p.websiteSeoScore !== null ? `${current.p.websiteSeoScore}/100` : "Ainda não medido"} />
+              </div>
+              <WebsiteSeoCard website={current.p.websiteOverride ?? current.p.website} seoScore={current.p.websiteSeoScore} seoChecks={current.p.seoChecks as never} seoCheckedAt={current.p.seoCheckedAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null} seoError={current.p.seoError} />
+            </>
+          )}
         </>
       )}
 

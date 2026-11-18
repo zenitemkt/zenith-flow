@@ -43,7 +43,7 @@ export function GoogleReviewsPanel({ competitorId, initialQuery, place }: { comp
   return (
     <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="flex items-center gap-2 text-sm font-semibold text-[#101828]"><Star size={16} className="fill-[#FDB022] text-[#FDB022]" /> Avaliações no Google</h2><p className="mt-1 text-xs text-[#667085]">Nota pública e volume de avaliações. Atualização diária.</p></div>
+        <div><h2 className="flex items-center gap-2 text-sm font-semibold text-[#101828]"><Star size={16} className="fill-[#FDB022] text-[#FDB022]" /> Avaliações no Google</h2><p className="mt-1 text-xs text-[#667085]">Nota pública e volume de avaliações. Atualiza no botão &quot;Atualizar&quot; (aqui ou nos diretos, acima) ou sozinho no dia 1, se passar 30 dias sem atualizar.</p></div>
         {place.id && <div className="text-right"><p className="text-3xl font-semibold text-[#101828]">{place.rating?.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) ?? "—"}</p><p className="text-xs text-[#667085]">{place.reviewCount?.toLocaleString("pt-BR") ?? "—"} avaliações</p></div>}
       </div>
       {place.id ? (

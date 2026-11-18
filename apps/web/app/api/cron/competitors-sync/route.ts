@@ -11,10 +11,12 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 /**
- * Rotina diária da Análise de Concorrentes: Instagram, alertas, Google e velocidade dos sites.
- * No primeiro dia do mês, fecha também os relatórios do mês anterior. Tudo num agendamento só,
- * porque o plano da Vercel limita quantos agendamentos o projeto pode ter.
- * A cada etapa sobra menos tempo: o que não couber hoje entra na rodada de amanhã.
+ * Rotina diária da Análise de Concorrentes: Instagram (só cliente + diretos — referências só
+ * manualmente) e alertas. Google e velocidade/SEO do site NÃO rodam todo dia: o time atualiza
+ * pelos botões "Atualizar todos" de cada aba, quando quiser. Se um perfil direto ficar 30 dias
+ * sem essa atualização manual, o próprio dia 1 força a atualização antes de fechar o relatório
+ * mensal, pra ele não sair com dado velho. Tudo num agendamento só, porque o plano da Vercel
+ * limita quantos agendamentos o projeto pode ter.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -24,8 +26,9 @@ export async function GET(request: Request) {
 
   const startedAt = Date.now();
   const left = (reserve: number) => Math.max(0, 52_000 - (Date.now() - startedAt) - reserve);
+  const isFirstOfMonth = new Date(Date.now() - 3 * 3600_000).getUTCDate() === 1;
 
-  const instagram = await syncAllCompetitors(left(22_000));
+  const instagram = await syncAllCompetitors(left(10_000));
 
   let alerts = 0;
   let alertFailures = 0;
@@ -39,17 +42,22 @@ export async function GET(request: Request) {
     }
   }
 
-  const google = await syncAllGooglePlaces(left(12_000)).catch((error) => {
-    console.error("competitor_google_sync_failed", error);
-    return null;
-  });
-  const pagespeed = await syncAllCompetitorWebsites(left(2_000)).catch((error) => {
-    console.error("competitor_pagespeed_sync_failed", error);
-    return null;
-  });
+  // Fallback mensal: só quem não foi atualizado (pelo botão) há mais de 30 dias, e só direto/cliente.
+  const staleFallback = isFirstOfMonth
+    ? {
+        google: await syncAllGooglePlaces(left(15_000), { directOnly: true, staleBefore: new Date(Date.now() - 30 * 86_400_000) }).catch((error) => {
+          console.error("competitor_google_sync_failed", error);
+          return null;
+        }),
+        site: await syncAllCompetitorWebsites(left(5_000), { directOnly: true, staleBefore: new Date(Date.now() - 30 * 86_400_000) }).catch((error) => {
+          console.error("competitor_pagespeed_sync_failed", error);
+          return null;
+        }),
+      }
+    : null;
 
   // Relatório mensal: só no dia 1, e só com tempo sobrando.
-  const reports: { month: string; ok: number; failed: number } | null = new Date(Date.now() - 3 * 3600_000).getUTCDate() === 1 && left(0) > 12_000 ? await (async () => {
+  const reports: { month: string; ok: number; failed: number } | null = isFirstOfMonth && left(0) > 12_000 ? await (async () => {
     const month = previousClosedMonth();
     const clients = await prisma.client.findMany({
       where: { competitors: { some: { isOwn: true } }, AND: { competitors: { some: { isOwn: false, category: "DIRECT" } } } },
@@ -71,5 +79,5 @@ export async function GET(request: Request) {
     return { month: monthKey(month), ok, failed };
   })() : null;
 
-  return NextResponse.json({ instagram, alerts, alertFailures, google, pagespeed, reports });
+  return NextResponse.json({ instagram, alerts, alertFailures, staleFallback, reports });
 }
