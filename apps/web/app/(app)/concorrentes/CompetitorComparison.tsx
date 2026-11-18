@@ -10,6 +10,8 @@ interface ChartProfile {
   followers: number | null;
   snapshots: { day: Date; followers: number | null }[];
   posts: { timestamp: Date; likeCount: number | null; commentsCount: number | null }[];
+  /** Desde quando o perfil é monitorado — posts de antes não entram nos gráficos por semana (senão a semana de um perfil novo compara com meses de histórico do Instagram de outro). */
+  trackedSince: Date;
 }
 
 type Metric = "followers" | "engagement" | "interactions" | "posts";
@@ -40,6 +42,7 @@ function seriesFor(profile: ChartProfile, metric: Metric): { day: Date; value: n
   }
   const weeks = new Map<number, { count: number; interactions: number }>();
   for (const post of profile.posts) {
+    if (post.timestamp < profile.trackedSince) continue;
     const key = weekStart(post.timestamp);
     const w = weeks.get(key) ?? { count: 0, interactions: 0 };
     w.count += 1;
@@ -121,7 +124,8 @@ function TrendChart({ metric, profiles }: { metric: Metric; profiles: ChartProfi
   const x = (date: Date) => left + ((date.getTime() - minDate) / Math.max(1, maxDate - minDate)) * (width - left - right);
   const y = (change: number) => top + ((maxChange - change) / Math.max(0.01, maxChange - minChange)) * (height - top - bottom);
   const ticks = Array.from({ length: 5 }, (_, index) => minChange + ((maxChange - minChange) * index) / 4).reverse();
-  const dateLabel = (timestamp: number) => new Date(timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const shortDate = (timestamp: number) => new Date(timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const dateLabel = (timestamp: number) => (isFollowers ? shortDate(timestamp) : `Semana de ${shortDate(timestamp)}`);
   const tickLabel = (value: number) => (isFollowers ? `${value > 0 ? "+" : ""}${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}%` : formatValue(metric, value));
 
   return (

@@ -184,6 +184,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                 followers: profile.followers,
                 snapshots: profile.snapshots,
                 posts: profile.posts.map((post) => ({ timestamp: post.timestamp, likeCount: post.likeCount, commentsCount: post.commentsCount })),
+                trackedSince: profile.createdAt,
               }))}
               days={days}
             />
