@@ -13,6 +13,7 @@ import { CompetitorMonthlyReports } from "./CompetitorMonthlyReports";
 import { GoogleReviewsComparison, GoogleReviewsPanel } from "./CompetitorGoogleReviews";
 import { CompetitorWebsiteScores } from "./CompetitorWebsiteScores";
 import { CompetitorWebsiteEditor } from "./CompetitorWebsiteEditor";
+import { CompetitorSeoPanel } from "./CompetitorSeoPanel";
 import { CompetitorContentIdeas } from "./CompetitorContentIdeas";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
@@ -211,6 +212,15 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
           </section>
 
           <GoogleReviewsPanel key={current.p.id} competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
+          <CompetitorSeoPanel
+            website={current.p.websiteOverride ?? current.p.website}
+            seoScore={current.p.websiteSeoScore}
+            seoChecks={current.p.seoChecks as never}
+            seoCheckedAt={current.p.seoCheckedAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null}
+            seoError={current.p.seoError}
+            googleLinked={Boolean(current.p.googlePlaceId)}
+            googleProfileChecks={current.p.googleProfileChecks as never}
+          />
 
           <section className={CARD}>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">

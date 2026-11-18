@@ -1,4 +1,5 @@
 import { prisma } from "@zenite-mkt/db";
+import { syncCompetitorSeo } from "@/lib/competitor-seo";
 
 const ENDPOINT = "https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed";
 
@@ -19,26 +20,36 @@ export function effectiveCompetitorWebsite(competitor: { website: string | null;
   return normalizeWebsiteUrl(competitor.websiteOverride) ?? normalizeWebsiteUrl(competitor.website);
 }
 
-export async function fetchPageSpeedScore(rawUrl: string): Promise<number> {
+export interface PageSpeedScores { performance: number; seo: number | null }
+
+/** Performance e SEO do Lighthouse numa chamada só (mesma cota da PageSpeed API). */
+export async function fetchPageSpeedScores(rawUrl: string): Promise<PageSpeedScores> {
   const website = normalizeWebsiteUrl(rawUrl);
   if (!website) throw new Error("O endereço do site é inválido.");
   const url = new URL(ENDPOINT);
   url.searchParams.set("url", website);
   url.searchParams.set("strategy", "mobile");
-  url.searchParams.set("category", "performance");
+  url.searchParams.append("category", "performance");
+  url.searchParams.append("category", "seo");
   url.searchParams.set("locale", "pt_BR");
   const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY?.trim();
   if (apiKey) url.searchParams.set("key", apiKey);
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(45_000) });
-  const body = await response.json().catch(() => null) as { lighthouseResult?: { categories?: { performance?: { score?: number | null } } }; error?: { message?: string } } | null;
+  const body = await response.json().catch(() => null) as { lighthouseResult?: { categories?: { performance?: { score?: number | null }; seo?: { score?: number | null } } }; error?: { message?: string } } | null;
   if (!response.ok) {
     const detail = body?.error?.message ?? `erro ${response.status}`;
     if (response.status === 429 || /quota exceeded/i.test(detail)) throw new Error("Limite diário do PageSpeed atingido. Tente novamente amanhã ou configure GOOGLE_PAGESPEED_API_KEY.");
     throw new Error(`PageSpeed: ${detail}`);
   }
-  const score = body?.lighthouseResult?.categories?.performance?.score;
-  if (typeof score !== "number") throw new Error("O PageSpeed não devolveu uma nota de performance.");
-  return Math.round(Math.max(0, Math.min(1, score)) * 100);
+  const perf = body?.lighthouseResult?.categories?.performance?.score;
+  if (typeof perf !== "number") throw new Error("O PageSpeed não devolveu uma nota de performance.");
+  const seo = body?.lighthouseResult?.categories?.seo?.score;
+  const pct = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return { performance: pct(perf), seo: typeof seo === "number" ? pct(seo) : null };
+}
+
+export async function fetchPageSpeedScore(rawUrl: string): Promise<number> {
+  return (await fetchPageSpeedScores(rawUrl)).performance;
 }
 
 export async function syncCompetitorWebsite(competitorId: string) {
@@ -50,9 +61,11 @@ export async function syncCompetitorWebsite(competitorId: string) {
     throw new Error("Este perfil não informa um site válido.");
   }
   try {
-    const score = await fetchPageSpeedScore(website);
-    await prisma.competitor.update({ where: { id: competitorId }, data: { websiteScore: score, websiteScoreAt: new Date(), websiteScoreError: null } });
-    return { score };
+    const scores = await fetchPageSpeedScores(website);
+    await prisma.competitor.update({ where: { id: competitorId }, data: { websiteScore: scores.performance, websiteSeoScore: scores.seo, websiteScoreAt: new Date(), websiteScoreError: null } });
+    // SEO on-page roda junto: mesmo site, mesmo botão "Medir site".
+    await syncCompetitorSeo(competitorId, website).catch((error) => console.error("competitor_seo_sync_failed", competitorId, error));
+    return { score: scores.performance };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha ao medir o site.";
     await prisma.competitor.update({ where: { id: competitorId }, data: { websiteScoreError: message.slice(0, 500) } });

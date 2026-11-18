@@ -3860,8 +3860,16 @@ model Competitor {
   websiteOverride    String?
   /// Nota Lighthouse mobile (0-100) da página inicial informada pelo Instagram.
   websiteScore       Int?
+  /// Nota de SEO do Lighthouse (0-100), mesma chamada do PageSpeed.
+  websiteSeoScore    Int?
   websiteScoreAt     DateTime?
   websiteScoreError  String?
+  /// Checklist de SEO on-page (title, description, H1, robots.txt, sitemap, dados estruturados).
+  seoChecks          Json?
+  seoCheckedAt       DateTime?
+  seoError           String?
+  /// Completude pública do perfil do Google (categoria, horário, telefone, site, fotos).
+  googleProfileChecks Json?
   pictureUrl         String?
   followers          Int?
   follows            Int?

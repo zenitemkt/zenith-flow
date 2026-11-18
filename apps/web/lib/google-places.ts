@@ -29,10 +29,24 @@ export async function searchGooglePlaces(query: string): Promise<GooglePlaceCand
   return (body.places ?? []).map((place: any) => ({ id: String(place.id), name: String(place.displayName?.text ?? "Estabelecimento"), address: String(place.formattedAddress ?? "") }));
 }
 
+export interface GoogleProfileCheck { id: string; label: string; ok: boolean; detail: string }
+
+/** Completude pública do perfil: o que qualquer pessoa vê na ficha do Google. */
+function profileChecks(place: any): GoogleProfileCheck[] {
+  const photoCount = Array.isArray(place.photos) ? place.photos.length : 0;
+  return [
+    { id: "category", label: "Categoria definida", ok: Boolean(place.primaryTypeDisplayName?.text), detail: place.primaryTypeDisplayName?.text ?? "Sem categoria principal." },
+    { id: "phone", label: "Telefone cadastrado", ok: Boolean(place.nationalPhoneNumber), detail: place.nationalPhoneNumber ?? "Sem telefone." },
+    { id: "website", label: "Site cadastrado no perfil", ok: Boolean(place.websiteUri), detail: place.websiteUri ?? "Sem site." },
+    { id: "hours", label: "Horário de funcionamento", ok: Boolean(place.regularOpeningHours?.weekdayDescriptions?.length), detail: place.regularOpeningHours?.weekdayDescriptions?.length ? "Cadastrado." : "Não informado." },
+    { id: "photos", label: "Fotos no perfil", ok: photoCount >= 3, detail: `${photoCount} foto(s) pública(s).` },
+  ];
+}
+
 export async function fetchGooglePlace(placeId: string) {
   if (!/^[A-Za-z0-9_-]{8,300}$/.test(placeId)) throw new Error("Local do Google inválido.");
-  const place = await googleFetch(`${DETAILS_URL}/${encodeURIComponent(placeId)}`, { method: "GET" }, "id,displayName,formattedAddress,rating,userRatingCount");
-  return { id: String(place.id), name: String(place.displayName?.text ?? "Estabelecimento"), address: String(place.formattedAddress ?? ""), rating: typeof place.rating === "number" ? place.rating : null, reviewCount: Number.isInteger(place.userRatingCount) ? place.userRatingCount : null };
+  const place = await googleFetch(`${DETAILS_URL}/${encodeURIComponent(placeId)}`, { method: "GET" }, "id,displayName,formattedAddress,rating,userRatingCount,primaryTypeDisplayName,nationalPhoneNumber,websiteUri,regularOpeningHours,photos");
+  return { id: String(place.id), name: String(place.displayName?.text ?? "Estabelecimento"), address: String(place.formattedAddress ?? ""), rating: typeof place.rating === "number" ? place.rating : null, reviewCount: Number.isInteger(place.userRatingCount) ? place.userRatingCount : null, profileChecks: profileChecks(place) };
 }
 
 export async function linkGooglePlace(competitorId: string, placeId: string) {
@@ -41,7 +55,7 @@ export async function linkGooglePlace(competitorId: string, placeId: string) {
   const day = competitorSnapshotDay(now);
   await prisma.$transaction([
     prisma.competitorGoogleSnapshot.deleteMany({ where: { competitorId } }),
-    prisma.competitor.update({ where: { id: competitorId }, data: { googlePlaceId: place.id, googlePlaceName: place.name, googlePlaceAddress: place.address, googleRating: place.rating, googleReviewCount: place.reviewCount, googleLastSyncAt: now, googleLastError: null } }),
+    prisma.competitor.update({ where: { id: competitorId }, data: { googlePlaceId: place.id, googlePlaceName: place.name, googlePlaceAddress: place.address, googleRating: place.rating, googleReviewCount: place.reviewCount, googleProfileChecks: place.profileChecks as never, googleLastSyncAt: now, googleLastError: null } }),
     prisma.competitorGoogleSnapshot.create({ data: { competitorId, day, rating: place.rating, reviewCount: place.reviewCount } }),
   ]);
   return place;
@@ -54,7 +68,7 @@ export async function syncGooglePlace(competitorId: string) {
     const place = await fetchGooglePlace(competitor.googlePlaceId);
     const now = new Date();
     await prisma.$transaction([
-      prisma.competitor.update({ where: { id: competitorId }, data: { googlePlaceName: place.name, googlePlaceAddress: place.address, googleRating: place.rating, googleReviewCount: place.reviewCount, googleLastSyncAt: now, googleLastError: null } }),
+      prisma.competitor.update({ where: { id: competitorId }, data: { googlePlaceName: place.name, googlePlaceAddress: place.address, googleRating: place.rating, googleReviewCount: place.reviewCount, googleProfileChecks: place.profileChecks as never, googleLastSyncAt: now, googleLastError: null } }),
       prisma.competitorGoogleSnapshot.upsert({ where: { competitorId_day: { competitorId, day: competitorSnapshotDay(now) } }, create: { competitorId, day: competitorSnapshotDay(now), rating: place.rating, reviewCount: place.reviewCount }, update: { rating: place.rating, reviewCount: place.reviewCount } }),
     ]);
     return place;
