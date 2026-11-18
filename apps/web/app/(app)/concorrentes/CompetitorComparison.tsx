@@ -98,7 +98,8 @@ function TrendChart({ metric, profiles }: { metric: Metric; profiles: ChartProfi
     [profiles, metric],
   );
   const all = series.flatMap((profile) => profile.points);
-  if (all.length < 2) {
+  const distinctDates = new Set(all.map((point) => point.day.getTime())).size;
+  if (distinctDates < 2) {
     return <p className="py-8 text-center text-sm text-[#667085]">O gráfico aparecerá depois de pelo menos dois registros {isFollowers ? "diários" : "semanais"}.</p>;
   }
 
