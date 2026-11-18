@@ -107,8 +107,11 @@ export async function scheduleContentPosts(input: {
   if (platforms.includes("FACEBOOK") && media.length > 1 && hasVideo) {
     throw new ScheduleError("O Facebook não aceita carrossel com vídeo.");
   }
-  if (platforms.includes("GOOGLE_BUSINESS") && (input.format === "REEL" || input.format === "STORY")) {
-    throw new ScheduleError("O Google aceita esta publicação apenas no formato Feed.");
+  if (platforms.includes("GOOGLE_BUSINESS") && input.format === "STORY") {
+    throw new ScheduleError("O Google não aceita publicação em Stories.");
+  }
+  if (platforms.includes("GOOGLE_BUSINESS") && media.length > 1) {
+    throw new ScheduleError("O Google aceita no máximo um arquivo (imagem ou vídeo) nesta publicação.");
   }
   const googleCallToAction = ["BOOK", "ORDER", "SHOP", "LEARN_MORE", "SIGN_UP", "CALL"].includes(String(input.googleCallToAction)) ? String(input.googleCallToAction) : null;
   const googleCallToActionUrl = typeof input.googleCallToActionUrl === "string" && /^https:\/\//i.test(input.googleCallToActionUrl) ? input.googleCallToActionUrl.slice(0, 2000) : null;

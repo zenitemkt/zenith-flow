@@ -175,7 +175,7 @@ export function QuickPostForm({
   }
 
   function togglePlatform(p: SocialPlatform) {
-    if (p === "GOOGLE_BUSINESS" && !platforms.includes(p)) setFormat("FEED");
+    if (p === "GOOGLE_BUSINESS" && !platforms.includes(p) && format === "STORY") setFormat("FEED");
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   }
 
@@ -191,7 +191,7 @@ export function QuickPostForm({
     const mediaError = quickPostMediaError({ platforms, format, files });
     if (mediaError) return setError(mediaError);
     if (format !== "STORY" && caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
-    if (platforms.includes("GOOGLE_BUSINESS") && format !== "FEED") return setError("O Google aceita esta publicação apenas no formato Feed.");
+    if (platforms.includes("GOOGLE_BUSINESS") && format === "STORY") return setError("O Google não aceita publicação em Stories.");
     if (platforms.includes("GOOGLE_BUSINESS") && googleCallToAction && googleCallToAction !== "CALL" && !/^https:\/\//i.test(googleCallToActionUrl)) return setError("Informe um link https:// para o botão do Google.");
     if (miniChatAvailable && miniChat.enabled) {
       if (!miniChat.keyword.trim()) return setError("Mini-chat: informe a palavra-chave.");
@@ -414,7 +414,7 @@ export function QuickPostForm({
                 key={f}
                 type="button"
                 onClick={() => setFormat(f)}
-                disabled={platforms.includes("GOOGLE_BUSINESS") && f !== "FEED"}
+                disabled={platforms.includes("GOOGLE_BUSINESS") && f === "STORY"}
                 aria-pressed={format === f}
                 className={`h-9 rounded-lg text-sm font-medium ${
                   format === f ? "bg-[#F2F4F7] font-semibold text-[#101828] ring-1 ring-[#101828]" : "border border-[#E4E7EC] text-[#475467] disabled:cursor-not-allowed disabled:opacity-40"
@@ -468,7 +468,7 @@ export function QuickPostForm({
           {hasVideo && files.length > 1 && <p className="text-xs text-[#667085]">Carrossel com vídeo só sai no Instagram.</p>}
         </div>
 
-        {platforms.includes("GOOGLE_BUSINESS") && <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><div className="flex items-center gap-2"><MapPin size={16} className="text-[#FF2B00]" /><p className="text-sm font-semibold text-[#101828]">Botão no Google (opcional)</p></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><select value={googleCallToAction} onChange={(event) => setGoogleCallToAction(event.target.value)} className={INPUT}><option value="">Sem botão</option><option value="LEARN_MORE">Saiba mais</option><option value="SIGN_UP">Inscrever-se</option><option value="BOOK">Reservar</option><option value="ORDER">Pedir</option><option value="SHOP">Comprar</option><option value="CALL">Ligar</option></select>{googleCallToAction && googleCallToAction !== "CALL" && <input value={googleCallToActionUrl} onChange={(event) => setGoogleCallToActionUrl(event.target.value)} placeholder="https://seusite.com.br/pagina" className={INPUT} />}</div><p className="mt-2 text-xs text-[#667085]">O Google exibirá o texto, até uma foto e este botão no perfil da empresa.</p></div>}
+        {platforms.includes("GOOGLE_BUSINESS") && <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><div className="flex items-center gap-2"><MapPin size={16} className="text-[#FF2B00]" /><p className="text-sm font-semibold text-[#101828]">Botão no Google (opcional)</p></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><select value={googleCallToAction} onChange={(event) => setGoogleCallToAction(event.target.value)} className={INPUT}><option value="">Sem botão</option><option value="LEARN_MORE">Saiba mais</option><option value="SIGN_UP">Inscrever-se</option><option value="BOOK">Reservar</option><option value="ORDER">Pedir</option><option value="SHOP">Comprar</option><option value="CALL">Ligar</option></select>{googleCallToAction && googleCallToAction !== "CALL" && <input value={googleCallToActionUrl} onChange={(event) => setGoogleCallToActionUrl(event.target.value)} placeholder="https://seusite.com.br/pagina" className={INPUT} />}</div><p className="mt-2 text-xs text-[#667085]">O Google exibirá o texto, até uma foto ou vídeo (máx. 30s, ~75MB) e este botão no perfil da empresa.</p></div>}
 
         <label className={`flex flex-col gap-1.5 ${FIELD_LABEL}`}>
           Título no cartão (opcional)

@@ -120,6 +120,8 @@ export interface GoogleBusinessLocalPostInput {
   parent: string;
   summary: string;
   mediaUrl?: string | null;
+  /** Vídeo: até 30s e ~75MB (limite do Google). Passa `mediaFormat: VIDEO` em vez de PHOTO. */
+  mediaIsVideo?: boolean;
   callToAction?: string | null;
   callToActionUrl?: string | null;
 }
@@ -135,7 +137,7 @@ export async function publishGoogleBusinessLocalPost(accessToken: string, input:
       languageCode: "pt-BR",
       summary: input.summary,
       topicType: "STANDARD",
-      ...(input.mediaUrl ? { media: [{ mediaFormat: "PHOTO", sourceUrl: input.mediaUrl }] } : {}),
+      ...(input.mediaUrl ? { media: [{ mediaFormat: input.mediaIsVideo ? "VIDEO" : "PHOTO", sourceUrl: input.mediaUrl }] } : {}),
       ...(callToAction ? { callToAction } : {}),
     }),
   });

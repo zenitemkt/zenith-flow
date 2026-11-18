@@ -43,11 +43,12 @@ describe("publicação direta — regras da arte", () => {
     expect(quickPostMediaError({ platforms: ["FACEBOOK"], format: "FEED", files: [img, vid] })).toMatch(/carrossel/);
   });
 
-  it("Google aceita somente feed com no máximo uma imagem", () => {
+  it("Google não aceita Stories nem mais de um arquivo, mas aceita vídeo único", () => {
     expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "FEED", files: [] })).toBeNull();
     expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "STORY", files: [img] })).toMatch(/Google/);
-    expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "FEED", files: [img, img] })).toMatch(/uma imagem/);
-    expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "FEED", files: [vid] })).toMatch(/uma imagem/);
+    expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "FEED", files: [img, img] })).toMatch(/um arquivo/);
+    expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS"], format: "FEED", files: [vid] })).toBeNull();
+    expect(quickPostMediaError({ platforms: ["GOOGLE_BUSINESS", "INSTAGRAM"], format: "REEL", files: [vid] })).toBeNull();
   });
 });
 

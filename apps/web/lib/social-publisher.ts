@@ -150,7 +150,8 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       const published = await publishGoogleBusinessLocalPost(token, {
         parent: googleBusinessLocationParent(location.accountId, location.locationId),
         summary: caption,
-        mediaUrl: media[0]?.isVideo ? null : media[0]?.url,
+        mediaUrl: media[0]?.url ?? null,
+        mediaIsVideo: media[0]?.isVideo ?? false,
         callToAction: full.googleCallToAction,
         callToActionUrl: full.googleCallToActionUrl,
       });
