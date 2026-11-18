@@ -40,6 +40,8 @@ export interface ClientCardData {
   /** Muda quando o cliente é salvo — força o navegador a buscar logo/banner novos. */
   imageVersion: number;
   formValues: Partial<ClientFormValues>;
+  /** Cliente fictício de demonstração (painel de vendas) — some da lista por padrão. */
+  isDemo: boolean;
 }
 
 function EditClientIconButton({ client }: { client: ClientCardData }) {
@@ -232,20 +234,23 @@ export function ClientsBoard({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [showDemo, setShowDemo] = useState(false);
+  const hasDemo = clients.some((c) => c.isDemo);
 
-  const activeCount = clients.filter((c) => c.active).length;
-  const inactiveCount = clients.length - activeCount;
+  const base = useMemo(() => (showDemo ? clients : clients.filter((c) => !c.isDemo)), [clients, showDemo]);
+  const activeCount = base.filter((c) => c.active).length;
+  const inactiveCount = base.length - activeCount;
 
   const visible = useMemo(() => {
     const q = normalize(query.trim());
-    return clients.filter((client) => {
+    return base.filter((client) => {
       if (filter === "active" && !client.active) return false;
       if (filter === "inactive" && client.active) return false;
       if (!q) return true;
       const haystack = normalize([client.name, client.segment ?? "", ...client.socials.map((s) => socialChipLabel(s.network, s.url))].join(" "));
       return haystack.includes(q);
     });
-  }, [clients, query, filter]);
+  }, [base, query, filter]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -273,12 +278,27 @@ export function ClientsBoard({
             className="h-full flex-1 !border-0 bg-transparent !shadow-none outline-none"
           />
         </label>
+        {hasDemo && (
+          <label className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#E4E7EC] bg-white px-3 text-sm text-[#344054]">
+            <input type="checkbox" checked={showDemo} onChange={(e) => setShowDemo(e.target.checked)} className="h-4 w-4 accent-[#FF2B00]" />
+            Mostrar demonstração
+          </label>
+        )}
         <NewClientForm />
       </div>
 
       {clients.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
           <p className="text-sm text-[#667085]">Nenhum cliente ainda. Crie o primeiro para começar o onboarding.</p>
+        </div>
+      ) : base.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">
+          <p className="text-sm text-[#667085]">
+            Só o cliente de demonstração está cadastrado.{" "}
+            <button type="button" onClick={() => setShowDemo(true)} className="font-semibold text-[#FF2B00] hover:underline">
+              Mostrar demonstração
+            </button>
+          </p>
         </div>
       ) : visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-10 text-center">

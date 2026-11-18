@@ -30,9 +30,10 @@ export default async function CarteiraPage() {
         avatarKey: true,
         bannerKey: true,
         socialLinks: true,
+        isDemo: true,
         segment: { select: { name: true } },
       },
-      orderBy: { name: "asc" },
+      orderBy: [{ isAgencyOwn: "desc" }, { name: "asc" }],
     }),
     prisma.contentItem.groupBy({
       by: ["clientId", "status"],
@@ -68,6 +69,7 @@ export default async function CarteiraPage() {
       driveUrl: client.driveUrl,
       counts: countsByClient.get(client.id) ?? { todo: 0, doing: 0, review: 0, done: 0 },
       imageVersion: client.updatedAt.getTime(),
+      isDemo: client.isDemo,
       formValues: {
         name: client.name,
         document: client.document ?? "",

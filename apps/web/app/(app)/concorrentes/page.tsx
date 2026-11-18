@@ -57,7 +57,11 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
   if (isClientRole(membership.role)) redirect("/");
   const agencyId = membership.agencyId;
   const hidden = await getHiddenClientIds(agencyId, session.user.id);
-  const clients = await prisma.client.findMany({ where: { agencyId, ...visibleClientWhere(hidden) }, orderBy: { name: "asc" }, select: { id: true, name: true } });
+  const clients = await prisma.client.findMany({
+    where: { agencyId, isDemo: false, ...visibleClientWhere(hidden) },
+    orderBy: [{ isAgencyOwn: "desc" }, { name: "asc" }],
+    select: { id: true, name: true },
+  });
   if (clients.length === 0) return <p className="text-sm text-[#667085]">Cadastre um cliente para analisar os concorrentes dele.</p>;
 
   const days = [30, 90, 180, 365].includes(Number(searchParams.dias)) ? Number(searchParams.dias) : 90;

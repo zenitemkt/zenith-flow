@@ -355,6 +355,10 @@ model Client {
   defaultPublishTime     String             @default("10:00")
   /// Perfis já usados em collab do Instagram deste cliente (sem @), para sugerir de novo.
   collabHandles          String[]           @default([])
+  /// Cliente fictício de demonstração (painel de vendas) — some da Carteira por padrão e nunca aparece em Concorrentes.
+  isDemo                 Boolean            @default(false)
+  /// Cliente da própria agência (ex. Zenite Hub) — sempre primeiro nas listas que fazem sentido ordenar assim.
+  isAgencyOwn            Boolean            @default(false)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
