@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { isSafeHttpUrl, isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
 import { Prisma } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
+import { findActiveDuplicateRule } from "@/lib/instagram-post-rules";
 
 interface RouteParams {
   params: { id: string };
@@ -63,6 +64,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const finalMediaId = "mediaId" in data ? data.mediaId : rule.mediaId;
   if (data.active === true && rule.socialPostId && !finalMediaId) {
     return NextResponse.json({ error: "Esta regra liga sozinha quando o post agendado for publicado." }, { status: 409 });
+  }
+
+  const finalActive = "active" in data ? data.active : rule.active;
+  if (finalActive) {
+    const finalKeyword = "keyword" in data ? (data.keyword as string | null) : rule.keyword;
+    const duplicate = await findActiveDuplicateRule({ agencyId: membership.agencyId, clientId: rule.clientId, triggerType: rule.triggerType, keyword: finalKeyword, mediaId: finalMediaId as string | null, excludeId: rule.id });
+    if (duplicate) return NextResponse.json({ error: "Já existe um gatilho igual ativo nesse mesmo canal (mesma palavra-chave e post). Pause o outro antes de ativar este." }, { status: 409 });
   }
 
   const updated = await prisma.instagramAutomationRule.update({ where: { id: rule.id }, data });

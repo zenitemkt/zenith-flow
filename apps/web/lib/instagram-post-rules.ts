@@ -58,6 +58,31 @@ export async function createPendingPostRule(input: { agencyId: string; clientId:
   });
 }
 
+function normalizeKeyword(keyword: string | null): string | null {
+  return keyword ? keyword.trim().toLowerCase() : null;
+}
+
+/**
+ * Evita dois gatilhos iguais ativos ao mesmo tempo no mesmo canal (mesmo tipo + palavra-chave e,
+ * pra comentário, mesmo post específico ou ambos "qualquer post") — daria ambiguidade de qual regra responde.
+ * Em canais diferentes (DM, story, comentário) não há conflito.
+ */
+export async function findActiveDuplicateRule(params: { agencyId: string; clientId: string; triggerType: string; keyword: string | null; mediaId: string | null; excludeId?: string }) {
+  const candidates = await prisma.instagramAutomationRule.findMany({
+    where: {
+      agencyId: params.agencyId,
+      clientId: params.clientId,
+      triggerType: params.triggerType,
+      active: true,
+      ...(params.excludeId ? { id: { not: params.excludeId } } : {}),
+    },
+    select: { id: true, keyword: true, mediaId: true },
+  });
+  const keyword = normalizeKeyword(params.keyword);
+  const mediaId = params.mediaId ?? null;
+  return candidates.find((rule) => normalizeKeyword(rule.keyword) === keyword && (rule.mediaId ?? null) === mediaId) ?? null;
+}
+
 /** Chamado quando o post sai no Instagram: liga as regras que esperavam por ele. Nunca lança erro. */
 export async function activatePendingPostRules(socialPostId: string, mediaId: string | null, permalink: string | null) {
   if (!mediaId) return;

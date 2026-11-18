@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { isSafeHttpUrl, isTrivialFlow, parseFlow } from "@/lib/instagram-flow-model";
 import { Prisma } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
+import { findActiveDuplicateRule } from "@/lib/instagram-post-rules";
 
 function text(value: unknown, maxLength = 1000): string | null {
   if (typeof value !== "string") return null;
@@ -67,6 +68,9 @@ export async function POST(request: Request) {
     triggerType === "comment" && Array.isArray(body?.publicReplyTexts)
       ? body.publicReplyTexts.filter((item: unknown): item is string => typeof item === "string" && Boolean(item.trim())).map((item: string) => item.trim().slice(0, 300)).slice(0, 20)
       : [];
+
+  const duplicate = await findActiveDuplicateRule({ agencyId: membership.agencyId, clientId, triggerType, keyword, mediaId });
+  if (duplicate) return NextResponse.json({ error: "Já existe um gatilho igual ativo nesse mesmo canal (mesma palavra-chave e post). Pause o outro antes de criar este." }, { status: 409 });
 
   const rule = await prisma.instagramAutomationRule.create({
     data: {
