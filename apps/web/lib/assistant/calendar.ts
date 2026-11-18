@@ -45,7 +45,7 @@ function brt(date: string, time: string): Date {
   return new Date(`${date}T${time}:00${TZ_OFFSET}`);
 }
 
-function brtDateString(d: Date): string {
+export function brtDateString(d: Date): string {
   return new Date(d.getTime() - 3 * 3_600_000).toISOString().slice(0, 10);
 }
 

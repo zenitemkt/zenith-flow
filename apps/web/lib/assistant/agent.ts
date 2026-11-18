@@ -5,7 +5,7 @@ import { buildSystemPrompt } from "./prompt";
 import { splitBubbles } from "./style";
 import { downloadMedia, sendText, transcribeAudio } from "./whatsapp";
 import { askPartnersApproval, notifyPartners } from "./notify";
-import { cancelMeeting, createMeeting, findFreeSlots, formatSlot } from "./calendar";
+import { brtDateString, cancelMeeting, createMeeting, findFreeSlots, formatSlot } from "./calendar";
 import { raiseSystemAlert } from "@/lib/system-alerts";
 
 const brl = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -50,7 +50,11 @@ async function leadSummary(leadId: string | null): Promise<string | null> {
 }
 
 export const TOOLS = [
-  { name: "check_availability", description: "Lista horários livres nas agendas dos dois sócios para a reunião rápida.", input_schema: { type: "object", properties: {}, required: [] } },
+  {
+    name: "check_availability",
+    description: "Horários livres pros sócios. Sem `date`, devolve opções espalhadas em dias diferentes (até 2 por dia, manhã e tarde). Com `date`, devolve só os horários livres daquele dia (use quando a pessoa pedir um dia específico).",
+    input_schema: { type: "object", properties: { date: { type: "string", description: "AAAA-MM-DD, opcional" } }, required: [] },
+  },
   {
     name: "book_meeting",
     description: "Agenda a reunião num horário devolvido por check_availability.",
@@ -80,8 +84,28 @@ async function runTool(name: string, input: Record<string, unknown>, conv: Conve
     case "check_availability": {
       const slots = await findFreeSlots(config, now);
       if (!slots.length) return "Sem horários livres nos próximos 7 dias. Chame os sócios com request_human.";
-      const ordered = config.meeting.preferMorning ? [...slots.filter((s) => s.period === "manha"), ...slots.filter((s) => s.period === "tarde")] : slots;
-      return ordered.slice(0, 8).map((s) => `${s.start.toISOString()} = ${formatSlot(s.start)} (${s.period})`).join("\n");
+      const date = typeof input.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(input.date) ? input.date : null;
+      if (date) {
+        const sameDay = slots.filter((s) => brtDateString(s.start) === date);
+        if (!sameDay.length) return `Sem horário livre em ${date}. Avise a pessoa e pergunte outro dia, ou rode check_availability sem data para ver as opções mais próximas.`;
+        return sameDay.slice(0, 6).map((s) => `${s.start.toISOString()} = ${formatSlot(s.start)} (${s.period})`).join("\n");
+      }
+      // Sem dia pedido: no máximo 2 horários por dia (manhã e tarde), espalhados pelos próximos dias —
+      // nunca empilhar tudo nos 2 primeiros dias, senão dias mais à frente somem da lista sem estar ocupados de verdade.
+      const byDay = new Map<string, typeof slots>();
+      for (const slot of slots) {
+        const key = brtDateString(slot.start);
+        (byDay.get(key) ?? byDay.set(key, []).get(key)!).push(slot);
+      }
+      const picked: typeof slots = [];
+      for (const daySlots of byDay.values()) {
+        if (picked.length >= 8) break;
+        const morning = daySlots.find((s) => s.period === "manha");
+        const afternoon = daySlots.find((s) => s.period === "tarde");
+        if (morning) picked.push(morning);
+        if (afternoon) picked.push(afternoon);
+      }
+      return picked.slice(0, 8).map((s) => `${s.start.toISOString()} = ${formatSlot(s.start)} (${s.period})`).join("\n");
     }
     case "book_meeting": {
       const start = new Date(String(input.start_iso));
