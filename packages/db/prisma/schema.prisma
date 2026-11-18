@@ -862,6 +862,10 @@ model ContentItem {
   description     String?
   channel         ContentChannel
   format          String?
+  /// Todas as redes da peça (a mesma arte replicada em cada tamanho). Vazio = cartão antigo: vale `channel`.
+  channels        ContentChannel[] @default([])
+  /// Todos os formatos da peça (ex.: Post estático + Stories). Vazio = cartão antigo: vale `format`.
+  formats         String[]       @default([])
   campaign        String?
   caption         String?
   scheduledDate   DateTime?

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
 import { requirePortalContext } from "@/lib/portal";
-import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { channelsLabel } from "@/lib/content-formats";
 import { MONTH_LABELS, WEEKDAY_LABELS, adjacentMonths, buildMonthCells, monthParam, parseMonth } from "@/lib/content-calendar";
 import { prisma } from "@zenite-mkt/db";
 import {
@@ -33,7 +33,7 @@ function EntryChip({ entry }: { entry: CalendarEntry }) {
   return (
     <span
       className="flex items-center gap-1.5 rounded-lg bg-white/[0.05] px-2 py-1 text-xs text-[#E7E4E0]"
-      title={`${entry.title} (${CONTENT_CHANNEL_LABELS[entry.channel]}, ${CONTENT_PHASE_LABELS[phase]})`}
+      title={`${entry.title} (${channelsLabel(entry)}, ${CONTENT_PHASE_LABELS[phase]})`}
     >
       <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${CONTENT_PHASE_DOT[phase]}`} />
       <span className="truncate">{entry.title}</span>

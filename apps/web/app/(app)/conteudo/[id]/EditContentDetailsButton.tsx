@@ -5,26 +5,35 @@ import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
+import { ChannelFormatPicker } from "@/app/_components/ChannelFormatPicker";
 
 export function EditContentDetailsButton({
   contentId,
   initialTitle,
   initialDescription,
+  initialChannels,
+  initialFormats,
 }: {
   contentId: string;
   initialTitle: string;
   initialDescription: string;
+  initialChannels: string[];
+  initialFormats: string[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
+  const [channels, setChannels] = useState(initialChannels);
+  const [formats, setFormats] = useState(initialFormats);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   function close() {
     setTitle(initialTitle);
     setDescription(initialDescription);
+    setChannels(initialChannels);
+    setFormats(initialFormats);
     setError(null);
     setOpen(false);
   }
@@ -32,12 +41,16 @@ export function EditContentDetailsButton({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (channels.length === 0) {
+      setError("Selecione ao menos uma rede.");
+      return;
+    }
     setLoading(true);
 
     const response = await fetch(`/api/content/${contentId}/details`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description, channels, formats }),
     });
 
     setLoading(false);
@@ -76,6 +89,8 @@ export function EditContentDetailsButton({
               className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             />
           </div>
+
+          <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
 
           {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 

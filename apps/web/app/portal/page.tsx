@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePortalContext } from "@/lib/portal";
-import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { channelsLabel } from "@/lib/content-formats";
 import { prisma } from "@zenite-mkt/db";
 import {
   CONTENT_PHASE_DOT,
@@ -116,7 +116,7 @@ export default async function PortalHomePage() {
                       <span className="min-w-0">
                         <span className="block truncate text-[15px] font-medium text-[#F5F2EE]">{item.title}</span>
                         <span className="mt-0.5 flex gap-2 text-xs text-[#8B8D9A]">
-                          <span>{CONTENT_CHANNEL_LABELS[item.channel]}</span>
+                          <span>{channelsLabel(item)}</span>
                           <span>versão {approval.contentVersion.versionNumber}</span>
                         </span>
                       </span>
@@ -169,7 +169,7 @@ export default async function PortalHomePage() {
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-medium">{item.title}</span>
                       <span className="mt-0.5 flex items-center gap-2 text-xs text-[#8B8D9A]">
-                        <span>{CONTENT_CHANNEL_LABELS[item.channel]}</span>
+                        <span>{channelsLabel(item)}</span>
                         <span className="flex items-center gap-1.5">
                           <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${CONTENT_PHASE_DOT[phase]}`} />
                           {CONTENT_PHASE_LABELS[phase]}

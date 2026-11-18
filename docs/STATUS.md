@@ -1,8 +1,12 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-11-17.
+Última atualização: 2026-11-18.
 
 ## Implementado
+
+- **Peça com várias redes e formatos (2026-11-18)**: `ContentItem.channels`/`formats` (migration `20261118120000_content_channels_formats`, só ADD COLUMN), regras em `lib/content-formats.ts` (tamanhos, rótulos, fallback para `channel`/`format` de cartões antigos), seletor `app/_components/ChannelFormatPicker.tsx` em `NewContentModal` e `EditContentDetailsButton` (`/api/content/:id/details` aceita `channels`/`formats`). Telas: Kanban, detalhe (Tamanhos), calendário, portal (início, aprovações, calendário) e `/aprovar/:token`. `SocialPublishPanel` recebe `defaultPlatforms`. Ver `docs/DECISIONS.md` (2026-11-18).
+  - Testado: `vitest` (`lib/content-formats.test.ts`, 5), `tsc --noEmit`, `lint` e `next build`. A suíte de `lib` tem 1 falha que já existia antes desta mudança (`social-scheduling.test.ts`, "lê um instante por rede e ignora lixo").
+  - **Não testado ao vivo**: criar/editar peça com várias redes no navegador e a migration num banco (Postgres local desligado; vai pelo `migrate deploy` do build de produção).
 
 - **Concorrentes — Fase 3D, sugestões de pauta (2026-11-17)**: a análise cruza temas, formatos, ganchos e posts vencedores de concorrentes diretos e referências com o histórico recente do perfil do cliente. A Claude devolve exatamente dez ideias estruturadas com título, formato, gancho, início de legenda, justificativa e fontes. A equipe escolhe a data e envia cada pauta ao calendário como `ContentItem` em `IDEIA`, vinculada ao cliente. A resposta é validada no servidor e não é persistida até a equipe escolher uma pauta.
 

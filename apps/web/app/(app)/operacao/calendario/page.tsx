@@ -98,6 +98,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
     title: item.title,
     status: item.status,
     channel: item.channel,
+    channels: item.channels,
     scheduledDateISO: item.scheduledDate ? item.scheduledDate.toISOString() : null,
     client: { name: item.client.name },
   });

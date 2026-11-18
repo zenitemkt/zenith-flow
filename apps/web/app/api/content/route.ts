@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma, type ContentChannel } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
+import { parseChannels, parseFormats } from "@/lib/content-formats";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -31,7 +32,11 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const title = optionalString(body?.title);
   const clientId = optionalString(body?.clientId);
-  const channel = body?.channel as ContentChannel | undefined;
+  // Várias redes e formatos num cartão só; `channel`/`format` (um só) continuam aceitos.
+  const channels = parseChannels(body?.channels);
+  const channel = (channels[0] ?? body?.channel) as ContentChannel | undefined;
+  const formats = parseFormats(body?.formats);
+  const format = formats[0] ?? optionalString(body?.format);
 
   if (!title) {
     return NextResponse.json({ error: "Informe o título da peça." }, { status: 400 });
@@ -88,7 +93,9 @@ export async function POST(request: Request) {
         title,
         description: optionalString(body?.description),
         channel,
-        format: optionalString(body?.format),
+        channels: channels.length ? channels : [channel],
+        format,
+        formats: formats.length ? formats : format ? [format] : [],
         campaign: optionalString(body?.campaign),
         caption: optionalString(body?.caption),
         scheduledDate,

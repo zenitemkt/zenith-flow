@@ -1,3 +1,13 @@
+## 2026-11-18 — Peça com várias redes e vários formatos
+
+**Pedido**: o designer faz a mesma arte e replica a prancheta em cada tamanho (ex.: Morada, Instagram 1080×1350 + LinkedIn 1080×1080; Instagram Post + Stories). Marcar várias redes e vários formatos e ter um cartão só, aprovado de uma vez no portal.
+
+**Decisão 1 — listas novas, campos antigos mantidos**: `channels ContentChannel[]` e `formats String[]` em `content_item` (migration só com ADD COLUMN). `channel`/`format` continuam gravados com o primeiro item, para tudo que já usa um valor só (agendamento, quick-post, recorrências, demo). Lista vazia = cartão antigo: `contentChannels()`/`contentFormats()` caem em `channel`/`format`, sem backfill.
+
+**Decisão 2 — um cartão só (mudança de comportamento)**: "Nova peça" deixa de criar um cartão por canal. A aprovação já era por versão (vários arquivos, um botão Aprovar), então o cliente vê todas as pranchetas no mesmo link e aprova tudo junto. O painel de publicação já agenda várias redes por cartão; agora abre com as redes da peça marcadas.
+
+**Decisão 3 — tamanhos padrão** (combinados com o Kevin): feed (Post estático/Carrossel) Instagram e Facebook 1080×1350, LinkedIn 1080×1080; Stories/Reels 1080×1920 (Instagram, Facebook, TikTok, YouTube Shorts); Vídeo YouTube 1280×720. Combinação inexistente (Stories no LinkedIn, Post no TikTok) não entra na lista; rede "Outro" ou formato "Outro" aparece como "a definir".
+
 ## 2026-11-17 — Concorrentes Fase 3A: relatório mensal
 
 **Decisão 1 — mês encerrado, não janela móvel**: o fechamento usa o mês civil anterior em `America/Sao_Paulo`. A geração manual e o cron trabalham com a mesma chave `clientId + month`; isso torna a operação idempotente e mantém meses anteriores consultáveis.

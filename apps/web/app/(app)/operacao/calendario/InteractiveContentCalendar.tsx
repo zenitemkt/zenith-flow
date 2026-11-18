@@ -8,7 +8,6 @@ import { Facebook, Instagram, LayoutGrid, ListChecks, Check, Clock, CalendarDays
 import { WEEKDAY_LABELS, buildMonthCells } from "@/lib/content-calendar";
 import {
   CONTENT_CALENDAR_BUCKET_CLASS,
-  CONTENT_CHANNEL_LABELS,
   CONTENT_STATUS_BADGE_CLASS,
   CONTENT_STATUS_LABELS,
   contentCalendarBucket,
@@ -16,6 +15,7 @@ import {
 } from "@/lib/content";
 import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
 import { QuickPostModal, todaySP, type QuickPostClient } from "./QuickPostModal";
+import { channelsLabel } from "@/lib/content-formats";
 
 const CALENDAR_BUCKET_ICON: Record<ContentCalendarBucket, typeof Clock | null> = {
   neutral: null,
@@ -65,6 +65,7 @@ export interface CalendarContentItem {
   title: string;
   status: ContentStatus;
   channel: ContentChannel;
+  channels: ContentChannel[];
   scheduledDateISO: string | null;
   client: { name: string };
 }
@@ -280,7 +281,7 @@ export function InteractiveContentCalendar({
                                   key={item.id}
                                   href={`/conteudo/${item.id}`}
                                   className={`flex items-center gap-1 truncate rounded px-1.5 py-1 text-xs font-medium ${CONTENT_CALENDAR_BUCKET_CLASS[bucket]}`}
-                                  title={`${item.title} · ${item.client.name} · ${CONTENT_CHANNEL_LABELS[item.channel]} · ${CONTENT_STATUS_LABELS[item.status]}`}
+                                  title={`${item.title} · ${item.client.name} · ${channelsLabel(item)} · ${CONTENT_STATUS_LABELS[item.status]}`}
                                 >
                                   {BucketIcon && <BucketIcon className="h-3 w-3 shrink-0" aria-hidden />}
                                   <span className="truncate">{item.title}</span>
@@ -370,7 +371,7 @@ export function InteractiveContentCalendar({
                         <Link href={`/conteudo/${item.id}`} className="flex flex-1 flex-col gap-0.5 truncate">
                           <span className="truncate text-sm font-medium text-[#101828]">{item.title}</span>
                           <span className="truncate text-xs text-[#667085]">
-                            {item.client.name} · {CONTENT_CHANNEL_LABELS[item.channel]}
+                            {item.client.name} · {channelsLabel(item)}
                             {item.scheduledDateISO
                               ? ` · ${new Date(item.scheduledDateISO).toLocaleDateString("pt-BR", {
                                   day: "2-digit",

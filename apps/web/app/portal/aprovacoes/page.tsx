@@ -1,6 +1,6 @@
 import { requirePortalContext } from "@/lib/portal";
 import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
-import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { channelsAndFormatsLabel } from "@/lib/content-formats";
 import { prisma } from "@zenite-mkt/db";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { PortalApprovalActions } from "./PortalApprovalActions";
@@ -63,7 +63,7 @@ export default async function PortalApprovalsPage() {
                   <div>
                     <h2 className="font-display text-xl font-semibold leading-snug tracking-[-0.015em]">{item.title}</h2>
                     <p className="mt-1 flex flex-wrap gap-x-3 text-sm text-[#8B8D9A]">
-                      <span>{CONTENT_CHANNEL_LABELS[item.channel]}</span>
+                      <span>{channelsAndFormatsLabel(item)}</span>
                       <span>versão {approval.contentVersion.versionNumber}</span>
                       <span>
                         responder até{" "}

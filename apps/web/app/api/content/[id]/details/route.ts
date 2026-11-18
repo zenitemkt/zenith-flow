@@ -3,6 +3,7 @@ import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
+import { parseChannels, parseFormats } from "@/lib/content-formats";
 
 interface RouteParams {
   params: { id: string };
@@ -34,10 +35,22 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Informe o título." }, { status: 400 });
   }
 
+  // Redes e formatos são opcionais aqui (quem só edita título/descrição não manda).
+  const channels = parseChannels(body?.channels);
+  const formats = parseFormats(body?.formats);
+  if (Array.isArray(body?.channels) && channels.length === 0) {
+    return NextResponse.json({ error: "Selecione ao menos uma rede." }, { status: 400 });
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.contentItem.update({
       where: { id: item.id },
-      data: { title, description: description || null },
+      data: {
+        title,
+        description: description || null,
+        ...(channels.length ? { channels, channel: channels[0] } : {}),
+        ...(Array.isArray(body?.formats) ? { formats, format: formats[0] ?? null } : {}),
+      },
     });
     await tx.auditLog.create({
       data: {
@@ -47,7 +60,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         action: "content.details_updated",
         resourceType: "content_item",
         resourceId: item.id,
-        metadata: { title, description: description || null },
+        metadata: { title, description: description || null, ...(channels.length ? { channels } : {}), ...(Array.isArray(body?.formats) ? { formats } : {}) },
       },
     });
   });

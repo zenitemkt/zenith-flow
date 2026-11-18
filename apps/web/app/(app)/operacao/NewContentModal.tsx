@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
-import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { ChannelFormatPicker } from "@/app/_components/ChannelFormatPicker";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
 
 interface ClientOption {
@@ -17,8 +17,6 @@ interface PersonOption {
   name: string;
 }
 
-const CHANNELS = Object.entries(CONTENT_CHANNEL_LABELS);
-const FORMAT_OPTIONS = ["Reels", "Carrossel", "Stories", "Post estático", "Vídeo", "Outro"];
 
 export function NewContentModal({
   clients,
@@ -46,7 +44,7 @@ export function NewContentModal({
       : (clients[0]?.id ?? "");
   const [channels, setChannels] = useState<string[]>(["INSTAGRAM"]);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
-  const [format, setFormat] = useState("");
+  const [formats, setFormats] = useState<string[]>([]);
   const [campaign, setCampaign] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [caption, setCaption] = useState("");
@@ -59,16 +57,12 @@ export function NewContentModal({
     setDescription("");
     setChannels(["INSTAGRAM"]);
     setAssigneeUserIds([]);
-    setFormat("");
+    setFormats([]);
     setCampaign("");
     setScheduledDate("");
     setCaption("");
     setError(null);
     setOpen(false);
-  }
-
-  function toggleChannel(value: string) {
-    setChannels((prev) => (prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value]));
   }
 
   function toggleAssignee(userId: string) {
@@ -81,50 +75,30 @@ export function NewContentModal({
     setError(null);
 
     if (channels.length === 0) {
-      setError("Selecione ao menos um canal.");
+      setError("Selecione ao menos uma rede.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const responses = await Promise.all(
-        channels.map((channel) =>
-          fetch("/api/content", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title,
-              description,
-              clientId,
-              channel,
-              format,
-              campaign,
-              scheduledDate,
-              caption,
-              assigneeUserIds,
-            }),
-          }),
-        ),
-      );
-
-      const failed = responses.find((response) => !response.ok);
-      if (failed) {
-        const body = await failed.json().catch(() => null);
+      // Um cartão só com todas as redes e formatos (antes era um cartão por canal).
+      const response = await fetch("/api/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description, clientId, channels, formats, campaign, scheduledDate, caption, assigneeUserIds }),
+      });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
         setError(body?.error ?? "Não foi possível criar a peça.");
         return;
       }
 
-      const bodies = await Promise.all(responses.map((response) => response.json()));
       close();
-      if (bodies.length === 1) {
-        router.push(`/conteudo/${bodies[0].id}`);
-      } else {
-        router.push("/operacao");
-      }
-      // Em ambos os casos o quadro por baixo (`/operacao`) ganhou card(s) novo(s)
-      // — sem isso, só aparece depois de uma navegação nova (bug reportado pelo
-      // Kevin: card criado não aparecia até trocar de aba e voltar).
+      router.push(`/conteudo/${body.id}`);
+      // O quadro por baixo (`/operacao`) ganhou card novo — sem isso, só aparece
+      // depois de uma navegação nova (bug reportado pelo Kevin: card criado não
+      // aparecia até trocar de aba e voltar).
       router.refresh();
     } finally {
       setLoading(false);
@@ -219,55 +193,9 @@ export function NewContentModal({
               </p>
             </div>
           )}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-[#344054]">
-              Canais para publicar
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {CHANNELS.map(([value, label]) => {
-                const active = channels.includes(value);
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => toggleChannel(value)}
-                    aria-pressed={active}
-                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                      active
-                        ? "bg-[#FF2B00] text-white"
-                        : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-[#98A2B3]">
-              {channels.length > 1
-                ? `Atenção: ${channels.length} canais marcados, então serão criadas ${channels.length} peças (uma para cada).`
-                : "Selecionando mais de um canal, uma peça é criada para cada um."}
-            </p>
-          </div>
+          <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
+          <p className="-mt-1 text-xs text-[#98A2B3]">Tudo vira um cartão só: o designer replica a arte em cada tamanho e o cliente aprova tudo junto.</p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="content-format" className="text-sm font-medium text-[#344054]">
-                Formato (opcional)
-              </label>
-              <select
-                id="content-format"
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-                className="h-11 rounded-lg border border-[#D0D5DD] px-3 text-sm outline-none focus:border-[#FF2B00]"
-              >
-                <option value="">Selecione...</option>
-                {FORMAT_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
             <FormField
               label="Data agendada (opcional)"
               name="scheduledDate"
@@ -314,7 +242,7 @@ export function NewContentModal({
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
               style={{ backgroundColor: "#FF2B00" }}
             >
-              {loading ? "Criando..." : channels.length > 1 ? `Criar ${channels.length} peças` : "Criar peça"}
+              {loading ? "Criando..." : "Criar peça"}
             </button>
           </div>
         </form>

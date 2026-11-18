@@ -118,7 +118,7 @@ export function SocialPublishPanel({
   defaultDate,
   defaultTime,
   defaultFormat,
-  defaultPlatform,
+  defaultPlatforms,
 }: {
   contentId: string;
   clientId: string;
@@ -131,7 +131,8 @@ export function SocialPublishPanel({
   defaultDate: string | null;
   defaultTime: string;
   defaultFormat: SocialPostFormat;
-  defaultPlatform: SocialPlatform | null;
+  /** Redes da peça: o painel já abre com elas marcadas (as que estiverem conectadas). */
+  defaultPlatforms: SocialPlatform[];
 }) {
   const router = useRouter();
   const active = connections.filter((c) => c.status === "ACTIVE");
@@ -144,8 +145,8 @@ export function SocialPublishPanel({
   const igScheduled = scheduled.find((p) => p.platform === "INSTAGRAM");
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(() => {
     if (editing) return Array.from(new Set(scheduled.map((p) => p.platform)));
-    const preferred = active.find((c) => c.platform === defaultPlatform);
-    return preferred ? [preferred.platform] : active.map((c) => c.platform);
+    const preferred = active.filter((c) => defaultPlatforms.includes(c.platform)).map((c) => c.platform);
+    return preferred.length ? preferred : active.map((c) => c.platform);
   });
   const [format, setFormat] = useState<SocialPostFormat>(
     firstScheduled?.format ?? defaultFormat,

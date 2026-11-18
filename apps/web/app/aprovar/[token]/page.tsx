@@ -1,6 +1,6 @@
 import { prisma } from "@zenite-mkt/db";
 import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
-import { CONTENT_CHANNEL_LABELS } from "@/lib/content";
+import { channelsAndFormatsLabel } from "@/lib/content-formats";
 import { MaterialPreview } from "@/app/_components/MaterialPreview";
 import { ApprovalActions } from "./ApprovalActions";
 
@@ -42,7 +42,7 @@ export default async function AprovarPage({ params }: PageProps) {
             </div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">
               {approval.contentVersion.contentItem.client.name} ·{" "}
-              {CONTENT_CHANNEL_LABELS[approval.contentVersion.contentItem.channel]}
+              {channelsAndFormatsLabel(approval.contentVersion.contentItem)}
             </p>
             <h1 className="mb-3 text-lg font-semibold text-[#101828]">
               {approval.contentVersion.contentItem.title}

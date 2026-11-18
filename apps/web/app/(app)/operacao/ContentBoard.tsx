@@ -18,12 +18,12 @@ import {
 import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
 import {
   CONTENT_BOARD_COLUMNS,
-  CONTENT_CHANNEL_LABELS,
   CONTENT_STATUS_BADGE_CLASS,
   CONTENT_STATUS_LABELS,
   contentBoardColumnForStatus,
   type ContentBoardColumnId,
 } from "@/lib/content";
+import { channelsAndFormatsLabel } from "@/lib/content-formats";
 import { NewVersionModal } from "@/app/(app)/conteudo/[id]/NewVersionModal";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 
@@ -37,7 +37,9 @@ export interface BoardContentItem {
   title: string;
   status: ContentStatus;
   channel: ContentChannel;
+  channels: ContentChannel[];
   format: string | null;
+  formats: string[];
   scheduledDateISO: string | null;
   clientId: string;
   clientName: string;
@@ -213,8 +215,7 @@ function ContentCard({
         <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs leading-relaxed text-[#667085]">{item.description}</p>
       )}
       <p className="mt-1 truncate text-xs text-[#98A2B3]">
-        {CONTENT_CHANNEL_LABELS[item.channel]}
-        {item.format ? ` · ${item.format}` : ""}
+        {channelsAndFormatsLabel(item)}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         <span

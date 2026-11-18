@@ -28,6 +28,7 @@ import { VersionMediaGallery } from "@/app/_components/VersionMediaGallery";
 import { ContentPropertiesPanel } from "./ContentPropertiesPanel";
 import { SocialPublishPanel } from "./SocialPublishPanel";
 import { platformForChannel, postFormatFor } from "@/lib/social-scheduling";
+import { artSizes, channelsAndFormatsLabel, channelsLabel, contentChannels, contentFormats, formatsLabel } from "@/lib/content-formats";
 import { getHiddenClientIds, isClientHidden, visibleByClientWhere } from "@/lib/client-access";
 
 /** Rótulos curtos da trilha de etapas — mesmos 5 baldes do quadro de Operação. */
@@ -115,6 +116,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
     }),
   ]);
   const latestMedia = item.versions[0]?.media ?? [];
+  const sizes = artSizes(contentChannels(item), contentFormats(item));
 
   const currentStep = CONTENT_BOARD_COLUMNS.findIndex((c) => c.id === contentBoardColumnForStatus(item.status));
   const isArchived = item.status === "ARQUIVADO";
@@ -146,8 +148,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
           {item.client.name}
           <span className="text-[#98A2B3]">·</span>
           <span className="font-normal text-[#667085]">
-            {CONTENT_CHANNEL_LABELS[item.channel]}
-            {item.format ? ` · ${item.format}` : ""}
+            {channelsAndFormatsLabel(item)}
           </span>
         </Link>
 
@@ -191,7 +192,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
           )}
           <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} primary={!canSubmit} />
           <div className="ml-auto">
-            <EditContentDetailsButton contentId={item.id} initialTitle={item.title} initialDescription={item.description ?? ""} />
+            <EditContentDetailsButton contentId={item.id} initialTitle={item.title} initialDescription={item.description ?? ""} initialChannels={contentChannels(item)} initialFormats={contentFormats(item)} />
           </div>
           {hint && <p className="basis-full text-xs text-[#667085]">{hint}</p>}
         </div>
@@ -207,8 +208,19 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                 {item.client.name}
               </Link>
             </Property>
-            <Property label="Canal">{CONTENT_CHANNEL_LABELS[item.channel]}</Property>
-            <Property label="Formato">{item.format ?? <span className="text-[#98A2B3]">—</span>}</Property>
+            <Property label={contentChannels(item).length > 1 ? "Redes" : "Rede"}>{channelsLabel(item)}</Property>
+            <Property label={contentFormats(item).length > 1 ? "Formatos" : "Formato"}>{formatsLabel(item) || <span className="text-[#98A2B3]">—</span>}</Property>
+            {sizes.length > 0 && (
+              <Property label="Tamanhos">
+                <ul className="flex flex-col gap-0.5">
+                  {sizes.map((s) => (
+                    <li key={`${s.channel}-${s.format}`} className="text-xs">
+                      {CONTENT_CHANNEL_LABELS[s.channel]} · {s.format}: <span className="font-semibold tabular-nums">{s.size ?? "a definir"}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Property>
+            )}
             {item.campaign && <Property label="Campanha">{item.campaign}</Property>}
           </div>
           <ContentPropertiesPanel
@@ -327,7 +339,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
               defaultDate={item.scheduledDate ? item.scheduledDate.toISOString().slice(0, 10) : null}
               defaultTime={item.client.defaultPublishTime}
               defaultFormat={postFormatFor(item.format)}
-              defaultPlatform={platformForChannel(item.channel)}
+              defaultPlatforms={contentChannels(item).map(platformForChannel).filter((p): p is NonNullable<typeof p> => p !== null)}
             />
           </Section>
 
