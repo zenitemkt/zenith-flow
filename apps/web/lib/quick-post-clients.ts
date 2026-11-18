@@ -21,6 +21,7 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
       name: true,
       defaultPublishTime: true,
       avatarKey: true,
+      collabHandles: true,
       socialConnections: {
         where: { platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
         select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
@@ -40,6 +41,7 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
     name: c.name,
     defaultPublishTime: c.defaultPublishTime,
     hasAvatar: Boolean(c.avatarKey),
+    collabHandles: c.collabHandles,
     connections: [
       ...c.socialConnections.map((conn) => ({ platform: conn.platform, name: conn.name, username: conn.username, pictureUrl: conn.pictureUrl, active: conn.status === "ACTIVE" })),
       ...c.googleBusinessLocations.map((location) => ({ platform: "GOOGLE_BUSINESS" as const, name: location.name, username: null, pictureUrl: null, active: location.verified !== false })),
@@ -48,7 +50,7 @@ export async function loadQuickPostClients(agencyId: string, activeClientId?: st
 
   if (activeClientId && !clients.some((c) => c.id === activeClientId)) {
     const filtered = await prisma.client.findFirst({ where: { AND: [visibleClientWhere(hidden)], id: activeClientId, agencyId }, select: { id: true, name: true } });
-    if (filtered) clients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", hasAvatar: false, connections: [] });
+    if (filtered) clients.unshift({ id: filtered.id, name: filtered.name, defaultPublishTime: "10:00", hasAvatar: false, connections: [], collabHandles: [] });
   }
   return clients;
 }

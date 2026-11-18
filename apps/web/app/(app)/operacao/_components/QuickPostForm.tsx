@@ -23,6 +23,8 @@ export interface QuickPostClient {
   defaultPublishTime: string;
   hasAvatar: boolean;
   connections: { platform: SocialPlatform; name: string; username?: string | null; pictureUrl?: string | null; active: boolean }[];
+  /** Perfis já usados em collab deste cliente (sem @), para sugerir de novo. */
+  collabHandles: string[];
 }
 
 const ICON = { INSTAGRAM: Instagram, FACEBOOK: Facebook, GOOGLE_BUSINESS: MapPin } as const;
@@ -506,6 +508,24 @@ export function QuickPostForm({
               <input value={collabText} onChange={(e) => setCollabText(e.target.value)} placeholder="@perfil1, @perfil2" className={INPUT} />
               <span className="text-xs font-normal text-[#667085]">Até 3 perfis, separados por vírgula. Cada um recebe o convite no Instagram e precisa aceitar para o post aparecer no perfil dele.</span>
             </label>
+            {client && client.collabHandles.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {client.collabHandles.map((handle) => (
+                  <button
+                    key={handle}
+                    type="button"
+                    onClick={() => {
+                      if (collaborators.some((c) => c.toLowerCase() === handle.toLowerCase())) return;
+                      setCollabText((prev) => [...collaborators, handle].join(", "));
+                    }}
+                    disabled={collaborators.length >= 3 || collaborators.some((c) => c.toLowerCase() === handle.toLowerCase())}
+                    className="rounded-full border border-[#D0D5DD] bg-white px-2.5 py-1 text-xs font-medium text-[#344054] hover:bg-[#F2F4F7] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    @{handle}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

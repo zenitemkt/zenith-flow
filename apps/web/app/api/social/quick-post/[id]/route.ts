@@ -7,6 +7,7 @@ import { publishPostsNow } from "@/lib/social-publisher";
 import { QUICK_POST_AUDIT_ACTION } from "@/lib/social-quick-post";
 import { createPendingPostRule, parseMiniChatInput } from "@/lib/instagram-post-rules";
 import { canSeeClient } from "@/lib/client-access";
+import { rememberCollabHandles } from "@/lib/client-collab";
 
 export const maxDuration = 60;
 
@@ -115,6 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM", format: "REEL" }, data: { trialStrategy } });
     await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey } });
   }
+  if (collaborators.length) await rememberCollabHandles(item.clientId, collaborators);
 
   if (miniChat) {
     const igPost = await prisma.socialPost.findFirst({ where: { id: { in: ids }, platform: "INSTAGRAM" }, select: { id: true, clientId: true } });

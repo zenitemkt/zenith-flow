@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@/lib/social-scheduling";
 import { publishPostsNow } from "@/lib/social-publisher";
 import { canSeeClient } from "@/lib/client-access";
+import { rememberCollabHandles } from "@/lib/client-collab";
 
 export const maxDuration = 60;
 
@@ -70,6 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (collaborators.length || coverOffsetMs !== null || coverKey || trialStrategy) {
     await prisma.socialPost.updateMany({ where: { id: { in: ids }, platform: "INSTAGRAM" }, data: { collaborators, coverOffsetMs, coverKey, trialStrategy: format === "REEL" ? trialStrategy : null } });
   }
+  if (collaborators.length) await rememberCollabHandles(item.clientId, collaborators);
 
   if (!now) return NextResponse.json({ ok: true, scheduled: ids.length }, { status: 201 });
 

@@ -353,6 +353,8 @@ model Client {
   autoScheduleOnApproval Boolean            @default(false)
   /// Horário padrão (HH:MM, São Paulo) usado no agendamento automático.
   defaultPublishTime     String             @default("10:00")
+  /// Perfis já usados em collab do Instagram deste cliente (sem @), para sugerir de novo.
+  collabHandles          String[]           @default([])
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
