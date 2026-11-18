@@ -77,6 +77,39 @@ export async function publishBlogDraft(ref: GithubRepoRef, input: PublishBlogDra
   }
 }
 
+/** Dispara o deploy pelo Deploy Hook da Vercel (configurado em Settings → Git do projeto zenitehub). Nunca lança — falha aqui não deve derrubar a publicação, que já foi commitada. */
+async function triggerZenitehubDeployHook(agencyId: string): Promise<void> {
+  const url = process.env.ZENITEHUB_DEPLOY_HOOK_URL;
+  const key = "blog:deploy-hook";
+  if (!url) {
+    await raiseSystemAlert({
+      agencyId,
+      key,
+      category: "BLOG",
+      severity: "WARNING",
+      title: "Artigo publicado no GitHub, mas sem Deploy Hook configurado",
+      detail: "Configure ZENITEHUB_DEPLOY_HOOK_URL (Vercel → projeto zenitehub → Settings → Git → Deploy Hooks) para o site publicar sozinho.",
+      href: "/automacoes/blog",
+    }).catch(() => null);
+    return;
+  }
+  try {
+    const response = await fetch(url, { method: "POST" });
+    if (!response.ok) throw new Error(`Deploy hook respondeu ${response.status}`);
+    await resolveSystemAlert(agencyId, key);
+  } catch (error) {
+    await raiseSystemAlert({
+      agencyId,
+      key,
+      category: "BLOG",
+      severity: "WARNING",
+      title: "Artigo publicado no GitHub, mas o deploy na Vercel falhou",
+      detail: error instanceof Error ? error.message : "Erro desconhecido ao chamar o deploy hook.",
+      href: "/automacoes/blog",
+    }).catch(() => null);
+  }
+}
+
 async function publishBlogDraftInner(ref: GithubRepoRef, input: PublishBlogDraftInput): Promise<{ commitPaths: string[] }> {
   const workDir = mkdtempSync(path.join(tmpdir(), "blog-publish-"));
   try {
@@ -221,6 +254,11 @@ async function publishBlogDraftInner(ref: GithubRepoRef, input: PublishBlogDraft
           throw new Error(`${failed.length} de ${writes.length} arquivo(s) não foram commitados mesmo após nova tentativa: ${detail}`);
         }
       }
+      // A Vercel bloqueia o deploy automático desses commits ("commit author doesn't have
+      // permission to create deployments" — o autor via API do GitHub não é reconhecido pela
+      // Vercel), então o site fica parado até alguém publicar manualmente. O Deploy Hook ignora
+      // essa checagem e dispara o deploy direto (incidente de 2026-11-18: nada saía no ar desde 09/11).
+      await triggerZenitehubDeployHook(input.draft.agencyId);
     }
 
     return { commitPaths: writes.map((w) => w.path) };
