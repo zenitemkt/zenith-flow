@@ -199,7 +199,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
             </div>
             {current.p.lastError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">Última atualização falhou: {current.p.lastError}</p>}
             {!current.p.isOwn && current.p.category === "REFERENCE" && <p className="mt-3 rounded-lg bg-[#F4F3FF] px-3 py-2 text-xs text-[#5925DC]">Este perfil serve como referência de mercado. Os dados e análises continuam disponíveis, mas ele não participa de rankings, posições ou gráficos de disputa.</p>}
-            <CompetitorWebsiteEditor competitorId={current.p.id} instagramWebsite={current.p.website} websiteOverride={current.p.websiteOverride} />
+            <CompetitorWebsiteEditor key={current.p.id} competitorId={current.p.id} instagramWebsite={current.p.website} websiteOverride={current.p.websiteOverride} />
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               <Stat label="Seguidores" value={current.p.followers !== null ? int(current.p.followers) : "—"} hint={current.growth !== null && current.snapshotDays > 1 ? `${current.growth >= 0 ? "+" : ""}${int(current.growth)} no período` : "histórico começa agora"} />
               <Stat label="Posts no período" value={String(current.stats.posts)} hint={`${dec(current.stats.postsPerWeek)} por semana`} />
