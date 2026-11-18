@@ -4,6 +4,8 @@ import { prisma, type SocialPlatform } from "@zenite-mkt/db";
 import { fetchMetaPages, type MetaPageOption } from "@/lib/meta-social";
 import { SOCIAL_OAUTH_PENDING_COOKIE, decodeSocialOAuthPending } from "@/lib/social-oauth-pending";
 import { DisconnectSocialButton, SocialPagePicker, SocialSettingsForm } from "./SocialConnectionsClient";
+import { GoogleBusinessLocationPicker } from "./GoogleBusinessLocationPicker";
+import { googleBusinessConfigured } from "@/lib/google-business";
 
 const ERROR_TEXT: Record<string, string> = {
   authorization_denied: "A autorização foi cancelada na Meta.",
@@ -58,6 +60,9 @@ export async function SocialConnectionsSection({
   }
 
   const hasMeta = byPlatform.has("FACEBOOK") || byPlatform.has("INSTAGRAM");
+  const googleLocation = googleBusinessConfigured()
+    ? await prisma.googleBusinessLocation.findFirst({ where: { clientId }, select: { name: true } })
+    : null;
 
   return (
     <section id="redes" className="rounded-xl border border-[#E4E7EC] bg-white p-4">
@@ -109,24 +114,30 @@ export async function SocialConnectionsSection({
                       ? `Com erro: ${connection.lastError ?? "reconecte"}`
                       : connection.name
                     : id === "GOOGLE_BUSINESS"
-                      ? "Em breve — aguardando liberação da API pelo Google"
+                      ? googleLocation
+                        ? googleLocation.name
+                        : googleBusinessConfigured()
+                          ? "Nenhuma localização vinculada"
+                          : "Em breve — aguardando liberação da API pelo Google"
                       : id === "INSTAGRAM" && byPlatform.has("FACEBOOK")
                         ? "A Página escolhida não tem Instagram profissional vinculado"
                         : "Não conectado"}
                 </p>
               </div>
-              {connection ? (
-                <>
-                  <span
-                    className={`hidden rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${
-                      connection.status === "ACTIVE" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEE4E2] text-[#B42318]"
-                    }`}
-                  >
-                    {connection.status === "ACTIVE" ? "Conectado" : "Erro"}
-                  </span>
-                  <DisconnectSocialButton connectionId={connection.id} label={label} />
-                </>
-              ) : null}
+              {id === "GOOGLE_BUSINESS"
+                ? googleBusinessConfigured() && <GoogleBusinessLocationPicker clientId={clientId} linked={googleLocation} />
+                : connection ? (
+                    <>
+                      <span
+                        className={`hidden rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${
+                          connection.status === "ACTIVE" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEE4E2] text-[#B42318]"
+                        }`}
+                      >
+                        {connection.status === "ACTIVE" ? "Conectado" : "Erro"}
+                      </span>
+                      <DisconnectSocialButton connectionId={connection.id} label={label} />
+                    </>
+                  ) : null}
             </li>
           );
         })}

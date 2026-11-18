@@ -61,6 +61,54 @@ export async function refreshGoogleBusinessAccessToken(refreshToken: string): Pr
   return body.access_token;
 }
 
+import { prisma } from "@zenite-mkt/db";
+import { decryptSecret } from "@/lib/crypto-secrets";
+
+/** Troca o refresh token da agência por um access token válido na hora. */
+export async function withGoogleBusinessToken<T>(agencyId: string, fn: (accessToken: string) => Promise<T>): Promise<T> {
+  const connection = await prisma.googleBusinessConnection.findUnique({ where: { agencyId } });
+  if (!connection || connection.status !== "ACTIVE") throw new Error("Conecte a conta do Google Meu Negócio em Integrações antes de vincular um cliente.");
+  const accessToken = await refreshGoogleBusinessAccessToken(decryptSecret(connection.refreshTokenEnc));
+  return fn(accessToken);
+}
+
+export interface GoogleBusinessLocationOption {
+  accountId: string;
+  locationId: string;
+  name: string;
+  address: string | null;
+}
+
+/** Contas e localizações que a conta conectada do Google administra. */
+export async function listGoogleBusinessLocations(accessToken: string): Promise<GoogleBusinessLocationOption[]> {
+  const accountsRes = await fetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!accountsRes.ok) throw new Error(`O Google recusou listar as contas (${accountsRes.status}).`);
+  const accountsBody = (await accountsRes.json()) as { accounts?: { name: string }[] };
+  const options: GoogleBusinessLocationOption[] = [];
+  for (const account of accountsBody.accounts ?? []) {
+    const readMask = "name,title,storefrontAddress";
+    let pageToken: string | undefined;
+    do {
+      const url = new URL(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations`);
+      url.searchParams.set("readMask", readMask);
+      url.searchParams.set("pageSize", "100");
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const locationsRes = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!locationsRes.ok) break;
+      const locationsBody = (await locationsRes.json()) as {
+        locations?: { name: string; title?: string; storefrontAddress?: { addressLines?: string[]; locality?: string } }[];
+        nextPageToken?: string;
+      };
+      for (const location of locationsBody.locations ?? []) {
+        const address = location.storefrontAddress ? [...(location.storefrontAddress.addressLines ?? []), location.storefrontAddress.locality].filter(Boolean).join(", ") : null;
+        options.push({ accountId: account.name, locationId: location.name, name: location.title ?? location.name, address });
+      }
+      pageToken = locationsBody.nextPageToken;
+    } while (pageToken);
+  }
+  return options;
+}
+
 export function googleBusinessLocationParent(accountId: string, locationId: string): string {
   if (locationId.startsWith("accounts/")) return locationId;
   const account = accountId.startsWith("accounts/") ? accountId : `accounts/${accountId}`;
