@@ -31,6 +31,7 @@ export default async function CarteiraPage() {
         bannerKey: true,
         socialLinks: true,
         isDemo: true,
+        isAgencyOwn: true,
         segment: { select: { name: true } },
       },
       orderBy: [{ isAgencyOwn: "desc" }, { name: "asc" }],
@@ -70,6 +71,7 @@ export default async function CarteiraPage() {
       counts: countsByClient.get(client.id) ?? { todo: 0, doing: 0, review: 0, done: 0 },
       imageVersion: client.updatedAt.getTime(),
       isDemo: client.isDemo,
+      isAgencyOwn: client.isAgencyOwn,
       formValues: {
         name: client.name,
         document: client.document ?? "",

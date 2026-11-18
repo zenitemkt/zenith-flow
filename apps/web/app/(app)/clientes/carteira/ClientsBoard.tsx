@@ -42,6 +42,8 @@ export interface ClientCardData {
   formValues: Partial<ClientFormValues>;
   /** Cliente fictício de demonstração (painel de vendas) — some da lista por padrão. */
   isDemo: boolean;
+  /** Cliente da própria agência (ex. Zenite Hub) — não conta nos números de Ativos/Inativos/Total. */
+  isAgencyOwn: boolean;
 }
 
 function EditClientIconButton({ client }: { client: ClientCardData }) {
@@ -238,8 +240,10 @@ export function ClientsBoard({
   const hasDemo = clients.some((c) => c.isDemo);
 
   const base = useMemo(() => (showDemo ? clients : clients.filter((c) => !c.isDemo)), [clients, showDemo]);
-  const activeCount = base.filter((c) => c.active).length;
-  const inactiveCount = base.length - activeCount;
+  // Demonstração e o cliente da própria agência não são "carteira" de verdade: não entram na contagem.
+  const countable = useMemo(() => clients.filter((c) => !c.isDemo && !c.isAgencyOwn), [clients]);
+  const activeCount = countable.filter((c) => c.active).length;
+  const inactiveCount = countable.length - activeCount;
 
   const visible = useMemo(() => {
     const q = normalize(query.trim());
@@ -262,7 +266,7 @@ export function ClientsBoard({
         <div className="flex gap-2">
           <Counter icon={<CheckCircle2 size={14} className="text-[#3dd68c]" aria-hidden />} value={activeCount} label="Ativos" active={filter === "active"} onClick={() => setFilter(filter === "active" ? "all" : "active")} />
           <Counter icon={<RotateCcw size={14} className="text-[#ff8a80]" aria-hidden />} value={inactiveCount} label="Inativos" active={filter === "inactive"} onClick={() => setFilter(filter === "inactive" ? "all" : "inactive")} />
-          <Counter icon={<Users size={14} className="text-[#93b4ff]" aria-hidden />} value={clients.length} label="Total" active={filter === "all"} onClick={() => setFilter("all")} />
+          <Counter icon={<Users size={14} className="text-[#93b4ff]" aria-hidden />} value={countable.length} label="Total" active={filter === "all"} onClick={() => setFilter("all")} />
         </div>
       </div>
 
