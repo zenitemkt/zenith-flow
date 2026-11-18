@@ -210,7 +210,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
             </div>
           </section>
 
-          <GoogleReviewsPanel competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
+          <GoogleReviewsPanel key={current.p.id} competitorId={current.p.id} initialQuery={`${current.p.displayName || current.p.igUsername}`} place={{ id: current.p.googlePlaceId, name: current.p.googlePlaceName, address: current.p.googlePlaceAddress, rating: current.p.googleRating, reviewCount: current.p.googleReviewCount, syncedAt: current.p.googleLastSyncAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: current.p.googleLastError }} />
 
           <section className={CARD}>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
