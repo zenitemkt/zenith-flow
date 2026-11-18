@@ -67,7 +67,8 @@ interface ComparisonData {
   };
 }
 
-const COLORS = ["#FF2B00", "#175CD3", "#027A48", "#7A5AF8", "#DC6803", "#475467"];
+// #FF2B00 (índice 0) é a cor da marca, reservada para o perfil do cliente — as demais evitam tons de laranja/vermelho para não confundir.
+const COLORS = ["#FF2B00", "#175CD3", "#027A48", "#7A5AF8", "#0E7490", "#DB2777", "#475467"];
 const number = (value: number) => Math.round(value).toLocaleString("pt-BR");
 const decimal = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
