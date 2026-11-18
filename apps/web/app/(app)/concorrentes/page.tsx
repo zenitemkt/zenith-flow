@@ -63,7 +63,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     include: {
       posts: { where: { timestamp: { gte: since } } },
       snapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } },
-      ads: { orderBy: [{ active: "desc" }, { startedAt: "desc" }, { lastSeenAt: "desc" }] },
+      ads: { orderBy: [{ active: "desc" }, { startedAt: "desc" }, { lastSeenAt: "desc" }], take: 60 },
       googleSnapshots: { where: { day: { gte: since } }, orderBy: { day: "asc" } },
     },
   });

@@ -28,8 +28,8 @@ export function parseCompetitorContentIdeas(raw: string): CompetitorContentIdea[
     const sources = Array.isArray(row.sources) ? row.sources.filter((source): source is string => typeof source === "string").map((source) => source.trim()).filter(Boolean).slice(0, 3) : [];
     return [{ title, format, hook, captionOpening, rationale, sources }];
   });
-  if (ideas.length !== 10) throw new Error(`A IA devolveu ${ideas.length} ideias válidas em vez de 10.`);
-  return ideas;
+  if (ideas.length < 5) throw new Error(`A IA devolveu só ${ideas.length} ideias completas. Tente de novo.`);
+  return ideas.slice(0, 10);
 }
 
 export async function generateCompetitorContentIdeas(clientId: string, agencyId: string, periodDays: number) {

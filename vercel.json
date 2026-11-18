@@ -6,9 +6,6 @@
   "crons": [
     { "path": "/api/cron/meta-sync", "schedule": "0 9 * * *" },
     { "path": "/api/cron/competitors-sync", "schedule": "30 9 * * *" },
-    { "path": "/api/cron/competitor-reports", "schedule": "0 11 1 * *" },
-    { "path": "/api/cron/competitors-google-sync", "schedule": "15 10 * * *" },
-    { "path": "/api/cron/competitors-pagespeed", "schedule": "0 12 * * *" },
     { "path": "/api/cron/site-monitor", "schedule": "0 10 * * *" },
     { "path": "/api/cron/site-monitor", "schedule": "0 13 * * *" }
   ],

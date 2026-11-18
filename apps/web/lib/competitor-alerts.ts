@@ -176,6 +176,11 @@ export async function generateCompetitorAlerts(agencyId: string, now = new Date(
       href: alert.href,
     });
   }
-  await resolveSystemAlertsByPrefix(agencyId, "competitor:", active.map((alert) => alert.key));
+  // Só reconcilia o que esta função gera. Os alertas de anúncio novo (competitor:newad:) vêm da
+  // importação da Biblioteca e seriam fechados sem motivo se o prefixo fosse "competitor:".
+  const keys = active.map((alert) => alert.key);
+  for (const prefix of ["competitor:viral:", "competitor:growth:", "competitor:cadence:", "competitor:format:"]) {
+    await resolveSystemAlertsByPrefix(agencyId, prefix, keys);
+  }
   return { competitors: competitors.length, alerts: active.length };
 }

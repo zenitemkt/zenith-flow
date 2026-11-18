@@ -11,6 +11,6 @@ describe("sugestões de pauta dos concorrentes", () => {
   });
 
   it("recusa respostas incompletas", () => {
-    expect(() => parseCompetitorContentIdeas(JSON.stringify({ ideas: [idea(1)] }))).toThrow(/em vez de 10/);
+    expect(() => parseCompetitorContentIdeas(JSON.stringify({ ideas: [idea(1)] }))).toThrow(/ideias completas/);
   });
 });
