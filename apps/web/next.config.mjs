@@ -13,6 +13,8 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
+    // instrumentation.ts registra o "acordador" dos crons nas escritas do Prisma (lib/cron-wake.ts).
+    instrumentationHook: true,
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

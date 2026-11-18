@@ -43,6 +43,50 @@ export async function handlePartnerButton(agencyId: string, buttonId: string) {
   await prisma.assistantConversation.update({ where: { id: booking.conversationId }, data: { replyDueAt: replyAt(5) } });
 }
 
+/**
+ * Quando a próxima rodada tem trabalho (lib/cron-wake.ts): resposta pendente, aprovação de sócio que
+ * expira, lembrete de confirmação e aviso de início. Espelha as condições de `processAssistantQueue`.
+ * Só olha até ~25h à frente — o cron-wake nunca dorme além da próxima hora cheia.
+ */
+export async function nextAssistantWorkAt(now = new Date()): Promise<Date[]> {
+  const [firstReply, pending, upcoming] = await Promise.all([
+    prisma.assistantConversation.aggregate({ where: { mode: "bot", replyDueAt: { not: null } }, _min: { replyDueAt: true } }),
+    prisma.assistantBooking.findMany({ where: { status: "pending_partner" }, select: { agencyId: true, createdAt: true } }),
+    prisma.assistantBooking.findMany({
+      where: {
+        status: { in: ["scheduled", "confirmed"] },
+        startsAt: { gt: new Date(now.getTime() - 15 * 60_000), lt: new Date(now.getTime() + 25 * 3_600_000) },
+        OR: [{ status: "scheduled", reminderSentAt: null }, { status: "confirmed", startNoticeSentAt: null }],
+      },
+      select: { agencyId: true, status: true, startsAt: true },
+    }),
+  ]);
+  const candidates: Date[] = [];
+  if (firstReply._min.replyDueAt) candidates.push(firstReply._min.replyDueAt);
+
+  const configs = new Map<string, Awaited<ReturnType<typeof loadAssistant>>>();
+  const assistantOf = async (agencyId: string) => {
+    if (!configs.has(agencyId)) configs.set(agencyId, await loadAssistant(agencyId));
+    return configs.get(agencyId)!;
+  };
+  for (const booking of pending) {
+    const { config } = await assistantOf(booking.agencyId);
+    candidates.push(new Date(booking.createdAt.getTime() + config.meeting.partnerApprovalTimeoutMinutes * 60_000));
+  }
+  for (const booking of upcoming) {
+    const { enabled, config } = await assistantOf(booking.agencyId);
+    if (!enabled) continue;
+    if (booking.status === "scheduled") {
+      if (booking.startsAt <= now) continue; // lembrete só sai antes do início
+      // processAssistantQueue só enxerga reuniões nas próximas 24h e lembra `confirmHoursBefore` antes.
+      candidates.push(new Date(booking.startsAt.getTime() - Math.min(config.reminders.confirmHoursBefore, 24) * 3_600_000));
+    } else if (config.reminders.sendStartNotice) {
+      candidates.push(booking.startsAt);
+    }
+  }
+  return candidates;
+}
+
 /** Rodada do agendador (chamada a cada minuto): respostas vencidas, aprovações expiradas, lembretes e aviso de início. */
 export async function processAssistantQueue(): Promise<Record<string, number>> {
   const now = new Date();

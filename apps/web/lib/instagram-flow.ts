@@ -371,6 +371,18 @@ export async function continueFlowWithReply(input: {
 }
 
 /** Agendador de minuto em minuto: retoma atrasos vencidos, aplica desistência por tempo e expira sessões paradas. */
+/** Quando o cron precisa rodar por causa das sequências (lib/cron-wake.ts): próxima retomada ou expiração da janela de 24h. */
+export async function nextFlowSessionWorkAt(): Promise<Date[]> {
+  const [firstResume, oldestWaiting] = await Promise.all([
+    prisma.instagramFlowSession.aggregate({ where: { status: { in: ["waiting_delay", "waiting_input"] }, resumeAt: { not: null } }, _min: { resumeAt: true } }),
+    prisma.instagramFlowSession.aggregate({ where: { status: { in: ["waiting_input", "waiting_reply", "waiting_delay"] }, resumeAt: null }, _min: { updatedAt: true } }),
+  ]);
+  const candidates: Date[] = [];
+  if (firstResume._min.resumeAt) candidates.push(firstResume._min.resumeAt);
+  if (oldestWaiting._min.updatedAt) candidates.push(new Date(oldestWaiting._min.updatedAt.getTime() + MESSAGING_WINDOW_MS));
+  return candidates;
+}
+
 export async function processDueFlowSessions(budgetMs: number): Promise<{ resumed: number; expired: number }> {
   const started = Date.now();
   const now = new Date();

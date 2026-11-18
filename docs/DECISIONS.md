@@ -1,3 +1,13 @@
+## 2026-11-18 — Crons externos sem acordar o Neon a cada minuto
+
+**Contexto**: o Neon (Free: 100 CU-h/projeto/mês, scale-to-zero após 5 min ocioso) pausou o projeto. Os dois cronjobs do cron-job.org (posts/sequências e fila da Milena) batiam a cada minuto e consultavam o banco sempre, então ele nunca desligava (~0,25 CU × 720 h ≈ 180 CU-h).
+
+**Decisão 1 — plano no Runtime Cache, banco só quando há trabalho**: cada cron grava `{ nextDueAt, computedAt }` no Runtime Cache (`@vercel/functions`, grátis no Hobby até 1M leituras/200K gravações; uso ≈ 170K leituras/mês). O minuto seguinte só lê o cache. Escolhido em vez de espaçar o cron (atrasaria posts e a Milena) ou de pagar a Neon. O cron-job.org continua a cada minuto.
+
+**Decisão 2 — escritas acordam o cron via middleware do Prisma**: `@zenite-mkt/db` expõe `setModelWriteListener`; um `$use` avisa depois de cada escrita com linhas afetadas nas tabelas de fila, e `instrumentation.ts` registra `onModelWrite` (grava `touched`). Fica num só lugar em vez de espalhar chamadas por cada rota que agenda algo. `$use` em vez de `$extends` para não mudar o tipo do `prisma` exportado (precisará migrar se o Prisma subir para 6).
+
+**Decisão 3 — sempre fail-open**: sem plano, cache com erro, `touched` até 15 s antes do cálculo (transação ainda sem COMMIT, relógios), ou horário vencido → consulta o banco como antes. O plano nunca passa da próxima hora cheia UTC, para as limpezas (PUBLISHING travado, sessões expiradas, peças excluídas por FK) e para os dois crons acordarem o banco juntos. Plano não é gravado se a rodada ou o cálculo falhar.
+
 ## 2026-11-18 — Peça com várias redes e vários formatos
 
 **Pedido**: o designer faz a mesma arte e replica a prancheta em cada tamanho (ex.: Morada, Instagram 1080×1350 + LinkedIn 1080×1080; Instagram Post + Stories). Marcar várias redes e vários formatos e ter um cartão só, aprovado de uma vez no portal.

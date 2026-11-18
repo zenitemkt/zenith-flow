@@ -295,6 +295,24 @@ export const MISSED_SCHEDULE_ERROR =
  * processamento, dentro do tempo disponível. Chamado pelo cron externo (todas
  * as agências) e pelo sistema aberto no navegador (`agencyId` da sessão).
  */
+/**
+ * Quando o cron precisa rodar de novo por causa dos posts (lib/cron-wake.ts):
+ * primeiro horário/nova tentativa pendente ou PUBLISHING que ficará "travado".
+ * Pode devolver um horário já passado (sobrou trabalho) — então roda no próximo minuto.
+ */
+export async function nextSocialPostWorkAt(): Promise<Date[]> {
+  const [firstPublish, firstRetry, oldestPublishing] = await Promise.all([
+    prisma.socialPost.aggregate({ where: { status: "SCHEDULED", nextAttemptAt: null }, _min: { publishAt: true } }),
+    prisma.socialPost.aggregate({ where: { status: { in: ["SCHEDULED", "PROCESSING"] }, nextAttemptAt: { not: null } }, _min: { nextAttemptAt: true } }),
+    prisma.socialPost.aggregate({ where: { status: "PUBLISHING" }, _min: { updatedAt: true } }),
+  ]);
+  const candidates: Date[] = [];
+  if (firstPublish._min.publishAt) candidates.push(firstPublish._min.publishAt);
+  if (firstRetry._min.nextAttemptAt) candidates.push(firstRetry._min.nextAttemptAt);
+  if (oldestPublishing._min.updatedAt) candidates.push(new Date(oldestPublishing._min.updatedAt.getTime() + STALE_PUBLISHING_MS));
+  return candidates;
+}
+
 export async function publishDueSocialPosts(
   budgetMs: number,
   now = new Date(),

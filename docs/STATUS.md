@@ -4,6 +4,10 @@
 
 ## Implementado
 
+- **Crons sem acordar o Neon (2026-11-18)**: `lib/cron-wake.ts` (decisão pura `decideCronRun`, plano no Runtime Cache, `refreshCronPlan`, `onModelWrite`), `instrumentation.ts` (+ `experimental.instrumentationHook`), ouvinte de escrita em `packages/db/src/client.ts`. Próximo trabalho: `nextSocialPostWorkAt` (`lib/social-publisher.ts`), `nextFlowSessionWorkAt` (`lib/instagram-flow.ts`), `nextAssistantWorkAt` (`lib/assistant/process.ts`). As rotas `/api/cron/social-publish` e `/api/assistant/process` respondem `idle: true` sem consultar o banco. Ver `docs/DECISIONS.md` (2026-11-18).
+  - Testado: `vitest` (`lib/cron-wake.test.ts`, 12), `tsc --noEmit`, `lint` e `next build`. Mesma falha antiga em `social-scheduling.test.ts`.
+  - **Não testado ao vivo**: o banco Neon está pausado (cota do Free) até o próximo ciclo ou upgrade. Depois do deploy, **reativar os dois cronjobs no cron-job.org** (ficaram "Inativo" pelas falhas) e conferir em Observability → Runtime Cache e na resposta do cron (`idle`/`wake`).
+
 - **Peça com várias redes e formatos (2026-11-18)**: `ContentItem.channels`/`formats` (migration `20261118120000_content_channels_formats`, só ADD COLUMN), regras em `lib/content-formats.ts` (tamanhos, rótulos, fallback para `channel`/`format` de cartões antigos), seletor `app/_components/ChannelFormatPicker.tsx` em `NewContentModal` e `EditContentDetailsButton` (`/api/content/:id/details` aceita `channels`/`formats`). Telas: Kanban, detalhe (Tamanhos), calendário, portal (início, aprovações, calendário) e `/aprovar/:token`. `SocialPublishPanel` recebe `defaultPlatforms`. Ver `docs/DECISIONS.md` (2026-11-18).
   - Testado: `vitest` (`lib/content-formats.test.ts`, 5), `tsc --noEmit`, `lint` e `next build`. A suíte de `lib` tem 1 falha que já existia antes desta mudança (`social-scheduling.test.ts`, "lê um instante por rede e ignora lixo").
   - **Não testado ao vivo**: criar/editar peça com várias redes no navegador e a migration num banco (Postgres local desligado; vai pelo `migrate deploy` do build de produção).
