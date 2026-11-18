@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { raiseSystemAlert } from "@/lib/system-alerts";
+import { raiseSystemAlert, resolveSystemAlert } from "@/lib/system-alerts";
 import { Prisma, prisma } from "@zenite-mkt/db";
 import { loadAssistant } from "@/lib/assistant/agent";
 import { assistantAgencyId } from "@/lib/assistant/calendar";
@@ -145,7 +145,21 @@ export async function POST(request: Request) {
           continue;
         }
         if (isNew && config.notifications.onNewContact && !partners.has(message.from)) {
-          await notifyPartners(config, `${config.name}: novo contato no WhatsApp, ${profiles.get(message.from) || "sem nome"} (+${message.from}).`).catch(() => null);
+          const delivered = await notifyPartners(config, `${config.name}: novo contato no WhatsApp, ${profiles.get(message.from) || "sem nome"} (+${message.from}).`).catch(() => false);
+          if (delivered) {
+            await resolveSystemAlert(agencyId, "assistant:partner-notify");
+          } else {
+            // Falha silenciosa comum: sócio fora da janela de 24h e sem ASSISTANT_PARTNER_TEMPLATE configurado.
+            await raiseSystemAlert({
+              agencyId,
+              key: "assistant:partner-notify",
+              category: "AUTOMATION",
+              severity: "WARNING",
+              title: "WhatsApp: aviso de novo contato não chegou aos sócios",
+              detail: "Confira os números em Configurações da assistente e, se o sócio não conversa com o número da Zenite há mais de 24h, configure um modelo aprovado em ASSISTANT_PARTNER_TEMPLATE.",
+              href: "/automacoes/assistente",
+            }).catch(() => null);
+          }
         }
         if (conv.mode === "bot") {
           await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date(), replyDueAt: replyAt(config.replyDelaySeconds), autoTakeoverAt: null } });
