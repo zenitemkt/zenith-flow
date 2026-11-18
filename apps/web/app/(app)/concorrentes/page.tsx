@@ -17,6 +17,7 @@ import { CompetitorWebsiteEditor } from "./CompetitorWebsiteEditor";
 import { GoogleProfileCard, WebsiteSeoCard } from "./CompetitorSeoPanel";
 import { CompetitorContentIdeas } from "./CompetitorContentIdeas";
 import { CompetitorTabs, type CompetitorTab } from "./CompetitorTabs";
+import { CompetitorProfileSwitcher } from "./CompetitorProfileSwitcher";
 import { monthKey, monthLabel, parseMonthlyCompetitorReport, previousClosedMonth } from "@/lib/competitor-reports";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +114,10 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
   const href = (id: string) => `/concorrentes?cliente=${clientId}&dias=${days}&c=${id}${tableType === "competitive" ? "" : `&tipo=${tableType}`}&aba=${tab}`;
   const maxHeat = current ? Math.max(1, ...current.stats.heatmap.flat()) : 1;
   const maxHookAverage = current ? Math.max(1, ...current.stats.hooks.map((hook) => hook.avgEngagement)) : 1;
+  const switcherOption = (r: (typeof rows)[number]) => ({ id: r.p.id, label: `@${r.p.igUsername}`, href: href(r.p.id) });
+  const switcherOwn = rows.filter((r) => r.p.isOwn).map(switcherOption);
+  const switcherDirect = rows.filter((r) => !r.p.isOwn && r.p.category === "DIRECT").map(switcherOption);
+  const switcherReference = rows.filter((r) => !r.p.isOwn && r.p.category === "REFERENCE").map(switcherOption);
 
   const profileHeader = current && (
     <section className={CARD}>
@@ -137,7 +142,10 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
             </p>
           </div>
         </div>
-        <CompetitorActions competitorId={current.p.id} days={days} username={current.p.igUsername} hasReport={Boolean(current.p.aiReport)} currentRole={current.p.isOwn ? "OWN" : current.p.category === "REFERENCE" ? "REFERENCE" : "DIRECT"} />
+        <div className="flex flex-wrap items-center gap-2">
+          {rows.length > 1 && <CompetitorProfileSwitcher currentHref={href(current.p.id)} own={switcherOwn} direct={switcherDirect} reference={switcherReference} />}
+          <CompetitorActions competitorId={current.p.id} days={days} username={current.p.igUsername} hasReport={Boolean(current.p.aiReport)} currentRole={current.p.isOwn ? "OWN" : current.p.category === "REFERENCE" ? "REFERENCE" : "DIRECT"} />
+        </div>
       </div>
       {current.p.lastError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">Última atualização falhou: {current.p.lastError}</p>}
       {!current.p.isOwn && current.p.category === "REFERENCE" && <p className="mt-3 rounded-lg bg-[#F4F3FF] px-3 py-2 text-xs text-[#5925DC]">Este perfil serve como referência de mercado. Os dados e análises continuam disponíveis, mas ele não participa de rankings, posições ou gráficos de disputa.</p>}
@@ -165,7 +173,18 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
           <CompetitorContentIdeas clientId={clientId} clientName={clients.find((client) => client.id === clientId)?.name ?? "o cliente"} days={days} />
 
           {comparison ? (
-            <ClientCompetitorComparison comparison={comparison} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, snapshots: profile.snapshots }))} days={days} />
+            <ClientCompetitorComparison
+              comparison={comparison}
+              profiles={competitiveProfiles.map((profile) => ({
+                id: profile.id,
+                username: profile.igUsername,
+                isOwn: profile.isOwn,
+                followers: profile.followers,
+                snapshots: profile.snapshots,
+                posts: profile.posts.map((post) => ({ timestamp: post.timestamp, likeCount: post.likeCount, commentsCount: post.commentsCount })),
+              }))}
+              days={days}
+            />
           ) : rows.length > 0 ? (
             <section className={`${CARD} border-dashed`}>
               <h2 className={H2}>Comparar o cliente com os concorrentes</h2>
