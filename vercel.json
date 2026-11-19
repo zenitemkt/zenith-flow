@@ -3,6 +3,7 @@
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then npm run migrate:deploy --workspace=packages/db; fi && npm run build --workspace=apps/web",
   "outputDirectory": "apps/web/.next",
+  "ignoreCommand": "git diff --quiet \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD -- . ':(exclude)docs' ':(exclude).claude' ':(exclude,glob)*.md' ':(exclude,glob)*.pdf'",
   "crons": [
     { "path": "/api/cron/meta-sync", "schedule": "0 9 * * *" },
     { "path": "/api/cron/competitors-sync", "schedule": "30 9 * * *" },

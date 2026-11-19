@@ -1,3 +1,13 @@
+## 2026-11-19 — Functions Storage da Vercel: menos deploys guardados
+
+**Contexto**: o Hobby tem 10 GB de Deployment/Functions Storage, somando todos os projetos da conta. Cada deploy guarda o pacote de funções (Prisma incluso) e a retenção padrão era 30 dias; com ~256 pushes no `main` em 30 dias, lotou. Ao passar do limite a Vercel apagou sozinha os deploys não protegidos (ficaram os 3 últimos de produção por projeto).
+
+**Decisão 1 — `ignoreCommand` no `vercel.json`**: `git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD` excluindo `docs/`, `.claude/` e `*.md`/`*.pdf` só da raiz (glob sem `**`). Exit 0 = nada relevante mudou → pula. Sem SHA anterior ou SHA fora do clone raso → erro → faz deploy (falha para o lado seguro). `.md` dentro de `apps/`/`packages/` continua contando, pois `blog-agent-rules.md` é lido em runtime.
+
+**Decisão 2 — retenção curta no painel** (feita pelo Kevin, a CLI não tem a opção): o Hobby sempre preserva o deploy no ar e os 3 últimos de produção, então rollback continua possível.
+
+**Prática**: agentes devem juntar o trabalho e fazer push menos vezes; cada push com código é um deploy guardado.
+
 ## 2026-11-18 — Crons externos sem acordar o Neon a cada minuto
 
 **Contexto**: o Neon (Free: 100 CU-h/projeto/mês, scale-to-zero após 5 min ocioso) pausou o projeto. Os dois cronjobs do cron-job.org (posts/sequências e fila da Milena) batiam a cada minuto e consultavam o banco sempre, então ele nunca desligava (~0,25 CU × 720 h ≈ 180 CU-h).
