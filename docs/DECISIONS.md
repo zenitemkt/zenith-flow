@@ -8,6 +8,8 @@
 
 **Decisão 3 — sempre fail-open**: sem plano, cache com erro, `touched` até 15 s antes do cálculo (transação ainda sem COMMIT, relógios), ou horário vencido → consulta o banco como antes. O plano nunca passa da próxima hora cheia UTC, para as limpezas (PUBLISHING travado, sessões expiradas, peças excluídas por FK) e para os dois crons acordarem o banco juntos. Plano não é gravado se a rodada ou o cálculo falhar.
 
+**Decisão 4 (2026-11-19) — telas abertas também respeitam o plano**: medido no primeiro dia, o banco dormiu ~75% da noite, mas ficou acordado a tarde toda com o portal aberto (`SocialPublishTicker` → `/api/social/publish-due` a cada minuto, com sessão + busca no banco). A rota agora lê o plano do job `social` antes da sessão e só segue se o cron também seguiria; ela não grava plano (é escopada a uma agência e não cobre as sequências do Instagram). Exposição: só `{ ok, idle }`, e o middleware já exige cookie de sessão. A tela Conversas deixou de atualizar com a aba escondida.
+
 ## 2026-11-18 — Peça com várias redes e vários formatos
 
 **Pedido**: o designer faz a mesma arte e replica a prancheta em cada tamanho (ex.: Morada, Instagram 1080×1350 + LinkedIn 1080×1080; Instagram Post + Stories). Marcar várias redes e vários formatos e ter um cartão só, aprovado de uma vez no portal.

@@ -109,10 +109,21 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Atualiza sozinho a cada 10 s para acompanhar a conversa ao vivo.
+  // Atualiza sozinho a cada 10 s para acompanhar a conversa ao vivo — só com a aba visível:
+  // aba esquecida no fundo consultaria o banco o dia todo e o Neon nunca desligaria.
+  // Ao voltar para a aba, atualiza na hora.
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), 10_000);
-    return () => clearInterval(t);
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 10_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router]);
   useEffect(() => {
     // Chrome novo devolve uma Promise aqui; com chaves o efeito não retorna nada.
