@@ -98,7 +98,12 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
     const stats = analyzeCompetitor(p.posts, p.followers, days);
     const first = p.snapshots.find((s) => s.followers !== null)?.followers ?? null;
     const growth = first !== null && p.followers !== null ? p.followers - first : null;
-    const overall = computeOverallScore({ instagramEngagementRate: stats.engagementRate, googleRating: p.googleRating, websiteScore: p.websiteScore, websiteSeoScore: p.websiteSeoScore });
+    const overall = computeOverallScore({
+      instagram: p.followers ? { engagementRate: stats.engagementRate, postCount: stats.posts } : null,
+      google: { placeId: p.googlePlaceId, rating: p.googleRating, reviewCount: p.googleReviewCount, profileChecks: p.googleProfileChecks as never },
+      websiteScore: p.websiteScore,
+      websiteSeoScore: p.websiteSeoScore,
+    });
     return { p, stats, growth, snapshotDays: p.snapshots.length, overall };
   });
   const competitiveProfiles = profiles.filter((profile) => profile.isOwn || profile.category === "DIRECT");
