@@ -24,7 +24,14 @@ export async function handleLeadButton(agencyId: string, buttonId: string) {
     await notifyPartners(config, `${config.name}: ${conv.profileName ?? "contato"} (+${conv.phone}) confirmou a reunião de ${formatSlot(booking.startsAt)}.\n${booking.meetUrl ?? ""}`);
   } else if (action === "cancel") {
     await cancelBooking(booking.id, config, "pelo lembrete");
-    await prisma.assistantMessage.create({ data: { conversationId: conv.id, role: "user", content: "[sistema] A pessoa desmarcou a reunião pelo lembrete. Pergunte se ela quer reagendar para outro dia e conduza o reagendamento." } });
+    await prisma.assistantMessage.create({
+      data: {
+        conversationId: conv.id,
+        role: "user",
+        content:
+          "[sistema] A pessoa pediu pra remarcar a reunião pelo lembrete. Pergunte qual dia e horário funciona melhor pra ela — não ofereça horários de cara. Quando ela responder o dia, chame check_availability com date=AAAA-MM-DD desse dia e ofereça os horários livres daquele dia (se tiver mais de um, espalhe entre manhã e tarde). Conduza até marcar o novo horário.",
+      },
+    });
     await prisma.assistantConversation.update({ where: { id: conv.id }, data: { replyDueAt: replyAt(5), mode: "bot" } });
   }
 }
