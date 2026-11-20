@@ -52,10 +52,10 @@ export function ProspectSearchButton({ pending, ready }: { pending: number; read
         onClick={() => void start()}
         className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[#FF2B00] px-4 text-sm font-semibold text-white disabled:opacity-60"
       >
-        <Search size={16} aria-hidden /> {running ? "Buscando no Google Maps..." : busy ? "Iniciando..." : "Buscar leads"}
+        <Search size={16} aria-hidden /> {running ? "Buscando no Google Maps..." : busy ? "Iniciando..." : "Buscar empresas"}
       </button>
       {!ready && <p className="text-[11px] text-[#667085]">Salve pelo menos um nicho, uma cidade e a chave do Apify.</p>}
-      {running && <p className="text-[11px] text-[#667085]">Pode sair da página: a busca continua e o resultado entra na próxima vez que você abrir.</p>}
+      {running && <p className="text-[11px] text-[#667085]">Pode sair da página: a busca continua no Apify e as empresas entram na lista quando você voltar nesta aba.</p>}
       {summary && <p className="text-[11px] font-medium text-[#027A48]">{summary}</p>}
     </div>
   );

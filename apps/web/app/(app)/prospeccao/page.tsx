@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma, type ProspectStatus, type ProspectTemperature } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
-import { mergeProspectingConfig } from "@/lib/prospecting/config";
+import { mergeProspectingConfig, type ProspectingConfig } from "@/lib/prospecting/config";
 import { MAX_SEARCH_COMBINATIONS } from "@/lib/prospecting/search";
 import { sentToday, whatsappOpenerFor } from "@/lib/prospecting/outreach";
 import { isMobileBr } from "@/lib/assistant/form-outreach";
@@ -16,6 +16,12 @@ import { ProspectEmailSendButton } from "./ProspectEmailSendButton";
 export const dynamic = "force-dynamic";
 
 const CARD = "rounded-xl border border-[#E4E7EC] bg-white p-4";
+type Tab = "empresas" | "busca" | "contato";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "empresas", label: "Empresas" },
+  { id: "busca", label: "Busca" },
+  { id: "contato", label: "Contato" },
+];
 const FILTERS: Record<string, { label: string; statuses: ProspectStatus[] }> = {
   lista: { label: "Na lista", statuses: ["NOVO", "CONTATADO", "RESPONDEU"] },
   leads: { label: "Viraram lead", statuses: ["VIROU_LEAD"] },
@@ -36,17 +42,63 @@ function formatPhone(digits: string | null) {
   return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digits;
 }
 
-export default async function ProspeccaoPage({ searchParams }: { searchParams: { filtro?: string; temp?: string } }) {
+export default async function ProspeccaoPage({ searchParams }: { searchParams: { aba?: string; filtro?: string; temp?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   if (isClientRole(membership.role)) redirect("/");
   const agencyId = membership.agencyId;
+  const tab: Tab = TABS.find((t) => t.id === searchParams.aba)?.id ?? "empresas";
 
-  const filter = searchParams.filtro && FILTERS[searchParams.filtro] ? searchParams.filtro : "lista";
-  const temp = TEMPS.find((t) => t.id === searchParams.temp)?.id ?? null;
-  const now = new Date();
-  const [settings, prospects, byStatus, hot, dueEmails, today] = await Promise.all([
-    prisma.prospectingSettings.findUnique({ where: { agencyId } }),
+  const settings = await prisma.prospectingSettings.findUnique({ where: { agencyId } });
+  const config = mergeProspectingConfig(settings?.config);
+  const pendingRuns = Array.isArray(settings?.pendingRuns) ? settings.pendingRuns.length : 0;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-lg font-semibold text-[#101828]">Prospecção automática</h1>
+        <p className="text-sm text-[#667085]">Empresas do Google Maps que ainda não conhecem a Zenite. Só viram lead no Comercial quando engajam.</p>
+      </div>
+
+      <div className="flex flex-wrap gap-1 border-b border-[#E4E7EC]">
+        {TABS.map((t) => (
+          <Link
+            key={t.id}
+            href={t.id === "empresas" ? "/prospeccao" : `/prospeccao?aba=${t.id}`}
+            className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium ${tab === t.id ? "border-[#FF2B00] text-[#FF2B00]" : "border-transparent text-[#667085] hover:text-[#344054]"}`}
+          >
+            {t.label}
+            {t.id === "busca" && pendingRuns > 0 && <span className="ml-1.5 rounded-full bg-[#FFF4ED] px-1.5 py-0.5 text-[10px] text-[#C4320A]">buscando</span>}
+          </Link>
+        ))}
+      </div>
+
+      {tab === "empresas" && <EmpresasTab agencyId={agencyId} config={config} filtro={searchParams.filtro} temp={searchParams.temp} pendingRuns={pendingRuns} lastSearchAt={settings?.lastSearchAt ?? null} />}
+
+      {tab === "busca" && (
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          <section className={CARD}>
+            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Onde buscar</h2>
+            <ProspectingSettingsForm config={config} hasToken={Boolean(settings?.apifyTokenEnc)} maxCombinations={MAX_SEARCH_COMBINATIONS} />
+          </section>
+          <section className={CARD}>
+            <h2 className="mb-1 text-sm font-semibold text-[#101828]">Buscar empresas</h2>
+            <p className="mb-3 text-xs text-[#667085]">Cada busca leva alguns minutos no Apify. Empresas repetidas e quem já é lead da Zenite ficam de fora.</p>
+            <ProspectSearchButton pending={pendingRuns} ready={Boolean(settings?.apifyTokenEnc) && config.segments.length > 0 && config.cities.length > 0} />
+            {settings?.lastSearchError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">{settings.lastSearchError}</p>}
+          </section>
+        </div>
+      )}
+
+      {tab === "contato" && <ContatoTab agencyId={agencyId} config={config} />}
+    </div>
+  );
+}
+
+async function EmpresasTab({ agencyId, config, filtro, temp: tempParam, pendingRuns, lastSearchAt }: { agencyId: string; config: ProspectingConfig; filtro?: string; temp?: string; pendingRuns: number; lastSearchAt: Date | null }) {
+  const filter = filtro && FILTERS[filtro] ? filtro : "lista";
+  const temp = TEMPS.find((t) => t.id === tempParam)?.id ?? null;
+  const [prospects, byStatus, hot] = await Promise.all([
     prisma.prospect.findMany({
       where: { agencyId, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
       orderBy: [{ score: "desc" }, { createdAt: "desc" }],
@@ -54,14 +106,8 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
     }),
     prisma.prospect.groupBy({ by: ["status"], where: { agencyId }, _count: { _all: true } }),
     prisma.prospect.count({ where: { agencyId, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
-    prisma.prospect.count({
-      where: { agencyId, optOut: false, email: { not: null }, status: { in: ["NOVO", "CONTATADO"] }, OR: [{ emailStep: 0 }, { emailStep: 1, nextEmailAt: { lte: now } }] },
-    }),
-    sentToday(agencyId, now),
   ]);
-  const config = mergeProspectingConfig(settings?.config);
   const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
-  const pendingRuns = Array.isArray(settings?.pendingRuns) ? settings.pendingRuns.length : 0;
   const href = (next: { filtro?: string; temp?: string | null }) => {
     const params = new URLSearchParams();
     const f = next.filtro ?? filter;
@@ -73,20 +119,13 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-lg font-semibold text-[#101828]">Prospecção automática</h1>
-        <p className="text-sm text-[#667085]">
-          Empresas do Google Maps nos nichos e cidades escolhidos, pontuadas pelo quanto precisam de marketing. É contato frio: só vira lead no Comercial quando a empresa engajar.
-        </p>
-      </div>
-
+    <>
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           { label: "Na lista", value: countOf(FILTERS.lista!.statuses) },
           { label: "Quentes na lista", value: hot },
           { label: "Viraram lead", value: countOf(FILTERS.leads!.statuses) },
-          { label: "Última busca", value: settings?.lastSearchAt ? settings.lastSearchAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—" },
+          { label: "Última busca", value: lastSearchAt ? lastSearchAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—" },
         ].map((stat) => (
           <div key={stat.label} className={CARD}>
             <p className="text-xs text-[#667085]">{stat.label}</p>
@@ -95,40 +134,11 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <section className={CARD}>
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Onde buscar</h2>
-          <ProspectingSettingsForm config={config} hasToken={Boolean(settings?.apifyTokenEnc)} maxCombinations={MAX_SEARCH_COMBINATIONS} />
-        </section>
-        <section className={CARD}>
-          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Buscar leads</h2>
-          <p className="mb-3 text-xs text-[#667085]">Cada busca leva alguns minutos no Apify. Empresas repetidas e quem já é lead da Zenite ficam de fora.</p>
-          <ProspectSearchButton pending={pendingRuns} ready={Boolean(settings?.apifyTokenEnc) && config.segments.length > 0 && config.cities.length > 0} />
-          {settings?.lastSearchError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">{settings.lastSearchError}</p>}
-        </section>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <section className={CARD}>
-          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Primeiro contato e e-mails</h2>
-          <ProspectOutreachForm config={config} />
-        </section>
-        <section className={`${CARD} flex flex-col gap-4`}>
-          <div>
-            <h2 className="mb-1 text-sm font-semibold text-[#101828]">Envios de hoje</h2>
-            <p className="text-xs text-[#667085]">
-              WhatsApp: {today.whatsapp} de {config.dailyLimits.whatsapp} primeiros contatos · E-mail: {today.email} de {config.dailyLimits.email}
-            </p>
-          </div>
-          <div className="rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#475467]">
-            <p className="mb-1 font-semibold text-[#344054]">Como funciona o WhatsApp</p>
-            <p>1. Clique em WhatsApp na empresa: abre a conversa com a mensagem pronta. Envie pelo WhatsApp Business do número da Milena.</p>
-            <p>2. Clique em Já enviei. Se a empresa responder, vira lead e a Milena continua a conversa sozinha.</p>
-            <p>3. Se não responder em 3 dias, sai um único follow-up automático. Depois disso, mais nada.</p>
-          </div>
-          <ProspectEmailSendButton due={dueEmails} enabled={config.email.enabled} />
-        </section>
-      </div>
+      {pendingRuns > 0 && (
+        <p className="rounded-lg bg-[#FFF4ED] px-3 py-2 text-xs text-[#C4320A]">
+          Tem uma busca em andamento. <Link href="/prospeccao?aba=busca" className="font-semibold underline">Acompanhe na aba Busca</Link>.
+        </p>
+      )}
 
       <section className={CARD}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -148,7 +158,9 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
         </div>
 
         {prospects.length === 0 ? (
-          <p className="rounded-lg bg-[#F9FAFB] px-3 py-6 text-center text-sm text-[#667085]">Nenhuma empresa aqui ainda. Configure os nichos e cidades e clique em Buscar leads.</p>
+          <p className="rounded-lg bg-[#F9FAFB] px-3 py-6 text-center text-sm text-[#667085]">
+            Nenhuma empresa aqui ainda. <Link href="/prospeccao?aba=busca" className="font-semibold text-[#FF2B00] hover:underline">Configure a busca</Link>.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
@@ -169,11 +181,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
                 {prospects.map((p) => {
                   const t = TEMPS.find((x) => x.id === p.temperature)!;
                   const whatsappUrl = !p.whatsappSentAt && !p.optOut && isMobileBr(p.phone) ? `https://wa.me/${p.phone}?text=${encodeURIComponent(whatsappOpenerFor(config, p))}` : null;
-                  const contact = [
-                    p.whatsappSentAt ? `WhatsApp ${dateShort(p.whatsappSentAt)}` : null,
-                    p.emailStep > 0 ? `E-mail ${p.emailStep}/2` : null,
-                    p.optOut ? "Saiu da lista" : null,
-                  ].filter(Boolean);
+                  const contact = [p.whatsappSentAt ? `WhatsApp ${dateShort(p.whatsappSentAt)}` : null, p.emailStep > 0 ? `E-mail ${p.emailStep}/2` : null, p.optOut ? "Saiu da lista" : null].filter(Boolean);
                   return (
                     <tr key={p.id} className="border-b border-[#F2F4F7] align-top last:border-0">
                       <td className="py-2.5 pr-3">
@@ -195,6 +203,39 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
             </table>
           </div>
         )}
+      </section>
+    </>
+  );
+}
+
+async function ContatoTab({ agencyId, config }: { agencyId: string; config: ProspectingConfig }) {
+  const now = new Date();
+  const [dueEmails, today] = await Promise.all([
+    prisma.prospect.count({
+      where: { agencyId, optOut: false, email: { not: null }, status: { in: ["NOVO", "CONTATADO"] }, OR: [{ emailStep: 0 }, { emailStep: 1, nextEmailAt: { lte: now } }] },
+    }),
+    sentToday(agencyId, now),
+  ]);
+  return (
+    <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <section className={CARD}>
+        <h2 className="mb-3 text-sm font-semibold text-[#101828]">Textos e e-mails</h2>
+        <ProspectOutreachForm config={config} />
+      </section>
+      <section className={`${CARD} flex flex-col gap-4 self-start`}>
+        <div>
+          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Envios de hoje</h2>
+          <p className="text-xs text-[#667085]">
+            WhatsApp: {today.whatsapp} de {config.dailyLimits.whatsapp} primeiros contatos · E-mail: {today.email} de {config.dailyLimits.email}
+          </p>
+        </div>
+        <div className="rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#475467]">
+          <p className="mb-1 font-semibold text-[#344054]">Como funciona o WhatsApp</p>
+          <p>1. Na aba Empresas, clique em WhatsApp: abre a conversa com a mensagem pronta. Envie pelo WhatsApp Business do número da Milena.</p>
+          <p>2. Clique em Já enviei. Se a empresa responder, vira lead e a Milena continua a conversa sozinha.</p>
+          <p>3. Se não responder em 3 dias, sai um único follow-up automático. Depois disso, mais nada.</p>
+        </div>
+        <ProspectEmailSendButton due={dueEmails} enabled={config.email.enabled} />
       </section>
     </div>
   );

@@ -25,7 +25,7 @@ export function ProspectEmailSendButton({ due, enabled }: { due: number; enabled
       <button type="button" disabled={!enabled || busy || due === 0} onClick={() => void send()} className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[#D0D5DD] bg-white px-4 text-sm font-semibold text-[#344054] disabled:opacity-60">
         <Mail size={16} aria-hidden /> {busy ? "Enviando..." : `Enviar e-mails de hoje (${due})`}
       </button>
-      {!enabled && <p className="text-[11px] text-[#667085]">Ligue os e-mails automáticos em &quot;Primeiro contato e e-mails&quot;.</p>}
+      {!enabled && <p className="text-[11px] text-[#667085]">Ligue os e-mails automáticos em &quot;Textos e e-mails&quot;, ao lado.</p>}
       {summary && <p className="text-[11px] font-medium text-[#027A48]">{summary}</p>}
     </div>
   );
