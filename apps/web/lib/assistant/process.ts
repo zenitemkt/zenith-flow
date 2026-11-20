@@ -1,8 +1,9 @@
 import { prisma } from "@zenite-mkt/db";
 import { cancelBooking, confirmBookingEvent, loadAssistant, runConversationTurn } from "./agent";
+import { nextAutoFollowUpWakeTimes, runAutoFollowUps } from "./auto-follow-up";
 import { formatSlot } from "./calendar";
 import { notifyPartners } from "./notify";
-import { sendButtons, sendText } from "./whatsapp";
+import { sendButtonTemplate, sendButtons, sendText } from "./whatsapp";
 
 /** Agenda a resposta da assistente para daqui a `seconds` (cada mensagem nova empurra o prazo). */
 export function replyAt(seconds: number) {
@@ -84,13 +85,14 @@ export async function nextAssistantWorkAt(now = new Date()): Promise<Date[]> {
       candidates.push(booking.startsAt);
     }
   }
+  candidates.push(...(await nextAutoFollowUpWakeTimes(now)));
   return candidates;
 }
 
 /** Rodada do agendador (chamada a cada minuto): respostas vencidas, aprovações expiradas, lembretes e aviso de início. */
 export async function processAssistantQueue(): Promise<Record<string, number>> {
   const now = new Date();
-  const stats = { replies: 0, expired: 0, reminders: 0, startNotices: 0 };
+  const stats = { replies: 0, expired: 0, reminders: 0, startNotices: 0, followUps: 0 };
 
   const due = await prisma.assistantConversation.findMany({ where: { replyDueAt: { lte: now }, mode: "bot" }, select: { id: true, replyDueAt: true }, take: 20 });
   for (const conv of due) {
@@ -115,10 +117,21 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
     if (!enabled) continue;
     const phone = booking.conversation.phone;
     if (booking.status === "scheduled" && !booking.reminderSentAt && booking.startsAt.getTime() - now.getTime() <= config.reminders.confirmHoursBefore * 3_600_000 && booking.startsAt > now) {
-      await sendButtons(phone, `Oi! Lembrando da nossa reunião hoje, ${formatSlot(booking.startsAt)}, pelo Google Meet. Posso confirmar?`, [
-        { id: `confirm_${booking.id}`, title: "Confirmar" },
-        { id: `cancel_${booking.id}`, title: "Desmarcar" },
-      ]).catch((e) => console.error("assistant_reminder_failed", booking.id, e));
+      const reminderText = `Oi! Lembrando da nossa reunião hoje, ${formatSlot(booking.startsAt)}, pelo Google Meet. Posso confirmar?`;
+      try {
+        await sendButtons(phone, reminderText, [
+          { id: `confirm_${booking.id}`, title: "Confirmar" },
+          { id: `cancel_${booking.id}`, title: "Desmarcar" },
+        ]);
+      } catch {
+        // Janela de 24h fechada (reunião marcada há dias sem troca de mensagem desde então) — cai no modelo aprovado.
+        const template = process.env.ASSISTANT_MEETING_REMINDER_TEMPLATE;
+        if (template) {
+          await sendButtonTemplate(phone, template, [reminderText], [`confirm_${booking.id}`, `cancel_${booking.id}`]).catch((e) =>
+            console.error("assistant_reminder_failed", booking.id, e),
+          );
+        } else console.error("assistant_reminder_failed", booking.id, "ASSISTANT_MEETING_REMINDER_TEMPLATE ausente.");
+      }
       await prisma.assistantBooking.update({ where: { id: booking.id }, data: { reminderSentAt: now } });
       stats.reminders++;
     }
@@ -128,5 +141,7 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
       stats.startNotices++;
     }
   }
+
+  stats.followUps = (await runAutoFollowUps(now)).sent;
   return stats;
 }

@@ -1,5 +1,5 @@
 import type { AssistantConfig } from "./config";
-import { sendButtons, sendGroupText, sendTemplate, sendText } from "./whatsapp";
+import { sendButtonTemplate, sendButtons, sendGroupText, sendTemplate, sendText } from "./whatsapp";
 
 /**
  * Aviso aos sócios: tenta o grupo (API de grupos da Meta); se não houver grupo ou der erro, manda no privado
@@ -35,7 +35,7 @@ export async function notifyPartners(config: AssistantConfig, text: string): Pro
   return delivered;
 }
 
-/** Pedido de aprovação aos sócios para horário com pouca antecedência (botões vão no privado, grupo não tem botão). */
+/** Pedido de aprovação aos sócios para horário com pouca antecedência (botões vão no privado, grupo não tem botão). Fora da janela de 24h, cai no modelo `ASSISTANT_PARTNER_APPROVAL_TEMPLATE`. */
 export async function askPartnersApproval(config: AssistantConfig, bookingId: string, text: string): Promise<boolean> {
   let delivered = false;
   for (const phone of config.notifications.partnerPhones) {
@@ -45,8 +45,15 @@ export async function askPartnersApproval(config: AssistantConfig, bookingId: st
         { id: `deny_${bookingId}`, title: "Não posso" },
       ]);
       delivered = true;
-    } catch (error) {
-      console.error("assistant_partner_approval_failed", phone, error);
+    } catch {
+      const template = process.env.ASSISTANT_PARTNER_APPROVAL_TEMPLATE;
+      if (!template) continue;
+      try {
+        await sendButtonTemplate(phone, template, [text.slice(0, 1000)], [`approve_${bookingId}`, `deny_${bookingId}`]);
+        delivered = true;
+      } catch (error) {
+        console.error("assistant_partner_approval_failed", phone, error);
+      }
     }
   }
   return delivered;

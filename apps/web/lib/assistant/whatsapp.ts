@@ -59,6 +59,22 @@ export function sendTemplate(to: string, name: string, params: string[]) {
   });
 }
 
+/** Modelo aprovado com botões de resposta rápida — `buttonPayloads[i]` é o payload (ex.: `confirm_<id>`) do botão i do modelo. */
+export function sendButtonTemplate(to: string, name: string, bodyParams: string[], buttonPayloads: string[]) {
+  return post({
+    to,
+    type: "template",
+    template: {
+      name,
+      language: { code: "pt_BR" },
+      components: [
+        ...(bodyParams.length ? [{ type: "body", parameters: bodyParams.map((text) => ({ type: "text", text })) }] : []),
+        ...buttonPayloads.map((payload, index) => ({ type: "button", sub_type: "quick_reply", index: String(index), parameters: [{ type: "payload", payload }] })),
+      ],
+    },
+  });
+}
+
 export async function downloadMedia(mediaId: string): Promise<{ data: Buffer; mimeType: string }> {
   const meta = await fetch(`${GRAPH}/${mediaId}`, { headers: { Authorization: `Bearer ${token()}` } }).then((r) => r.json());
   if (!meta?.url) throw new Error("Mídia sem URL.");

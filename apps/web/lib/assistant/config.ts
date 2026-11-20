@@ -52,6 +52,10 @@ export interface AssistantConfig {
     confirmHoursBefore: number;
     sendStartNotice: boolean;
   };
+  /** Retomada automática de contato com lead que recebeu mensagem nossa e não respondeu. */
+  followUp: {
+    autoEnabled: boolean;
+  };
   conversation: {
     guaranteeOnlyIfAsked: boolean;
     guaranteeText: string;
@@ -118,6 +122,9 @@ export const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
   reminders: {
     confirmHoursBefore: 2,
     sendStartNotice: true,
+  },
+  followUp: {
+    autoEnabled: true,
   },
   conversation: {
     guaranteeOnlyIfAsked: true,

@@ -9,7 +9,38 @@ import { firstName } from "./form-outreach";
 export const FOLLOW_UP_AFTER_HOURS = 48;
 
 /** Status em que não faz sentido cobrar resposta. */
-const CLOSED_LEAD_STATUSES = new Set(["DESQUALIFICADO", "CONVERTIDO"]);
+export const CLOSED_LEAD_STATUSES = new Set(["DESQUALIFICADO", "CONVERTIDO"]);
+
+/**
+ * Retomada automática (seção combinada com o Gabriel em 2026-11-20): 23h ainda está dentro da
+ * janela de 24h da Meta (mensagem livre, sem modelo); 3 e 7 dias já exigem modelo aprovado.
+ */
+export interface FollowUpStageDef {
+  stage: number;
+  afterHours: number;
+  kind: "text" | "template";
+}
+export const AUTO_FOLLOW_UP_STAGES: FollowUpStageDef[] = [
+  { stage: 1, afterHours: 23, kind: "text" },
+  { stage: 2, afterHours: 72, kind: "template" },
+  { stage: 3, afterHours: 168, kind: "template" },
+];
+
+/** Estágio de retomada automática pendente agora, ou null. Pega o mais avançado (ex.: cron ficou fora do ar e pulou um estágio). */
+export function dueFollowUpStage(silentHours: number, currentStage: number): FollowUpStageDef | null {
+  let due: FollowUpStageDef | null = null;
+  for (const def of AUTO_FOLLOW_UP_STAGES) if (def.stage > currentStage && silentHours >= def.afterHours) due = def;
+  return due;
+}
+
+/** Texto da retomada automática por estágio (23h / 3 dias / 7 dias) — tom diferente a cada tentativa, a última já fecha a porta. */
+export function autoFollowUpMessage(leadName: string | null | undefined, stage: number): string {
+  const name = firstName(leadName);
+  const hi = `Oi${name ? `, ${name}` : ""}!`;
+  if (stage === 1) return `${hi} Vi que ainda não conseguiu ver minha mensagem 😊 Ficou alguma dúvida? Se quiser, te explico rapidinho por aqui.`;
+  if (stage === 2) return `${hi} Passando só pra saber se ainda faz sentido a gente conversar sobre o marketing da sua empresa. Se agora não for um bom momento, sem problema algum.`;
+  return `${hi} Vou parar de insistir por aqui pra não incomodar 😊 Se mais pra frente fizer sentido falar sobre marketing pra sua empresa, é só me chamar que seguimos de onde paramos.`;
+}
 
 export interface WhatsappActivity {
   conversationId: string;

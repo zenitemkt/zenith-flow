@@ -3474,6 +3474,8 @@ model AssistantConversation {
   /// Primeira mensagem mandada pela equipe no celular; a Milena assume quando o contato responder.
   autoTakeoverAt DateTime?
   failures       Int                @default(0)
+  /// Retomada automática de lead silencioso (23h/3 dias/7 dias) — 0 = nenhuma ainda enviada. Zera quando a pessoa responde.
+  followUpStage  Int                @default(0)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   messages       AssistantMessage[]
