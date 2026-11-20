@@ -10,7 +10,7 @@ export function replyAt(seconds: number) {
   return new Date(Date.now() + seconds * 1000);
 }
 
-/** Lead apertou Confirmar/Desmarcar no lembrete. */
+/** Lead apertou Confirmar/Remarcar no lembrete. */
 export async function handleLeadButton(agencyId: string, buttonId: string) {
   const { config } = await loadAssistant(agencyId);
   const [action, bookingId] = buttonId.split("_");
@@ -121,7 +121,7 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
       try {
         await sendButtons(phone, reminderText, [
           { id: `confirm_${booking.id}`, title: "Confirmar" },
-          { id: `cancel_${booking.id}`, title: "Desmarcar" },
+          { id: `cancel_${booking.id}`, title: "Remarcar" },
         ]);
       } catch {
         // Janela de 24h fechada (reunião marcada há dias sem troca de mensagem desde então) — cai no modelo aprovado.
