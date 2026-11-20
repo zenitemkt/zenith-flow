@@ -4,7 +4,7 @@ import { brtDateString } from "@/lib/assistant/calendar";
 import { isMobileBr, phoneVariants } from "@/lib/assistant/form-outreach";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { getAppBaseUrl } from "@/lib/meta-ads";
-import { EMAIL_FOLLOW_UP_DAYS, mergeProspectingConfig, type ProspectingConfig } from "./config";
+import { EMAIL_FOLLOW_UP_DAYS, WHATSAPP_FOLLOW_UP_DAYS, mergeProspectingConfig, type ProspectingConfig } from "./config";
 import { emailHook, renderCopy, whatsappHook, type ProspectCopyInput } from "./copy";
 import { convertProspectToLead } from "./search";
 
@@ -32,6 +32,49 @@ export async function sentToday(agencyId: string, now = new Date()): Promise<Rec
 /** Mensagem pronta do primeiro contato no WhatsApp, já personalizada pra empresa. */
 export function whatsappOpenerFor(config: ProspectingConfig, prospect: ProspectCopyInput): string {
   return renderCopy(config.whatsappOpener, prospect, whatsappHook(prospect));
+}
+
+export function whatsappFollowUpFor(config: ProspectingConfig, prospect: ProspectCopyInput): string {
+  return renderCopy(config.whatsappFollowUp, prospect, whatsappHook(prospect));
+}
+
+export const whatsappLink = (phone: string, text: string) => `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+
+/**
+ * Rotina da manhã: primeiros contatos do dia (maior pontuação, só celular, até o limite diário) e
+ * follow-ups vencidos (primeiro contato há 3 dias ou mais, sem resposta). Tudo enviado à mão.
+ */
+export async function getMorningRoutine(agencyId: string, config: ProspectingConfig, now = new Date()) {
+  const today = await sentToday(agencyId, now);
+  const remaining = Math.max(0, config.dailyLimits.whatsapp - today.whatsapp);
+  const [candidates, followUps] = await Promise.all([
+    prisma.prospect.findMany({
+      where: { agencyId, status: { in: ["NOVO", "CONTATADO"] }, optOut: false, whatsappSentAt: null, phone: { not: null } },
+      orderBy: [{ score: "desc" }, { createdAt: "asc" }],
+      take: 300,
+    }),
+    prisma.prospect.findMany({
+      where: { agencyId, status: "CONTATADO", optOut: false, whatsappFollowUpAt: null, whatsappSentAt: { lte: new Date(now.getTime() - WHATSAPP_FOLLOW_UP_DAYS * 86_400_000) } },
+      orderBy: { whatsappSentAt: "asc" },
+      take: 100,
+    }),
+  ]);
+  return { firstContacts: candidates.filter((p) => isMobileBr(p.phone)).slice(0, remaining), followUps, remaining, sentToday: today.whatsapp };
+}
+
+/** "Já enviei o follow-up" (manual, pelo celular do número da Milena). */
+export async function markWhatsappFollowUpSent(agencyId: string, prospectId: string, now = new Date()): Promise<void> {
+  const prospect = await prisma.prospect.findFirst({ where: { id: prospectId, agencyId } });
+  if (!prospect) throw new Error("Prospect não encontrado.");
+  if (!prospect.whatsappSentAt) throw new Error("Faça o primeiro contato antes do follow-up.");
+  if (prospect.whatsappFollowUpAt) return;
+  const conv = await prisma.assistantConversation.findFirst({ where: { agencyId, prospectId: prospect.id } });
+  if (conv && !conv.leadId) {
+    // Renova a janela de "Já enviei": o eco do celular conta como fala da Milena, que segue se a empresa responder.
+    await prisma.assistantConversation.update({ where: { id: conv.id }, data: { autoTakeoverAt: now, mode: "bot", replyDueAt: null } });
+    await prisma.assistantMessage.updateMany({ where: { conversationId: conv.id, role: "partner" }, data: { role: "assistant" } });
+  }
+  await prisma.prospect.update({ where: { id: prospect.id }, data: { whatsappFollowUpAt: now, lastContactedAt: now } });
 }
 
 const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -110,7 +153,7 @@ export async function sendDueProspectEmails(agencyId: string, now = new Date()):
 /**
  * "Já enviei" o primeiro WhatsApp (mandado à mão pelo celular do número da Milena): abre a conversa
  * em modo Milena, ligada ao prospect. Se a empresa responder, vira Lead e a Milena segue; se não
- * responder, sai um único follow-up 3 dias depois (modelo follow_up_3dias).
+ * responder, o follow-up (também manual) aparece na rotina da manhã 3 dias depois.
  */
 export async function markWhatsappSent(agencyId: string, prospectId: string, now = new Date()): Promise<void> {
   const prospect = await prisma.prospect.findFirst({ where: { id: prospectId, agencyId } });

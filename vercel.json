@@ -8,7 +8,9 @@
     { "path": "/api/cron/meta-sync", "schedule": "0 9 * * *" },
     { "path": "/api/cron/competitors-sync", "schedule": "30 9 * * *" },
     { "path": "/api/cron/site-monitor", "schedule": "0 10 * * *" },
-    { "path": "/api/cron/site-monitor", "schedule": "0 13 * * *" }
+    { "path": "/api/cron/site-monitor", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/prospeccao", "schedule": "0 10 * * *" },
+    { "path": "/api/cron/prospeccao", "schedule": "40 10 * * *" }
   ],
   "regions": [
     "gru1"

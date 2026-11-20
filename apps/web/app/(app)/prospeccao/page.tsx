@@ -5,19 +5,22 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { mergeProspectingConfig, type ProspectingConfig } from "@/lib/prospecting/config";
 import { MAX_SEARCH_COMBINATIONS } from "@/lib/prospecting/search";
-import { sentToday, whatsappOpenerFor } from "@/lib/prospecting/outreach";
+import { getMorningRoutine, sentToday, whatsappFollowUpFor, whatsappLink, whatsappOpenerFor } from "@/lib/prospecting/outreach";
 import { isMobileBr } from "@/lib/assistant/form-outreach";
 import { ProspectingSettingsForm } from "./ProspectingSettingsForm";
 import { ProspectSearchButton } from "./ProspectSearchButton";
 import { ProspectRowActions } from "./ProspectRowActions";
 import { ProspectOutreachForm } from "./ProspectOutreachForm";
 import { ProspectEmailSendButton } from "./ProspectEmailSendButton";
+import { ProspectWhatsappButtons } from "./ProspectWhatsappButtons";
+import { PendingSearchWatcher } from "./PendingSearchWatcher";
 
 export const dynamic = "force-dynamic";
 
 const CARD = "rounded-xl border border-[#E4E7EC] bg-white p-4";
-type Tab = "empresas" | "busca" | "contato";
+type Tab = "hoje" | "empresas" | "busca" | "contato";
 const TABS: { id: Tab; label: string }[] = [
+  { id: "hoje", label: "Rotina do dia" },
   { id: "empresas", label: "Empresas" },
   { id: "busca", label: "Busca" },
   { id: "contato", label: "Contato" },
@@ -47,7 +50,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
   if (!session || !membership) redirect("/login");
   if (isClientRole(membership.role)) redirect("/");
   const agencyId = membership.agencyId;
-  const tab: Tab = TABS.find((t) => t.id === searchParams.aba)?.id ?? "empresas";
+  const tab: Tab = TABS.find((t) => t.id === searchParams.aba)?.id ?? "hoje";
 
   const settings = await prisma.prospectingSettings.findUnique({ where: { agencyId } });
   const config = mergeProspectingConfig(settings?.config);
@@ -64,7 +67,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
         {TABS.map((t) => (
           <Link
             key={t.id}
-            href={t.id === "empresas" ? "/prospeccao" : `/prospeccao?aba=${t.id}`}
+            href={t.id === "hoje" ? "/prospeccao" : `/prospeccao?aba=${t.id}`}
             className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium ${tab === t.id ? "border-[#FF2B00] text-[#FF2B00]" : "border-transparent text-[#667085] hover:text-[#344054]"}`}
           >
             {t.label}
@@ -72,6 +75,10 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
           </Link>
         ))}
       </div>
+
+      {pendingRuns > 0 && tab !== "busca" && <PendingSearchWatcher />}
+
+      {tab === "hoje" && <RotinaTab agencyId={agencyId} config={config} />}
 
       {tab === "empresas" && <EmpresasTab agencyId={agencyId} config={config} filtro={searchParams.filtro} temp={searchParams.temp} pendingRuns={pendingRuns} lastSearchAt={settings?.lastSearchAt ?? null} />}
 
@@ -109,13 +116,12 @@ async function EmpresasTab({ agencyId, config, filtro, temp: tempParam, pendingR
   ]);
   const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
   const href = (next: { filtro?: string; temp?: string | null }) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ aba: "empresas" });
     const f = next.filtro ?? filter;
     const t = next.temp === undefined ? temp : next.temp;
     if (f !== "lista") params.set("filtro", f);
     if (t) params.set("temp", t);
-    const qs = params.toString();
-    return `/prospeccao${qs ? `?${qs}` : ""}`;
+    return `/prospeccao?${params.toString()}`;
   };
 
   return (
@@ -231,11 +237,63 @@ async function ContatoTab({ agencyId, config }: { agencyId: string; config: Pros
         </div>
         <div className="rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#475467]">
           <p className="mb-1 font-semibold text-[#344054]">Como funciona o WhatsApp</p>
-          <p>1. Na aba Empresas, clique em WhatsApp: abre a conversa com a mensagem pronta. Envie pelo WhatsApp Business do número da Milena.</p>
-          <p>2. Clique em Já enviei. Se a empresa responder, vira lead e a Milena continua a conversa sozinha.</p>
-          <p>3. Se não responder em 3 dias, sai um único follow-up automático. Depois disso, mais nada.</p>
+          <p>1. Toda manhã, na aba Rotina do dia, abra cada empresa no WhatsApp: a mensagem já vem pronta. Envie pelo WhatsApp Business do número da Milena e clique em Já enviei.</p>
+          <p>2. Se a empresa responder, vira lead e a Milena continua a conversa sozinha.</p>
+          <p>3. Quem não respondeu em 3 dias aparece na rotina pro follow-up, também manual. Depois disso, mais nada.</p>
         </div>
         <ProspectEmailSendButton due={dueEmails} enabled={config.email.enabled} />
+      </section>
+    </div>
+  );
+}
+
+async function RotinaTab({ agencyId, config }: { agencyId: string; config: ProspectingConfig }) {
+  const routine = await getMorningRoutine(agencyId, config);
+  const row = (p: (typeof routine.firstContacts)[number], step: "first" | "followup") => {
+    const t = TEMPS.find((x) => x.id === p.temperature)!;
+    const text = step === "first" ? whatsappOpenerFor(config, p) : whatsappFollowUpFor(config, p);
+    return (
+      <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F2F4F7] py-3 last:border-0">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[#101828]">
+            {p.name} <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${t.className}`}>{p.score.toLocaleString("pt-BR")} · {t.label}</span>
+          </p>
+          <p className="text-xs text-[#667085]">
+            {p.segment} · {p.city} · {formatPhone(p.phone)}
+            {step === "followup" && p.whatsappSentAt ? ` · primeiro contato em ${dateShort(p.whatsappSentAt)}` : ""}
+          </p>
+        </div>
+        <ProspectWhatsappButtons id={p.id} url={whatsappLink(p.phone!, text)} step={step} />
+      </li>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="rounded-lg bg-[#F9FAFB] px-3 py-2 text-xs text-[#475467]">
+        Envie tudo pelo WhatsApp Business do número da Milena: clique em Abrir no WhatsApp, envie a mensagem e volte pra clicar em Já enviei. Quem responder vira lead e a Milena assume a conversa.
+      </p>
+      <section className={CARD}>
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-[#101828]">Follow-ups de hoje ({routine.followUps.length})</h2>
+          <span className="text-[11px] text-[#667085]">Primeiro contato há 3 dias ou mais, sem resposta. Último toque.</span>
+        </div>
+        {routine.followUps.length ? <ul>{routine.followUps.map((p) => row(p, "followup"))}</ul> : <p className="py-3 text-sm text-[#667085]">Nenhum follow-up pra hoje.</p>}
+      </section>
+      <section className={CARD}>
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-[#101828]">Primeiros contatos de hoje ({routine.firstContacts.length})</h2>
+          <span className="text-[11px] text-[#667085]">
+            {routine.sentToday} de {config.dailyLimits.whatsapp} enviados hoje · maior pontuação primeiro, só celular
+          </span>
+        </div>
+        {routine.firstContacts.length ? (
+          <ul>{routine.firstContacts.map((p) => row(p, "first"))}</ul>
+        ) : (
+          <p className="py-3 text-sm text-[#667085]">
+            {routine.remaining === 0 ? "Limite de primeiros contatos de hoje atingido." : <>Nenhuma empresa nova com celular. <Link href="/prospeccao?aba=busca" className="font-semibold text-[#FF2B00] hover:underline">Buscar mais empresas</Link>.</>}
+          </p>
+        )}
       </section>
     </div>
   );

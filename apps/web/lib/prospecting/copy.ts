@@ -42,6 +42,9 @@ export function renderCopy(template: string, p: ProspectCopyInput, hook: string)
 export const DEFAULT_WHATSAPP_OPENER =
   "Oi, tudo bem? Aqui é a Milena, da Zenite, agência de marketing de Americana. Encontrei a {empresa} no Google Maps. {gancho} Posso te fazer uma pergunta rápida sobre como os clientes chegam até vocês hoje?";
 
+export const DEFAULT_WHATSAPP_FOLLOW_UP =
+  "Oi, tudo bem? Milena da Zenite de novo. Conseguiu ver minha mensagem sobre a {empresa}? Se fizer sentido, te explico em 2 minutinhos como empresas de {nicho} da região estão atraindo mais clientes pelo Google e pelo Instagram.";
+
 export const DEFAULT_EMAIL_STEPS: { subject: string; body: string }[] = [
   {
     subject: "{empresa} no Google",

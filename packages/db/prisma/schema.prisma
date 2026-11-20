@@ -3527,38 +3527,40 @@ enum ProspectStatus {
 }
 
 model Prospect {
-  id              String              @id @default(cuid())
-  agencyId        String
-  agency          Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  name            String
-  phone           String?
-  email           String?
-  website         String?
-  address         String?
-  segment         String
-  city            String
-  category        String?
-  mapsUrl         String?
-  rating          Float?
-  reviewCount     Int?
-  score           Float               @default(0)
-  temperature     ProspectTemperature @default(FRIO)
-  potential       String?
-  status          ProspectStatus      @default(NOVO)
-  optOut          Boolean             @default(false)
+  id                 String              @id @default(cuid())
+  agencyId           String
+  agency             Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name               String
+  phone              String?
+  email              String?
+  website            String?
+  address            String?
+  segment            String
+  city               String
+  category           String?
+  mapsUrl            String?
+  rating             Float?
+  reviewCount        Int?
+  score              Float               @default(0)
+  temperature        ProspectTemperature @default(FRIO)
+  potential          String?
+  status             ProspectStatus      @default(NOVO)
+  optOut             Boolean             @default(false)
   /// Token do link "sair da lista" nos e-mails (gerado no primeiro envio).
-  optOutToken     String?             @unique
-  lastContactedAt DateTime?
+  optOutToken        String?             @unique
+  lastContactedAt    DateTime?
   /// Primeiro contato manual no WhatsApp ("Já enviei"); a Milena assume se responder.
-  whatsappSentAt  DateTime?
+  whatsappSentAt     DateTime?
+  /// Follow-up manual no WhatsApp (rotina da manhã, 3 dias depois do primeiro contato sem resposta).
+  whatsappFollowUpAt DateTime?
   /// E-mails da sequência já enviados (0, 1 = primeiro, 2 = lembrete do dia 3).
-  emailStep       Int                 @default(0)
-  nextEmailAt     DateTime?
+  emailStep          Int                 @default(0)
+  nextEmailAt        DateTime?
   /// Preenchido quando o prospect engaja e vira Lead no Comercial.
-  leadId          String?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  contacts        ProspectContact[]
+  leadId             String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  contacts           ProspectContact[]
 
   @@index([agencyId, status])
   @@index([agencyId, score])

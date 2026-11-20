@@ -24,6 +24,10 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/public/blog-views",
   // "Sair da lista" dos e-mails de prospecção: quem recebe não tem login.
   "/api/public/prospect-optout",
+  // Respostas aos e-mails de prospecção (webhook do Resend, protegido pela assinatura Svix na rota).
+  "/api/public/prospect-inbound",
+  // Rotina diária da prospecção: chamada pelo Vercel Cron, protegida por CRON_SECRET na própria rota.
+  "/api/cron/prospeccao",
   // Agendador de redes: chamado pelo cron externo, protegido por CRON_SECRET na própria rota.
   "/api/cron/social-publish",
   "/api/cron/site-monitor",

@@ -1,4 +1,7 @@
-import { DEFAULT_EMAIL_STEPS, DEFAULT_WHATSAPP_OPENER } from "./copy";
+import { DEFAULT_EMAIL_STEPS, DEFAULT_WHATSAPP_FOLLOW_UP, DEFAULT_WHATSAPP_OPENER } from "./copy";
+
+export type AutoSearch = "off" | "weekly" | "daily";
+const AUTO_SEARCH: AutoSearch[] = ["off", "weekly", "daily"];
 
 /** Configuração da prospecção automática da agência (fica em `ProspectingSettings.config`). */
 export interface ProspectingConfig {
@@ -10,29 +13,38 @@ export interface ProspectingConfig {
   maxPerSearch: number;
   /** Teto de envios por dia. */
   dailyLimits: { whatsapp: number; email: number };
+  /** Busca automática no Google Maps (rotina das 7h): cada busca é cobrada no Apify. */
+  autoSearch: AutoSearch;
   /** Mensagem pronta do primeiro contato (enviada à mão pelo celular, como a Milena). */
   whatsappOpener: string;
+  /** Mensagem pronta do follow-up manual (3 dias depois, se não respondeu). */
+  whatsappFollowUp: string;
   email: {
     enabled: boolean;
     /** Remetente (domínio verificado no Resend). Vazio = remetente padrão do sistema. */
     fromEmail: string;
-    /** Pra onde vão as respostas (caixa de alguém da equipe). */
+    /** Endereço que recebe as respostas. Se for um endereço de recebimento do Resend, o sistema lê a resposta sozinho. */
     replyTo: string;
+    /** Caixa da equipe pra onde as respostas recebidas pelo sistema são encaminhadas. */
+    forwardTo: string;
     /** Primeiro e-mail e lembrete 3 dias depois. */
     steps: { subject: string; body: string }[];
   };
 }
 
-/** Lembrete por e-mail sai 3 dias depois do primeiro, pra quem não respondeu. */
+/** Lembrete por e-mail e follow-up manual no WhatsApp: 3 dias depois do primeiro contato, pra quem não respondeu. */
 export const EMAIL_FOLLOW_UP_DAYS = 3;
+export const WHATSAPP_FOLLOW_UP_DAYS = 3;
 
 export const DEFAULT_PROSPECTING_CONFIG: ProspectingConfig = {
   segments: [],
   cities: ["Americana, SP"],
   maxPerSearch: 30,
   dailyLimits: { whatsapp: 30, email: 50 },
+  autoSearch: "off",
   whatsappOpener: DEFAULT_WHATSAPP_OPENER,
-  email: { enabled: false, fromEmail: "", replyTo: "", steps: DEFAULT_EMAIL_STEPS },
+  whatsappFollowUp: DEFAULT_WHATSAPP_FOLLOW_UP,
+  email: { enabled: false, fromEmail: "", replyTo: "", forwardTo: "", steps: DEFAULT_EMAIL_STEPS },
 };
 
 const MAX_ITEMS = 10;
@@ -60,11 +72,14 @@ export function mergeProspectingConfig(stored: unknown): ProspectingConfig {
     cities: cleanList(s.cities, d.cities),
     maxPerSearch: clamp(s.maxPerSearch, 5, 100, d.maxPerSearch),
     dailyLimits: { whatsapp: clamp(limits.whatsapp, 0, 100, d.dailyLimits.whatsapp), email: clamp(limits.email, 0, 500, d.dailyLimits.email) },
+    autoSearch: AUTO_SEARCH.includes(s.autoSearch as AutoSearch) ? (s.autoSearch as AutoSearch) : d.autoSearch,
     whatsappOpener: text(s.whatsappOpener, 1000, d.whatsappOpener),
+    whatsappFollowUp: text(s.whatsappFollowUp, 1000, d.whatsappFollowUp),
     email: {
       enabled: mail.enabled === true,
       fromEmail: email(mail.fromEmail),
       replyTo: email(mail.replyTo),
+      forwardTo: email(mail.forwardTo),
       steps: d.email.steps.map((fallback, i) => {
         const step = obj(storedSteps[i]);
         return { subject: text(step.subject, 150, fallback.subject), body: text(step.body, 4000, fallback.body) };

@@ -13,6 +13,7 @@ const STEP_LABELS = ["Primeiro e-mail", "Lembrete (3 dias depois, se não respon
 export function ProspectOutreachForm({ config }: { config: ProspectingConfig }) {
   const router = useRouter();
   const [opener, setOpener] = useState(config.whatsappOpener);
+  const [followUp, setFollowUp] = useState(config.whatsappFollowUp);
   const [email, setEmail] = useState(config.email);
   const [limits, setLimits] = useState(config.dailyLimits);
   const [busy, setBusy] = useState(false);
@@ -25,7 +26,7 @@ export function ProspectOutreachForm({ config }: { config: ProspectingConfig }) 
     const res = await fetch("/api/prospecting/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: { ...config, whatsappOpener: opener, email, dailyLimits: limits } }),
+      body: JSON.stringify({ config: { ...config, whatsappOpener: opener, whatsappFollowUp: followUp, email, dailyLimits: limits } }),
     });
     const body = await res.json().catch(() => null);
     setBusy(false);
@@ -41,6 +42,10 @@ export function ProspectOutreachForm({ config }: { config: ProspectingConfig }) 
         Primeira mensagem do WhatsApp (você envia pelo celular, como a Milena)
         <textarea rows={3} value={opener} onChange={(e) => setOpener(e.target.value)} className={FIELD} />
       </label>
+      <label className={LABEL}>
+        Follow-up do WhatsApp (3 dias depois, se não respondeu; também enviado à mão)
+        <textarea rows={3} value={followUp} onChange={(e) => setFollowUp(e.target.value)} className={FIELD} />
+      </label>
 
       <label className="flex items-center gap-2 text-sm font-medium text-[#101828]">
         <input type="checkbox" checked={email.enabled} onChange={(e) => setEmail({ ...email, enabled: e.target.checked })} />
@@ -54,7 +59,13 @@ export function ProspectOutreachForm({ config }: { config: ProspectingConfig }) 
         </label>
         <label className={LABEL}>
           Respostas vão para
-          <input value={email.replyTo} onChange={(e) => setEmail({ ...email, replyTo: e.target.value })} placeholder="seu@email.com" className={FIELD} />
+          <input value={email.replyTo} onChange={(e) => setEmail({ ...email, replyTo: e.target.value })} placeholder="respostas@prospeccao.hubzenite.com.br" className={FIELD} />
+          <span className="font-normal text-[#98A2B3]">Use o endereço de recebimento do Resend: o sistema lê a resposta, para o lembrete e transforma em lead sozinho.</span>
+        </label>
+        <label className={LABEL}>
+          Encaminhar respostas para
+          <input value={email.forwardTo} onChange={(e) => setEmail({ ...email, forwardTo: e.target.value })} placeholder="seu@email.com" className={FIELD} />
+          <span className="font-normal text-[#98A2B3]">Sua caixa: cada resposta chega aqui, com link pro lead.</span>
         </label>
       </div>
       {email.steps.map((step, i) => (
