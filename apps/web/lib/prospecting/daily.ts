@@ -8,7 +8,7 @@ const INTERVAL_MS = { daily: 20 * 3_600_000, weekly: 6.5 * 86_400_000 } as const
 
 /**
  * Rotina da manhã (Vercel Cron às 7h e 7h40): importa buscas que terminaram no Apify, inicia a busca
- * automática quando vence (diária ou semanal, se ligada) e envia os e-mails do dia. A segunda rodada
+ * automática quando vence (diária ou semanal, se ligada) e envia os e-mails do dia (se o envio automático estiver ligado). A segunda rodada
  * importa o resultado das buscas iniciadas na primeira. O WhatsApp fica de fora: é manual.
  */
 export async function runDailyProspecting(now = new Date()): Promise<Record<string, unknown>[]> {
@@ -34,7 +34,7 @@ export async function runDailyProspecting(now = new Date()): Promise<Record<stri
       });
     }
 
-    if (config.email.enabled) {
+    if (config.email.enabled && config.email.autoSend) {
       entry.emails = await sendDueProspectEmails(settings.agencyId, now).catch(async (e) => {
         const detail = e instanceof Error ? e.message : String(e);
         await raiseSystemAlert({ agencyId: settings.agencyId, key: "prospecting:emails", category: "AUTOMATION", severity: "WARNING", title: "Prospecção automática: e-mails do dia não saíram", detail, href: "/prospeccao?aba=contato" });

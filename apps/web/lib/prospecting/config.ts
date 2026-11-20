@@ -21,6 +21,8 @@ export interface ProspectingConfig {
   whatsappFollowUp: string;
   email: {
     enabled: boolean;
+    /** Rotina das 7h envia os e-mails do dia sozinha. Desligado = só pelo botão "Enviar e-mails de hoje". */
+    autoSend: boolean;
     /** Remetente (domínio verificado no Resend). Vazio = remetente padrão do sistema. */
     fromEmail: string;
     /** Endereço que recebe as respostas. Se for um endereço de recebimento do Resend, o sistema lê a resposta sozinho. */
@@ -44,7 +46,7 @@ export const DEFAULT_PROSPECTING_CONFIG: ProspectingConfig = {
   autoSearch: "off",
   whatsappOpener: DEFAULT_WHATSAPP_OPENER,
   whatsappFollowUp: DEFAULT_WHATSAPP_FOLLOW_UP,
-  email: { enabled: false, fromEmail: "", replyTo: "", forwardTo: "", steps: DEFAULT_EMAIL_STEPS },
+  email: { enabled: false, autoSend: false, fromEmail: "", replyTo: "", forwardTo: "", steps: DEFAULT_EMAIL_STEPS },
 };
 
 const MAX_ITEMS = 10;
@@ -77,6 +79,7 @@ export function mergeProspectingConfig(stored: unknown): ProspectingConfig {
     whatsappFollowUp: text(s.whatsappFollowUp, 1000, d.whatsappFollowUp),
     email: {
       enabled: mail.enabled === true,
+      autoSend: mail.autoSend === true,
       fromEmail: email(mail.fromEmail),
       replyTo: email(mail.replyTo),
       forwardTo: email(mail.forwardTo),

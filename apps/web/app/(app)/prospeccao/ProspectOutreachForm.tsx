@@ -49,7 +49,11 @@ export function ProspectOutreachForm({ config }: { config: ProspectingConfig }) 
 
       <label className="flex items-center gap-2 text-sm font-medium text-[#101828]">
         <input type="checkbox" checked={email.enabled} onChange={(e) => setEmail({ ...email, enabled: e.target.checked })} />
-        E-mails automáticos ligados
+        E-mails ligados
+      </label>
+      <label className="-mt-2 flex items-center gap-2 pl-6 text-xs text-[#344054]">
+        <input type="checkbox" disabled={!email.enabled} checked={email.enabled && email.autoSend} onChange={(e) => setEmail({ ...email, autoSend: e.target.checked })} />
+        Enviar sozinho todo dia às 7h (desligado: só quando eu clicar em &quot;Enviar e-mails de hoje&quot;)
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={LABEL}>
