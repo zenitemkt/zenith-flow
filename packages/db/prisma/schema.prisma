@@ -3476,6 +3476,8 @@ model AssistantConversation {
   failures       Int                @default(0)
   /// Retomada automática de lead silencioso (23h/3 dias/7 dias) — 0 = nenhuma ainda enviada. Zera quando a pessoa responde.
   followUpStage  Int                @default(0)
+  /// A pessoa pediu pra não receber mais mensagem (ou foi grosseira dispensando o contato) — nunca mais entra na retomada automática.
+  followUpOptOut Boolean            @default(false)
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   messages       AssistantMessage[]

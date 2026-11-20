@@ -72,6 +72,11 @@ export const TOOLS = [
     input_schema: { type: "object", properties: { reason: { type: "string" }, summary: { type: "string" } }, required: ["reason", "summary"] },
   },
   {
+    name: "stop_follow_up",
+    description: "Chame quando a pessoa disser claramente que não quer mais receber mensagem, pedir pra parar de mandar, ou dispensar o contato de forma grosseira/debochada. Isso impede qualquer retomada automática futura (23h/3 dias/7 dias) com ela. Não chame por simples 'agora não' ou silêncio — só quando ela pedir pra parar ou for hostil.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
     name: "payment_instructions",
     description: "Dados de pagamento do produto de entrada. discount=true só se a pessoa pediu desconto e você já ofereceu o valor com desconto à vista no Pix.",
     input_schema: { type: "object", properties: { method: { type: "string", enum: ["cartao", "pix"] }, discount: { type: "boolean" } }, required: ["method"] },
@@ -141,6 +146,10 @@ async function runTool(name: string, input: Record<string, unknown>, conv: Conve
       if (!ok) return "Falha ao avisar os sócios. Diga que teve um problema e peça para a pessoa tentar de novo em instantes.";
       await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "human" } });
       return "Sócios avisados. A assistente fica pausada nesta conversa.";
+    }
+    case "stop_follow_up": {
+      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { followUpOptOut: true } });
+      return "Registrado. Não insista mais — responda com educação e encerre, sem pedir reunião nem reabrir o assunto.";
     }
     case "payment_instructions": {
       const p = config.entryProduct;
