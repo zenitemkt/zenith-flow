@@ -15,6 +15,7 @@ import {
   Settings,
   BellRing,
   Binoculars,
+  Crosshair,
 } from "lucide-react";
 import type { NavigationGroup } from "./types";
 
@@ -77,6 +78,7 @@ export const navigationGroups: NavigationGroup[] = [
           { id: "commercial-goals", label: "Metas", href: "/comercial/metas", comingSoon: false },
         ],
       },
+      { id: "prospecting", label: "Prospecção automática", icon: Crosshair, href: "/prospeccao", comingSoon: false },
     ],
   },
   {

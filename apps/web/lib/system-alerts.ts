@@ -18,6 +18,7 @@ export const SYSTEM_ALERT_TYPES = [
   { id: "social-post", category: "SOCIAL", label: "Publicação nas redes falhou", description: "Post agendado que não saiu no Instagram ou no Facebook.", prefixes: ["social:post:"] },
   { id: "instagram-chat", category: "SOCIAL", label: "Mini-chat do Instagram", description: "Resposta automática de gatilho, comentário ou direct que falhou.", prefixes: ["instagram:send:"] },
   { id: "assistant", category: "AUTOMATION", label: "Assistente virtual (Milena)", description: "Falhou duas vezes com um lead e passou a conversa para a equipe.", prefixes: ["assistant:"] },
+  { id: "prospecting", category: "AUTOMATION", label: "Prospecção automática", description: "Busca de leads no Google Maps (Apify) falhou ou a chave está inválida.", prefixes: ["prospecting:"] },
   { id: "ads-creative", category: "INTEGRATION", label: "Criativo de anúncio com problema", description: "Criativo reprovado pela Meta, que falhou ao subir, ou campanha que não subiu.", prefixes: ["ads:creative:", "ads:campaign:"] },
   { id: "traffic-recommendations", category: "AUTOMATION", label: "Recomendações de tráfego", description: "Sugestões diárias do Tráfego - Raio X: pausar anúncio caro, ajustar verba, trocar criativo cansado ou reprovado.", prefixes: ["traffic:rec:"] },
   { id: "social-connection", category: "INTEGRATION", label: "Conexão de rede social expirou", description: "Acesso a um perfil expirou ou foi removido.", prefixes: ["social:connection:"] },

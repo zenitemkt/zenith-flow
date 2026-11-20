@@ -1,0 +1,160 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { prisma, type ProspectStatus, type ProspectTemperature } from "@zenite-mkt/db";
+import { requireSessionAndMembership } from "@/lib/session";
+import { isClientRole } from "@/lib/rbac";
+import { mergeProspectingConfig } from "@/lib/prospecting/config";
+import { MAX_SEARCH_COMBINATIONS } from "@/lib/prospecting/search";
+import { ProspectingSettingsForm } from "./ProspectingSettingsForm";
+import { ProspectSearchButton } from "./ProspectSearchButton";
+import { ProspectRowActions } from "./ProspectRowActions";
+
+export const dynamic = "force-dynamic";
+
+const CARD = "rounded-xl border border-[#E4E7EC] bg-white p-4";
+const FILTERS: Record<string, { label: string; statuses: ProspectStatus[] }> = {
+  lista: { label: "Na lista", statuses: ["NOVO", "CONTATADO", "RESPONDEU"] },
+  leads: { label: "Viraram lead", statuses: ["VIROU_LEAD"] },
+  descartados: { label: "Descartados", statuses: ["DESQUALIFICADO"] },
+};
+const TEMPS: { id: ProspectTemperature; label: string; className: string }[] = [
+  { id: "QUENTE", label: "Quente", className: "bg-[#FEF3F2] text-[#B42318]" },
+  { id: "MORNO", label: "Morno", className: "bg-[#FFFAEB] text-[#B54708]" },
+  { id: "FRIO", label: "Frio", className: "bg-[#EFF8FF] text-[#175CD3]" },
+];
+const STATUS_LABEL: Record<ProspectStatus, string> = { NOVO: "Novo", CONTATADO: "Contatado", RESPONDEU: "Respondeu", DESQUALIFICADO: "Descartado", VIROU_LEAD: "Virou lead" };
+
+function formatPhone(digits: string | null) {
+  if (!digits) return "—";
+  const m = digits.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digits;
+}
+
+export default async function ProspeccaoPage({ searchParams }: { searchParams: { filtro?: string; temp?: string } }) {
+  const { session, membership } = await requireSessionAndMembership();
+  if (!session || !membership) redirect("/login");
+  if (isClientRole(membership.role)) redirect("/");
+  const agencyId = membership.agencyId;
+
+  const filter = searchParams.filtro && FILTERS[searchParams.filtro] ? searchParams.filtro : "lista";
+  const temp = TEMPS.find((t) => t.id === searchParams.temp)?.id ?? null;
+  const [settings, prospects, byStatus, hot] = await Promise.all([
+    prisma.prospectingSettings.findUnique({ where: { agencyId } }),
+    prisma.prospect.findMany({
+      where: { agencyId, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
+      orderBy: [{ score: "desc" }, { createdAt: "desc" }],
+      take: 300,
+    }),
+    prisma.prospect.groupBy({ by: ["status"], where: { agencyId }, _count: { _all: true } }),
+    prisma.prospect.count({ where: { agencyId, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
+  ]);
+  const config = mergeProspectingConfig(settings?.config);
+  const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
+  const pendingRuns = Array.isArray(settings?.pendingRuns) ? settings.pendingRuns.length : 0;
+  const href = (next: { filtro?: string; temp?: string | null }) => {
+    const params = new URLSearchParams();
+    const f = next.filtro ?? filter;
+    const t = next.temp === undefined ? temp : next.temp;
+    if (f !== "lista") params.set("filtro", f);
+    if (t) params.set("temp", t);
+    const qs = params.toString();
+    return `/prospeccao${qs ? `?${qs}` : ""}`;
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-lg font-semibold text-[#101828]">Prospecção automática</h1>
+        <p className="text-sm text-[#667085]">
+          Empresas do Google Maps nos nichos e cidades escolhidos, pontuadas pelo quanto precisam de marketing. É contato frio: só vira lead no Comercial quando a empresa engajar.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[
+          { label: "Na lista", value: countOf(FILTERS.lista!.statuses) },
+          { label: "Quentes na lista", value: hot },
+          { label: "Viraram lead", value: countOf(FILTERS.leads!.statuses) },
+          { label: "Última busca", value: settings?.lastSearchAt ? settings.lastSearchAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) : "—" },
+        ].map((stat) => (
+          <div key={stat.label} className={CARD}>
+            <p className="text-xs text-[#667085]">{stat.label}</p>
+            <p className="mt-1 text-xl font-semibold text-[#101828]">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <section className={CARD}>
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Onde buscar</h2>
+          <ProspectingSettingsForm config={config} hasToken={Boolean(settings?.apifyTokenEnc)} maxCombinations={MAX_SEARCH_COMBINATIONS} />
+        </section>
+        <section className={CARD}>
+          <h2 className="mb-1 text-sm font-semibold text-[#101828]">Buscar leads</h2>
+          <p className="mb-3 text-xs text-[#667085]">Cada busca leva alguns minutos no Apify. Empresas repetidas e quem já é lead da Zenite ficam de fora.</p>
+          <ProspectSearchButton pending={pendingRuns} ready={Boolean(settings?.apifyTokenEnc) && config.segments.length > 0 && config.cities.length > 0} />
+          {settings?.lastSearchError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">{settings.lastSearchError}</p>}
+        </section>
+      </div>
+
+      <section className={CARD}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1">
+            {Object.entries(FILTERS).map(([id, f]) => (
+              <Link key={id} href={href({ filtro: id })} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${filter === id ? "bg-[#FF2B00] text-white" : "text-[#475467] hover:bg-[#F2F4F7]"}`}>
+                {f.label} ({countOf(f.statuses)})
+              </Link>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <Link href={href({ temp: null })} className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${!temp ? "bg-[#101828] text-white" : "text-[#475467] hover:bg-[#F2F4F7]"}`}>Todas</Link>
+            {TEMPS.map((t) => (
+              <Link key={t.id} href={href({ temp: t.id })} className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${temp === t.id ? t.className : "text-[#475467] hover:bg-[#F2F4F7]"}`}>{t.label}</Link>
+            ))}
+          </div>
+        </div>
+
+        {prospects.length === 0 ? (
+          <p className="rounded-lg bg-[#F9FAFB] px-3 py-6 text-center text-sm text-[#667085]">Nenhuma empresa aqui ainda. Configure os nichos e cidades e clique em Buscar leads.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="text-xs text-[#667085]">
+                <tr className="border-b border-[#EAECF0]">
+                  <th className="py-2 pr-3 font-medium">Empresa</th>
+                  <th className="py-2 pr-3 font-medium">Nicho / cidade</th>
+                  <th className="py-2 pr-3 font-medium">Telefone</th>
+                  <th className="py-2 pr-3 font-medium">Google</th>
+                  <th className="py-2 pr-3 font-medium">Site</th>
+                  <th className="py-2 pr-3 font-medium">Nota</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {prospects.map((p) => {
+                  const t = TEMPS.find((x) => x.id === p.temperature)!;
+                  return (
+                    <tr key={p.id} className="border-b border-[#F2F4F7] align-top last:border-0">
+                      <td className="py-2.5 pr-3">
+                        <p className="font-medium text-[#101828]">{p.mapsUrl ? <a href={p.mapsUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">{p.name}</a> : p.name}</p>
+                        <p className="text-[11px] text-[#98A2B3]">{p.potential}</p>
+                      </td>
+                      <td className="py-2.5 pr-3 text-xs text-[#475467]">{p.segment}<br />{p.city}</td>
+                      <td className="py-2.5 pr-3 text-xs text-[#344054]">{formatPhone(p.phone)}{p.email && <><br /><span className="text-[#667085]">{p.email}</span></>}</td>
+                      <td className="py-2.5 pr-3 text-xs text-[#344054]">{p.rating !== null ? `${p.rating.toLocaleString("pt-BR")} (${p.reviewCount ?? 0})` : "—"}</td>
+                      <td className="py-2.5 pr-3 text-xs">{p.website ? <a href={p.website} target="_blank" rel="noopener noreferrer" className="text-[#175CD3] hover:underline">Tem</a> : <span className="text-[#B42318]">Não tem</span>}</td>
+                      <td className="py-2.5 pr-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.className}`}>{p.score.toLocaleString("pt-BR")} · {t.label}</span></td>
+                      <td className="py-2.5 pr-3 text-xs text-[#475467]">{STATUS_LABEL[p.status]}</td>
+                      <td className="py-2.5"><ProspectRowActions id={p.id} status={p.status} leadId={p.leadId} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

@@ -156,6 +156,8 @@ model Agency {
   googleBusinessReviewResponses GoogleBusinessReviewResponse[]
   instagramAutomationRules      InstagramAutomationRule[]
   assistantSettings             AssistantSettings?
+  prospectingSettings           ProspectingSettings?
+  prospects                     Prospect[]
   assistantConversations        AssistantConversation[]
   assistantBookings             AssistantBooking[]
   instagramAutomationLogs       InstagramAutomationLog[]
@@ -859,11 +861,11 @@ enum ApprovalStatus {
 }
 
 model ContentItem {
-  id              String         @id @default(cuid())
+  id              String           @id @default(cuid())
   agencyId        String
-  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agency          Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   clientId        String
-  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   title           String
   description     String?
   channel         ContentChannel
@@ -871,18 +873,18 @@ model ContentItem {
   /// Todas as redes da peça (a mesma arte replicada em cada tamanho). Vazio = cartão antigo: vale `channel`.
   channels        ContentChannel[] @default([])
   /// Todos os formatos da peça (ex.: Post estático + Stories). Vazio = cartão antigo: vale `format`.
-  formats         String[]       @default([])
+  formats         String[]         @default([])
   campaign        String?
   caption         String?
   scheduledDate   DateTime?
-  status          ContentStatus  @default(IDEIA)
+  status          ContentStatus    @default(IDEIA)
   /// Ordem importa: o primeiro da lista decide em qual coluna de responsável
   /// o card cai no Kanban de Operação enquanto ainda está em "A Fazer"
   /// (Ideia/Pauta) — vazio cai na coluna "Backend" (pedido do usuário,
   /// 2026-09-15).
-  assigneeUserIds String[]       @default([])
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  assigneeUserIds String[]         @default([])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   versions       ContentVersion[]
   socialPosts    SocialPost[]
@@ -3488,6 +3490,101 @@ model AssistantConversation {
   @@map("assistant_conversation")
 }
 
+/// Prospecção automática da própria agência (seção "Prospecção automática", grupo Produção).
+/// Prospect é contato frio: só vira Lead (funil Comercial) quando responde/engaja.
+model ProspectingSettings {
+  id              String    @id @default(cuid())
+  agencyId        String    @unique
+  agency          Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  active          Boolean   @default(false)
+  apifyTokenEnc   String?
+  /// ProspectingConfig (lib/prospecting/config.ts): segmentos, cidades, limite por busca, limites diários de envio.
+  config          Json
+  /// Busca em andamento no Apify (assíncrona, leva alguns minutos).
+  pendingRuns     Json?
+  lastSearchAt    DateTime?
+  lastSearchError String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("prospecting_settings")
+}
+
+enum ProspectTemperature {
+  QUENTE
+  MORNO
+  FRIO
+}
+
+enum ProspectStatus {
+  NOVO
+  CONTATADO
+  RESPONDEU
+  DESQUALIFICADO
+  VIROU_LEAD
+}
+
+model Prospect {
+  id              String              @id @default(cuid())
+  agencyId        String
+  agency          Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  phone           String?
+  email           String?
+  website         String?
+  address         String?
+  segment         String
+  city            String
+  category        String?
+  mapsUrl         String?
+  rating          Float?
+  reviewCount     Int?
+  score           Float               @default(0)
+  temperature     ProspectTemperature @default(FRIO)
+  potential       String?
+  status          ProspectStatus      @default(NOVO)
+  /// Dia da sequência de contato já enviado (0 = nenhum).
+  sequenceDay     Int                 @default(0)
+  optOut          Boolean             @default(false)
+  lastContactedAt DateTime?
+  nextContactAt   DateTime?
+  /// Preenchido quando o prospect engaja e vira Lead no Comercial.
+  leadId          String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  contacts        ProspectContact[]
+
+  @@index([agencyId, status])
+  @@index([agencyId, score])
+  @@map("prospect")
+}
+
+/// Dedupe de telefone/e-mail entre buscas (mesma ideia de LeadPhone/LeadEmail).
+model ProspectContact {
+  id              String   @id @default(cuid())
+  agencyId        String
+  prospectId      String
+  prospect        Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  type            String // phone | email
+  normalizedValue String
+
+  @@unique([agencyId, normalizedValue])
+  @@index([prospectId])
+  @@map("prospect_contact")
+}
+
+/// Contador diário de envios por canal, pra respeitar o limite (30 WhatsApp / 200 e-mail).
+model ProspectSendLog {
+  id       String   @id @default(cuid())
+  agencyId String
+  channel  String // whatsapp | email
+  day      DateTime @db.Date
+  count    Int      @default(0)
+
+  @@unique([agencyId, channel, day])
+  @@map("prospect_send_log")
+}
+
 model AssistantMessage {
   id             String                @id @default(cuid())
   conversationId String
@@ -3853,50 +3950,50 @@ enum CompetitorCategory {
 }
 
 model Competitor {
-  id                 String             @id @default(cuid())
-  agencyId           String
-  clientId           String
-  client             Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  igUsername         String
+  id                  String             @id @default(cuid())
+  agencyId            String
+  clientId            String
+  client              Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  igUsername          String
   /// Perfil do próprio cliente, usado como base de comparação.
-  isOwn              Boolean            @default(false)
+  isOwn               Boolean            @default(false)
   /// Direto participa da disputa; referência serve apenas como benchmark e inspiração.
-  category           CompetitorCategory @default(DIRECT)
-  notes              String?
-  displayName        String?
-  biography          String?
-  website            String?
+  category            CompetitorCategory @default(DIRECT)
+  notes               String?
+  displayName         String?
+  biography           String?
+  website             String?
   /// Site oficial definido manualmente. Quando preenchido, tem prioridade sobre o link da bio.
-  websiteOverride    String?
+  websiteOverride     String?
   /// Nota Lighthouse mobile (0-100) da página inicial informada pelo Instagram.
-  websiteScore       Int?
+  websiteScore        Int?
   /// Nota de SEO do Lighthouse (0-100), mesma chamada do PageSpeed.
-  websiteSeoScore    Int?
-  websiteScoreAt     DateTime?
-  websiteScoreError  String?
+  websiteSeoScore     Int?
+  websiteScoreAt      DateTime?
+  websiteScoreError   String?
   /// Checklist de SEO on-page (title, description, H1, robots.txt, sitemap, dados estruturados).
-  seoChecks          Json?
-  seoCheckedAt       DateTime?
-  seoError           String?
+  seoChecks           Json?
+  seoCheckedAt        DateTime?
+  seoError            String?
   /// Completude pública do perfil do Google (categoria, horário, telefone, site, fotos).
   googleProfileChecks Json?
-  pictureUrl         String?
-  followers          Int?
-  follows            Int?
-  mediaCount         Int?
-  lastSyncAt         DateTime?
-  lastError          String?
-  aiReport           String?
-  aiReportAt         DateTime?
-  aiReportDays       Int?
-  googlePlaceId      String?
-  googlePlaceName    String?
-  googlePlaceAddress String?
-  googleRating       Float?
-  googleReviewCount  Int?
-  googleLastSyncAt   DateTime?
-  googleLastError    String?
-  createdAt          DateTime           @default(now())
+  pictureUrl          String?
+  followers           Int?
+  follows             Int?
+  mediaCount          Int?
+  lastSyncAt          DateTime?
+  lastError           String?
+  aiReport            String?
+  aiReportAt          DateTime?
+  aiReportDays        Int?
+  googlePlaceId       String?
+  googlePlaceName     String?
+  googlePlaceAddress  String?
+  googleRating        Float?
+  googleReviewCount   Int?
+  googleLastSyncAt    DateTime?
+  googleLastError     String?
+  createdAt           DateTime           @default(now())
 
   posts           CompetitorPost[]
   snapshots       CompetitorSnapshot[]
