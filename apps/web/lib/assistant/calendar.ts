@@ -131,6 +131,11 @@ export function formatSlot(d: Date): string {
   return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+/** Só a hora, formato "15h30" — usado na variável do modelo de lembrete de reunião. */
+export function formatTimeOnly(d: Date): string {
+  return d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).replace(":", "h");
+}
+
 /** Agendas que a conta conectada enxerga (as próprias e as compartilhadas), para escolher no painel. */
 export async function listCalendars(): Promise<{ id: string; name: string; canWrite: boolean }[]> {
   const token = await accessToken();

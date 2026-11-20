@@ -1,7 +1,8 @@
 import { prisma } from "@zenite-mkt/db";
 import { cancelBooking, confirmBookingEvent, loadAssistant, runConversationTurn } from "./agent";
 import { nextAutoFollowUpWakeTimes, runAutoFollowUps } from "./auto-follow-up";
-import { formatSlot } from "./calendar";
+import { formatSlot, formatTimeOnly } from "./calendar";
+import { firstName } from "./form-outreach";
 import { notifyPartners } from "./notify";
 import { sendButtonTemplate, sendButtons, sendText } from "./whatsapp";
 
@@ -127,7 +128,8 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
         // Janela de 24h fechada (reunião marcada há dias sem troca de mensagem desde então) — cai no modelo aprovado.
         const template = process.env.ASSISTANT_MEETING_REMINDER_TEMPLATE;
         if (template) {
-          await sendButtonTemplate(phone, template, [reminderText], [`confirm_${booking.id}`, `cancel_${booking.id}`]).catch((e) =>
+          const name = firstName(booking.conversation.profileName) || "tudo bem";
+          await sendButtonTemplate(phone, template, [name, formatTimeOnly(booking.startsAt)], [`confirm_${booking.id}`, `cancel_${booking.id}`]).catch((e) =>
             console.error("assistant_reminder_failed", booking.id, e),
           );
         } else console.error("assistant_reminder_failed", booking.id, "ASSISTANT_MEETING_REMINDER_TEMPLATE ausente.");
