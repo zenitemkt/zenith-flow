@@ -878,6 +878,9 @@ model ContentItem {
   caption         String?
   scheduledDate   DateTime?
   status          ContentStatus    @default(IDEIA)
+  /// Capa de vídeo já enviada ao R2 pela publicação direta, antes do passo final confirmar o agendamento
+  /// (sobrevive se esse passo falhar — senão a capa ficaria órfã no bucket sem registro nenhum).
+  pendingCoverKey String?
   /// Ordem importa: o primeiro da lista decide em qual coluna de responsável
   /// o card cai no Kanban de Operação enquanto ainda está em "A Fazer"
   /// (Ideia/Pauta) — vazio cai na coluna "Backend" (pedido do usuário,

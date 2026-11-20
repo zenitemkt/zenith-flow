@@ -27,6 +27,24 @@ export interface QuickPostClient {
   collabHandles: string[];
 }
 
+interface PendingMedia {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}
+/** Publicação já criada com arte enviada, mas nunca chegou a ser agendada. */
+interface PendingQuickPost {
+  id: string;
+  title: string | null;
+  caption: string | null;
+  createdAt: string;
+  platforms: SocialPlatform[];
+  format: SocialPostFormat;
+  pendingCoverKey: string | null;
+  media: PendingMedia[];
+}
+
 const ICON = { INSTAGRAM: Instagram, FACEBOOK: Facebook, GOOGLE_BUSINESS: MapPin } as const;
 const LABEL: Record<SocialPlatform, string> = { INSTAGRAM: "Instagram", FACEBOOK: "Facebook", GOOGLE_BUSINESS: "Google" };
 const FORMAT_LABEL: Record<SocialPostFormat, string> = { FEED: "Feed", REEL: "Reels", STORY: "Story" };
@@ -95,6 +113,10 @@ export function QuickPostForm({
   const [platforms, setPlatforms] = useState<SocialPlatform[]>(() => activePlatforms(preset));
   const [format, setFormat] = useState<SocialPostFormat>("FEED");
   const [files, setFiles] = useState<File[]>([]);
+  // Retomar publicação com arte já enviada antes (a pessoa fechou no meio, ou o passo final falhou).
+  const [pendingItems, setPendingItems] = useState<PendingQuickPost[]>([]);
+  const [showPendingPicker, setShowPendingPicker] = useState(false);
+  const [resuming, setResuming] = useState<{ contentId: string; media: PendingMedia[]; coverKey: string | null } | null>(null);
   // Collab (até 3 perfis) e capa do vídeo, só no Instagram.
   const [collabText, setCollabText] = useState("");
   const [coverMode, setCoverMode] = useState<"auto" | "frame" | "image">("auto");
@@ -115,8 +137,10 @@ export function QuickPostForm({
   const miniChatAvailable = platforms.includes("INSTAGRAM") && format !== "STORY";
   const collabAvailable = miniChatAvailable;
   const collaborators = collabText.split(/[\s,;]+/).map((c) => c.trim().replace(/^@/, "")).filter(Boolean).slice(0, 3);
+  const mediaCount = resuming ? resuming.media.length : files.length;
+  const mediaIsVideo = resuming ? resuming.media.length === 1 && isVideoType(resuming.media[0]!.contentType) : files.length === 1 && isVideoType(files[0]!.type);
   // Capa: Instagram, vídeo único (Reels ou vídeo no feed).
-  const coverAvailable = miniChatAvailable && files.length === 1 && isVideoType(files[0]!.type);
+  const coverAvailable = miniChatAvailable && mediaCount === 1 && mediaIsVideo;
   const [videoDuration, setVideoDuration] = useState(0);
   const [busy, setBusy] = useState<"schedule" | "now" | null>(null);
   const guardSubmit = useSubmitGuard();
@@ -131,19 +155,59 @@ export function QuickPostForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy]);
 
+  useEffect(() => {
+    if (!clientId) {
+      setPendingItems([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/social/quick-post/pending?clientId=${clientId}`)
+      .then((res) => res.json())
+      .then((body) => !cancelled && setPendingItems(body?.items ?? []))
+      .catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId]);
+
   function selectClient(id: string) {
     const next = clients.find((c) => c.id === id);
     setClientId(id);
     setPlatforms(activePlatforms(next));
     setTime(defaultTimeFor(date, next));
     setOverrides({});
+    setResuming(null);
+    setShowPendingPicker(false);
+  }
+
+  function resumePending(item: PendingQuickPost) {
+    setPlatforms(item.platforms.length ? item.platforms : activePlatforms(client));
+    setFormat(item.format);
+    setCaption(item.caption ?? "");
+    setTitle(item.title ?? "");
+    setFiles([]);
+    setCoverFile(null);
+    setCoverMode(item.pendingCoverKey ? "image" : "auto");
+    setResuming({ contentId: item.id, media: item.media, coverKey: item.pendingCoverKey });
+    setShowPendingPicker(false);
+  }
+
+  function discardResuming() {
+    setResuming(null);
+    setFiles([]);
+    setCoverFile(null);
   }
 
   const timeOf = (p: SocialPlatform) => overrides[p] ?? time;
 
-  // Pré-visualização: a arte escolhida vira URL local (liberada ao trocar os arquivos).
-  const previewMedia = useMemo(() => files.map((f) => ({ url: URL.createObjectURL(f), isVideo: isVideoType(f.type) })), [files]);
-  useEffect(() => () => previewMedia.forEach((m) => URL.revokeObjectURL(m.url)), [previewMedia]);
+  // Pré-visualização: a arte escolhida vira URL local (liberada ao trocar os arquivos); a retomada usa o link já existente do arquivo.
+  const previewMedia = useMemo(
+    () => (resuming ? resuming.media.map((m) => ({ url: `/api/content-media/${m.id}`, isVideo: isVideoType(m.contentType) })) : files.map((f) => ({ url: URL.createObjectURL(f), isVideo: isVideoType(f.type) }))),
+    [files, resuming],
+  );
+  useEffect(() => () => {
+    if (!resuming) previewMedia.forEach((m) => URL.revokeObjectURL(m.url));
+  }, [previewMedia, resuming]);
   const previewProfiles = useMemo(() => {
     const out: Partial<Record<SocialPlatform, PreviewProfile>> = {};
     if (!client) return out;
@@ -190,7 +254,7 @@ export function QuickPostForm({
     if (busy) return;
     setError(null);
     if (!client) return setError("Escolha o cliente.");
-    const mediaError = quickPostMediaError({ platforms, format, files });
+    const mediaError = quickPostMediaError({ platforms, format, files: resuming ? resuming.media.map((m) => ({ type: m.contentType })) : files });
     if (mediaError) return setError(mediaError);
     if (format !== "STORY" && caption.length > CAPTION_MAX) return setError(`A legenda passa de ${CAPTION_MAX} caracteres.`);
     if (platforms.includes("GOOGLE_BUSINESS") && format === "STORY") return setError("O Google não aceita publicação em Stories.");
@@ -223,40 +287,44 @@ export function QuickPostForm({
       googleCallToAction: platforms.includes("GOOGLE_BUSINESS") ? googleCallToAction || null : null,
       googleCallToActionUrl: platforms.includes("GOOGLE_BUSINESS") && googleCallToAction !== "CALL" ? googleCallToActionUrl || null : null,
     };
-    let contentId: string | null = null;
+    let contentId: string | null = resuming?.contentId ?? null;
     let scheduled = false;
     try {
-      setProgress("Preparando...");
-      const created = await fetch("/api/social/quick-post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, clientId: client.id, title: format === "STORY" ? "" : title }),
-      });
-      const createdBody = await created.json().catch(() => null);
-      if (!created.ok) throw new Error(createdBody?.error ?? "Não foi possível criar a publicação.");
-      contentId = createdBody.id as string;
-
-      if (files.length > 0) {
-        const media: UploadedMedia[] = [];
-        for (const [index, file] of files.entries()) {
-          setProgress(`Enviando arte ${index + 1} de ${files.length}...`);
-          media.push(await uploadSocialMedia(contentId, file, "approved"));
-        }
-        const version = await fetch(`/api/content/${contentId}/versions`, {
+      if (!contentId) {
+        setProgress("Preparando...");
+        const created = await fetch("/api/social/quick-post", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ media, notes: `Enviada ${source}` }),
+          body: JSON.stringify({ ...payload, clientId: client.id, title: format === "STORY" ? "" : title }),
         });
-        if (!version.ok) {
-          const body = await version.json().catch(() => null);
-          throw new Error(body?.error ?? "Não foi possível salvar a arte.");
+        const createdBody = await created.json().catch(() => null);
+        if (!created.ok) throw new Error(createdBody?.error ?? "Não foi possível criar a publicação.");
+        contentId = createdBody.id as string;
+
+        if (files.length > 0) {
+          const media: UploadedMedia[] = [];
+          for (const [index, file] of files.entries()) {
+            setProgress(`Enviando arte ${index + 1} de ${files.length}...`);
+            media.push(await uploadSocialMedia(contentId, file, "approved"));
+          }
+          const version = await fetch(`/api/content/${contentId}/versions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ media, notes: `Enviada ${source}` }),
+          });
+          if (!version.ok) {
+            const body = await version.json().catch(() => null);
+            throw new Error(body?.error ?? "Não foi possível salvar a arte.");
+          }
         }
       }
 
-      let coverKey: string | null = null;
+      let coverKey: string | null = resuming?.coverKey ?? null;
       if (coverAvailable && coverMode === "image" && coverFile) {
         setProgress("Enviando a capa...");
         coverKey = (await uploadSocialMedia(contentId, coverFile, "approved")).key;
+        // Guarda já — se o passo final falhar, a capa não fica órfã no bucket sem registro.
+        await fetch(`/api/content/${contentId}/cover`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: coverKey }) }).catch(() => null);
       }
       setProgress(now ? "Publicando..." : "Agendando...");
       const res = await fetch(`/api/social/quick-post/${contentId}`, {
@@ -408,6 +476,33 @@ export function QuickPostForm({
           </div>
         )}
 
+        {pendingItems.length > 0 && !resuming && (
+          <div className="rounded-xl border border-[#FEDF89] bg-[#FFFAEB] p-3">
+            <p className="text-sm text-[#93400A]">
+              {pendingItems.length === 1 ? "Você tem 1 publicação" : `Você tem ${pendingItems.length} publicações`} com arte já enviada, sem terminar de agendar.
+            </p>
+            <button type="button" onClick={() => setShowPendingPicker((v) => !v)} className="mt-1 text-sm font-semibold text-[#93400A] underline">
+              {showPendingPicker ? "Esconder" : "Continuar uma delas em vez de enviar de novo"}
+            </button>
+            {showPendingPicker && (
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {pendingItems.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => resumePending(item)}
+                      className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-[#FEDF89] bg-white px-2.5 py-2 text-left text-xs hover:bg-[#FFFAEB]"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[#101828]">{item.title || item.caption?.slice(0, 60) || "Sem legenda"}</span>
+                      <span className="shrink-0 text-[#98A2B3]">{item.media.length} arquivo{item.media.length > 1 ? "s" : ""}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <span className={FIELD_LABEL}>Formato</span>
           <div className="grid grid-cols-3 gap-1.5">
@@ -430,44 +525,67 @@ export function QuickPostForm({
 
         <div className="flex flex-col gap-1.5">
           <span className={FIELD_LABEL}>Arte</span>
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#D0D5DD] px-4 py-5 text-center hover:border-[#FF2B00] hover:bg-[#FFF9F7]">
-            <ImagePlus size={20} className="text-[#667085]" aria-hidden />
-            <span className="text-sm font-semibold text-[#101828]">Escolher imagem ou vídeo</span>
-            <span className="text-xs text-[#667085]">
-              {format === "REEL" ? "Um vídeo MP4 ou MOV" : format === "STORY" ? "Um arquivo" : "Vários arquivos viram carrossel (até 10)"}
-            </span>
-            <input
-              type="file"
-              multiple={format === "FEED"}
-              accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
-              className="sr-only"
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          {files.length > 0 && (
-            <ol className="flex flex-col gap-1.5">
-              {files.map((file, index) => (
-                <li key={`${file.name}-${index}`} className="flex min-w-0 items-center gap-2 rounded-lg border border-[#EEF0F3] px-2.5 py-2 text-sm">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#F2F4F7] text-xs font-semibold text-[#475467]">{index + 1}</span>
-                  {isVideoType(file.type) && <Film size={14} className="shrink-0 text-[#667085]" aria-hidden />}
-                  <span className="min-w-0 flex-1 truncate text-[#344054]">{file.name}</span>
-                  <span className="shrink-0 text-xs text-[#98A2B3]">{formatBytes(file.size)}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFiles(files.filter((_, i) => i !== index))}
-                    aria-label={`Remover ${file.name}`}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#667085] hover:bg-[#F2F4F7]"
-                  >
-                    <X size={14} aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ol>
+          {resuming ? (
+            <>
+              <ol className="flex flex-col gap-1.5">
+                {resuming.media.map((media, index) => (
+                  <li key={media.id} className="flex min-w-0 items-center gap-2 rounded-lg border border-[#EEF0F3] bg-[#F9FAFB] px-2.5 py-2 text-sm">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#F2F4F7] text-xs font-semibold text-[#475467]">{index + 1}</span>
+                    {isVideoType(media.contentType) && <Film size={14} className="shrink-0 text-[#667085]" aria-hidden />}
+                    <span className="min-w-0 flex-1 truncate text-[#344054]">{media.fileName}</span>
+                    <span className="shrink-0 text-xs text-[#98A2B3]">{formatBytes(media.sizeBytes)}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-xs text-[#667085]">
+                Arte já enviada antes, sem reenviar.{" "}
+                <button type="button" onClick={discardResuming} className="font-semibold text-[#FF2B00] underline">
+                  Enviar outra mídia
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-[#D0D5DD] px-4 py-5 text-center hover:border-[#FF2B00] hover:bg-[#FFF9F7]">
+                <ImagePlus size={20} className="text-[#667085]" aria-hidden />
+                <span className="text-sm font-semibold text-[#101828]">Escolher imagem ou vídeo</span>
+                <span className="text-xs text-[#667085]">
+                  {format === "REEL" ? "Um vídeo MP4 ou MOV" : format === "STORY" ? "Um arquivo" : "Vários arquivos viram carrossel (até 10)"}
+                </span>
+                <input
+                  type="file"
+                  multiple={format === "FEED"}
+                  accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"
+                  className="sr-only"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {files.length > 0 && (
+                <ol className="flex flex-col gap-1.5">
+                  {files.map((file, index) => (
+                    <li key={`${file.name}-${index}`} className="flex min-w-0 items-center gap-2 rounded-lg border border-[#EEF0F3] px-2.5 py-2 text-sm">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#F2F4F7] text-xs font-semibold text-[#475467]">{index + 1}</span>
+                      {isVideoType(file.type) && <Film size={14} className="shrink-0 text-[#667085]" aria-hidden />}
+                      <span className="min-w-0 flex-1 truncate text-[#344054]">{file.name}</span>
+                      <span className="shrink-0 text-xs text-[#98A2B3]">{formatBytes(file.size)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                        aria-label={`Remover ${file.name}`}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[#667085] hover:bg-[#F2F4F7]"
+                      >
+                        <X size={14} aria-hidden />
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {hasVideo && files.length > 1 && <p className="text-xs text-[#667085]">Carrossel com vídeo só sai no Instagram.</p>}
+            </>
           )}
-          {hasVideo && files.length > 1 && <p className="text-xs text-[#667085]">Carrossel com vídeo só sai no Instagram.</p>}
         </div>
 
         {platforms.includes("GOOGLE_BUSINESS") && <div className="rounded-xl border border-[#E4E7EC] bg-[#F9FAFB] p-3"><div className="flex items-center gap-2"><MapPin size={16} className="text-[#FF2B00]" /><p className="text-sm font-semibold text-[#101828]">Botão no Google (opcional)</p></div><div className="mt-3 grid gap-2 sm:grid-cols-2"><select value={googleCallToAction} onChange={(event) => setGoogleCallToAction(event.target.value)} className={INPUT}><option value="">Sem botão</option><option value="LEARN_MORE">Saiba mais</option><option value="SIGN_UP">Inscrever-se</option><option value="BOOK">Reservar</option><option value="ORDER">Pedir</option><option value="SHOP">Comprar</option><option value="CALL">Ligar</option></select>{googleCallToAction && googleCallToAction !== "CALL" && <input value={googleCallToActionUrl} onChange={(event) => setGoogleCallToActionUrl(event.target.value)} placeholder="https://seusite.com.br/pagina" className={INPUT} />}</div><p className="mt-2 text-xs text-[#667085]">O Google exibirá o texto, até uma foto ou vídeo (máx. 30s, ~75MB) e este botão no perfil da empresa.</p></div>}
@@ -564,7 +682,7 @@ export function QuickPostForm({
             {coverMode === "image" && (
               <label className="mt-2 flex flex-col gap-1 text-xs text-[#667085]">
                 <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} className="text-xs" />
-                Imagem vertical 9:16 (1080×1920) fica melhor. Vira JPEG antes de enviar.
+                {resuming?.coverKey && !coverFile ? "Já tem uma capa enviada antes — escolha um arquivo só se quiser trocar." : "Imagem vertical 9:16 (1080×1920) fica melhor. Vira JPEG antes de enviar."}
               </label>
             )}
           </div>
