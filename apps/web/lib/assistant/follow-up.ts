@@ -19,11 +19,13 @@ export interface FollowUpStageDef {
   stage: number;
   afterHours: number;
   kind: "text" | "template";
+  /** Só pra kind "template" — nome da env var com o modelo aprovado desse estágio (cada estágio tem o seu, com texto diferente). */
+  templateEnvVar?: string;
 }
 export const AUTO_FOLLOW_UP_STAGES: FollowUpStageDef[] = [
   { stage: 1, afterHours: 23, kind: "text" },
-  { stage: 2, afterHours: 72, kind: "template" },
-  { stage: 3, afterHours: 168, kind: "template" },
+  { stage: 2, afterHours: 72, kind: "template", templateEnvVar: "ASSISTANT_FOLLOWUP_3D_TEMPLATE" },
+  { stage: 3, afterHours: 168, kind: "template", templateEnvVar: "ASSISTANT_FOLLOWUP_7D_TEMPLATE" },
 ];
 
 /** Estágio de retomada automática pendente agora, ou null. Pega o mais avançado (ex.: cron ficou fora do ar e pulou um estágio). */

@@ -1,6 +1,7 @@
 import { Prisma, prisma } from "@zenite-mkt/db";
 import { raiseSystemAlert } from "@/lib/system-alerts";
 import { loadAssistant } from "./agent";
+import { firstName } from "./form-outreach";
 import { AUTO_FOLLOW_UP_STAGES, CLOSED_LEAD_STATUSES, autoFollowUpMessage, dueFollowUpStage } from "./follow-up";
 import { sendTemplate, sendText } from "./whatsapp";
 
@@ -68,20 +69,21 @@ export async function runAutoFollowUps(now = new Date()): Promise<{ sent: number
       if (due.kind === "text") {
         await sendText(candidate.phone, text);
       } else {
-        const template = process.env.ASSISTANT_FOLLOWUP_TEMPLATE;
+        const template = due.templateEnvVar ? process.env[due.templateEnvVar] : undefined;
         if (!template) {
           await raiseSystemAlert({
             agencyId: candidate.agencyId,
-            key: "assistant:followup-template",
+            key: `assistant:followup-template:${due.stage}`,
             category: "AUTOMATION",
             severity: "WARNING",
-            title: "WhatsApp: retomada automática de lead sem modelo aprovado",
-            detail: "Configure ASSISTANT_FOLLOWUP_TEMPLATE (modelo aprovado pra retomar lead depois de 3 ou 7 dias de silêncio).",
+            title: `WhatsApp: retomada automática de ${due.afterHours}h sem modelo aprovado`,
+            detail: `Configure ${due.templateEnvVar} (modelo aprovado desse estágio da retomada).`,
             href: "/automacoes/assistente",
           }).catch(() => null);
           continue;
         }
-        await sendTemplate(candidate.phone, template, [text]);
+        const name = firstName(candidate.profileName) || "tudo bem";
+        await sendTemplate(candidate.phone, template, [name]);
       }
       await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: due.stage } });
       await prisma.assistantMessage.create({ data: { conversationId: candidate.conversationId, role: "assistant", content: `[retomada] ${text}` } });
