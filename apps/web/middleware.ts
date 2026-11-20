@@ -22,6 +22,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/collect",
   "/api/v1/integrations/site-leads",
   "/api/public/blog-views",
+  // "Sair da lista" dos e-mails de prospecção: quem recebe não tem login.
+  "/api/public/prospect-optout",
   // Agendador de redes: chamado pelo cron externo, protegido por CRON_SECRET na própria rota.
   "/api/cron/social-publish",
   "/api/cron/site-monitor",

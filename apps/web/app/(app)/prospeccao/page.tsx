@@ -5,9 +5,13 @@ import { requireSessionAndMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { mergeProspectingConfig } from "@/lib/prospecting/config";
 import { MAX_SEARCH_COMBINATIONS } from "@/lib/prospecting/search";
+import { sentToday, whatsappOpenerFor } from "@/lib/prospecting/outreach";
+import { isMobileBr } from "@/lib/assistant/form-outreach";
 import { ProspectingSettingsForm } from "./ProspectingSettingsForm";
 import { ProspectSearchButton } from "./ProspectSearchButton";
 import { ProspectRowActions } from "./ProspectRowActions";
+import { ProspectOutreachForm } from "./ProspectOutreachForm";
+import { ProspectEmailSendButton } from "./ProspectEmailSendButton";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +28,8 @@ const TEMPS: { id: ProspectTemperature; label: string; className: string }[] = [
 ];
 const STATUS_LABEL: Record<ProspectStatus, string> = { NOVO: "Novo", CONTATADO: "Contatado", RESPONDEU: "Respondeu", DESQUALIFICADO: "Descartado", VIROU_LEAD: "Virou lead" };
 
+const dateShort = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
+
 function formatPhone(digits: string | null) {
   if (!digits) return "—";
   const m = digits.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
@@ -38,7 +44,8 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
 
   const filter = searchParams.filtro && FILTERS[searchParams.filtro] ? searchParams.filtro : "lista";
   const temp = TEMPS.find((t) => t.id === searchParams.temp)?.id ?? null;
-  const [settings, prospects, byStatus, hot] = await Promise.all([
+  const now = new Date();
+  const [settings, prospects, byStatus, hot, dueEmails, today] = await Promise.all([
     prisma.prospectingSettings.findUnique({ where: { agencyId } }),
     prisma.prospect.findMany({
       where: { agencyId, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
@@ -47,6 +54,10 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
     }),
     prisma.prospect.groupBy({ by: ["status"], where: { agencyId }, _count: { _all: true } }),
     prisma.prospect.count({ where: { agencyId, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
+    prisma.prospect.count({
+      where: { agencyId, optOut: false, email: { not: null }, status: { in: ["NOVO", "CONTATADO"] }, OR: [{ emailStep: 0 }, { emailStep: 1, nextEmailAt: { lte: now } }] },
+    }),
+    sentToday(agencyId, now),
   ]);
   const config = mergeProspectingConfig(settings?.config);
   const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
@@ -97,6 +108,28 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
         </section>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <section className={CARD}>
+          <h2 className="mb-3 text-sm font-semibold text-[#101828]">Primeiro contato e e-mails</h2>
+          <ProspectOutreachForm config={config} />
+        </section>
+        <section className={`${CARD} flex flex-col gap-4`}>
+          <div>
+            <h2 className="mb-1 text-sm font-semibold text-[#101828]">Envios de hoje</h2>
+            <p className="text-xs text-[#667085]">
+              WhatsApp: {today.whatsapp} de {config.dailyLimits.whatsapp} primeiros contatos · E-mail: {today.email} de {config.dailyLimits.email}
+            </p>
+          </div>
+          <div className="rounded-lg bg-[#F9FAFB] p-3 text-xs text-[#475467]">
+            <p className="mb-1 font-semibold text-[#344054]">Como funciona o WhatsApp</p>
+            <p>1. Clique em WhatsApp na empresa: abre a conversa com a mensagem pronta. Envie pelo WhatsApp Business do número da Milena.</p>
+            <p>2. Clique em Já enviei. Se a empresa responder, vira lead e a Milena continua a conversa sozinha.</p>
+            <p>3. Se não responder em 3 dias, sai um único follow-up automático. Depois disso, mais nada.</p>
+          </div>
+          <ProspectEmailSendButton due={dueEmails} enabled={config.email.enabled} />
+        </section>
+      </div>
+
       <section className={CARD}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1">
@@ -127,6 +160,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
                   <th className="py-2 pr-3 font-medium">Google</th>
                   <th className="py-2 pr-3 font-medium">Site</th>
                   <th className="py-2 pr-3 font-medium">Nota</th>
+                  <th className="py-2 pr-3 font-medium">Contato</th>
                   <th className="py-2 pr-3 font-medium">Status</th>
                   <th className="py-2 font-medium" />
                 </tr>
@@ -134,6 +168,12 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
               <tbody>
                 {prospects.map((p) => {
                   const t = TEMPS.find((x) => x.id === p.temperature)!;
+                  const whatsappUrl = !p.whatsappSentAt && !p.optOut && isMobileBr(p.phone) ? `https://wa.me/${p.phone}?text=${encodeURIComponent(whatsappOpenerFor(config, p))}` : null;
+                  const contact = [
+                    p.whatsappSentAt ? `WhatsApp ${dateShort(p.whatsappSentAt)}` : null,
+                    p.emailStep > 0 ? `E-mail ${p.emailStep}/2` : null,
+                    p.optOut ? "Saiu da lista" : null,
+                  ].filter(Boolean);
                   return (
                     <tr key={p.id} className="border-b border-[#F2F4F7] align-top last:border-0">
                       <td className="py-2.5 pr-3">
@@ -145,8 +185,9 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
                       <td className="py-2.5 pr-3 text-xs text-[#344054]">{p.rating !== null ? `${p.rating.toLocaleString("pt-BR")} (${p.reviewCount ?? 0})` : "—"}</td>
                       <td className="py-2.5 pr-3 text-xs">{p.website ? <a href={p.website} target="_blank" rel="noopener noreferrer" className="text-[#175CD3] hover:underline">Tem</a> : <span className="text-[#B42318]">Não tem</span>}</td>
                       <td className="py-2.5 pr-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.className}`}>{p.score.toLocaleString("pt-BR")} · {t.label}</span></td>
+                      <td className="py-2.5 pr-3 text-xs text-[#475467]">{contact.length ? contact.join(" · ") : "—"}</td>
                       <td className="py-2.5 pr-3 text-xs text-[#475467]">{STATUS_LABEL[p.status]}</td>
-                      <td className="py-2.5"><ProspectRowActions id={p.id} status={p.status} leadId={p.leadId} /></td>
+                      <td className="py-2.5"><ProspectRowActions id={p.id} status={p.status} leadId={p.leadId} whatsappUrl={whatsappUrl} /></td>
                     </tr>
                   );
                 })}

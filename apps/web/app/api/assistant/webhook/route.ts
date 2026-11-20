@@ -6,6 +6,17 @@ import { assistantAgencyId } from "@/lib/assistant/calendar";
 import { notifyPartners } from "@/lib/assistant/notify";
 import { handleLeadButton, handlePartnerButton, replyAt } from "@/lib/assistant/process";
 import { verifyWhatsappSignature } from "@/lib/assistant/whatsapp";
+import { phoneVariants } from "@/lib/assistant/form-outreach";
+import { onProspectReply } from "@/lib/prospecting/outreach";
+
+/** Conversa pelo número, aceitando o celular com ou sem o 9 extra (o WhatsApp às vezes usa o formato antigo). */
+async function findConversation(agencyId: string, phone: string) {
+  const variants = phoneVariants(phone);
+  return (
+    (await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone } } })) ??
+    (variants.length > 1 ? await prisma.assistantConversation.findFirst({ where: { agencyId, phone: { in: variants } } }) : null)
+  );
+}
 
 /** Webhook do WhatsApp (Cloud API, coexistência) da assistente virtual. */
 export async function GET(request: Request) {
@@ -112,12 +123,23 @@ export async function POST(request: Request) {
       // Coexistência: mensagem enviada pela equipe pelo app do celular. A equipe assumiu, a assistente pausa.
       for (const echo of (value.message_echoes ?? []) as WaMessage[]) {
         if (!echo.to || partners.has(echo.to)) continue;
-        const conv =
-          (await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: echo.to } } })) ??
-          (await prisma.assistantConversation.create({ data: { agencyId, phone: echo.to, mode: "human" } }));
+        const conv = (await findConversation(agencyId, echo.to)) ?? (await prisma.assistantConversation.create({ data: { agencyId, phone: echo.to, mode: "human" } }));
         // Primeira mensagem manual marcada com "Já enviei": conta como fala da própria Milena, que segue dali.
         const handoff = conv.autoTakeoverAt && Date.now() - conv.autoTakeoverAt.getTime() < 7 * 24 * 3600_000;
-        await prisma.assistantMessage.upsert({ where: { waMessageId: echo.id }, create: { conversationId: conv.id, role: handoff ? "assistant" : "partner", content: describe(echo).content, waMessageId: echo.id }, update: {} });
+        const echoContent = describe(echo).content;
+        // "Já enviei" clicado antes do eco chegar: o texto preparado já foi registrado sem id da Meta — só completa, não duplica.
+        const takeoverAt = conv.autoTakeoverAt?.getTime() ?? 0;
+        const placeholder = handoff
+          ? await prisma.assistantMessage.findFirst({
+              where: { conversationId: conv.id, role: "assistant", waMessageId: null, createdAt: { gte: new Date(takeoverAt - 60_000), lte: new Date(takeoverAt + 60_000) } },
+              orderBy: { createdAt: "asc" },
+            })
+          : null;
+        if (placeholder && !(await prisma.assistantMessage.findUnique({ where: { waMessageId: echo.id }, select: { id: true } }))) {
+          await prisma.assistantMessage.update({ where: { id: placeholder.id }, data: { waMessageId: echo.id, content: echoContent } });
+        } else {
+          await prisma.assistantMessage.upsert({ where: { waMessageId: echo.id }, create: { conversationId: conv.id, role: handoff ? "assistant" : "partner", content: echoContent, waMessageId: echo.id }, update: {} });
+        }
         if (!handoff) await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "human", replyDueAt: null } });
       }
 
@@ -128,12 +150,24 @@ export async function POST(request: Request) {
           await handlePartnerButton(agencyId, buttonId);
           continue;
         }
-        let conv = await prisma.assistantConversation.findUnique({ where: { agencyId_phone: { agencyId, phone: message.from } } });
+        let conv = await findConversation(agencyId, message.from);
         const isNew = !conv;
         if (!conv) conv = await prisma.assistantConversation.create({ data: { agencyId, phone: message.from, profileName: profiles.get(message.from) || null } });
         const { content, mediaId, mediaType } = describe(message);
         const stored = await prisma.assistantMessage.upsert({ where: { waMessageId: message.id }, create: { conversationId: conv.id, role: "user", content, mediaId, mediaType, waMessageId: message.id }, update: {} });
         if (stored.createdAt.getTime() < Date.now() - 60_000) continue; // reenvio da Meta, já tratado
+
+        // Respondeu a prospecção: engajou, vira Lead no Comercial (mesmo com a Milena desligada).
+        if (conv.prospectId && !conv.leadId) {
+          const leadId = await onProspectReply(agencyId, conv).catch((e) => {
+            console.error("prospect_reply_lead_failed", conv!.id, e);
+            return null;
+          });
+          if (leadId) {
+            conv = { ...conv, leadId };
+            await notifyPartners(config, `${config.name}: ${conv.profileName ?? "empresa da prospecção"} (+${conv.phone}) respondeu a prospecção no WhatsApp e virou lead.`).catch(() => false);
+          }
+        }
 
         // Desligada: a conversa aparece na caixa de Conversas, mas a assistente não responde.
         if (!enabled) {

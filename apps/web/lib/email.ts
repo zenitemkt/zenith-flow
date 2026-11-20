@@ -33,22 +33,30 @@ interface SendEmailArgs {
   bcc?: string[];
   subject: string;
   html: string;
+  text?: string;
+  /** Remetente específico (domínio verificado no Resend); padrão RESEND_FROM_EMAIL. */
+  from?: string;
+  replyTo?: string;
+  headers?: Record<string, string>;
 }
 
 /** Núcleo genérico — todo template específico do produto chama esta função. */
-export async function sendEmail({ to, cc, bcc, subject, html }: SendEmailArgs): Promise<void> {
+export async function sendEmail({ to, cc, bcc, subject, html, text, from, replyTo, headers }: SendEmailArgs): Promise<void> {
   if (!isEmailConfigured()) {
     throw new EmailNotConfiguredError();
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL!,
+    from: from || process.env.RESEND_FROM_EMAIL!,
     to,
     cc: cc && cc.length > 0 ? cc : undefined,
     bcc: bcc && bcc.length > 0 ? bcc : undefined,
     subject,
     html,
+    ...(text ? { text } : {}),
+    ...(replyTo ? { replyTo } : {}),
+    ...(headers ? { headers } : {}),
   });
 
   if (error) {

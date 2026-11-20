@@ -18,14 +18,25 @@ interface FollowUpCandidate {
   phone: string;
   profileName: string | null;
   leadId: string | null;
+  prospectId: string | null;
+  lastInboundAt: Date | null;
   followUpStage: number;
   lastRealMessageAt: Date;
 }
 
+/**
+ * Conversa de prospecção (primeiro contato manual pra empresa que nunca falou com a gente): um único
+ * follow-up, 3 dias depois, pelo modelo do estágio 2. Sem o toque de 23h (não há janela de 24h aberta)
+ * e sem o de 7 dias.
+ */
+const PROSPECT_STAGE = AUTO_FOLLOW_UP_STAGES.find((def) => def.stage === 2)!;
+const DONE_STAGE = 3;
+const WINDOW_MS = 24 * 3_600_000;
+
 async function findFollowUpCandidates(): Promise<FollowUpCandidate[]> {
-  const rows = await prisma.$queryRaw<{ conversationId: string; agencyId: string; phone: string; profileName: string | null; leadId: string | null; followUpStage: number; lastRealMessageAt: Date }[]>(
+  const rows = await prisma.$queryRaw<FollowUpCandidate[]>(
     Prisma.sql`
-      SELECT c."id" AS "conversationId", c."agencyId", c."phone", c."profileName", c."leadId", c."followUpStage", m."createdAt" AS "lastRealMessageAt"
+      SELECT c."id" AS "conversationId", c."agencyId", c."phone", c."profileName", c."leadId", c."prospectId", c."lastInboundAt", c."followUpStage", m."createdAt" AS "lastRealMessageAt"
       FROM "assistant_conversation" c
       JOIN LATERAL (
         SELECT "createdAt", "role" FROM "assistant_message"
@@ -61,10 +72,21 @@ export async function runAutoFollowUps(now = new Date()): Promise<{ sent: number
     if (!enabled || !config.followUp.autoEnabled) continue;
 
     const silentHours = (now.getTime() - candidate.lastRealMessageAt.getTime()) / 3_600_000;
-    const due = dueFollowUpStage(silentHours, candidate.followUpStage);
+    const isProspect = Boolean(candidate.prospectId && !candidate.leadId);
+    const due = isProspect ? (silentHours >= PROSPECT_STAGE.afterHours ? PROSPECT_STAGE : null) : dueFollowUpStage(silentHours, candidate.followUpStage);
     if (!due) continue;
+    const nextStage = isProspect ? DONE_STAGE : due.stage;
 
-    const text = autoFollowUpMessage(candidate.profileName, due.stage);
+    // Texto livre só vale com a janela de 24h aberta (a pessoa escreveu nas últimas 24h); fechada, pula o toque.
+    const windowOpen = candidate.lastInboundAt !== null && now.getTime() - new Date(candidate.lastInboundAt).getTime() < WINDOW_MS;
+    if (due.kind === "text" && !windowOpen) {
+      await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: nextStage } });
+      continue;
+    }
+
+    // Prospect é empresa (o nome salvo é o da empresa), então o modelo cumprimenta "pessoal".
+    const greetName = isProspect ? null : candidate.profileName;
+    const text = autoFollowUpMessage(greetName, due.stage);
     try {
       if (due.kind === "text") {
         await sendText(candidate.phone, text);
@@ -77,19 +99,23 @@ export async function runAutoFollowUps(now = new Date()): Promise<{ sent: number
             category: "AUTOMATION",
             severity: "WARNING",
             title: `WhatsApp: retomada automática de ${due.afterHours}h sem modelo aprovado`,
-            detail: `Configure ${due.templateEnvVar} (modelo aprovado desse estágio da retomada).`,
+            detail: `Configure ${due.templateEnvVar} (modelo aprovado desse estágio da retomada). Esse toque foi pulado.`,
             href: "/automacoes/assistente",
           }).catch(() => null);
+          // Pula o toque em vez de tentar de novo a cada minuto (manteria o banco acordado à toa).
+          await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: nextStage } });
           continue;
         }
-        const name = firstName(candidate.profileName) || "tudo bem";
+        const name = firstName(greetName) || "pessoal";
         await sendTemplate(candidate.phone, template, [name]);
       }
-      await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: due.stage } });
+      await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: nextStage } });
       await prisma.assistantMessage.create({ data: { conversationId: candidate.conversationId, role: "assistant", content: `[retomada] ${text}` } });
       sent++;
     } catch (error) {
       console.error("assistant_auto_followup_failed", candidate.conversationId, error);
+      // Falhou (número inválido, modelo recusado...): não tenta de novo a cada minuto.
+      await prisma.assistantConversation.update({ where: { id: candidate.conversationId }, data: { followUpStage: nextStage } }).catch(() => null);
     }
   }
   return { sent };
@@ -100,8 +126,9 @@ export async function nextAutoFollowUpWakeTimes(now = new Date()): Promise<Date[
   const candidates = await findFollowUpCandidates();
   const out: Date[] = [];
   for (const candidate of candidates) {
-    const next = AUTO_FOLLOW_UP_STAGES.find((def) => def.stage > candidate.followUpStage);
-    if (next) out.push(new Date(candidate.lastRealMessageAt.getTime() + next.afterHours * 3_600_000));
+    const isProspect = Boolean(candidate.prospectId && !candidate.leadId);
+    const next = isProspect ? PROSPECT_STAGE : AUTO_FOLLOW_UP_STAGES.find((def) => def.stage > candidate.followUpStage);
+    if (next) out.push(new Date(new Date(candidate.lastRealMessageAt).getTime() + next.afterHours * 3_600_000));
   }
   return out;
 }

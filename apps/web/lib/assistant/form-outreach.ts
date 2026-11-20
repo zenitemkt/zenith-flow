@@ -12,6 +12,19 @@ export const waPhone = (raw: string | null | undefined) => {
   return digits.length >= 12 ? digits : null;
 };
 
+/**
+ * Mesmo celular brasileiro com e sem o 9 extra: o WhatsApp às vezes identifica o contato pelo formato
+ * antigo (55 + DDD + 8 dígitos), então a conversa pode chegar num formato diferente do cadastrado.
+ */
+export function phoneVariants(phone: string): string[] {
+  if (/^55\d{2}9\d{8}$/.test(phone)) return [phone, phone.slice(0, 4) + phone.slice(5)];
+  if (/^55\d{2}[6-9]\d{7}$/.test(phone)) return [phone, `${phone.slice(0, 4)}9${phone.slice(4)}`];
+  return [phone];
+}
+
+/** Celular (dá pra chamar no WhatsApp); fixo fica de fora. */
+export const isMobileBr = (phone: string | null | undefined) => Boolean(phone && (/^55\d{2}9\d{8}$/.test(phone) || /^55\d{2}[6-9]\d{7}$/.test(phone)));
+
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /**

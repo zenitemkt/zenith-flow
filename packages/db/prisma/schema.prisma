@@ -3480,6 +3480,8 @@ model AssistantConversation {
   followUpStage  Int                @default(0)
   /// A pessoa pediu pra não receber mais mensagem (ou foi grosseira dispensando o contato) — nunca mais entra na retomada automática.
   followUpOptOut Boolean            @default(false)
+  /// Conversa aberta pela prospecção automática (primeiro contato manual): ao responder, o prospect vira Lead.
+  prospectId     String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   messages       AssistantMessage[]
@@ -3543,11 +3545,15 @@ model Prospect {
   temperature     ProspectTemperature @default(FRIO)
   potential       String?
   status          ProspectStatus      @default(NOVO)
-  /// Dia da sequência de contato já enviado (0 = nenhum).
-  sequenceDay     Int                 @default(0)
   optOut          Boolean             @default(false)
+  /// Token do link "sair da lista" nos e-mails (gerado no primeiro envio).
+  optOutToken     String?             @unique
   lastContactedAt DateTime?
-  nextContactAt   DateTime?
+  /// Primeiro contato manual no WhatsApp ("Já enviei"); a Milena assume se responder.
+  whatsappSentAt  DateTime?
+  /// E-mails da sequência já enviados (0, 1 = primeiro, 2 = lembrete do dia 3).
+  emailStep       Int                 @default(0)
+  nextEmailAt     DateTime?
   /// Preenchido quando o prospect engaja e vira Lead no Comercial.
   leadId          String?
   createdAt       DateTime            @default(now())

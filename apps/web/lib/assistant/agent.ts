@@ -7,6 +7,7 @@ import { downloadMedia, sendText, transcribeAudio } from "./whatsapp";
 import { askPartnersApproval, notifyPartners } from "./notify";
 import { brtDateString, cancelMeeting, createMeeting, findFreeSlots, formatSlot } from "./calendar";
 import { raiseSystemAlert } from "@/lib/system-alerts";
+import { onProspectStop } from "@/lib/prospecting/outreach";
 
 const brl = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -149,6 +150,7 @@ async function runTool(name: string, input: Record<string, unknown>, conv: Conve
     }
     case "stop_follow_up": {
       await prisma.assistantConversation.update({ where: { id: conv.id }, data: { followUpOptOut: true } });
+      await onProspectStop(conv.agencyId, conv).catch((e) => console.error("prospect_stop_failed", conv.id, e));
       return "Registrado. Não insista mais — responda com educação e encerre, sem pedir reunião nem reabrir o assunto.";
     }
     case "payment_instructions": {
