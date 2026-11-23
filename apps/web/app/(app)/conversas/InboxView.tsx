@@ -293,7 +293,7 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
                 />
               )}
               {current.mode === "bot" && current.counterpartBot && (
-                <p className="mb-2 text-[11px] text-[#667085]">A Milena identificou um robô de atendimento do outro lado e parou de responder aqui. Clique em "Religar a Milena" se for engano.</p>
+                <p className="mb-2 text-[11px] text-[#667085]">A Milena identificou um robô de atendimento do outro lado e parou de responder aqui. Clique em &quot;Religar a Milena&quot; se for engano.</p>
               )}
               {current.mode === "bot" && !current.counterpartBot && <p className="mb-2 text-[11px] text-[#667085]">A Milena está respondendo. Se você mandar mensagem, a conversa passa para a equipe.</p>}
               <div className="flex items-end gap-2">
