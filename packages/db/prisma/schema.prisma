@@ -3209,8 +3209,8 @@ model GoogleBusinessReviewPolicy {
   autoReplyFiveStars    Boolean  @default(true)
   manualAtOrBelow       Int      @default(3)
   responseTone          String   @default("Profissional, cordial e específico")
-  fourStarTemplate      String   @db.Text
-  fiveStarTemplate      String   @db.Text
+  /// Orientações extras da agência pra IA levar em conta (não é texto copiado literal); ex.: "mencione que atendemos aos sábados".
+  extraGuidelines       String?  @db.Text
   notifyLowRatings      Boolean  @default(true)
   requireCommentForAuto Boolean  @default(false)
   createdAt             DateTime @default(now())

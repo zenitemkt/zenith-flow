@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
-import { DEFAULT_FOUR_STAR_TEMPLATE, DEFAULT_FIVE_STAR_TEMPLATE, validateReviewPolicy } from "@/lib/google-business-reviews";
+import { DEFAULT_RESPONSE_TONE, validateReviewPolicy } from "@/lib/google-business-reviews";
 
 export async function PATCH(request: Request) {
   const { session, membership } = await requireSessionAndMembership();
@@ -14,13 +14,12 @@ export async function PATCH(request: Request) {
     autoReplyFourStars: body.autoReplyFourStars !== false,
     autoReplyFiveStars: body.autoReplyFiveStars !== false,
     manualAtOrBelow: Number(body.manualAtOrBelow ?? 3),
-    responseTone: String(body.responseTone ?? "").trim(),
-    fourStarTemplate: String(body.fourStarTemplate ?? DEFAULT_FOUR_STAR_TEMPLATE).trim(),
-    fiveStarTemplate: String(body.fiveStarTemplate ?? DEFAULT_FIVE_STAR_TEMPLATE).trim(),
+    responseTone: String(body.responseTone ?? DEFAULT_RESPONSE_TONE).trim(),
+    extraGuidelines: String(body.extraGuidelines ?? "").trim() || null,
     notifyLowRatings: body.notifyLowRatings !== false,
     requireCommentForAuto: body.requireCommentForAuto === true,
   };
-  const error = validateReviewPolicy(data);
+  const error = validateReviewPolicy({ manualAtOrBelow: data.manualAtOrBelow, responseTone: data.responseTone, extraGuidelines: data.extraGuidelines ?? "" });
   if (error) return NextResponse.json({ error }, { status: 400 });
   const policy = await prisma.$transaction(async (tx) => {
     const saved = await tx.googleBusinessReviewPolicy.upsert({ where: { agencyId: membership.agencyId }, create: { agencyId: membership.agencyId, ...data }, update: data });

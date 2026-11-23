@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyGoogleReview, renderGoogleReviewTemplate, validateReviewPolicy } from "./google-business-reviews";
+import { classifyGoogleReview, validateReviewPolicy } from "./google-business-reviews";
 
 const enabled = { autoReplyEnabled: true, autoReplyFourStars: true, autoReplyFiveStars: true, manualAtOrBelow: 3, requireCommentForAuto: false };
 
@@ -15,12 +15,17 @@ describe("triagem de avaliações Google", () => {
     expect(classifyGoogleReview(5, "Ótimo", { ...enabled, autoReplyEnabled: false })).toBe("PENDING_MANUAL");
   });
 
-  it("respeita a exigência de comentário e substitui variáveis seguras", () => {
+  it("respeita a exigência de comentário", () => {
     expect(classifyGoogleReview(5, " ", { ...enabled, requireCommentForAuto: true })).toBe("PENDING_MANUAL");
-    expect(renderGoogleReviewTemplate("Olá, {nome}. Obrigado pela {empresa}!", { reviewerName: "Ana Souza", businessName: "Zenite" })).toBe("Olá, Ana. Obrigado pela Zenite!");
   });
 
   it("rejeita uma política fora da regra 1–3", () => {
-    expect(validateReviewPolicy({ manualAtOrBelow: 4, responseTone: "Cordial", fourStarTemplate: "A", fiveStarTemplate: "B" })).toContain("1 a 3");
+    expect(validateReviewPolicy({ manualAtOrBelow: 4, responseTone: "Cordial", extraGuidelines: "" })).toContain("1 a 3");
+  });
+
+  it("exige tom de voz e limita o tamanho das orientações extras", () => {
+    expect(validateReviewPolicy({ manualAtOrBelow: 2, responseTone: "", extraGuidelines: "" })).toContain("tom de voz");
+    expect(validateReviewPolicy({ manualAtOrBelow: 2, responseTone: "Cordial", extraGuidelines: "x".repeat(801) })).toContain("800");
+    expect(validateReviewPolicy({ manualAtOrBelow: 2, responseTone: "Cordial", extraGuidelines: "" })).toBeNull();
   });
 });

@@ -11,8 +11,7 @@ export interface ReviewPolicyValue {
   autoReplyFiveStars: boolean;
   manualAtOrBelow: number;
   responseTone: string;
-  fourStarTemplate: string;
-  fiveStarTemplate: string;
+  extraGuidelines: string;
   notifyLowRatings: boolean;
   requireCommentForAuto: boolean;
 }
@@ -52,9 +51,8 @@ export function ReviewPolicyForm({ initial, canManage }: { initial: ReviewPolicy
       </div>
       <div className="space-y-4 p-4">
         <label className="block"><span className="mb-1.5 block text-xs font-semibold text-[#344054]">Tom de voz</span><input value={value.responseTone} disabled={!canManage} onChange={(e) => set("responseTone", e.target.value)} maxLength={240} className="h-10 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" /></label>
-        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-[#344054]">Modelo para 5 estrelas</span><textarea value={value.fiveStarTemplate} disabled={!canManage} onChange={(e) => set("fiveStarTemplate", e.target.value)} rows={4} maxLength={1500} className="w-full rounded-lg border border-[#D0D5DD] bg-white p-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" /></label>
-        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-[#344054]">Modelo para 4 estrelas</span><textarea value={value.fourStarTemplate} disabled={!canManage} onChange={(e) => set("fourStarTemplate", e.target.value)} rows={4} maxLength={1500} className="w-full rounded-lg border border-[#D0D5DD] bg-white p-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" /></label>
-        <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[#667085]">Variáveis disponíveis: <code>{"{nome}"}</code> e <code>{"{empresa}"}</code>.</p>{canManage && <button onClick={() => void save()} disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF2B00] px-3 text-sm font-semibold text-white disabled:opacity-60"><Save size={15} />{saving ? "Salvando..." : "Salvar regras"}</button>}</div>
+        <label className="block"><span className="mb-1.5 block text-xs font-semibold text-[#344054]">Orientações extras (opcional)</span><textarea value={value.extraGuidelines} disabled={!canManage} onChange={(e) => set("extraGuidelines", e.target.value)} rows={3} maxLength={800} placeholder="Ex.: mencione que atendemos aos sábados; nunca ofereça desconto na resposta." className="w-full rounded-lg border border-[#D0D5DD] bg-white p-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]" /></label>
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[#667085]">Cada avaliação recebe uma resposta única, escrita por IA a partir do que a pessoa escreveu, seguindo as boas práticas do Google (nada de texto padronizado repetido).</p>{canManage && <button onClick={() => void save()} disabled={saving} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-[#FF2B00] px-3 text-sm font-semibold text-white disabled:opacity-60"><Save size={15} />{saving ? "Salvando..." : "Salvar regras"}</button>}</div>
       </div>
     </div>
   </section>;

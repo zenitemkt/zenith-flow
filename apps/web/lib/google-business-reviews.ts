@@ -1,5 +1,4 @@
-export const DEFAULT_FOUR_STAR_TEMPLATE = "Olá, {nome}! Obrigado pela avaliação e por escolher a {empresa}. Ficamos felizes com sua experiência e vamos continuar trabalhando para conquistar a quinta estrela na próxima visita.";
-export const DEFAULT_FIVE_STAR_TEMPLATE = "Olá, {nome}! Muito obrigado pelas cinco estrelas. É ótimo saber que sua experiência com a {empresa} foi positiva. Esperamos receber você novamente em breve!";
+export const DEFAULT_RESPONSE_TONE = "Profissional, cordial e específico";
 
 export interface ReviewPolicyInput {
   autoReplyEnabled: boolean;
@@ -21,20 +20,9 @@ export function classifyGoogleReview(stars: number, comment: string | null | und
   return "PENDING_MANUAL";
 }
 
-export function renderGoogleReviewTemplate(template: string, input: { reviewerName?: string | null; businessName: string }) {
-  const firstName = input.reviewerName?.trim().split(/\s+/)[0] || "cliente";
-  return template.replaceAll("{nome}", firstName).replaceAll("{empresa}", input.businessName).trim();
-}
-
-export function validateReviewPolicy(input: {
-  manualAtOrBelow: number;
-  responseTone: string;
-  fourStarTemplate: string;
-  fiveStarTemplate: string;
-}) {
+export function validateReviewPolicy(input: { manualAtOrBelow: number; responseTone: string; extraGuidelines: string }) {
   if (!Number.isInteger(input.manualAtOrBelow) || input.manualAtOrBelow < 1 || input.manualAtOrBelow > 3) return "A fila manual deve abranger notas de 1 a 3.";
   if (!input.responseTone.trim() || input.responseTone.length > 240) return "Informe o tom de voz em até 240 caracteres.";
-  if (!input.fourStarTemplate.trim() || !input.fiveStarTemplate.trim()) return "Os modelos de 4 e 5 estrelas são obrigatórios.";
-  if (input.fourStarTemplate.length > 1500 || input.fiveStarTemplate.length > 1500) return "Cada modelo pode ter até 1.500 caracteres.";
+  if (input.extraGuidelines.length > 800) return "As orientações extras podem ter até 800 caracteres.";
   return null;
 }
