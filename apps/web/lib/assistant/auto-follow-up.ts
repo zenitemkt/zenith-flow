@@ -7,8 +7,9 @@ import { sendTemplate, sendText } from "./whatsapp";
 
 /**
  * Retomada automática de lead que recebeu mensagem nossa (Milena ou equipe) e não respondeu:
- * 23h (mensagem livre, ainda dentro da janela de 24h da Meta), 3 dias e 7 dias (modelo aprovado
- * `ASSISTANT_FOLLOWUP_TEMPLATE`, janela fechada havia muito). A mensagem de "[sistema] ..." e as
+ * 23h (mensagem livre, ainda dentro da janela de 24h da Meta), 3 dias (`ASSISTANT_FOLLOWUP_3D_TEMPLATE`)
+ * e 7 dias (`ASSISTANT_FOLLOWUP_7D_TEMPLATE`), modelos aprovados pra janela já fechada havia muito.
+ * A mensagem de "[sistema] ..." e as
  * próprias retomadas ("[retomada] ...") não contam como a "última mensagem real" — senão cada
  * retomada reiniciaria a contagem de silêncio e os estágios de 3/7 dias nunca chegariam a tempo.
  */

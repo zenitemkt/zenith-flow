@@ -136,7 +136,8 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
         const template = process.env.ASSISTANT_MEETING_REMINDER_TEMPLATE;
         if (template) {
           const name = firstName(booking.conversation.profileName) || "tudo bem";
-          await sendButtonTemplate(phone, template, [name, formatTimeOnly(booking.startsAt)], [`confirm_${booking.id}`, `cancel_${booking.id}`]).catch((e) =>
+          // Esse modelo foi aprovado na Meta como "Portuguese (POR)" (pt_PT), não pt_BR como os demais.
+          await sendButtonTemplate(phone, template, [name, formatTimeOnly(booking.startsAt)], [`confirm_${booking.id}`, `cancel_${booking.id}`], "pt_PT").catch((e) =>
             console.error("assistant_reminder_failed", booking.id, e),
           );
         } else console.error("assistant_reminder_failed", booking.id, "ASSISTANT_MEETING_REMINDER_TEMPLATE ausente.");

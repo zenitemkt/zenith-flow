@@ -50,23 +50,23 @@ export function sendGroupText(groupId: string, body: string) {
   return post({ recipient_type: "group", to: groupId, type: "text", text: { body } });
 }
 
-/** Modelo aprovado, usado quando a janela de 24 h da conversa já fechou. */
-export function sendTemplate(to: string, name: string, params: string[]) {
+/** Modelo aprovado, usado quando a janela de 24 h da conversa já fechou. `language` é o código cadastrado na Meta pra esse modelo (a maioria é pt_BR, mas um modelo aprovado como "Portuguese (POR)" precisa de pt_PT — a Meta recusa o envio se o código não bater exatamente com o da aprovação). */
+export function sendTemplate(to: string, name: string, params: string[], language = "pt_BR") {
   return post({
     to,
     type: "template",
-    template: { name, language: { code: "pt_BR" }, components: params.length ? [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] : [] },
+    template: { name, language: { code: language }, components: params.length ? [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] : [] },
   });
 }
 
-/** Modelo aprovado com botões de resposta rápida — `buttonPayloads[i]` é o payload (ex.: `confirm_<id>`) do botão i do modelo. */
-export function sendButtonTemplate(to: string, name: string, bodyParams: string[], buttonPayloads: string[]) {
+/** Modelo aprovado com botões de resposta rápida — `buttonPayloads[i]` é o payload (ex.: `confirm_<id>`) do botão i do modelo. Mesma observação de `language` acima. */
+export function sendButtonTemplate(to: string, name: string, bodyParams: string[], buttonPayloads: string[], language = "pt_BR") {
   return post({
     to,
     type: "template",
     template: {
       name,
-      language: { code: "pt_BR" },
+      language: { code: language },
       components: [
         ...(bodyParams.length ? [{ type: "body", parameters: bodyParams.map((text) => ({ type: "text", text })) }] : []),
         ...buttonPayloads.map((payload, index) => ({ type: "button", sub_type: "quick_reply", index: String(index), parameters: [{ type: "payload", payload }] })),
