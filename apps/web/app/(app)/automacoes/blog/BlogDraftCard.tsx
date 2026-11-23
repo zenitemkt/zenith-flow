@@ -26,6 +26,7 @@ export interface BlogDraftSummary {
   status: "PENDING" | "APPROVED" | "REJECTED";
   origin: string;
   createdAt: string;
+  reviewedAt: string | null;
   comments: DraftComment[];
   suggestedRelated: string[] | null;
   suggestedFaq: Array<{ q: string; a: string }> | null;
@@ -33,6 +34,7 @@ export interface BlogDraftSummary {
 }
 
 const STATUS_LABELS: Record<string, string> = { PENDING: "Pendente", APPROVED: "Publicado", REJECTED: "Rejeitado" };
+const formatDateTime = (iso: string) => new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-[#FFFAEB] text-[#B54708]",
   APPROVED: "bg-[#ECFDF3] text-[#027A48]",
@@ -170,7 +172,9 @@ export function BlogDraftCard({ draft }: { draft: BlogDraftSummary }) {
             <span className="text-xs text-[#98A2B3]">{draft.category ?? "sem categoria"}</span>
           </div>
           <h3 className="text-sm font-semibold text-[#101828]">{draft.title}</h3>
-          <p className="mt-0.5 text-xs text-[#667085]">/{draft.slug}</p>
+          <p className="mt-0.5 text-xs text-[#667085]">
+            /{draft.slug} · {draft.status === "APPROVED" && draft.reviewedAt ? `Publicado em ${formatDateTime(draft.reviewedAt)}` : `Criado em ${formatDateTime(draft.createdAt)}`}
+          </p>
         </div>
         <button type="button" onClick={() => setExpanded((v) => !v)} className="text-xs font-semibold text-[#FF2B00]">
           {expanded ? "Recolher" : "Ver detalhes"}

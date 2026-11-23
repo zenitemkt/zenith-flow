@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
+import { canManageIntegrations } from "@/lib/rbac";
 import { ContentAutomationConnectionForm } from "./ContentAutomationConnectionForm";
 import { SearchConsoleConnectionCard } from "./SearchConsoleConnectionCard";
 import { BlogSettingsForm } from "./BlogSettingsForm";
 import { BlogDraftCard, type BlogDraftSummary } from "./BlogDraftCard";
+import { ManualBlogRecordForm } from "./ManualBlogRecordForm";
 
 export default async function BlogAutomationPage() {
   const { session, membership } = await requireSessionAndMembership();
@@ -38,6 +40,7 @@ export default async function BlogAutomationPage() {
     status: draft.status,
     origin: draft.origin,
     createdAt: draft.createdAt.toISOString(),
+    reviewedAt: draft.reviewedAt ? draft.reviewedAt.toISOString() : null,
     comments: draft.comments.map((c) => ({ id: c.id, body: c.body, status: c.status, agentReply: c.agentReply, createdAt: c.createdAt.toISOString() })),
     suggestedRelated: Array.isArray(draft.suggestedRelated) ? (draft.suggestedRelated as string[]) : null,
     suggestedFaq: Array.isArray(draft.suggestedFaq) ? (draft.suggestedFaq as Array<{ q: string; a: string }>) : null,
@@ -68,6 +71,8 @@ export default async function BlogAutomationPage() {
         siteUrl={searchConsole?.siteUrl ?? null}
         lastError={searchConsole?.lastError ?? null}
       />
+
+      <ManualBlogRecordForm canManage={canManageIntegrations(membership.role)} />
 
       <section>
         <h2 className="mb-3 text-sm font-semibold text-[#101828]">Pendentes ({pending.length})</h2>
