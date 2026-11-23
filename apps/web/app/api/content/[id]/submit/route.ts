@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { SUBMITTABLE_STATUSES } from "@/lib/content";
+import { isDesignKind } from "@/lib/content-kind";
 import { prisma } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
 
@@ -28,6 +29,9 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const item = await prisma.contentItem.findUnique({ where: { id: params.id } });
   if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 });
+  }
+  if (!isDesignKind(item.kind)) {
+    return NextResponse.json({ error: "Só cartões de design vão para aprovação do cliente." }, { status: 400 });
   }
   if (!SUBMITTABLE_STATUSES.includes(item.status)) {
     return NextResponse.json(

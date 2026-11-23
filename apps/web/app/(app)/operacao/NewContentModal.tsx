@@ -6,6 +6,8 @@ import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { ChannelFormatPicker } from "@/app/_components/ChannelFormatPicker";
 import { useSubmitGuard } from "@/lib/useSubmitGuard";
+import type { ContentKind } from "@zenite-mkt/db";
+import { CONTENT_KINDS, CONTENT_KIND_HINTS, CONTENT_KIND_LABELS, isDesignKind } from "@/lib/content-kind";
 
 interface ClientOption {
   id: string;
@@ -42,6 +44,8 @@ export function NewContentModal({
     : clients.some((client) => client.id === defaultClientId)
       ? (defaultClientId as string)
       : (clients[0]?.id ?? "");
+  const [kind, setKind] = useState<ContentKind>("DESIGN");
+  const design = isDesignKind(kind);
   const [channels, setChannels] = useState<string[]>(["INSTAGRAM"]);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [formats, setFormats] = useState<string[]>([]);
@@ -55,6 +59,7 @@ export function NewContentModal({
   function close() {
     setTitle("");
     setDescription("");
+    setKind("DESIGN");
     setChannels(["INSTAGRAM"]);
     setAssigneeUserIds([]);
     setFormats([]);
@@ -74,7 +79,7 @@ export function NewContentModal({
     await guardSubmit(async () => {
     setError(null);
 
-    if (channels.length === 0) {
+    if (design && channels.length === 0) {
       setError("Selecione ao menos uma rede.");
       return;
     }
@@ -86,11 +91,16 @@ export function NewContentModal({
       const response = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, clientId, channels, formats, campaign, scheduledDate, caption, assigneeUserIds }),
+        // Só Design manda redes/formatos/campanha/legenda (o servidor também ignora nos demais tipos).
+        body: JSON.stringify(
+          design
+            ? { kind, title, description, clientId, channels, formats, campaign, scheduledDate, caption, assigneeUserIds }
+            : { kind, title, description, clientId, scheduledDate, assigneeUserIds },
+        ),
       });
       const body = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(body?.error ?? "Não foi possível criar a peça.");
+        setError(body?.error ?? (design ? "Não foi possível criar a peça." : "Não foi possível criar a tarefa."));
         return;
       }
 
@@ -125,6 +135,36 @@ export function NewContentModal({
       <Modal open={open} onClose={() => { if (!loading) close(); }} title="Nova tarefa">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3" aria-busy={loading}>
           <fieldset disabled={loading} className="flex min-w-0 flex-col gap-3 border-0 p-0 disabled:opacity-70">
+          <div className="flex flex-col gap-1.5">
+            <span id="content-kind-label" className="text-sm font-medium text-[#344054]">
+              Tipo de cartão
+            </span>
+            <div role="radiogroup" aria-labelledby="content-kind-label" className="flex flex-wrap gap-1.5">
+              {CONTENT_KINDS.map((option) => {
+                const active = kind === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setKind(option)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active
+                        ? "bg-[#FF2B00] text-white"
+                        : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
+                    }`}
+                  >
+                    {CONTENT_KIND_LABELS[option]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-[#98A2B3]">
+              {CONTENT_KIND_HINTS[kind]}
+              {!design && " Fluxo: A fazer → Fazendo → Concluído."}
+            </p>
+          </div>
           <FormField
             label="Título"
             name="title"
@@ -132,7 +172,7 @@ export function NewContentModal({
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Reel de lançamento"
+            placeholder={design ? "Reel de lançamento" : kind === "FINANCEIRO" ? "Enviar fechamento financeiro de novembro" : kind === "ATENDIMENTO" ? "Ligar para o cliente sobre a campanha" : kind === "SITE" ? "Ajustar banner da home do site" : "O que precisa ser feito"}
           />
           <div className="flex flex-col gap-1.5">
             <label htmlFor="content-description" className="text-sm font-medium text-[#344054]">
@@ -193,17 +233,23 @@ export function NewContentModal({
               </p>
             </div>
           )}
-          <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
-          <p className="-mt-1 text-xs text-[#98A2B3]">Tudo vira um cartão só: o designer replica a arte em cada tamanho e o cliente aprova tudo junto.</p>
+          {design && (
+            <>
+              <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
+              <p className="-mt-1 text-xs text-[#98A2B3]">Tudo vira um cartão só: o designer replica a arte em cada tamanho e o cliente aprova tudo junto.</p>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <FormField
-              label="Data agendada (opcional)"
+              label={design ? "Data agendada (opcional)" : "Prazo (opcional)"}
               name="scheduledDate"
               type="date"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
             />
           </div>
+          {design && (
+          <>
           <FormField
             label="Campanha (opcional)"
             name="campaign"
@@ -222,6 +268,8 @@ export function NewContentModal({
               className="resize-none rounded-lg border border-[#D0D5DD] px-3 py-2 text-sm outline-none focus:border-[#FF2B00] focus:ring-2 focus:ring-[#EDE9FE]"
             />
           </div>
+          </>
+          )}
 
           </fieldset>
 
@@ -242,7 +290,7 @@ export function NewContentModal({
               className="flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-60"
               style={{ backgroundColor: "#FF2B00" }}
             >
-              {loading ? "Criando..." : "Criar peça"}
+              {loading ? "Criando..." : design ? "Criar peça" : "Criar tarefa"}
             </button>
           </div>
         </form>

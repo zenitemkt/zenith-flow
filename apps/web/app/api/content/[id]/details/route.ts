@@ -4,6 +4,7 @@ import { isClientRole } from "@/lib/rbac";
 import { prisma } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
 import { parseChannels, parseFormats } from "@/lib/content-formats";
+import { canKindUseStatus, isDesignKind, parseContentKind } from "@/lib/content-kind";
 
 interface RouteParams {
   params: { id: string };
@@ -35,11 +36,24 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Informe o título." }, { status: 400 });
   }
 
-  // Redes e formatos são opcionais aqui (quem só edita título/descrição não manda).
-  const channels = parseChannels(body?.channels);
-  const formats = parseFormats(body?.formats);
-  if (Array.isArray(body?.channels) && channels.length === 0) {
+  // Tipo opcional: sem `kind` no corpo, o cartão mantém o tipo atual.
+  const kind = body?.kind === undefined ? item.kind : parseContentKind(body.kind);
+  const design = isDesignKind(kind);
+  if (kind !== item.kind && !canKindUseStatus(kind, item.status)) {
+    return NextResponse.json(
+      { error: "Para virar tarefa comum, o cartão precisa estar em A fazer, Fazendo ou Concluído." },
+      { status: 400 },
+    );
+  }
+
+  // Redes e formatos são opcionais aqui (quem só edita título/descrição não manda). Tarefa comum não tem.
+  const channels = design ? parseChannels(body?.channels) : [];
+  const formats = design ? parseFormats(body?.formats) : [];
+  if (design && Array.isArray(body?.channels) && channels.length === 0) {
     return NextResponse.json({ error: "Selecione ao menos uma rede." }, { status: 400 });
+  }
+  if (design && !isDesignKind(item.kind) && channels.length === 0) {
+    return NextResponse.json({ error: "Selecione ao menos uma rede para o cartão de design." }, { status: 400 });
   }
 
   await prisma.$transaction(async (tx) => {
@@ -48,8 +62,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       data: {
         title,
         description: description || null,
-        ...(channels.length ? { channels, channel: channels[0] } : {}),
-        ...(Array.isArray(body?.formats) ? { formats, format: formats[0] ?? null } : {}),
+        kind,
+        ...(design && channels.length ? { channels, channel: channels[0] } : {}),
+        ...(design && Array.isArray(body?.formats) ? { formats, format: formats[0] ?? null } : {}),
+        ...(!design ? { channels: [], channel: "OUTRO" as const, formats: [], format: null } : {}),
       },
     });
     await tx.auditLog.create({
@@ -60,7 +76,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         action: "content.details_updated",
         resourceType: "content_item",
         resourceId: item.id,
-        metadata: { title, description: description || null, ...(channels.length ? { channels } : {}), ...(Array.isArray(body?.formats) ? { formats } : {}) },
+        metadata: { title, description: description || null, kind, ...(channels.length ? { channels } : {}), ...(Array.isArray(body?.formats) ? { formats } : {}) },
       },
     });
   });

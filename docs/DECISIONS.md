@@ -1,3 +1,15 @@
+## 2026-11-22 — Tipo de cartão na Operação (Design × tarefa comum)
+
+**Contexto**: o quadro de Operação só servia para peças de design (rede, formato, tamanho, versão, aprovação, publicação). Demandas como ligar para cliente, enviar o fechamento financeiro ou ajustar o site ficavam com campos sem sentido.
+
+**Decisão 1 — campo `kind` no próprio `ContentItem`** (enum `ContentKind`: DESIGN, ATENDIMENTO, FINANCEIRO, SITE, OUTROS; padrão DESIGN). Lista fixa e pequena, pedida pelo usuário; cadastro por agência fica para depois, se precisar. Mantido no mesmo modelo (e não no `Task` de projetos) para continuar no mesmo quadro, com responsável, checklist, comentários e privacidade por cliente já existentes.
+
+**Decisão 2 — fluxo curto reaproveita status**: tarefa comum usa só IDEIA (A fazer), PRODUCAO (Fazendo) e PUBLICADO (Concluído), mais ARQUIVADO, mostrados com rótulos de tarefa (`contentStatusLabelFor`). Evita novo valor de enum e mexer nos mapas de status. A API de status recusa outros destinos; submit, versões, upload de mídia e publicação nas redes recusam cartão que não é de design. `channel` fica `OUTRO` só porque a coluna é obrigatória.
+
+**Decisão 3 — cliente não vê tarefa interna**: portal (início e calendário) filtra `kind: "DESIGN"`. Aprovação já não existe para os outros tipos. O calendário interno mostra as tarefas com prazo e a etiqueta do tipo.
+
+**Troca de tipo**: permitida no "Editar"; virar tarefa comum só a partir de A fazer, Fazendo ou Concluído.
+
 ## 2026-11-19 — Functions Storage da Vercel: menos deploys guardados
 
 **Contexto**: o Hobby tem 10 GB de Deployment/Functions Storage, somando todos os projetos da conta. Cada deploy guarda o pacote de funções (Prisma incluso) e a retenção padrão era 30 dias; com ~256 pushes no `main` em 30 dias, lotou. Ao passar do limite a Vercel apagou sozinha os deploys não protegidos (ficaram os 3 últimos de produção por projeto).

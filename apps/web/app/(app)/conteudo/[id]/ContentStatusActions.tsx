@@ -27,9 +27,12 @@ export function ContentStatusActions({
   contentId,
   options,
   primary = true,
+  labels,
 }: {
   contentId: string;
   options: ContentStatus[];
+  /** Rótulos próprios por destino (tarefas comuns: Iniciar, Concluir, Reabrir…). */
+  labels?: Partial<Record<ContentStatus, string>>;
   /** false = renderiza tudo como ação secundária (outra ação já é a principal). */
   primary?: boolean;
 }) {
@@ -61,9 +64,11 @@ export function ContentStatusActions({
     <>
       {options.map((option, index) => {
         const isPrimary = primary && index === 0 && option !== "ARQUIVADO";
-        const label = isPrimary
-          ? (ACTION_LABEL[option] ?? CONTENT_STATUS_LABELS[option])
-          : (BACKWARD_LABEL[option] ?? ACTION_LABEL[option] ?? CONTENT_STATUS_LABELS[option]);
+        const label =
+          labels?.[option] ??
+          (isPrimary
+            ? (ACTION_LABEL[option] ?? CONTENT_STATUS_LABELS[option])
+            : (BACKWARD_LABEL[option] ?? ACTION_LABEL[option] ?? CONTENT_STATUS_LABELS[option]));
         return (
           <button
             key={option}

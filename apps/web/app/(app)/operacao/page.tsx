@@ -34,6 +34,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         id: true,
         title: true,
         description: true,
+        kind: true,
         status: true,
         channel: true,
         channels: true,
@@ -64,6 +65,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
     return {
       id: item.id,
       title: item.title,
+      kind: item.kind,
       status: item.status,
       channel: item.channel,
       channels: item.channels,
@@ -87,7 +89,7 @@ export default async function OperacaoPage({ searchParams }: PageProps) {
         <div>
           <h1 className="text-lg font-semibold text-[#101828]">Operação</h1>
           <p className="text-sm text-[#667085]">
-            {boardItems.length} peça{boardItems.length === 1 ? "" : "s"} em produção em {membership.agency.name}.
+            {boardItems.length} {boardItems.length === 1 ? "cartão" : "cartões"} em andamento em {membership.agency.name}.
           </p>
         </div>
         <div className="flex items-center gap-2">

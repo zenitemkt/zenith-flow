@@ -48,7 +48,8 @@ export default async function PortalCalendarioPage({ searchParams }: PageProps) 
   const { cells, rangeStart, rangeEnd } = buildMonthCells(year, month);
 
   const items = await prisma.contentItem.findMany({
-    where: { clientId: client.id, scheduledDate: { gte: rangeStart, lt: rangeEnd } },
+    // Só peças de design; tarefas internas da agência não aparecem para o cliente.
+    where: { clientId: client.id, kind: "DESIGN", scheduledDate: { gte: rangeStart, lt: rangeEnd } },
     orderBy: { scheduledDate: "asc" },
   });
 

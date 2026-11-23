@@ -6,6 +6,8 @@ import { Pencil } from "lucide-react";
 import { Modal } from "@zenite-mkt/ui";
 import { FormField } from "@/app/_components/FormField";
 import { ChannelFormatPicker } from "@/app/_components/ChannelFormatPicker";
+import type { ContentKind } from "@zenite-mkt/db";
+import { CONTENT_KINDS, CONTENT_KIND_LABELS, isDesignKind } from "@/lib/content-kind";
 
 export function EditContentDetailsButton({
   contentId,
@@ -13,12 +15,14 @@ export function EditContentDetailsButton({
   initialDescription,
   initialChannels,
   initialFormats,
+  initialKind,
 }: {
   contentId: string;
   initialTitle: string;
   initialDescription: string;
   initialChannels: string[];
   initialFormats: string[];
+  initialKind: ContentKind;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -26,6 +30,8 @@ export function EditContentDetailsButton({
   const [description, setDescription] = useState(initialDescription);
   const [channels, setChannels] = useState(initialChannels);
   const [formats, setFormats] = useState(initialFormats);
+  const [kind, setKind] = useState<ContentKind>(initialKind);
+  const design = isDesignKind(kind);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,6 +40,7 @@ export function EditContentDetailsButton({
     setDescription(initialDescription);
     setChannels(initialChannels);
     setFormats(initialFormats);
+    setKind(initialKind);
     setError(null);
     setOpen(false);
   }
@@ -41,7 +48,7 @@ export function EditContentDetailsButton({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    if (channels.length === 0) {
+    if (design && channels.length === 0) {
       setError("Selecione ao menos uma rede.");
       return;
     }
@@ -50,7 +57,7 @@ export function EditContentDetailsButton({
     const response = await fetch(`/api/content/${contentId}/details`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, channels, formats }),
+      body: JSON.stringify(design ? { kind, title, description, channels, formats } : { kind, title, description }),
     });
 
     setLoading(false);
@@ -74,8 +81,32 @@ export function EditContentDetailsButton({
         <Pencil size={14} aria-hidden />
         Editar
       </button>
-      <Modal open={open} onClose={close} title="Editar peça">
+      <Modal open={open} onClose={close} title={design ? "Editar peça" : "Editar tarefa"}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <span id="content-edit-kind-label" className="text-sm font-medium text-[#344054]">
+              Tipo de cartão
+            </span>
+            <div role="radiogroup" aria-labelledby="content-edit-kind-label" className="flex flex-wrap gap-1.5">
+              {CONTENT_KINDS.map((option) => {
+                const active = kind === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setKind(option)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active ? "bg-[#FF2B00] text-white" : "border border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"
+                    }`}
+                  >
+                    {CONTENT_KIND_LABELS[option]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <FormField label="Título" name="title" required autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
           <div className="flex flex-col gap-1.5">
             <label htmlFor="content-edit-description" className="text-sm font-medium text-[#344054]">
@@ -90,7 +121,9 @@ export function EditContentDetailsButton({
             />
           </div>
 
-          <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
+          {design && (
+            <ChannelFormatPicker channels={channels} formats={formats} onChannelsChange={setChannels} onFormatsChange={setFormats} />
+          )}
 
           {error && <p className="text-sm font-medium text-[#D94343]">{error}</p>}
 

@@ -36,6 +36,8 @@ export default async function PortalHomePage() {
     prisma.contentItem.findMany({
       where: {
         clientId: client.id,
+        // Tarefas internas (ligação, financeiro, site…) não aparecem para o cliente.
+        kind: "DESIGN",
         scheduledDate: { gte: new Date() },
         status: { notIn: ["ARQUIVADO"] },
       },

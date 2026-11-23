@@ -15,7 +15,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
+import type { ContentChannel, ContentKind, ContentStatus } from "@zenite-mkt/db";
 import {
   CONTENT_BOARD_COLUMNS,
   CONTENT_STATUS_BADGE_CLASS,
@@ -24,6 +24,7 @@ import {
   type ContentBoardColumnId,
 } from "@/lib/content";
 import { channelsAndFormatsLabel } from "@/lib/content-formats";
+import { CONTENT_KIND_BADGE_CLASS, CONTENT_KIND_LABELS, canKindUseStatus, contentStatusLabelFor, isDesignKind } from "@/lib/content-kind";
 import { NewVersionModal } from "@/app/(app)/conteudo/[id]/NewVersionModal";
 import { DeleteRecordButton } from "@/app/_components/DeleteRecordButton";
 
@@ -35,6 +36,8 @@ export interface PersonOption {
 export interface BoardContentItem {
   id: string;
   title: string;
+  /** Design (fluxo completo) ou tarefa comum (A Fazer → Fazendo → Concluído). */
+  kind: ContentKind;
   status: ContentStatus;
   channel: ContentChannel;
   channels: ContentChannel[];
@@ -99,7 +102,7 @@ function ScheduleDateField({
 
   return (
     <div data-card-control className="flex items-center gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
-      <span className="text-[10px] font-medium uppercase tracking-wide text-[#98A2B3]">Publicação</span>
+      <span className="text-[10px] font-medium uppercase tracking-wide text-[#98A2B3]">{isDesignKind(item.kind) ? "Publicação" : "Prazo"}</span>
       <input
         type="date"
         value={value}
@@ -185,6 +188,7 @@ function ContentCard({
   const dragProps = canDrag ? { ...listeners, ...attributes } : {};
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const approvalUrl = item.approvalToken ? `${origin}/aprovar/${item.approvalToken}` : justSubmittedUrl;
+  const design = isDesignKind(item.kind);
 
   return (
     <div
@@ -214,14 +218,21 @@ function ContentCard({
       {item.description && (
         <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs leading-relaxed text-[#667085]">{item.description}</p>
       )}
-      <p className="mt-1 truncate text-xs text-[#98A2B3]">
-        {channelsAndFormatsLabel(item)}
-      </p>
+      {design && (
+        <p className="mt-1 truncate text-xs text-[#98A2B3]">
+          {channelsAndFormatsLabel(item)}
+        </p>
+      )}
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        {!design && (
+          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${CONTENT_KIND_BADGE_CLASS[item.kind]}`}>
+            {CONTENT_KIND_LABELS[item.kind]}
+          </span>
+        )}
         <span
           className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}
         >
-          {CONTENT_STATUS_LABELS[item.status]}
+          {contentStatusLabelFor(item.kind, item.status, CONTENT_STATUS_LABELS)}
         </span>
         {assigneeNames.length > 0 && (
           <span className="inline-block rounded bg-[#EEF2FF] px-1.5 py-0.5 text-[10px] font-medium text-[#3730A3]">
@@ -231,7 +242,28 @@ function ContentCard({
       </div>
 
       <div className="mt-2 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
-        {(item.status === "IDEIA" || item.status === "PAUTA") && (
+        {!design && (item.status === "IDEIA" || item.status === "PAUTA") && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAdvance(item, "PRODUCAO")}
+            className="flex h-7 items-center justify-center rounded-md border border-[#D0D5DD] text-[11px] font-medium text-[#344054] hover:border-[#FF2B00] hover:text-[#FF2B00] disabled:opacity-60"
+          >
+            Iniciar →
+          </button>
+        )}
+        {!design && item.status === "PRODUCAO" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAdvance(item, "PUBLICADO")}
+            className="flex h-7 items-center justify-center rounded-md text-[11px] font-semibold text-white disabled:opacity-60"
+            style={{ backgroundColor: "#FF2B00" }}
+          >
+            Concluir ✓
+          </button>
+        )}
+        {design && (item.status === "IDEIA" || item.status === "PAUTA") && (
           <button
             type="button"
             disabled={busy}
@@ -241,7 +273,7 @@ function ContentCard({
             Mover pra Fazendo →
           </button>
         )}
-        {(item.status === "PRODUCAO" || item.status === "AJUSTES") &&
+        {design && (item.status === "PRODUCAO" || item.status === "AJUSTES") &&
           (item.hasVersion ? (
             <button
               type="button"
@@ -257,12 +289,12 @@ function ContentCard({
               <NewVersionModal contentId={item.id} />
             </div>
           ))}
-        {item.status === "REVISAO_INTERNA" && !item.hasVersion && (
+        {design && item.status === "REVISAO_INTERNA" && !item.hasVersion && (
           <div className="[&_button]:h-7 [&_button]:w-full [&_button]:text-[11px]">
             <NewVersionModal contentId={item.id} />
           </div>
         )}
-        {item.status === "REVISAO_INTERNA" && item.hasVersion && (
+        {design && item.status === "REVISAO_INTERNA" && item.hasVersion && (
           <button
             type="button"
             disabled={busy}
@@ -551,6 +583,10 @@ export function ContentBoard({
     if (targetColumn === currentColumn) return;
     const targetStatus = COLUMN_TARGET_STATUS[targetColumn];
     if (!targetStatus) return;
+    if (!canKindUseStatus(item.kind, targetStatus)) {
+      setError(`"${item.title}" é ${CONTENT_KIND_LABELS[item.kind]}: segue só A Fazer → Fazendo → Concluído (sem aprovação nem agendamento).`);
+      return;
+    }
     await changeStatus(item, targetStatus);
   }
 

@@ -16,11 +16,14 @@ interface Person {
 export function ContentPropertiesPanel({
   contentId,
   scheduledDateISO,
+  dateLabel = "Publicação",
   assigneeUserIds,
   people,
 }: {
   contentId: string;
   scheduledDateISO: string | null;
+  /** Rótulo do campo de data: "Publicação" (design) ou "Prazo" (tarefa comum). */
+  dateLabel?: string;
   assigneeUserIds: string[];
   people: Person[];
 }) {
@@ -71,7 +74,7 @@ export function ContentPropertiesPanel({
     <>
       <div className="flex flex-col gap-1.5">
         <span className="flex items-center gap-1.5 text-xs font-medium text-[#667085]">
-          <CalendarDays size={13} aria-hidden /> Publicação
+          <CalendarDays size={13} aria-hidden /> {dateLabel}
           {saving === "date" && <span className="text-[#98A2B3]">· salvando...</span>}
         </span>
         <input
@@ -79,7 +82,7 @@ export function ContentPropertiesPanel({
           value={date}
           disabled={saving === "date"}
           onChange={(e) => void saveDate(e.target.value)}
-          aria-label="Data de publicação"
+          aria-label={dateLabel === "Publicação" ? "Data de publicação" : dateLabel}
           className="h-10 w-full rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#101828] outline-none focus:border-[#FF2B00]"
         />
       </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
 import { isClientRole } from "@/lib/rbac";
 import { canTransitionContent } from "@/lib/content";
+import { canKindUseStatus } from "@/lib/content-kind";
 import { prisma, type ContentStatus } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
 
@@ -32,6 +33,12 @@ export async function POST(request: Request, { params }: RouteParams) {
   if (!toStatus || !canTransitionContent(item.status, toStatus)) {
     return NextResponse.json(
       { error: `Não é possível mudar de ${item.status} para ${toStatus}.` },
+      { status: 400 },
+    );
+  }
+  if (!canKindUseStatus(item.kind, toStatus)) {
+    return NextResponse.json(
+      { error: "Tarefas que não são de design seguem só A fazer → Fazendo → Concluído." },
       { status: 400 },
     );
   }

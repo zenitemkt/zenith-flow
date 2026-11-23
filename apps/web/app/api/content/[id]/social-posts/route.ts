@@ -5,6 +5,7 @@ import { isClientRole } from "@/lib/rbac";
 import { ScheduleError, parsePublishAtByPlatform, scheduleContentPosts } from "@/lib/social-scheduling";
 import { publishPostsNow } from "@/lib/social-publisher";
 import { canSeeClient } from "@/lib/client-access";
+import { isDesignKind } from "@/lib/content-kind";
 import { rememberCollabHandles } from "@/lib/client-collab";
 
 export const maxDuration = 60;
@@ -28,9 +29,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const item = await prisma.contentItem.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, clientId: true } });
+  const item = await prisma.contentItem.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, clientId: true, kind: true } });
   if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 });
+  }
+  if (!isDesignKind(item.kind)) {
+    return NextResponse.json({ error: "Só cartões de design são publicados nas redes." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);

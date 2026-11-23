@@ -1,8 +1,12 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-11-18.
+Última atualização: 2026-11-22.
 
 ## Implementado
+
+- **Tipo de cartão na Operação (2026-11-22)**: `ContentItem.kind` (enum `ContentKind`, migration `20261122120000_content_kind`, só ADD), regras em `lib/content-kind.ts` (rótulos, fluxo curto, ações), seletor de tipo em `NewContentModal` e `EditContentDetailsButton`, quadro (`ContentBoard`: etiqueta, Iniciar/Concluir, arraste bloqueado para aprovação/agendar), detalhe (`ContentDetailView`: 3 etapas, sem Versões/Publicação), calendário interno com etiqueta e portal filtrando `DESIGN`. APIs `/api/content`, `status`, `details`, `submit`, `versions`, `media-upload` e `social-posts` respeitam o tipo. Ver `docs/DECISIONS.md` (2026-11-22).
+  - Testado: `vitest` (`lib/content-kind.test.ts`, 5; suíte `lib` 175/176 com a falha antiga de `social-scheduling.test.ts`), `tsc --noEmit`, `lint` e `next build`.
+  - **Não testado ao vivo**: criar/arrastar/concluir uma tarefa no navegador e a migration num banco (vai pelo `migrate deploy` do build de produção).
 
 - **Crons sem acordar o Neon (2026-11-18)**: `lib/cron-wake.ts` (decisão pura `decideCronRun`, plano no Runtime Cache, `refreshCronPlan`, `onModelWrite`), `instrumentation.ts` (+ `experimental.instrumentationHook`), ouvinte de escrita em `packages/db/src/client.ts`. Próximo trabalho: `nextSocialPostWorkAt` (`lib/social-publisher.ts`), `nextFlowSessionWorkAt` (`lib/instagram-flow.ts`), `nextAssistantWorkAt` (`lib/assistant/process.ts`). As rotas `/api/cron/social-publish` e `/api/assistant/process` respondem `idle: true` sem consultar o banco. Ver `docs/DECISIONS.md` (2026-11-18).
   - Testado: `vitest` (`lib/cron-wake.test.ts`, 12), `tsc --noEmit`, `lint` e `next build`. Mesma falha antiga em `social-scheduling.test.ts`.

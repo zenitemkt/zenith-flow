@@ -30,6 +30,10 @@ import { SocialPublishPanel } from "./SocialPublishPanel";
 import { platformForChannel, postFormatFor } from "@/lib/social-scheduling";
 import { artSizes, channelsAndFormatsLabel, channelsLabel, contentChannels, contentFormats, formatsLabel } from "@/lib/content-formats";
 import { getHiddenClientIds, isClientHidden, visibleByClientWhere } from "@/lib/client-access";
+import { CONTENT_KIND_BADGE_CLASS, CONTENT_KIND_LABELS, contentStatusLabelFor, isDesignKind, taskStatusActions } from "@/lib/content-kind";
+
+/** Trilha curta das tarefas comuns (não-design): A fazer → Fazendo → Concluído. */
+const TASK_STEPS = ["a_fazer", "fazendo", "concluido"] as const;
 
 /** Rótulos curtos da trilha de etapas — mesmos 5 baldes do quadro de Operação. */
 const STEP_LABEL: Record<string, string> = {
@@ -103,13 +107,15 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
     notFound();
   }
 
-  const canSubmit = SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
+  const design = isDesignKind(item.kind);
+  const canSubmit = design && SUBMITTABLE_STATUSES.includes(item.status) && item.versions.length > 0;
   const primaryContact = item.client.contacts.find((c) => c.isPrimary) ?? item.client.contacts.find((c) => c.email);
   const [thread, mentionableMembers, agencyMembers, socialConnections] = await Promise.all([
     loadCommentThreadView("content_item", item.id),
     getMentionableMembers(membership.agencyId),
     getAgencyMembers(membership.agencyId),
-    prisma.socialConnection.findMany({
+    // Tarefa comum não publica nas redes: não precisa das conexões.
+    !design ? Promise.resolve([]) : prisma.socialConnection.findMany({
       where: { AND: [visibleByClientWhere(hidden)], clientId: item.client.id, platform: { in: ["INSTAGRAM", "FACEBOOK"] }, status: { not: "REVOKED" } },
       select: { platform: true, name: true, username: true, pictureUrl: true, status: true },
       orderBy: { platform: "desc" },
@@ -118,9 +124,11 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
   const latestMedia = item.versions[0]?.media ?? [];
   const sizes = artSizes(contentChannels(item), contentFormats(item));
 
-  const currentStep = CONTENT_BOARD_COLUMNS.findIndex((c) => c.id === contentBoardColumnForStatus(item.status));
+  const steps: readonly string[] = design ? CONTENT_BOARD_COLUMNS.map((c) => c.id) : TASK_STEPS;
+  const currentStep = steps.indexOf(contentBoardColumnForStatus(item.status));
+  const taskActions = taskStatusActions(item.status);
   const isArchived = item.status === "ARQUIVADO";
-  const hint = nextStepHint(item.status, item.versions.length > 0);
+  const hint = design ? nextStepHint(item.status, item.versions.length > 0) : null;
   const checklistDone = item.checklistItems.filter((c) => c.done).length;
 
   return (
@@ -147,25 +155,31 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
           </span>
           {item.client.name}
           <span className="text-[#98A2B3]">·</span>
-          <span className="font-normal text-[#667085]">
-            {channelsAndFormatsLabel(item)}
-          </span>
+          {design ? (
+            <span className="font-normal text-[#667085]">
+              {channelsAndFormatsLabel(item)}
+            </span>
+          ) : (
+            <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${CONTENT_KIND_BADGE_CLASS[item.kind]}`}>
+              {CONTENT_KIND_LABELS[item.kind]}
+            </span>
+          )}
         </Link>
 
         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <h1 className="min-w-0 flex-1 text-xl font-bold leading-tight tracking-[-0.01em] text-[#101828] sm:text-2xl">{item.title}</h1>
           <span className={`mt-1 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}>
-            {CONTENT_STATUS_LABELS[item.status]}
+            {contentStatusLabelFor(item.kind, item.status, CONTENT_STATUS_LABELS)}
           </span>
         </div>
 
         {!isArchived && (
-          <ol className="flex items-center gap-1" aria-label="Etapas da peça">
-            {CONTENT_BOARD_COLUMNS.map((column, index) => {
+          <ol className="flex items-center gap-1" aria-label={design ? "Etapas da peça" : "Etapas da tarefa"}>
+            {steps.map((columnId, index) => {
               const done = index < currentStep;
               const current = index === currentStep;
               return (
-                <li key={column.id} className="flex min-w-0 flex-1 flex-col gap-1.5" aria-current={current ? "step" : undefined}>
+                <li key={columnId} className="flex min-w-0 flex-1 flex-col gap-1.5" aria-current={current ? "step" : undefined}>
                   <span className={`h-1.5 rounded-full ${done ? "bg-[#16A36A]" : current ? "bg-[#FF2B00]" : "bg-[#E4E7EC]"}`} />
                   <span
                     className={`flex items-center gap-1 truncate text-[11px] font-medium ${
@@ -173,7 +187,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                     }`}
                   >
                     {done && <Check size={11} aria-hidden className="shrink-0" />}
-                    {STEP_LABEL[column.id]}
+                    {STEP_LABEL[columnId]}
                   </span>
                 </li>
               );
@@ -190,9 +204,13 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
               defaultWhatsapp={primaryContact?.phone ?? null}
             />
           )}
-          <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} primary={!canSubmit} />
+          {design ? (
+            <ContentStatusActions contentId={item.id} options={CONTENT_STATUS_TRANSITIONS[item.status]} primary={!canSubmit} />
+          ) : (
+            <ContentStatusActions contentId={item.id} options={taskActions.options} labels={taskActions.labels} />
+          )}
           <div className="ml-auto">
-            <EditContentDetailsButton contentId={item.id} initialTitle={item.title} initialDescription={item.description ?? ""} initialChannels={contentChannels(item)} initialFormats={contentFormats(item)} />
+            <EditContentDetailsButton contentId={item.id} initialKind={item.kind} initialTitle={item.title} initialDescription={item.description ?? ""} initialChannels={design ? contentChannels(item) : ["INSTAGRAM"]} initialFormats={design ? contentFormats(item) : []} />
           </div>
           {hint && <p className="basis-full text-xs text-[#667085]">{hint}</p>}
         </div>
@@ -208,9 +226,10 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                 {item.client.name}
               </Link>
             </Property>
-            <Property label={contentChannels(item).length > 1 ? "Redes" : "Rede"}>{channelsLabel(item)}</Property>
-            <Property label={contentFormats(item).length > 1 ? "Formatos" : "Formato"}>{formatsLabel(item) || <span className="text-[#98A2B3]">—</span>}</Property>
-            {sizes.length > 0 && (
+            {!design && <Property label="Tipo">{CONTENT_KIND_LABELS[item.kind]}</Property>}
+            {design && <Property label={contentChannels(item).length > 1 ? "Redes" : "Rede"}>{channelsLabel(item)}</Property>}
+            {design && <Property label={contentFormats(item).length > 1 ? "Formatos" : "Formato"}>{formatsLabel(item) || <span className="text-[#98A2B3]">—</span>}</Property>}
+            {design && sizes.length > 0 && (
               <Property label="Tamanhos">
                 <ul className="flex flex-col gap-0.5">
                   {sizes.map((s) => (
@@ -226,6 +245,7 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
           <ContentPropertiesPanel
             contentId={item.id}
             scheduledDateISO={item.scheduledDate ? item.scheduledDate.toISOString() : null}
+            dateLabel={design ? undefined : "Prazo"}
             assigneeUserIds={item.assigneeUserIds}
             people={agencyMembers}
           />
@@ -246,6 +266,8 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
             )}
           </Section>
 
+          {design && (
+          <>
           <Section title={`Versões${item.versions.length ? ` · ${item.versions.length}` : ""}`} action={<NewVersionModal contentId={item.id} />}>
             <div className="flex flex-col gap-2">
               {item.versions.length === 0 && (
@@ -342,6 +364,8 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
               defaultPlatforms={contentChannels(item).map(platformForChannel).filter((p): p is NonNullable<typeof p> => p !== null)}
             />
           </Section>
+          </>
+          )}
 
           <div className="flex flex-col gap-2">
             {item.checklistItems.length > 0 && (
@@ -378,12 +402,12 @@ export async function ContentDetailView({ id, showBack = true }: { id: string; s
                   <p className="text-xs text-[#344054]">
                     {entry.fromStatus ? (
                       <>
-                        {CONTENT_STATUS_LABELS[entry.fromStatus]} → <strong className="font-semibold">{CONTENT_STATUS_LABELS[entry.toStatus]}</strong>
+                        {contentStatusLabelFor(item.kind, entry.fromStatus, CONTENT_STATUS_LABELS)} → <strong className="font-semibold">{contentStatusLabelFor(item.kind, entry.toStatus, CONTENT_STATUS_LABELS)}</strong>
                         {entry.reason ? ` — ${entry.reason}` : ""}
                       </>
                     ) : (
                       <>
-                        Criada como <strong className="font-semibold">{CONTENT_STATUS_LABELS[entry.toStatus]}</strong>
+                        Criada como <strong className="font-semibold">{contentStatusLabelFor(item.kind, entry.toStatus, CONTENT_STATUS_LABELS)}</strong>
                       </>
                     )}
                   </p>

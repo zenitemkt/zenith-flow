@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Operação — tipo de cartão
+
+- "Nova tarefa" começa pelo **tipo de cartão**: Design, Atendimento, Financeiro, Site / Tecnologia ou Outros. Redes, formatos, tamanhos, campanha e legenda só aparecem em **Design**; nos demais, o card tem título, descrição, cliente, responsável e **Prazo**.
+- Cartões que não são de design seguem **A Fazer → Fazendo → Concluído** (botões "Iniciar" e "Concluir"; não entram em "Aguardando aprovação" nem "Agendar"), mostram a etiqueta do tipo no quadro e no calendário, e no detalhe ficam sem Versões, Aprovação e Publicação nas redes.
+- Tarefas internas não aparecem no portal do cliente. O tipo pode ser trocado em "Editar". Migration só adiciona `kind` em `content_item` (cartões antigos = Design).
+
 ### Análise de Concorrentes — Fase 3D
 
 - Geração de dez sugestões de pauta baseada nas lacunas do cliente e nos padrões vencedores de concorrentes e referências.

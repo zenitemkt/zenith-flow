@@ -5,6 +5,7 @@ import { prisma } from "@zenite-mkt/db";
 import { CONTENT_MEDIA_MAX_FILES, validateContentMediaFile } from "@/lib/content-media";
 import { contentMediaPrefix } from "@/lib/content-media-server";
 import { canSeeClient } from "@/lib/client-access";
+import { isDesignKind } from "@/lib/content-kind";
 
 interface RouteParams {
   params: { id: string };
@@ -26,6 +27,9 @@ export async function POST(request: Request, { params }: RouteParams) {
   const item = await prisma.contentItem.findUnique({ where: { id: params.id } });
   if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 });
+  }
+  if (!isDesignKind(item.kind)) {
+    return NextResponse.json({ error: "Versões de arte só existem em cartões de design." }, { status: 400 });
   }
 
   const body = await request.json().catch(() => null);

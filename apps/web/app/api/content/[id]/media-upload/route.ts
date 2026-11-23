@@ -5,6 +5,7 @@ import { prisma } from "@zenite-mkt/db";
 import { DIRECT_UPLOAD_THRESHOLD_BYTES, validateContentMediaFile } from "@/lib/content-media";
 import { buildContentMediaKey, putContentMedia, signContentMediaUpload } from "@/lib/content-media-server";
 import { canSeeClient } from "@/lib/client-access";
+import { isDesignKind } from "@/lib/content-kind";
 
 interface RouteParams {
   params: { id: string };
@@ -26,9 +27,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Acesso restrito à equipe da agência." }, { status: 403 });
   }
 
-  const item = await prisma.contentItem.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, clientId: true } });
+  const item = await prisma.contentItem.findUnique({ where: { id: params.id }, select: { id: true, agencyId: true, clientId: true, kind: true } });
   if (!item || item.agencyId !== membership.agencyId || !(await canSeeClient(membership.agencyId, session.user.id, item.clientId))) {
     return NextResponse.json({ error: "Conteúdo não encontrado." }, { status: 404 });
+  }
+  if (!isDesignKind(item.kind)) {
+    return NextResponse.json({ error: "Arquivos de arte só existem em cartões de design." }, { status: 400 });
   }
 
   const contentTypeHeader = request.headers.get("content-type") ?? "";

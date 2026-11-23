@@ -96,6 +96,7 @@ export default async function CalendarioPage({ searchParams }: PageProps) {
   const toCalendarItem = (item: (typeof monthItems)[number]): CalendarContentItem => ({
     id: item.id,
     title: item.title,
+    kind: item.kind,
     status: item.status,
     channel: item.channel,
     channels: item.channels,

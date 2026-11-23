@@ -4,6 +4,7 @@ import { isClientRole } from "@/lib/rbac";
 import { prisma, type ContentChannel } from "@zenite-mkt/db";
 import { canSeeClient } from "@/lib/client-access";
 import { parseChannels, parseFormats } from "@/lib/content-formats";
+import { isDesignKind, parseContentKind } from "@/lib/content-kind";
 
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -32,11 +33,15 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const title = optionalString(body?.title);
   const clientId = optionalString(body?.clientId);
+  // Tipo do cartão: só Design tem redes/formatos/legenda/campanha (2026-11-22).
+  const kind = parseContentKind(body?.kind);
+  const design = isDesignKind(kind);
   // Várias redes e formatos num cartão só; `channel`/`format` (um só) continuam aceitos.
-  const channels = parseChannels(body?.channels);
-  const channel = (channels[0] ?? body?.channel) as ContentChannel | undefined;
-  const formats = parseFormats(body?.formats);
-  const format = formats[0] ?? optionalString(body?.format);
+  // Tarefa comum não tem rede: grava OUTRO só porque a coluna é obrigatória.
+  const channels = design ? parseChannels(body?.channels) : [];
+  const channel = (design ? (channels[0] ?? body?.channel) : "OUTRO") as ContentChannel | undefined;
+  const formats = design ? parseFormats(body?.formats) : [];
+  const format = design ? (formats[0] ?? optionalString(body?.format)) : null;
 
   if (!title) {
     return NextResponse.json({ error: "Informe o título da peça." }, { status: 400 });
@@ -92,12 +97,13 @@ export async function POST(request: Request) {
         clientId,
         title,
         description: optionalString(body?.description),
+        kind,
         channel,
-        channels: channels.length ? channels : [channel],
+        channels: design ? (channels.length ? channels : [channel]) : [],
         format,
         formats: formats.length ? formats : format ? [format] : [],
-        campaign: optionalString(body?.campaign),
-        caption: optionalString(body?.caption),
+        campaign: design ? optionalString(body?.campaign) : null,
+        caption: design ? optionalString(body?.caption) : null,
         scheduledDate,
         assigneeUserIds,
       },
@@ -113,6 +119,7 @@ export async function POST(request: Request) {
         action: "content.created",
         resourceType: "content_item",
         resourceId: created.id,
+        metadata: { kind },
       },
     });
     return created;

@@ -13,9 +13,15 @@ import {
   contentCalendarBucket,
   type ContentCalendarBucket,
 } from "@/lib/content";
-import type { ContentChannel, ContentStatus } from "@zenite-mkt/db";
+import type { ContentChannel, ContentKind, ContentStatus } from "@zenite-mkt/db";
 import { QuickPostModal, todaySP, type QuickPostClient } from "./QuickPostModal";
 import { channelsLabel } from "@/lib/content-formats";
+import { CONTENT_KIND_LABELS, contentStatusLabelFor, isDesignKind } from "@/lib/content-kind";
+
+/** Tarefa comum mostra o tipo (ex.: "Financeiro") no lugar das redes. */
+function itemKindOrChannels(item: CalendarContentItem): string {
+  return isDesignKind(item.kind) ? channelsLabel(item) : CONTENT_KIND_LABELS[item.kind];
+}
 
 const CALENDAR_BUCKET_ICON: Record<ContentCalendarBucket, typeof Clock | null> = {
   neutral: null,
@@ -63,6 +69,7 @@ function spDayAndTime(iso: string): { day: number; month: number; time: string }
 export interface CalendarContentItem {
   id: string;
   title: string;
+  kind: ContentKind;
   status: ContentStatus;
   channel: ContentChannel;
   channels: ContentChannel[];
@@ -281,7 +288,7 @@ export function InteractiveContentCalendar({
                                   key={item.id}
                                   href={`/conteudo/${item.id}`}
                                   className={`flex items-center gap-1 truncate rounded px-1.5 py-1 text-xs font-medium ${CONTENT_CALENDAR_BUCKET_CLASS[bucket]}`}
-                                  title={`${item.title} · ${item.client.name} · ${channelsLabel(item)} · ${CONTENT_STATUS_LABELS[item.status]}`}
+                                  title={`${item.title} · ${item.client.name} · ${itemKindOrChannels(item)} · ${contentStatusLabelFor(item.kind, item.status, CONTENT_STATUS_LABELS)}`}
                                 >
                                   {BucketIcon && <BucketIcon className="h-3 w-3 shrink-0" aria-hidden />}
                                   <span className="truncate">{item.title}</span>
@@ -355,7 +362,7 @@ export function InteractiveContentCalendar({
                           type="button"
                           disabled={!canSchedule || busyId === item.id}
                           onClick={() => void markAsScheduled(item)}
-                          title={canSchedule ? "Marcar como agendado" : "Aprove o conteúdo antes de agendar"}
+                          title={canSchedule ? "Marcar como agendado" : isDesignKind(item.kind) ? "Aprove o conteúdo antes de agendar" : "Tarefa: conclua pelo quadro de Operação"}
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                             canSchedule
                               ? "border-[#D0D5DD] hover:border-[#FF2B00] hover:bg-[#FFF1EC]"
@@ -371,7 +378,7 @@ export function InteractiveContentCalendar({
                         <Link href={`/conteudo/${item.id}`} className="flex flex-1 flex-col gap-0.5 truncate">
                           <span className="truncate text-sm font-medium text-[#101828]">{item.title}</span>
                           <span className="truncate text-xs text-[#667085]">
-                            {item.client.name} · {channelsLabel(item)}
+                            {item.client.name} · {itemKindOrChannels(item)}
                             {item.scheduledDateISO
                               ? ` · ${new Date(item.scheduledDateISO).toLocaleDateString("pt-BR", {
                                   day: "2-digit",
@@ -384,7 +391,7 @@ export function InteractiveContentCalendar({
                         <span
                           className={`shrink-0 rounded px-1.5 py-1 text-[11px] font-medium ${CONTENT_STATUS_BADGE_CLASS[item.status]}`}
                         >
-                          {CONTENT_STATUS_LABELS[item.status]}
+                          {contentStatusLabelFor(item.kind, item.status, CONTENT_STATUS_LABELS)}
                         </span>
                       </motion.div>
                     );
