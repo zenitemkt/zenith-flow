@@ -1,9 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@zenite-mkt/db";
 import { requireSessionAndMembership } from "@/lib/session";
 import { canManageIntegrations } from "@/lib/rbac";
-import { ContentAutomationConnectionForm } from "./ContentAutomationConnectionForm";
-import { SearchConsoleConnectionCard } from "./SearchConsoleConnectionCard";
 import { BlogSettingsForm } from "./BlogSettingsForm";
 import { BlogDraftCard, type BlogDraftSummary } from "./BlogDraftCard";
 import { ManualBlogRecordForm } from "./ManualBlogRecordForm";
@@ -12,9 +11,7 @@ export default async function BlogAutomationPage() {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
 
-  const [connection, searchConsole, agency, drafts] = await Promise.all([
-    prisma.contentAutomationConnection.findUnique({ where: { agencyId: membership.agencyId } }),
-    prisma.searchConsoleConnection.findUnique({ where: { agencyId: membership.agencyId } }),
+  const [agency, drafts] = await Promise.all([
     prisma.agency.findUnique({ where: { id: membership.agencyId }, select: { blogAutoPublish: true, blogVoiceNotes: true } }),
     prisma.blogDraft.findMany({
       where: { agencyId: membership.agencyId },
@@ -59,18 +56,10 @@ export default async function BlogAutomationPage() {
 
       <BlogSettingsForm initialAutoPublish={agency?.blogAutoPublish ?? true} initialVoiceNotes={agency?.blogVoiceNotes ?? ""} />
 
-      <ContentAutomationConnectionForm
-        connected={Boolean(connection)}
-        githubOwner={connection?.githubOwner ?? null}
-        githubRepo={connection?.githubRepo ?? null}
-        githubBranch={connection?.githubBranch ?? null}
-      />
-
-      <SearchConsoleConnectionCard
-        connected={Boolean(searchConsole)}
-        siteUrl={searchConsole?.siteUrl ?? null}
-        lastError={searchConsole?.lastError ?? null}
-      />
+      <p className="rounded-xl border border-dashed border-[#E4E7EC] bg-white p-4 text-sm text-[#667085]">
+        A conexão com o repositório do GitHub e com o Google Search Console agora fica em{" "}
+        <Link href="/integracoes?tab=conteudo" className="font-semibold text-[#FF2B00]">Integrações → Conteúdo</Link>.
+      </p>
 
       <ManualBlogRecordForm canManage={canManageIntegrations(membership.role)} />
 

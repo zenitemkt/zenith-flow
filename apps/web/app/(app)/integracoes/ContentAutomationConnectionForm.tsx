@@ -68,7 +68,7 @@ export function ContentAutomationConnectionForm({ connected, githubOwner, github
   return (
     <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#101828]">Conexão com o repositório do site</h2>
+        <h2 className="text-sm font-semibold text-[#101828]">Conexão com o repositório do site (blog automático)</h2>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${connected ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"}`}>
           {connected ? "Configurada" : "Não configurada"}
         </span>

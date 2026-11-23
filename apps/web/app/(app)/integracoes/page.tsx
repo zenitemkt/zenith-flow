@@ -22,6 +22,10 @@ import { SendTestMetaEventButton } from "./SendTestMetaEventButton";
 import { getHiddenClientIds, visibleByClientWhere, visibleByOptionalClientWhere } from "@/lib/client-access";
 import { googleBusinessConfigured } from "@/lib/google-business";
 import { GoogleBusinessIntegration } from "./GoogleBusinessIntegration";
+import { IntegrationTabs, type IntegrationTab } from "./IntegrationTabs";
+import { ContentAutomationConnectionForm } from "./ContentAutomationConnectionForm";
+import { SearchConsoleConnectionCard } from "./SearchConsoleConnectionCard";
+import { SearchConsoleOAuthResultToast } from "./SearchConsoleOAuthResultToast";
 
 const SITE_LEAD_SOURCE = "Site Zenite Hub";
 
@@ -49,7 +53,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 interface PageProps {
-  searchParams: { meta?: string; googleBusiness?: string };
+  searchParams: { tab?: string; meta?: string; googleBusiness?: string; gsc?: string };
 }
 
 export default async function IntegracoesPage({ searchParams }: PageProps) {
@@ -60,6 +64,11 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
   const hidden = await getHiddenClientIds(membership.agencyId, session.user.id);
 
   const canManage = canManageIntegrations(membership.role);
+
+  // Sem ?tab= explícito, infere pela volta de um OAuth (choose_account/googleBusiness/gsc)
+  // pra não devolver a pessoa numa aba diferente de onde ela conectou.
+  const inferredTab: IntegrationTab = searchParams.googleBusiness ? "google" : searchParams.gsc ? "conteudo" : "meta";
+  const tab: IntegrationTab = (["meta", "google", "site", "conteudo"].includes(searchParams.tab ?? "") ? (searchParams.tab as IntegrationTab) : inferredTab);
 
   const facebookPages = await prisma.socialConnection.findMany({
     where: { AND: [visibleByClientWhere(hidden)], agencyId: membership.agencyId, platform: "FACEBOOK" },
@@ -114,6 +123,8 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
     recentDeliveries,
     qualityStats,
     commercialDeliveries,
+    contentAutomationConnection,
+    searchConsoleConnection,
   ] = await Promise.all([
     prisma.trackingEvent.count({ where: { agencyId: membership.agencyId } }),
     prisma.trackingEvent.count({ where: { agencyId: membership.agencyId, receivedAt: { gte: oneDayAgo } } }),
@@ -142,6 +153,8 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
       : Promise.resolve([]),
     getDeliveryQualityStats(membership.agencyId, last30Days),
     prisma.commercialMetaEvent.findMany({ where: { AND: [visibleByOptionalClientWhere(hidden)], agencyId: membership.agencyId }, orderBy: { attemptedAt: "desc" }, take: 12 }),
+    prisma.contentAutomationConnection.findUnique({ where: { agencyId: membership.agencyId } }),
+    prisma.searchConsoleConnection.findUnique({ where: { agencyId: membership.agencyId } }),
   ]);
 
   const siteLeadConfigured =
@@ -184,313 +197,334 @@ export default async function IntegracoesPage({ searchParams }: PageProps) {
       <Suspense>
         <MetaOAuthResultToast />
       </Suspense>
+      <Suspense>
+        <SearchConsoleOAuthResultToast />
+      </Suspense>
 
       {canManage && pendingCandidates.length > 0 && <ChooseMetaAccountForm candidates={pendingCandidates} />}
 
       <div>
         <h1 className="text-lg font-semibold text-[#101828]">Integrações</h1>
         <p className="text-sm text-[#667085]">
-          Tracking first-party do site/landing pages de {membership.agency.name} (seção 34 do manual) — visitantes
-          identificados por e-mail viram Leads automaticamente em <span className="font-medium">Comercial → Leads</span>.
-          Também é aqui que fica a conexão com as plataformas de anúncio (seções 37/38) — visão de visitantes e
-          comportamento no site fica em <span className="font-medium">Traqueamento</span>, ao lado.
+          Todas as conexões com contas e serviços externos de {membership.agency.name}, organizadas por área —
+          visão de visitantes e comportamento no site fica em <span className="font-medium">Traqueamento</span>, ao lado.
         </p>
       </div>
 
-      <Suspense><GoogleBusinessIntegration configured={googleBusinessConfigured()} canManage={canManage} connection={googleBusinessConnection ? { email: googleBusinessConnection.googleAccountEmail, status: googleBusinessConnection.status, lastValidatedAt: googleBusinessConnection.lastValidatedAt?.toISOString() ?? null, locationCount: googleBusinessConnection._count.locations } : null} /></Suspense>
+      <IntegrationTabs active={tab} />
 
-      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
-        <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#101828]">Zenite Hub — Formulário de orçamento</h2>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
-                  siteLeadEnabled ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
-                }`}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full ${siteLeadEnabled ? "bg-[#12B76A]" : "bg-[#98A2B3]"}`} />
-                {siteLeadEnabled ? "Ativa" : siteLeadConfigured ? "Desconectada" : "Não configurada"}
-              </span>
-            </div>
-            <p className="max-w-2xl text-sm text-[#667085]">
-              Recebe os dados enviados em <span className="font-medium text-[#344054]">hubzenite.com.br/orcamento</span> e
-              cria o contato automaticamente em <span className="font-medium text-[#344054]">Comercial → Leads</span>.
-            </p>
-          </div>
-          <SiteLeadIntegrationActions enabled={siteLeadEnabled} configured={siteLeadConfigured} canManage={canManage} />
-        </div>
-
-        <div className="grid gap-px bg-[#EEF0F3] sm:grid-cols-3">
-          <div className="bg-white p-4">
-            <p className="text-xs text-[#667085]">Preenchimentos recebidos</p>
-            <p className="mt-1 text-xl font-semibold text-[#101828]">{siteLeadCount}</p>
-          </div>
-          <div className="bg-white p-4">
-            <p className="text-xs text-[#667085]">Último recebimento</p>
-            <p className="mt-1 text-sm font-semibold text-[#101828]">
-              {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "Nenhum preenchimento recebido"}
-            </p>
-          </div>
-          <div className="bg-white p-4">
-            <p className="text-xs text-[#667085]">Origem registrada</p>
-            <p className="mt-1 text-sm font-semibold text-[#101828]">{SITE_LEAD_SOURCE}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F9FAFB] px-4 py-3 text-xs text-[#667085]">
-          <span>A credencial fica protegida na Vercel e nunca é exibida nesta tela.</span>
-          <span>Desconectar não apaga leads já recebidos.</span>
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
-        <div className="border-b border-[#EEF0F3] p-4">
-          <h2 className="text-sm font-semibold text-[#101828]">Formulários nativos da Meta (Lead Ads)</h2>
-          <p className="mt-1 max-w-2xl text-sm text-[#667085]">
-            Cada resposta de formulário de anúncio de lead entra em <span className="font-medium text-[#344054]">Comercial → Leads</span> com uma
-            oportunidade no pipeline, origem &ldquo;Meta Lead Ads&rdquo;, formulário, campanha e respostas. Ative só a Página da própria agência: os leads vão
-            para o CRM da agência.
-          </p>
-        </div>
-        <MetaLeadsIntegration pages={metaLeadPages} canManage={canManage} />
-      </section>
-
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#101828]">Chave do coletor</h2>
-          {canManage && <RotateWriteKeyButton />}
-        </div>
-        <p className="mb-2 rounded-lg bg-[#F9FAFB] px-3 py-2 font-mono text-sm text-[#344054]">{writeKey}</p>
-        <p className="mb-3 text-xs text-[#98A2B3]">
-          Chave pública (não é secreta) — vai embutida no código do site, mesmo modelo do Google Analytics ou do Meta
-          Pixel. A segurança do coletor está na validação de consentimento e de schema, não no sigilo desta chave.
-        </p>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Exemplo de chamada</p>
-        <pre className="overflow-x-auto rounded-lg bg-[#101828] p-3 text-xs text-[#D0D5DD]">
-          <code>{snippetExample}</code>
-        </pre>
-      </section>
-
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[#101828]">Saúde da integração</h2>
-          <SendTestEventButton writeKey={writeKey} />
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{totalEvents}</p>
-            <p className="text-xs text-[#667085]">eventos recebidos (total)</p>
-          </div>
-          <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{eventsLast24h}</p>
-            <p className="text-xs text-[#667085]">eventos nas últimas 24h</p>
-          </div>
-          <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{totalVisitors}</p>
-            <p className="text-xs text-[#667085]">visitantes únicos</p>
-          </div>
-          <div className="rounded-lg border border-[#EEF0F3] p-3">
-            <p className="text-xl font-semibold text-[#101828]">{identifiedVisitors}</p>
-            <p className="text-xs text-[#667085]">identificados (viraram Lead)</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[#101828]">Últimos eventos</h2>
-        {lastEvents.length === 0 ? (
-          <p className="text-sm text-[#98A2B3]">
-            Nenhum evento recebido ainda — use &quot;Enviar evento de teste&quot; acima ou instale o snippet no site.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-1.5">
-            {lastEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <span className="font-medium text-[#101828]">{event.eventName}</span>
-                  {event.url && <span className="ml-2 truncate text-xs text-[#98A2B3]">{event.url}</span>}
-                </div>
-                <span className="whitespace-nowrap text-xs text-[#98A2B3]">
-                  {event.receivedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <div className="h-px bg-[#E4E7EC]" />
-
-      <div>
-        <h2 className="text-lg font-semibold text-[#101828]">Conexões com plataformas de anúncio</h2>
-        <p className="text-sm text-[#667085]">
-          Com o Pixel ID configurado, eventos de página/formulário já são enviados pra Meta pela Conversions API,
-          deduplicados com o Pixel do navegador. Ler campanhas/métricas automaticamente ainda é uma próxima fatia.
-        </p>
-      </div>
-
-      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
-        <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#101828]">Meta Ads</h2>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
-                  metaConnection ? STATUS_STYLES[metaConnection.status] : "bg-[#F2F4F7] text-[#667085]"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    metaConnection ? STATUS_DOT[metaConnection.status] : "bg-[#98A2B3]"
-                  }`}
-                />
-                {metaConnection ? STATUS_LABELS[metaConnection.status] : "Não conectada"}
-              </span>
-            </div>
-            {metaConnection ? (
-              <p className="max-w-2xl text-sm text-[#667085]">
-                Conta <span className="font-medium text-[#344054]">{metaConnection.externalAccountName}</span> (
-                {metaConnection.externalAccountId})
-                {metaConnection.tokenExpiresAt && (
-                  <>
-                    {" "}
-                    — acesso válido até{" "}
-                    <span className="font-medium text-[#344054]">
-                      {metaConnection.tokenExpiresAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                    </span>
-                  </>
-                )}
-              </p>
-            ) : (
-              <p className="max-w-2xl text-sm text-[#667085]">
-                Conecte a conta de anúncios da agência pra ler campanhas e (numa próxima fatia) mandar eventos de
-                conversão automaticamente.
-              </p>
-            )}
-          </div>
-          {canManage && (metaConnection ? <DisconnectMetaButton /> : <ConnectMetaButton />)}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F9FAFB] px-4 py-3 text-xs text-[#667085]">
-          <span>O token de acesso fica criptografado e nunca é exibido nesta tela.</span>
-          <span>Desconectar não apaga campanhas ou métricas já lidas.</span>
-        </div>
-        {metaConnection && canManage && <MetaPixelIdForm initialPixelId={metaConnection.metaPixelId} />}
-      </section>
-
-      <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
-        <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#101828]">Google Analytics 4</h2>
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
-                  agencyGa4?.ga4MeasurementId ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    agencyGa4?.ga4MeasurementId ? "bg-[#12B76A]" : "bg-[#98A2B3]"
-                  }`}
-                />
-                {agencyGa4?.ga4MeasurementId ? "Configurado" : "Não configurado"}
-              </span>
-            </div>
-            <p className="max-w-2xl text-sm text-[#667085]">
-              Tag no navegador (`gtag.js`) — não é conexão OAuth, só precisa do Measurement ID da propriedade GA4.
-            </p>
-          </div>
-        </div>
-        {canManage && <Ga4MeasurementIdForm initialMeasurementId={agencyGa4?.ga4MeasurementId ?? null} />}
-      </section>
-
-      {metaConnection && (
-        <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-          <div className="mb-5 border-b border-[#EEF0F3] pb-5">
-            <div className="mb-3"><h2 className="text-sm font-semibold text-[#101828]">Eventos do funil comercial</h2><p className="mt-1 text-xs text-[#667085]">Enviados pelo servidor quando o CRM avança, com deduplicação por negociação.</p></div>
-            <div className="mb-4 grid gap-2 sm:grid-cols-4">{[["Lead", "Formulário enviado"], ["QualifiedLead", "Lead qualificado"], ["ProposalSent", "Proposta enviada"], ["Purchase", "Pagamento recebido"]].map(([event, trigger]) => <div key={event} className="rounded-lg border border-[#EEF0F3] p-3"><p className="text-sm font-semibold text-[#101828]">{event}</p><p className="mt-1 text-xs text-[#667085]">{trigger}</p><span className="mt-2 inline-flex rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[11px] font-semibold text-[#027A48]">Ativo</span></div>)}</div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos eventos comerciais</h3>
-            {commercialDeliveries.length === 0 ? <p className="text-sm text-[#98A2B3]">Nenhum evento comercial enviado ainda.</p> : <div className="flex flex-col gap-1.5">{commercialDeliveries.map((delivery) => <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm"><div><span className="font-medium text-[#101828]">{delivery.eventName}</span><span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>{delivery.status === "SENT" ? "Enviado" : "Falhou"}</span>{delivery.valueCents !== null && <span className="ml-2 text-xs text-[#667085]">R$ {(delivery.valueCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}{delivery.error && <p className="mt-1 text-xs text-[#B42318]">{delivery.error}</p>}</div><span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span></div>)}</div>}
-          </div>
-
-          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-[#101828]">Qualidade do envio</h2>
-            {canManage && metaConnection.metaPixelId && <SendTestMetaEventButton />}
-          </div>
-          <p className="mb-4 text-xs text-[#98A2B3]">Últimos 30 dias (seções 5/6 do manual) — diagnóstico de entrega e consentimento.</p>
-
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-[#EEF0F3] p-3">
-              <p className="text-xl font-semibold text-[#101828]">{qualityStats.matchQuality.pct}%</p>
-              <p className="text-xs text-[#667085]">
-                dos eventos de lead com e-mail/telefone pra &quot;Advanced Matching&quot; ({qualityStats.matchQuality.withIdentifier}/
-                {qualityStats.matchQuality.total})
-              </p>
-            </div>
-            <div className="rounded-lg border border-[#EEF0F3] p-3">
-              <p className="text-xl font-semibold text-[#101828]">{qualityStats.consentAcceptance.pct}%</p>
-              <p className="text-xs text-[#667085]">
-                dos visitantes aceitaram analytics ({qualityStats.consentAcceptance.accepted}/{qualityStats.consentAcceptance.total})
-                {qualityStats.consentAcceptance.total > 0 && qualityStats.consentAcceptance.pct < 50 && (
-                  <span className="mt-1 block font-medium text-[#B54708]">
-                    Mais da metade está recusando — boa parte dos eventos de página/clique está sendo descartada antes de
-                    chegar na Meta/GA4.
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-
-          {qualityStats.byDestinationStatus.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {qualityStats.byDestinationStatus.map((group) => (
-                <span
-                  key={`${group.destination}-${group.status}`}
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    group.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
-                  }`}
-                >
-                  {DELIVERY_DESTINATION_LABELS[group.destination] ?? group.destination} ·{" "}
-                  {group.status === "SENT" ? "Enviados" : "Falharam"}: {group.count}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos envios</h3>
-          {recentDeliveries.length === 0 ? (
-            <p className="text-sm text-[#98A2B3]">Nenhuma tentativa de envio registrada ainda.</p>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              {recentDeliveries.map((delivery) => (
-                <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm">
-                  <div className="min-w-0">
-                    <span className="font-medium text-[#101828]">{delivery.trackingEvent.eventName}</span>
-                    <span className="ml-2 text-xs text-[#98A2B3]">{DELIVERY_DESTINATION_LABELS[delivery.destination] ?? delivery.destination}</span>
+      {tab === "meta" && (
+        <>
+          <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+            <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold text-[#101828]">Meta Ads</h2>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
+                      metaConnection ? STATUS_STYLES[metaConnection.status] : "bg-[#F2F4F7] text-[#667085]"
+                    }`}
+                  >
                     <span
-                      className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        metaConnection ? STATUS_DOT[metaConnection.status] : "bg-[#98A2B3]"
+                      }`}
+                    />
+                    {metaConnection ? STATUS_LABELS[metaConnection.status] : "Não conectada"}
+                  </span>
+                </div>
+                {metaConnection ? (
+                  <p className="max-w-2xl text-sm text-[#667085]">
+                    Conta <span className="font-medium text-[#344054]">{metaConnection.externalAccountName}</span> (
+                    {metaConnection.externalAccountId})
+                    {metaConnection.tokenExpiresAt && (
+                      <>
+                        {" "}
+                        — acesso válido até{" "}
+                        <span className="font-medium text-[#344054]">
+                          {metaConnection.tokenExpiresAt.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                ) : (
+                  <p className="max-w-2xl text-sm text-[#667085]">
+                    Conecte a conta de anúncios da agência pra ler campanhas e (numa próxima fatia) mandar eventos de
+                    conversão automaticamente.
+                  </p>
+                )}
+              </div>
+              {canManage && (metaConnection ? <DisconnectMetaButton /> : <ConnectMetaButton />)}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F9FAFB] px-4 py-3 text-xs text-[#667085]">
+              <span>O token de acesso fica criptografado e nunca é exibido nesta tela.</span>
+              <span>Desconectar não apaga campanhas ou métricas já lidas.</span>
+            </div>
+            {metaConnection && canManage && <MetaPixelIdForm initialPixelId={metaConnection.metaPixelId} />}
+          </section>
+
+          <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+            <div className="border-b border-[#EEF0F3] p-4">
+              <h2 className="text-sm font-semibold text-[#101828]">Formulários nativos da Meta (Lead Ads)</h2>
+              <p className="mt-1 max-w-2xl text-sm text-[#667085]">
+                Cada resposta de formulário de anúncio de lead entra em <span className="font-medium text-[#344054]">Comercial → Leads</span> com uma
+                oportunidade no pipeline, origem &ldquo;Meta Lead Ads&rdquo;, formulário, campanha e respostas. Ative só a Página da própria agência: os leads vão
+                para o CRM da agência.
+              </p>
+            </div>
+            <MetaLeadsIntegration pages={metaLeadPages} canManage={canManage} />
+          </section>
+
+          {metaConnection && (
+            <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+              <div className="mb-5 border-b border-[#EEF0F3] pb-5">
+                <div className="mb-3"><h2 className="text-sm font-semibold text-[#101828]">Eventos do funil comercial</h2><p className="mt-1 text-xs text-[#667085]">Enviados pelo servidor quando o CRM avança, com deduplicação por negociação.</p></div>
+                <div className="mb-4 grid gap-2 sm:grid-cols-4">{[["Lead", "Formulário enviado"], ["QualifiedLead", "Lead qualificado"], ["ProposalSent", "Proposta enviada"], ["Purchase", "Pagamento recebido"]].map(([event, trigger]) => <div key={event} className="rounded-lg border border-[#EEF0F3] p-3"><p className="text-sm font-semibold text-[#101828]">{event}</p><p className="mt-1 text-xs text-[#667085]">{trigger}</p><span className="mt-2 inline-flex rounded-full bg-[#ECFDF3] px-2 py-0.5 text-[11px] font-semibold text-[#027A48]">Ativo</span></div>)}</div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos eventos comerciais</h3>
+                {commercialDeliveries.length === 0 ? <p className="text-sm text-[#98A2B3]">Nenhum evento comercial enviado ainda.</p> : <div className="flex flex-col gap-1.5">{commercialDeliveries.map((delivery) => <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm"><div><span className="font-medium text-[#101828]">{delivery.eventName}</span><span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>{delivery.status === "SENT" ? "Enviado" : "Falhou"}</span>{delivery.valueCents !== null && <span className="ml-2 text-xs text-[#667085]">R$ {(delivery.valueCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}{delivery.error && <p className="mt-1 text-xs text-[#B42318]">{delivery.error}</p>}</div><span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span></div>)}</div>}
+              </div>
+
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-[#101828]">Qualidade do envio</h2>
+                {canManage && metaConnection.metaPixelId && <SendTestMetaEventButton />}
+              </div>
+              <p className="mb-4 text-xs text-[#98A2B3]">Últimos 30 dias (seções 5/6 do manual) — diagnóstico de entrega e consentimento.</p>
+
+              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-[#EEF0F3] p-3">
+                  <p className="text-xl font-semibold text-[#101828]">{qualityStats.matchQuality.pct}%</p>
+                  <p className="text-xs text-[#667085]">
+                    dos eventos de lead com e-mail/telefone pra &quot;Advanced Matching&quot; ({qualityStats.matchQuality.withIdentifier}/
+                    {qualityStats.matchQuality.total})
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[#EEF0F3] p-3">
+                  <p className="text-xl font-semibold text-[#101828]">{qualityStats.consentAcceptance.pct}%</p>
+                  <p className="text-xs text-[#667085]">
+                    dos visitantes aceitaram analytics ({qualityStats.consentAcceptance.accepted}/{qualityStats.consentAcceptance.total})
+                    {qualityStats.consentAcceptance.total > 0 && qualityStats.consentAcceptance.pct < 50 && (
+                      <span className="mt-1 block font-medium text-[#B54708]">
+                        Mais da metade está recusando — boa parte dos eventos de página/clique está sendo descartada antes de
+                        chegar na Meta/GA4.
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {qualityStats.byDestinationStatus.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {qualityStats.byDestinationStatus.map((group) => (
+                    <span
+                      key={`${group.destination}-${group.status}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        group.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
                       }`}
                     >
-                      {delivery.status === "SENT" ? "Enviado" : "Falhou"}
+                      {DELIVERY_DESTINATION_LABELS[group.destination] ?? group.destination} ·{" "}
+                      {group.status === "SENT" ? "Enviados" : "Falharam"}: {group.count}
                     </span>
-                    {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
-                  </div>
-                  <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Últimos envios</h3>
+              {recentDeliveries.length === 0 ? (
+                <p className="text-sm text-[#98A2B3]">Nenhuma tentativa de envio registrada ainda.</p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {recentDeliveries.map((delivery) => (
+                    <div key={delivery.id} className="flex items-start justify-between gap-3 text-sm">
+                      <div className="min-w-0">
+                        <span className="font-medium text-[#101828]">{delivery.trackingEvent.eventName}</span>
+                        <span className="ml-2 text-xs text-[#98A2B3]">{DELIVERY_DESTINATION_LABELS[delivery.destination] ?? delivery.destination}</span>
+                        <span
+                          className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            delivery.status === "SENT" ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"
+                          }`}
+                        >
+                          {delivery.status === "SENT" ? "Enviado" : "Falhou"}
+                        </span>
+                        {delivery.error && <p className="mt-0.5 break-words text-xs text-[#B42318]">{delivery.error}</p>}
+                      </div>
+                      <span className="shrink-0 text-xs text-[#98A2B3]">{delivery.attemptedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
-        </section>
+        </>
       )}
 
-      <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
-        <h2 className="mb-2 text-sm font-semibold text-[#101828]">Google Ads</h2>
-        <p className="text-sm text-[#98A2B3]">Ainda não conectado — próxima fatia.</p>
-      </section>
+      {tab === "google" && (
+        <>
+          <Suspense><GoogleBusinessIntegration configured={googleBusinessConfigured()} canManage={canManage} connection={googleBusinessConnection ? { email: googleBusinessConnection.googleAccountEmail, status: googleBusinessConnection.status, lastValidatedAt: googleBusinessConnection.lastValidatedAt?.toISOString() ?? null, locationCount: googleBusinessConnection._count.locations } : null} /></Suspense>
+
+          <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+            <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold text-[#101828]">Google Analytics 4</h2>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
+                      agencyGa4?.ga4MeasurementId ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        agencyGa4?.ga4MeasurementId ? "bg-[#12B76A]" : "bg-[#98A2B3]"
+                      }`}
+                    />
+                    {agencyGa4?.ga4MeasurementId ? "Configurado" : "Não configurado"}
+                  </span>
+                </div>
+                <p className="max-w-2xl text-sm text-[#667085]">
+                  Tag no navegador (`gtag.js`) — não é conexão OAuth, só precisa do Measurement ID da propriedade GA4.
+                </p>
+              </div>
+            </div>
+            {canManage && <Ga4MeasurementIdForm initialMeasurementId={agencyGa4?.ga4MeasurementId ?? null} />}
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <h2 className="mb-2 text-sm font-semibold text-[#101828]">Google Ads</h2>
+            <p className="text-sm text-[#98A2B3]">Ainda não conectado — próxima fatia.</p>
+          </section>
+        </>
+      )}
+
+      {tab === "site" && (
+        <>
+          <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
+            <div className="flex flex-col gap-4 border-b border-[#EEF0F3] p-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold text-[#101828]">Zenite Hub — Formulário de orçamento</h2>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold ${
+                      siteLeadEnabled ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${siteLeadEnabled ? "bg-[#12B76A]" : "bg-[#98A2B3]"}`} />
+                    {siteLeadEnabled ? "Ativa" : siteLeadConfigured ? "Desconectada" : "Não configurada"}
+                  </span>
+                </div>
+                <p className="max-w-2xl text-sm text-[#667085]">
+                  Recebe os dados enviados em <span className="font-medium text-[#344054]">hubzenite.com.br/orcamento</span> e
+                  cria o contato automaticamente em <span className="font-medium text-[#344054]">Comercial → Leads</span>.
+                </p>
+              </div>
+              <SiteLeadIntegrationActions enabled={siteLeadEnabled} configured={siteLeadConfigured} canManage={canManage} />
+            </div>
+
+            <div className="grid gap-px bg-[#EEF0F3] sm:grid-cols-3">
+              <div className="bg-white p-4">
+                <p className="text-xs text-[#667085]">Preenchimentos recebidos</p>
+                <p className="mt-1 text-xl font-semibold text-[#101828]">{siteLeadCount}</p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-xs text-[#667085]">Último recebimento</p>
+                <p className="mt-1 text-sm font-semibold text-[#101828]">
+                  {lastSiteLead ? lastSiteLead.createdAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "Nenhum preenchimento recebido"}
+                </p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-xs text-[#667085]">Origem registrada</p>
+                <p className="mt-1 text-sm font-semibold text-[#101828]">{SITE_LEAD_SOURCE}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#F9FAFB] px-4 py-3 text-xs text-[#667085]">
+              <span>A credencial fica protegida na Vercel e nunca é exibida nesta tela.</span>
+              <span>Desconectar não apaga leads já recebidos.</span>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#101828]">Chave do coletor</h2>
+              {canManage && <RotateWriteKeyButton />}
+            </div>
+            <p className="mb-2 rounded-lg bg-[#F9FAFB] px-3 py-2 font-mono text-sm text-[#344054]">{writeKey}</p>
+            <p className="mb-3 text-xs text-[#98A2B3]">
+              Chave pública (não é secreta) — vai embutida no código do site, mesmo modelo do Google Analytics ou do Meta
+              Pixel. A segurança do coletor está na validação de consentimento e de schema, não no sigilo desta chave.
+            </p>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#98A2B3]">Exemplo de chamada</p>
+            <pre className="overflow-x-auto rounded-lg bg-[#101828] p-3 text-xs text-[#D0D5DD]">
+              <code>{snippetExample}</code>
+            </pre>
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-[#101828]">Saúde da integração</h2>
+              <SendTestEventButton writeKey={writeKey} />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-lg border border-[#EEF0F3] p-3">
+                <p className="text-xl font-semibold text-[#101828]">{totalEvents}</p>
+                <p className="text-xs text-[#667085]">eventos recebidos (total)</p>
+              </div>
+              <div className="rounded-lg border border-[#EEF0F3] p-3">
+                <p className="text-xl font-semibold text-[#101828]">{eventsLast24h}</p>
+                <p className="text-xs text-[#667085]">eventos nas últimas 24h</p>
+              </div>
+              <div className="rounded-lg border border-[#EEF0F3] p-3">
+                <p className="text-xl font-semibold text-[#101828]">{totalVisitors}</p>
+                <p className="text-xs text-[#667085]">visitantes únicos</p>
+              </div>
+              <div className="rounded-lg border border-[#EEF0F3] p-3">
+                <p className="text-xl font-semibold text-[#101828]">{identifiedVisitors}</p>
+                <p className="text-xs text-[#667085]">identificados (viraram Lead)</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
+            <h2 className="mb-3 text-sm font-semibold text-[#101828]">Últimos eventos</h2>
+            {lastEvents.length === 0 ? (
+              <p className="text-sm text-[#98A2B3]">
+                Nenhum evento recebido ainda — use &quot;Enviar evento de teste&quot; acima ou instale o snippet no site.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                {lastEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#EEF0F3] px-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <span className="font-medium text-[#101828]">{event.eventName}</span>
+                      {event.url && <span className="ml-2 truncate text-xs text-[#98A2B3]">{event.url}</span>}
+                    </div>
+                    <span className="whitespace-nowrap text-xs text-[#98A2B3]">
+                      {event.receivedAt.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {tab === "conteudo" && (
+        <>
+          <ContentAutomationConnectionForm
+            connected={Boolean(contentAutomationConnection)}
+            githubOwner={contentAutomationConnection?.githubOwner ?? null}
+            githubRepo={contentAutomationConnection?.githubRepo ?? null}
+            githubBranch={contentAutomationConnection?.githubBranch ?? null}
+          />
+          <SearchConsoleConnectionCard
+            connected={Boolean(searchConsoleConnection)}
+            siteUrl={searchConsoleConnection?.siteUrl ?? null}
+            lastError={searchConsoleConnection?.lastError ?? null}
+          />
+        </>
+      )}
     </div>
   );
 }

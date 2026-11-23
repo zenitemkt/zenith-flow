@@ -9,7 +9,7 @@ export function SearchConsoleConnectionCard({ connected, siteUrl, lastError }: P
   return (
     <section className="rounded-xl border border-[#E4E7EC] bg-white p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[#101828]">Google Search Console</h2>
+        <h2 className="text-sm font-semibold text-[#101828]">Google Search Console (blog automático)</h2>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${connected ? "bg-[#ECFDF3] text-[#027A48]" : "bg-[#F2F4F7] text-[#667085]"}`}>
           {connected ? "Conectado" : "Não conectado"}
         </span>

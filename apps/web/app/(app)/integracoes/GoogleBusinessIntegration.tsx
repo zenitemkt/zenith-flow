@@ -23,7 +23,7 @@ export function GoogleBusinessIntegration({ configured, canManage, connection }:
     const result = params.get("googleBusiness");
     if (!result) return;
     if (result === "connected") toast.success(RESULT[result] ?? "Conta conectada."); else toast.error(RESULT[result] ?? "Não foi possível conectar.");
-    router.replace("/integracoes");
+    router.replace("/integracoes?tab=google");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

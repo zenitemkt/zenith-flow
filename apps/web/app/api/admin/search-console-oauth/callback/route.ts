@@ -5,15 +5,16 @@ import { exchangeSearchConsoleCode, listSearchConsoleSites } from "@/lib/search-
 import { verifyOAuthState } from "@/lib/oauth-state";
 
 function redirectToBlogAutomation(request: Request, params: Record<string, string>) {
-  const url = new URL("/automacoes/blog", request.url);
+  const url = new URL("/integracoes", request.url);
+  url.searchParams.set("tab", "conteudo");
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return NextResponse.redirect(url);
 }
 
 /**
  * Callback do OAuth do Search Console — redireciona de volta pra
- * /automacoes/blog com `?gsc=connected|error` (navegação do navegador, nunca
- * server-to-server, mesmo padrão do callback da Meta).
+ * /integracoes?tab=conteudo com `?gsc=connected|error` (navegação do
+ * navegador, nunca server-to-server, mesmo padrão do callback da Meta).
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
