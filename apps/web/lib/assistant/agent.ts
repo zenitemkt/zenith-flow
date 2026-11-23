@@ -7,7 +7,7 @@ import { downloadMedia, sendText, transcribeAudio } from "./whatsapp";
 import { askPartnersApproval, notifyPartners } from "./notify";
 import { brtDateString, cancelMeeting, createMeeting, findFreeSlots, formatSlot } from "./calendar";
 import { raiseSystemAlert } from "@/lib/system-alerts";
-import { onProspectStop } from "@/lib/prospecting/outreach";
+import { onProspectBotDetected, onProspectStop } from "@/lib/prospecting/outreach";
 
 const brl = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -75,6 +75,12 @@ export const TOOLS = [
   {
     name: "stop_follow_up",
     description: "Chame quando a pessoa disser claramente que não quer mais receber mensagem, pedir pra parar de mandar, ou dispensar o contato de forma grosseira/debochada. Isso impede qualquer retomada automática futura (23h/3 dias/7 dias) com ela. Não chame por simples 'agora não' ou silêncio — só quando ela pedir pra parar ou for hostil.",
+    input_schema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "detected_bot",
+    description:
+      "Chame quando quem responde é claramente um robô de atendimento automático (menu de outra empresa), não uma pessoa: mensagem de boas-vindas genérica com lista de opções pra escolher, 'mensagem inválida, selecione uma das opções acima', ou qualquer resposta repetida de menu que não faz sentido como conversa humana. Desliga a Milena nessa conversa pra sempre, sem mandar mais nada.",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -152,6 +158,11 @@ async function runTool(name: string, input: Record<string, unknown>, conv: Conve
       await prisma.assistantConversation.update({ where: { id: conv.id }, data: { followUpOptOut: true } });
       await onProspectStop(conv.agencyId, conv).catch((e) => console.error("prospect_stop_failed", conv.id, e));
       return "Registrado. Não insista mais — responda com educação e encerre, sem pedir reunião nem reabrir o assunto.";
+    }
+    case "detected_bot": {
+      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { counterpartBot: true, followUpOptOut: true, replyDueAt: null } });
+      await onProspectBotDetected(conv.agencyId, conv).catch((e) => console.error("prospect_bot_detected_failed", conv.id, e));
+      return "Registrado. Não responda mais nada nessa conversa.";
     }
     case "payment_instructions": {
       const p = config.entryProduct;
@@ -270,7 +281,7 @@ async function mediaBlocks(messages: { id: string; content: string; mediaId: str
 export async function runConversationTurn(conversationId: string): Promise<void> {
   const conv = await prisma.assistantConversation.findUniqueOrThrow({ where: { id: conversationId } });
   const { enabled, config } = await loadAssistant(conv.agencyId);
-  if (!enabled || conv.mode !== "bot") return;
+  if (!enabled || conv.mode !== "bot" || conv.counterpartBot) return;
   const now = new Date();
 
   try {
@@ -302,7 +313,8 @@ export async function runConversationTurn(conversationId: string): Promise<void>
     });
 
     let reply = "";
-    for (let round = 0; round < 6; round++) {
+    let botDetected = false;
+    for (let round = 0; round < 6 && !botDetected; round++) {
       const response = await callClaude(config, system, messages);
       const toolUses = response.content.filter((b) => b.type === "tool_use");
       reply = response.content.filter((b) => b.type === "text").map((b) => String(b.text)).join("\n").trim();
@@ -311,6 +323,7 @@ export async function runConversationTurn(conversationId: string): Promise<void>
       const fresher = await prisma.assistantConversation.findUniqueOrThrow({ where: { id: conversationId } });
       const results: Block[] = [];
       for (const use of toolUses) {
+        if (use.name === "detected_bot") botDetected = true;
         let output: string;
         try {
           output = await runTool(String(use.name), (use.input ?? {}) as Record<string, unknown>, fresher, config, now);
@@ -321,6 +334,11 @@ export async function runConversationTurn(conversationId: string): Promise<void>
         results.push({ type: "tool_result", tool_use_id: use.id, content: output });
       }
       messages.push({ role: "user", content: results });
+    }
+    // Robô do outro lado: a ferramenta já desligou a conversa, não manda nenhuma mensagem (nem a de despedida que o modelo tenha escrito).
+    if (botDetected) {
+      await prisma.assistantConversation.update({ where: { id: conversationId }, data: { failures: 0 } });
+      return;
     }
 
     const bubbles = splitBubbles(reply);

@@ -220,3 +220,20 @@ export async function onProspectStop(agencyId: string, conv: { prospectId: strin
     prisma.leadStatusHistory.create({ data: { leadId: conv.leadId, fromStatus: lead.status, toStatus: "DESQUALIFICADO", reason: "Prospecção: pediu pra não receber mais mensagens." } }),
   ]);
 }
+
+/**
+ * A Milena identificou que quem respondeu é um robô de atendimento de outra empresa (menu automático),
+ * não uma pessoa — mesmo tratamento de onProspectStop: sai da lista de prospecção e, se já tinha virado
+ * lead (a primeira resposta do robô já conta como "engajou" no webhook), desqualifica também.
+ */
+export async function onProspectBotDetected(agencyId: string, conv: { prospectId: string | null; leadId: string | null }): Promise<void> {
+  if (!conv.prospectId) return;
+  await prisma.prospect.updateMany({ where: { id: conv.prospectId, agencyId }, data: { optOut: true, nextEmailAt: null, status: "DESQUALIFICADO" } });
+  if (!conv.leadId) return;
+  const lead = await prisma.lead.findFirst({ where: { id: conv.leadId, agencyId }, select: { status: true } });
+  if (!lead || lead.status === "DESQUALIFICADO" || lead.status === "CONVERTIDO") return;
+  await prisma.$transaction([
+    prisma.lead.update({ where: { id: conv.leadId }, data: { status: "DESQUALIFICADO" } }),
+    prisma.leadStatusHistory.create({ data: { leadId: conv.leadId, fromStatus: lead.status, toStatus: "DESQUALIFICADO", reason: "Prospecção: quem responde é um robô de atendimento, não uma pessoa." } }),
+  ]);
+}

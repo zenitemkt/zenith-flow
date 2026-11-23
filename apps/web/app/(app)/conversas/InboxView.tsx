@@ -14,6 +14,8 @@ export interface InboxItem {
   preview: string;
   lastAt: string;
   mode: "bot" | "human" | null;
+  /** A Milena identificou que quem responde é um robô de atendimento de outra empresa e parou de mandar mensagem aqui. */
+  counterpartBot: boolean;
   classification: string | null;
   account: string;
   /** WhatsApp: a última fala foi nossa e o contato está sem responder há 2+ dias. */
@@ -211,7 +213,8 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
                   <p className="truncate pl-8 text-xs text-[#667085]">{i.preview}</p>
                   <div className="flex flex-wrap gap-1 pl-8">
                     <span className="text-[10px] text-[#98A2B3]">{i.account}</span>
-                    {i.mode && <span className={`rounded-full px-1.5 text-[10px] font-medium ${i.mode === "bot" ? "bg-[#FFF4ED] text-[#C42100]" : "bg-[#F2F4F7] text-[#344054]"}`}>{i.mode === "bot" ? "Milena" : "Equipe"}</span>}
+                    {i.mode && !i.counterpartBot && <span className={`rounded-full px-1.5 text-[10px] font-medium ${i.mode === "bot" ? "bg-[#FFF4ED] text-[#C42100]" : "bg-[#F2F4F7] text-[#344054]"}`}>{i.mode === "bot" ? "Milena" : "Equipe"}</span>}
+                    {i.counterpartBot && <span title="A Milena identificou um robô do outro lado e parou de responder" className="rounded-full bg-[#F2F4F7] px-1.5 text-[10px] font-medium text-[#344054]">Robô detectado</span>}
                     {i.classification && <span className="rounded-full bg-[#EFF8FF] px-1.5 text-[10px] text-[#175CD3]">{CLASS_LABEL[i.classification] ?? i.classification}</span>}
                   </div>
                 </Link>
@@ -244,10 +247,10 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void post({ action: "mode", mode: current.mode === "bot" ? "human" : "bot" })}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${current.mode === "bot" ? "border border-[#D0D5DD] text-[#344054]" : "bg-[#FF2B00] text-white"}`}
+                  onClick={() => void post({ action: "mode", mode: current.mode === "bot" && !current.counterpartBot ? "human" : "bot" })}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60 ${current.mode === "bot" && !current.counterpartBot ? "border border-[#D0D5DD] text-[#344054]" : "bg-[#FF2B00] text-white"}`}
                 >
-                  {current.mode === "bot" ? "Assumir conversa" : "Devolver para a Milena"}
+                  {current.mode === "bot" ? (current.counterpartBot ? "Religar a Milena" : "Assumir conversa") : "Devolver para a Milena"}
                 </button>
               )}
             </header>
@@ -289,7 +292,10 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
                   }}
                 />
               )}
-              {current.mode === "bot" && <p className="mb-2 text-[11px] text-[#667085]">A Milena está respondendo. Se você mandar mensagem, a conversa passa para a equipe.</p>}
+              {current.mode === "bot" && current.counterpartBot && (
+                <p className="mb-2 text-[11px] text-[#667085]">A Milena identificou um robô de atendimento do outro lado e parou de responder aqui. Clique em "Religar a Milena" se for engano.</p>
+              )}
+              {current.mode === "bot" && !current.counterpartBot && <p className="mb-2 text-[11px] text-[#667085]">A Milena está respondendo. Se você mandar mensagem, a conversa passa para a equipe.</p>}
               <div className="flex items-end gap-2">
                 <textarea
                   value={text}

@@ -36,7 +36,7 @@ async function findFollowUpCandidates(): Promise<FollowUpCandidate[]> {
         WHERE "conversationId" = c."id" AND "content" NOT LIKE '[sistema]%' AND "content" NOT LIKE '[retomada]%'
         ORDER BY "createdAt" DESC LIMIT 1
       ) m ON true
-      WHERE c."mode" = 'bot' AND c."followUpStage" < 3 AND c."followUpOptOut" = false AND m."role" != 'user'
+      WHERE c."mode" = 'bot' AND c."followUpStage" < 3 AND c."followUpOptOut" = false AND c."counterpartBot" = false AND m."role" != 'user'
         AND m."createdAt" < NOW() - INTERVAL '22 hours'
         -- Prospecção que ainda não respondeu: o follow-up é manual, na rotina da manhã (tela de Prospecção).
         AND (c."prospectId" IS NULL OR c."leadId" IS NOT NULL)

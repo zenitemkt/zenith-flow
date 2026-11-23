@@ -102,7 +102,7 @@ export async function processAssistantQueue(): Promise<Record<string, number>> {
   const now = new Date();
   const stats = { replies: 0, expired: 0, reminders: 0, startNotices: 0, followUps: 0 };
 
-  const due = await prisma.assistantConversation.findMany({ where: { replyDueAt: { lte: now }, mode: "bot" }, select: { id: true, replyDueAt: true }, take: 20 });
+  const due = await prisma.assistantConversation.findMany({ where: { replyDueAt: { lte: now }, mode: "bot", counterpartBot: false }, select: { id: true, replyDueAt: true }, take: 20 });
   for (const conv of due) {
     // Trava otimista: só quem conseguir limpar o prazo responde (evita resposta dobrada se duas rodadas se cruzarem).
     const claimed = await prisma.assistantConversation.updateMany({ where: { id: conv.id, replyDueAt: conv.replyDueAt }, data: { replyDueAt: null } });

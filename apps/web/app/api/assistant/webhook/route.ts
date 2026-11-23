@@ -195,7 +195,7 @@ export async function POST(request: Request) {
             }).catch(() => null);
           }
         }
-        if (conv.mode === "bot") {
+        if (conv.mode === "bot" && !conv.counterpartBot) {
           await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date(), replyDueAt: replyAt(config.replyDelaySeconds), autoTakeoverAt: null, followUpStage: 0 } });
         } else {
           await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date(), followUpStage: 0 } });

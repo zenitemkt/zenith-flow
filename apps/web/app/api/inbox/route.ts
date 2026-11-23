@@ -33,7 +33,8 @@ export async function POST(request: Request) {
       // Devolvida para a Milena com mensagem do contato sem resposta: ela responde em seguida.
       const last = mode === "bot" ? await prisma.assistantMessage.findFirst({ where: { conversationId: conv.id }, orderBy: { createdAt: "desc" } }) : null;
       const pending = last?.role === "user" && conv.lastInboundAt && Date.now() - conv.lastInboundAt.getTime() < 24 * 3600_000;
-      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, replyDueAt: pending ? new Date() : null } });
+      // Devolver pra Milena depois de um robô detectado por engano religa as respostas de novo.
+      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode, counterpartBot: mode === "bot" ? false : conv.counterpartBot, replyDueAt: pending ? new Date() : null } });
       return NextResponse.json({ ok: true });
     }
     const followUpAudit = (via: "wa.me" | "api") =>

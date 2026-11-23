@@ -3495,6 +3495,8 @@ model AssistantConversation {
   followUpStage  Int                @default(0)
   /// A pessoa pediu pra não receber mais mensagem (ou foi grosseira dispensando o contato) — nunca mais entra na retomada automática.
   followUpOptOut Boolean            @default(false)
+  /// A Milena identificou que quem responde é um robô de atendimento (menu automático de outra empresa), não uma pessoa — nunca mais manda mensagem aqui.
+  counterpartBot Boolean            @default(false)
   /// Conversa aberta pela prospecção automática (primeiro contato manual): ao responder, o prospect vira Lead.
   prospectId     String?
   createdAt      DateTime           @default(now())
