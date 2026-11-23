@@ -15,7 +15,7 @@ describe("nota geral do concorrente", () => {
     expect(computeOverallScore({ instagram: noInstagram, google: noGoogle, websiteScore: null, websiteSeoScore: null }).score).toBeNull();
   });
 
-  it("Google vinculado sem nenhuma avaliação pontua mal, não fica de fora do cálculo", () => {
+  it("Google vinculado sem nenhuma avaliação pontua 0 na nota, não fica de fora do cálculo", () => {
     const result = computeOverallScore({
       instagram: noInstagram,
       google: { placeId: "abc", rating: null, reviewCount: 0, profileChecks: [{ ok: true }, { ok: true }, { ok: false }] },
@@ -23,8 +23,14 @@ describe("nota geral do concorrente", () => {
       websiteSeoScore: null,
     });
     expect(result.missing).not.toContain("Google");
-    // rating efetivo puxado pro piso 3 (sem prova) = 60 pts; completude 2/3 = 66,7 pts → 60*0,8 + 66,7*0,2 ≈ 61
-    expect(result.score).toBe(61);
+    // nota 0 (zero avaliação = zero prova social); completude 2/3 = 66,7 pts → 0*0,8 + 66,7*0,2 ≈ 13
+    expect(result.score).toBe(13);
+  });
+
+  it("Google com 1 avaliação (pouca, mas não nenhuma) pontua melhor que zero avaliações", () => {
+    const semAvaliacao = computeOverallScore({ instagram: noInstagram, google: { placeId: "a", rating: null, reviewCount: 0, profileChecks: null }, websiteScore: null, websiteSeoScore: null });
+    const umaAvaliacao = computeOverallScore({ instagram: noInstagram, google: { placeId: "a", rating: 5, reviewCount: 1, profileChecks: null }, websiteScore: null, websiteSeoScore: null });
+    expect(umaAvaliacao.score!).toBeGreaterThan(semAvaliacao.score!);
   });
 
   it("100 avaliações de 4,9 pontuam mais que 1 avaliação de 5,0 — mais prova social", () => {

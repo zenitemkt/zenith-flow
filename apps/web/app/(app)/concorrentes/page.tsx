@@ -222,7 +222,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
                       <td className={TD}><ScoreBadge score={overall.score} /></td>
                       <td className={TD}>{p.followers !== null ? pct(rows.find((r) => r.p.id === p.id)!.stats.engagementRate) : "—"}</td>
                       <td className={TD}>
-                        {p.googleRating?.toLocaleString("pt-BR", { minimumFractionDigits: 1 }) ?? "—"}
+                        {p.googlePlaceId ? (p.googleRating ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 1 }) : "—"}
                         {p.googleLastSyncAt && <div className="text-[10px] font-normal text-[#98A2B3]">{dateShort(p.googleLastSyncAt)}</div>}
                       </td>
                       <td className={TD}>{p.websiteScore ?? "—"}</td>
@@ -275,7 +275,7 @@ export default async function ConcorrentesPage({ searchParams }: { searchParams:
             </section>
           )}
 
-          <GoogleReviewsComparison days={days} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
+          <GoogleReviewsComparison days={days} profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, linked: profile.googlePlaceId !== null, rating: profile.googleRating, reviewCount: profile.googleReviewCount, firstReviewCount: profile.googleSnapshots.find((snapshot) => snapshot.reviewCount !== null)?.reviewCount ?? null }))} />
 
           <CompetitorWebsiteScores profiles={competitiveProfiles.map((profile) => ({ id: profile.id, username: profile.igUsername, isOwn: profile.isOwn, website: profile.websiteOverride ?? profile.website, score: profile.websiteScore, measuredAt: profile.websiteScoreAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }) ?? null, error: profile.websiteScoreError }))} />
         </>

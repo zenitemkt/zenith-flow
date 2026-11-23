@@ -7,8 +7,9 @@
  * dado ausente). Só fica de fora quando o canal nem existe pro perfil (sem Google vinculado, por
  * exemplo) — aí não há nota nenhuma pra puxar pra baixo ou pra cima.
  *
- * Google e Instagram usam "shrinkage": a nota real (média de estrelas, taxa de engajamento) é
- * puxada em direção a um piso conservador quando a amostra (nº de avaliações, nº de posts) é
+ * Zero avaliações pontua 0 de verdade, não uma nota mediana: não ter nenhuma prova social é o
+ * pior caso, não um caso incerto. Com pelo menos 1 avaliação mas poucas, a nota usa "shrinkage":
+ * é puxada em direção a um piso conservador quando a amostra (nº de avaliações, nº de posts) é
  * pequena, e só vale como está quando a amostra já é grande o bastante pra confiar nela. Isso
  * evita que 1 avaliação de 5 estrelas valha mais que 100 avaliações de 4,9 — a segunda tem muito
  * mais prova social e deve pontuar mais alto.
@@ -42,8 +43,10 @@ const ENGAGEMENT_FLOOR = 0;
 
 /** Nº de avaliações do Google a partir do qual a média já é confiável. */
 const GOOGLE_CONFIDENCE_REVIEWS = 10;
-/** Sem avaliação nenhuma, a nota do Google conta como 3 (mediana baixa) — não como nota máxima nem fica de fora. */
+/** Com pelo menos 1 avaliação mas poucas, a nota puxa pra essa mediana baixa em vez de valer cheia. */
 const GOOGLE_RATING_FLOOR = 3;
+/** Zero avaliações não é "pouca prova social", é nenhuma: nota 0 de verdade, não o piso de quem tem 1 ou 2. */
+const GOOGLE_NO_REVIEWS_SCORE = 0;
 /** Peso da nota (estrelas) vs. completude do perfil (categoria, telefone, site, horário, fotos) na nota final do Google. */
 const GOOGLE_RATING_WEIGHT = 0.8;
 
@@ -63,8 +66,7 @@ export function computeOverallScore(input: OverallScoreInput): OverallScoreResul
 
   if (input.google.placeId) {
     const reviewCount = input.google.reviewCount ?? 0;
-    const effectiveRating = shrinkToward(input.google.rating ?? 0, reviewCount, GOOGLE_CONFIDENCE_REVIEWS, GOOGLE_RATING_FLOOR);
-    const ratingScore = (effectiveRating / 5) * 100;
+    const ratingScore = reviewCount === 0 ? GOOGLE_NO_REVIEWS_SCORE : (shrinkToward(input.google.rating ?? 0, reviewCount, GOOGLE_CONFIDENCE_REVIEWS, GOOGLE_RATING_FLOOR) / 5) * 100;
     const checks = input.google.profileChecks ?? [];
     const completenessScore = checks.length > 0 ? (checks.filter((c) => c.ok).length / checks.length) * 100 : 100;
     parts.push({ label: "Google", value: ratingScore * GOOGLE_RATING_WEIGHT + completenessScore * (1 - GOOGLE_RATING_WEIGHT) });
