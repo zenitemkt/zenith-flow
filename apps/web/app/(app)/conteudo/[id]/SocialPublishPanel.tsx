@@ -447,7 +447,7 @@ export function SocialPublishPanel({
     router.refresh();
   }
 
-  async function act(postId: string, action: "cancel" | "retry") {
+  async function act(postId: string, action: "cancel" | "retry" | "confirm_published", extra: Record<string, unknown> = {}) {
     if (busy) return;
     if (
       action === "cancel" &&
@@ -458,7 +458,7 @@ export function SocialPublishPanel({
     const res = await fetch(`/api/social-posts/${postId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, ...extra }),
     });
     const body = await res.json().catch(() => null);
     setBusy(null);
@@ -468,6 +468,19 @@ export function SocialPublishPanel({
         text: body?.error ?? "Não foi possível concluir.",
       });
     router.refresh();
+  }
+
+  async function confirmPublished(postId: string) {
+    if (busy) return;
+    if (
+      !(await confirmDialog(
+        "Confirma que esta publicação já saiu no ar (você conferiu na própria rede)? Isso NÃO publica de novo, só corrige o status — clicar sem ter certeza pode esconder uma falha real.",
+        { title: "Já publicou, só corrigir status", confirmLabel: "Confirmar" },
+      ))
+    )
+      return;
+    const permalink = window.prompt("Link do post na rede (opcional, Enter pra pular):", "") || null;
+    await act(postId, "confirm_published", { permalink });
   }
 
   const history = posts.length > 0 && (
@@ -529,6 +542,17 @@ export function SocialPublishPanel({
                   className="font-semibold text-[#FF2B00] hover:underline disabled:opacity-60"
                 >
                   {busy === post.id ? "Reenviando..." : "Tentar de novo agora"}
+                </button>
+              )}
+              {post.status === "FAILED" && post.lastError?.includes("interrompida") && (
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => void confirmPublished(post.id)}
+                  title="A publicação foi interrompida no meio, mas pode ter saído mesmo assim — confira na rede antes de usar"
+                  className="font-medium text-[#667085] hover:text-[#101828] disabled:opacity-60"
+                >
+                  Já publicou, só corrigir
                 </button>
               )}
               {(post.status === "FAILED" ||

@@ -94,6 +94,47 @@ async function settleDriveFiles(post: { id: string; agencyId: string; clientId: 
   if (to === "published") await withAgencyDrive(post.agencyId, () => moveClientDriveFiles(post.clientId, ids, "published")).catch((error) => console.error("client_drive_settle_failed", post.id, error));
 }
 
+/** Efeitos de uma publicação bem-sucedida (de verdade ou confirmada à mão) — sempre os mesmos, publique o agendador ou um admin confirmando que já saiu no ar. */
+async function markPublished(
+  full: { id: string; agencyId: string; clientId: string; platform: string; contentItemId: string | null; coverKey: string | null; version: { media: { driveFileId: string | null }[] } | null },
+  result: { externalPostId: string | null; permalink: string | null },
+  actor: { type: "system" } | { type: "user"; userId: string },
+) {
+  await prisma.socialPost.update({
+    where: { id: full.id },
+    data: { status: "PUBLISHED", externalPostId: result.externalPostId, permalink: result.permalink, publishedAt: new Date(), lastError: null, externalContainerId: null, nextAttemptAt: null },
+  });
+  if (full.platform === "INSTAGRAM") await activatePendingPostRules(full.id, result.externalPostId ?? null, result.permalink ?? null);
+  await settleDriveFiles(full, "published");
+  await prisma.auditLog.create({
+    data: {
+      agencyId: full.agencyId,
+      actorType: actor.type,
+      actorUserId: actor.type === "user" ? actor.userId : undefined,
+      action: actor.type === "user" ? "social_post.confirmed_published_manually" : "social_post.published",
+      resourceType: "social_post",
+      resourceId: full.id,
+      metadata: { platform: full.platform, permalink: result.permalink },
+    },
+  });
+  await markContentPublishedIfDone(full.contentItemId);
+}
+
+/**
+ * Corrige um post marcado FAILED que, na real, já saiu no ar (a função caiu no meio depois de
+ * publicar de verdade — mensagem "A publicação foi interrompida..."). Nunca fala com a Meta: só um
+ * admin confirmando o que já viu com os próprios olhos na rede, por isso exige FAILED (nunca
+ * reescreve um post que ainda está na fila ou já publicado por outro caminho).
+ */
+export async function confirmSocialPostPublishedManually(postId: string, permalink: string | null, actorUserId: string) {
+  const full = await prisma.socialPost.findUniqueOrThrow({
+    where: { id: postId },
+    include: { version: { include: { media: { select: { driveFileId: true } } } } },
+  });
+  if (full.status !== "FAILED") throw new Error("Só dá para confirmar publicações marcadas como falha.");
+  await markPublished(full, { externalPostId: full.externalPostId, permalink: permalink ?? full.permalink }, { type: "user", userId: actorUserId });
+}
+
 async function runPublish(post: SocialPost, budgetMs: number): Promise<"published" | "processing" | "retried" | "failed"> {
   const full = await prisma.socialPost.findUniqueOrThrow({
     where: { id: post.id },
@@ -135,7 +176,21 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       const token = decryptSecret(connection.accessTokenEnc!);
       result = full.externalContainerId
         ? await finishInstagramContainer({ igUserId: connection.externalId, token, containerId: full.externalContainerId, budgetMs })
-        : await publishToInstagram({ igUserId: connection.externalId, token, caption, media, format: full.format, budgetMs, collaborators: full.collaborators, coverUrl, thumbOffsetMs: full.coverOffsetMs, trialStrategy: full.trialStrategy });
+        : await publishToInstagram({
+            igUserId: connection.externalId,
+            token,
+            caption,
+            media,
+            format: full.format,
+            budgetMs,
+            collaborators: full.collaborators,
+            coverUrl,
+            thumbOffsetMs: full.coverOffsetMs,
+            trialStrategy: full.trialStrategy,
+            onContainerCreated: async (containerId) => {
+              await prisma.socialPost.update({ where: { id: full.id }, data: { externalContainerId: containerId } });
+            },
+          });
     } else if (full.platform === "FACEBOOK") {
       const connection = full.connection!;
       const token = decryptSecret(connection.accessTokenEnc!);
@@ -159,31 +214,7 @@ async function runPublish(post: SocialPost, budgetMs: number): Promise<"publishe
       result = { externalPostId: published.name, permalink: published.searchUrl ?? null };
     }
 
-    await prisma.socialPost.update({
-      where: { id: full.id },
-      data: {
-        status: "PUBLISHED",
-        externalPostId: result.externalPostId,
-        permalink: result.permalink,
-        publishedAt: new Date(),
-        lastError: null,
-        externalContainerId: null,
-        nextAttemptAt: null,
-      },
-    });
-    if (full.platform === "INSTAGRAM") await activatePendingPostRules(full.id, result.externalPostId ?? null, result.permalink ?? null);
-    await settleDriveFiles(full, "published");
-    await prisma.auditLog.create({
-      data: {
-        agencyId: full.agencyId,
-        actorType: "system",
-        action: "social_post.published",
-        resourceType: "social_post",
-        resourceId: full.id,
-        metadata: { platform: full.platform, permalink: result.permalink },
-      },
-    });
-    await markContentPublishedIfDone(full.contentItemId);
+    await markPublished(full, result, { type: "system" });
     return "published";
   } catch (error) {
     // Vídeo ainda processando: guarda o container e confere no próximo ciclo (não conta tentativa).
@@ -323,10 +354,31 @@ export async function publishDueSocialPosts(
   const summary: PublishRunSummary = { published: 0, processing: 0, retried: 0, failed: 0, skipped: 0 };
   const scope = options.agencyId ? { agencyId: options.agencyId } : {};
 
-  await prisma.socialPost.updateMany({
+  // PUBLISHING parado: a função pode ter caído no meio (timeout/queda da plataforma). Se já existe
+  // um container do Instagram salvo, o vídeo pode ter terminado de processar sozinho enquanto a
+  // função estava fora do ar — tenta de verdade (reaproveitando o MESMO container, nunca criando
+  // outro) antes de desistir, pra não marcar como falha um post que na real já saiu no ar.
+  const stalePosts = await prisma.socialPost.findMany({
     where: { ...scope, status: "PUBLISHING", updatedAt: { lt: new Date(now.getTime() - STALE_PUBLISHING_MS) } },
-    data: { status: "FAILED", lastError: "A publicação foi interrompida. Confira na rede se o post saiu antes de reenviar." },
+    select: { id: true, platform: true, externalContainerId: true, updatedAt: true },
   });
+  for (const stale of stalePosts) {
+    const remaining = budgetMs - (Date.now() - started);
+    if (stale.platform === "INSTAGRAM" && stale.externalContainerId && remaining > 15_000) {
+      // Trava otimista (mesmo espírito de `claim()`): só quem conseguir tocar o updatedAt tenta.
+      const claimed = await prisma.socialPost.updateMany({ where: { id: stale.id, status: "PUBLISHING", updatedAt: stale.updatedAt }, data: { updatedAt: new Date() } });
+      if (claimed.count === 1) {
+        const fresh = await prisma.socialPost.findUniqueOrThrow({ where: { id: stale.id } });
+        summary[await runPublish(fresh, Math.min(remaining - 5_000, 40_000))]++;
+        continue;
+      }
+    }
+    const failed = await prisma.socialPost.updateMany({
+      where: { id: stale.id, status: "PUBLISHING" },
+      data: { status: "FAILED", lastError: "A publicação foi interrompida. Confira na rede se o post saiu antes de reenviar." },
+    });
+    summary.failed += failed.count;
+  }
 
   // Publicações cuja peça foi excluída (de antes da exclusão cancelar junto) viram canceladas.
   await prisma.socialPost.updateMany({

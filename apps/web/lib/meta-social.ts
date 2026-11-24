@@ -330,8 +330,16 @@ export async function publishToInstagram(input: {
   coverUrl?: string | null;
   thumbOffsetMs?: number | null;
   trialStrategy?: string | null;
+  /**
+   * Chamado assim que o container é criado, antes de esperar o processamento —
+   * salva o id logo de cara pra, se a função cair no meio (timeout/queda da
+   * plataforma), a próxima tentativa reaproveitar este container (via
+   * `finishInstagramContainer`) em vez de criar outro vídeo do zero e publicar
+   * duplicado.
+   */
+  onContainerCreated?: (containerId: string) => Promise<void>;
 }): Promise<PublishResult> {
-  const { igUserId, token, caption, media, format, budgetMs, collaborators, coverUrl, thumbOffsetMs, trialStrategy } = input;
+  const { igUserId, token, caption, media, format, budgetMs, collaborators, coverUrl, thumbOffsetMs, trialStrategy, onContainerCreated } = input;
   if (media.length === 0) throw new Error("O Instagram exige pelo menos uma imagem ou vídeo.");
   if (format === "STORY" && media.length > 1) throw new Error("Story aceita um arquivo só.");
   const started = Date.now();
@@ -359,6 +367,7 @@ export async function publishToInstagram(input: {
     ).id;
   }
 
+  await onContainerCreated?.(containerId);
   return finishInstagramContainer({ igUserId, token, containerId, budgetMs: remaining() });
 }
 

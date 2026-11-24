@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zenite-mkt/db";
 import { getServerSession, getCurrentMembership } from "@/lib/session";
-import { isClientRole } from "@/lib/rbac";
-import { publishSocialPostNow } from "@/lib/social-publisher";
+import { canManageIntegrations, isClientRole } from "@/lib/rbac";
+import { confirmSocialPostPublishedManually, publishSocialPostNow } from "@/lib/social-publisher";
 import { canSeeClient } from "@/lib/client-access";
 
 export const maxDuration = 60;
@@ -125,6 +125,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (result.count === 0) return NextResponse.json({ error: "Esta publicação não pode ser reagendada." }, { status: 409 });
     await audit("rescheduled", { publishAt: publishAt.toISOString(), from: post.publishAt.toISOString() });
     if (post.contentItemId) await syncContentDate(post.contentItemId, session.user.id);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "confirm_published") {
+    if (!canManageIntegrations(membership.role)) return NextResponse.json({ error: "Apenas administradores podem confirmar isso." }, { status: 403 });
+    if (post.status !== "FAILED") return NextResponse.json({ error: "Só dá para confirmar publicações marcadas como falha." }, { status: 409 });
+    const permalink = typeof body?.permalink === "string" && body.permalink.trim() ? body.permalink.trim() : null;
+    try {
+      await confirmSocialPostPublishedManually(post.id, permalink, session.user.id);
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Não foi possível confirmar." }, { status: 500 });
+    }
     return NextResponse.json({ ok: true });
   }
 

@@ -28,12 +28,13 @@ describe("agendador — ciclo de publicação", () => {
   it("post que perdeu o horário por mais de 6h vira falha com aviso, sem publicar", async () => {
     const publishAt = new Date(NOW.getTime() - MAX_LATE_MS - 60_000);
     socialPost.findMany
+      .mockResolvedValueOnce([]) // PUBLISHING parado
       .mockResolvedValueOnce([{ id: "p1", agencyId: "a1", platform: "INSTAGRAM", publishAt }]) // perdidos
       .mockResolvedValueOnce([]); // vencidos
 
     const summary = await publishDueSocialPosts(40_000, NOW);
 
-    expect(socialPost.findMany.mock.calls[0]![0].where).toMatchObject({
+    expect(socialPost.findMany.mock.calls[1]![0].where).toMatchObject({
       status: "SCHEDULED",
       attempts: 0,
       nextAttemptAt: null,
@@ -46,6 +47,40 @@ describe("agendador — ciclo de publicação", () => {
     expect(auditLog.create.mock.calls[0]![0].data).toMatchObject({ action: "social_post.missed_schedule", resourceId: "p1", agencyId: "a1" });
     expect(summary).toEqual({ published: 0, processing: 0, retried: 0, failed: 1, skipped: 0 });
     expect(socialPost.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  it("PUBLISHING parado sem container do Instagram vira falha direto (sem tentar de novo)", async () => {
+    socialPost.findMany
+      .mockResolvedValueOnce([{ id: "p1", platform: "INSTAGRAM", externalContainerId: null, updatedAt: NOW }]) // PUBLISHING parado
+      .mockResolvedValueOnce([]) // perdidos
+      .mockResolvedValueOnce([]); // vencidos
+
+    const summary = await publishDueSocialPosts(40_000, NOW);
+
+    expect(socialPost.updateMany).toHaveBeenCalledWith({
+      where: { id: "p1", status: "PUBLISHING" },
+      data: { status: "FAILED", lastError: "A publicação foi interrompida. Confira na rede se o post saiu antes de reenviar." },
+    });
+    expect(summary.failed).toBe(1);
+    expect(socialPost.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  it("PUBLISHING parado com container do Instagram salvo tenta terminar o MESMO container antes de falhar", async () => {
+    const staleUpdatedAt = NOW;
+    socialPost.findMany
+      .mockResolvedValueOnce([{ id: "p1", platform: "INSTAGRAM", externalContainerId: "c1", updatedAt: staleUpdatedAt }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    // Perdeu a corrida pela trava otimista (outro processo já pegou este post): não chama runPublish, cai pro fail comum.
+    socialPost.updateMany.mockImplementation(async (args: { where: Record<string, unknown> }) =>
+      "updatedAt" in args.where ? { count: 0 } : { count: 1 },
+    );
+
+    const summary = await publishDueSocialPosts(40_000, NOW);
+
+    expect(socialPost.updateMany).toHaveBeenCalledWith({ where: { id: "p1", status: "PUBLISHING", updatedAt: staleUpdatedAt }, data: { updatedAt: expect.any(Date) } });
+    expect(socialPost.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(summary.failed).toBe(1);
   });
 
   it("chamado pelo sistema aberto, só mexe na agência da sessão", async () => {
