@@ -8,6 +8,7 @@ import { sendInstagramDirectMessage } from "@/lib/instagram-automation";
 import { recordInboxMessage } from "@/lib/social-inbox";
 import { decryptSecret } from "@/lib/crypto-secrets";
 import { subscribePageToMessages } from "@/lib/meta-lead-ads";
+import { onProspectBotDetected } from "@/lib/prospecting/outreach";
 
 /** Caixa de conversas: responder (WhatsApp ou Direct) e assumir/devolver a conversa para a Milena. */
 export async function POST(request: Request) {
@@ -26,6 +27,15 @@ export async function POST(request: Request) {
     }
     if (body?.action === "delete") {
       await prisma.assistantConversation.delete({ where: { id: conv.id } });
+      return NextResponse.json({ ok: true });
+    }
+    // Marcação manual de robô de atendimento (o que a detecção automática deixou passar): a Milena para aqui.
+    if (body?.action === "bot") {
+      await prisma.assistantConversation.update({ where: { id: conv.id }, data: { mode: "bot", counterpartBot: true, followUpOptOut: true, replyDueAt: null } });
+      await onProspectBotDetected(membership.agencyId, conv);
+      await prisma.auditLog.create({
+        data: { agencyId: membership.agencyId, actorUserId: session.user.id, actorType: "user", action: "assistant.counterpart_bot", resourceType: "assistant_conversation", resourceId: conv.id, metadata: { phone: conv.phone, prospectId: conv.prospectId } },
+      });
       return NextResponse.json({ ok: true });
     }
     if (body?.action === "mode") {

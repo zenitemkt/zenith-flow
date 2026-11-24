@@ -243,6 +243,17 @@ export function InboxView({ items, selected, messages, followUp = null, channel 
               <button type="button" disabled={busy} onClick={() => void deleteConversation()} title="Apagar conversa" aria-label="Apagar conversa" className="rounded-lg border border-[#D0D5DD] p-1.5 text-[#667085] hover:text-[#B42318] disabled:opacity-60">
                 <Trash2 size={15} aria-hidden />
               </button>
+              {current.mode && !current.counterpartBot && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void post({ action: "bot" })}
+                  title="Marca que quem responde é um robô de atendimento (menu automático). A Milena para de responder aqui e a empresa sai da prospecção."
+                  className="rounded-lg border border-[#D0D5DD] px-3 py-1.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB] disabled:opacity-60"
+                >
+                  É robô
+                </button>
+              )}
               {current.mode && (
                 <button
                   type="button"

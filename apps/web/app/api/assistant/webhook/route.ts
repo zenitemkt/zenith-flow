@@ -7,7 +7,8 @@ import { notifyPartners } from "@/lib/assistant/notify";
 import { handleLeadButton, handlePartnerButton, replyAt } from "@/lib/assistant/process";
 import { verifyWhatsappSignature } from "@/lib/assistant/whatsapp";
 import { phoneVariants } from "@/lib/assistant/form-outreach";
-import { onProspectReply } from "@/lib/prospecting/outreach";
+import { onProspectBotDetected, onProspectReply } from "@/lib/prospecting/outreach";
+import { detectCounterpartBot } from "@/lib/assistant/bot-detection";
 
 /** Conversa pelo número, aceitando o celular com ou sem o 9 extra (o WhatsApp às vezes usa o formato antigo). */
 async function findConversation(agencyId: string, phone: string) {
@@ -62,6 +63,9 @@ function describe(m: WaMessage): { content: string; mediaId: string | null; medi
       return { content: "[figurinha]", mediaId: null, mediaType: "sticker" };
     case "location":
       return { content: `[localização] ${m.location?.name ?? ""} ${m.location?.latitude},${m.location?.longitude}`, mediaId: null, mediaType: "other" };
+    case "unsupported":
+      // Menu com botões/lista enviado por outra empresa (robô de atendimento) chega assim pela API.
+      return { content: "[menu com botões ou formato que o WhatsApp não entrega]", mediaId: null, mediaType: "other" };
     default:
       return { content: `[mensagem do tipo ${m.type}]`, mediaId: null, mediaType: "other" };
   }
@@ -156,6 +160,22 @@ export async function POST(request: Request) {
         const { content, mediaId, mediaType } = describe(message);
         const stored = await prisma.assistantMessage.upsert({ where: { waMessageId: message.id }, create: { conversationId: conv.id, role: "user", content, mediaId, mediaType, waMessageId: message.id }, update: {} });
         if (stored.createdAt.getTime() < Date.now() - 60_000) continue; // reenvio da Meta, já tratado
+
+        // Robô de atendimento do outro lado (menu automático): marca e para, antes de virar lead e antes da Milena responder.
+        if (!conv.counterpartBot) {
+          const recent = await prisma.assistantMessage.findMany({ where: { conversationId: conv.id, role: "user", id: { not: stored.id } }, orderBy: { createdAt: "desc" }, take: 3, select: { content: true } });
+          const botReason = detectCounterpartBot({ type: message.type, content }, { prospect: Boolean(conv.prospectId), recentInbound: recent.map((r) => r.content) });
+          if (botReason) {
+            console.info("assistant_counterpart_bot", conv.id, botReason);
+            await prisma.assistantConversation.update({ where: { id: conv.id }, data: { counterpartBot: true, followUpOptOut: true, replyDueAt: null, lastInboundAt: new Date() } });
+            await onProspectBotDetected(agencyId, conv).catch((e) => console.error("prospect_bot_detected_failed", conv!.id, e));
+            continue;
+          }
+        } else {
+          // Já marcada como robô: só registra (aparece em Conversas), sem virar lead e sem resposta.
+          await prisma.assistantConversation.update({ where: { id: conv.id }, data: { lastInboundAt: new Date() } });
+          continue;
+        }
 
         // Respondeu a prospecção: engajou, vira Lead no Comercial (mesmo com a Milena desligada).
         if (conv.prospectId && !conv.leadId) {

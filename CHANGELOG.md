@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Milena — robô do outro lado
+
+- Menu com botões, "mensagem inválida, selecione uma opção", "com qual setor deseja falar" e respostas automáticas repetidas são reconhecidos na chegada: a conversa é marcada como robô, a Milena não responde, não vira lead e a empresa sai da prospecção.
+- Botão **É robô** em Conversas para marcar na mão; a lista de Empresas da prospecção mostra "Robô de atendimento".
+
 ### Prospecção automática — nichos
 
 - Cada termo buscado vira um **nicho** (ex.: "imobiliária", "odontologia"). Rotina do dia e Empresas ganham filtro por nicho, pra trabalhar só um ramo no dia; a aba Busca lista os nichos com "Trabalhar hoje" e "Ver empresas".

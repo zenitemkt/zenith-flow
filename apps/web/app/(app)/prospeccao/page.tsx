@@ -121,7 +121,7 @@ async function EmpresasTab({ agencyId, config, nicho, filtro, temp: tempParam, p
   const filter = filtro && FILTERS[filtro] ? filtro : "lista";
   const temp = TEMPS.find((t) => t.id === tempParam)?.id ?? null;
   const scope = { agencyId, ...(nicho ? { segment: nicho } : {}) };
-  const [prospects, byStatus, hot] = await Promise.all([
+  const [prospects, byStatus, hot, bots] = await Promise.all([
     prisma.prospect.findMany({
       where: { ...scope, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
       orderBy: [{ score: "desc" }, { createdAt: "desc" }],
@@ -129,7 +129,10 @@ async function EmpresasTab({ agencyId, config, nicho, filtro, temp: tempParam, p
     }),
     prisma.prospect.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
     prisma.prospect.count({ where: { ...scope, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
+    // Empresas que responderam com robô de atendimento (menu automático): a Milena parou de responder.
+    prisma.assistantConversation.findMany({ where: { agencyId, counterpartBot: true, prospectId: { not: null } }, select: { prospectId: true } }),
   ]);
+  const botProspects = new Set(bots.map((b) => b.prospectId));
   const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
   const href = (next: { filtro?: string; temp?: string | null }) => {
     const params = new URLSearchParams({ aba: "empresas" });
@@ -204,7 +207,7 @@ async function EmpresasTab({ agencyId, config, nicho, filtro, temp: tempParam, p
                 {prospects.map((p) => {
                   const t = TEMPS.find((x) => x.id === p.temperature)!;
                   const whatsappUrl = !p.whatsappSentAt && !p.optOut && isMobileBr(p.phone) ? `https://wa.me/${p.phone}?text=${encodeURIComponent(whatsappOpenerFor(config, p))}` : null;
-                  const contact = [p.whatsappSentAt ? `WhatsApp ${dateShort(p.whatsappSentAt)}` : null, p.emailStep > 0 ? `E-mail ${p.emailStep}/2` : null, p.optOut ? "Saiu da lista" : null].filter(Boolean);
+                  const contact = [p.whatsappSentAt ? `WhatsApp ${dateShort(p.whatsappSentAt)}` : null, p.emailStep > 0 ? `E-mail ${p.emailStep}/2` : null, botProspects.has(p.id) ? "Robô de atendimento" : p.optOut ? "Saiu da lista" : null].filter(Boolean);
                   return (
                     <tr key={p.id} className="border-b border-[#F2F4F7] align-top last:border-0">
                       <td className="py-2.5 pr-3">

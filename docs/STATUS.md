@@ -4,6 +4,10 @@
 
 ## Implementado
 
+- **Robô de atendimento detectado por regra (2026-11-23)**: `lib/assistant/bot-detection.ts` roda no webhook antes da IA e antes de a resposta da prospecção virar lead. Marca `counterpartBot` quando chega menu com botões (tipo `unsupported`) numa conversa de prospecção, frase típica de menu ("mensagem inválida", "selecione uma das opções", "com qual setor você gostaria de falar", "atendimento automático"...) ou a mesma mensagem longa repetida. Depois disso, mensagens novas só ficam registradas (sem lead e sem resposta). Saudação/ausência do WhatsApp Business não conta. Botão **É robô** em Conversas marca na mão (com auditoria `assistant.counterpart_bot`); Empresas da prospecção mostra "Robô de atendimento". A ferramenta `detected_bot` da Milena continua para o resto.
+  - Testado: `vitest lib/assistant/bot-detection.test.ts` (5) + `lib/assistant` e `lib/prospecting` (27), `tsc`, `lint`, `next build`.
+  - **Não testado ao vivo**: que todo menu interativo de outra empresa chegue como `unsupported` (é o que o print mostra). Conversas anteriores a esta mudança (ex.: Imobiliária Naidelice) precisam do botão "É robô".
+
 - **Prospecção por nicho e abas reordenadas (2026-11-23)**: cada termo buscado no Google Maps (`Prospect.segment`) vira um nicho. `/prospeccao` abre na aba **Busca** (ordem: Busca → Rotina do dia → Empresas → Contato), que lista os nichos com contagens e atalhos "Trabalhar hoje"/"Ver empresas". Rotina do dia e Empresas têm filtro de nicho (`?nicho=`, mantido ao trocar entre as duas); `getMorningRoutine` aceita o nicho e o limite diário de WhatsApp continua valendo para todos juntos. Sem migration: as imobiliárias já buscadas entram no nicho pelo termo gravado. Ver `docs/DECISIONS.md` (2026-11-23).
   - Testado: `vitest lib/prospecting` (13), `tsc --noEmit`, `lint` e `next build`.
   - **Não testado ao vivo**: navegação no navegador (banco local desligado). Termos diferentes para o mesmo ramo (ex.: "imobiliária" e "corretor de imóveis") aparecem como nichos separados.
