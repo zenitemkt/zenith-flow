@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Prospecção automática — nichos
+
+- Cada termo buscado vira um **nicho** (ex.: "imobiliária", "odontologia"). Rotina do dia e Empresas ganham filtro por nicho, pra trabalhar só um ramo no dia; a aba Busca lista os nichos com "Trabalhar hoje" e "Ver empresas".
+- Abas na ordem **Busca → Rotina do dia → Empresas → Contato**; a página abre na Busca.
+
 ### Operação — tipo de cartão
 
 - "Nova tarefa" começa pelo **tipo de cartão**: Design, Atendimento, Financeiro, Site / Tecnologia ou Outros. Redes, formatos, tamanhos, campanha e legenda só aparecem em **Design**; nos demais, o card tem título, descrição, cliente, responsável e **Prazo**.

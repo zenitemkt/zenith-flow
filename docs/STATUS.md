@@ -1,8 +1,12 @@
 # Status de implementação — ZENITE MKT
 
-Última atualização: 2026-11-22.
+Última atualização: 2026-11-23.
 
 ## Implementado
+
+- **Prospecção por nicho e abas reordenadas (2026-11-23)**: cada termo buscado no Google Maps (`Prospect.segment`) vira um nicho. `/prospeccao` abre na aba **Busca** (ordem: Busca → Rotina do dia → Empresas → Contato), que lista os nichos com contagens e atalhos "Trabalhar hoje"/"Ver empresas". Rotina do dia e Empresas têm filtro de nicho (`?nicho=`, mantido ao trocar entre as duas); `getMorningRoutine` aceita o nicho e o limite diário de WhatsApp continua valendo para todos juntos. Sem migration: as imobiliárias já buscadas entram no nicho pelo termo gravado. Ver `docs/DECISIONS.md` (2026-11-23).
+  - Testado: `vitest lib/prospecting` (13), `tsc --noEmit`, `lint` e `next build`.
+  - **Não testado ao vivo**: navegação no navegador (banco local desligado). Termos diferentes para o mesmo ramo (ex.: "imobiliária" e "corretor de imóveis") aparecem como nichos separados.
 
 - **Tipo de cartão na Operação (2026-11-22)**: `ContentItem.kind` (enum `ContentKind`, migration `20261122120000_content_kind`, só ADD), regras em `lib/content-kind.ts` (rótulos, fluxo curto, ações), seletor de tipo em `NewContentModal` e `EditContentDetailsButton`, quadro (`ContentBoard`: etiqueta, Iniciar/Concluir, arraste bloqueado para aprovação/agendar), detalhe (`ContentDetailView`: 3 etapas, sem Versões/Publicação), calendário interno com etiqueta e portal filtrando `DESIGN`. APIs `/api/content`, `status`, `details`, `submit`, `versions`, `media-upload` e `social-posts` respeitam o tipo. Ver `docs/DECISIONS.md` (2026-11-22).
   - Testado: `vitest` (`lib/content-kind.test.ts`, 5; suíte `lib` 175/176 com a falha antiga de `social-scheduling.test.ts`), `tsc --noEmit`, `lint` e `next build`.

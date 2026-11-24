@@ -44,17 +44,19 @@ export const whatsappLink = (phone: string, text: string) => `https://wa.me/${ph
  * Rotina da manhã: primeiros contatos do dia (maior pontuação, só celular, até o limite diário) e
  * follow-ups vencidos (primeiro contato há 3 dias ou mais, sem resposta). Tudo enviado à mão.
  */
-export async function getMorningRoutine(agencyId: string, config: ProspectingConfig, now = new Date()) {
+export async function getMorningRoutine(agencyId: string, config: ProspectingConfig, now = new Date(), segment?: string | null) {
+  // Nicho escolhido pra trabalhar no dia (termo da busca). O limite diário vale pra todos os nichos juntos.
+  const bySegment = segment ? { segment } : {};
   const today = await sentToday(agencyId, now);
   const remaining = Math.max(0, config.dailyLimits.whatsapp - today.whatsapp);
   const [candidates, followUps] = await Promise.all([
     prisma.prospect.findMany({
-      where: { agencyId, status: { in: ["NOVO", "CONTATADO"] }, optOut: false, whatsappSentAt: null, phone: { not: null } },
+      where: { agencyId, ...bySegment, status: { in: ["NOVO", "CONTATADO"] }, optOut: false, whatsappSentAt: null, phone: { not: null } },
       orderBy: [{ score: "desc" }, { createdAt: "asc" }],
       take: 300,
     }),
     prisma.prospect.findMany({
-      where: { agencyId, status: "CONTATADO", optOut: false, whatsappFollowUpAt: null, whatsappSentAt: { lte: new Date(now.getTime() - WHATSAPP_FOLLOW_UP_DAYS * 86_400_000) } },
+      where: { agencyId, ...bySegment, status: "CONTATADO", optOut: false, whatsappFollowUpAt: null, whatsappSentAt: { lte: new Date(now.getTime() - WHATSAPP_FOLLOW_UP_DAYS * 86_400_000) } },
       orderBy: { whatsappSentAt: "asc" },
       take: 100,
     }),

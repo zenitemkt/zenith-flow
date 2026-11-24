@@ -1415,3 +1415,11 @@ O `zenitehub` é estático, então não pode carregar no navegador a credencial 
 
 **Consequência**: todos os registros anteriores migram como diretos, sem mudança silenciosa de resultado. A equipe pode reclassificar um perfil no card. Marcar um novo perfil como cliente remove essa marca do anterior para manter uma única base de comparação.
 
+
+## 2026-11-23 — Nicho da prospecção é o termo buscado
+
+**Contexto**: a equipe quer trabalhar um ramo por dia (odontologia hoje, imobiliárias amanhã) e a lista misturava todos.
+
+**Decisão**: o nicho é o próprio termo da busca, já gravado em `Prospect.segment` a cada importação. Não há tabela nova de categorias nem migration: toda busca cria o nicho sozinha e os resultados antigos entram nele. O filtro vai pela URL (`?nicho=`) nas abas Rotina do dia e Empresas. O limite diário de primeiros contatos no WhatsApp segue global. A aba Busca passou a ser a primeira e a padrão, porque é onde o trabalho começa.
+
+**Consequência**: termos diferentes para o mesmo ramo viram nichos separados. Se isso incomodar, o próximo passo é poder renomear/juntar nichos.

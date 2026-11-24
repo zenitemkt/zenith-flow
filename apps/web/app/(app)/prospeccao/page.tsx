@@ -18,13 +18,16 @@ import { PendingSearchWatcher } from "./PendingSearchWatcher";
 export const dynamic = "force-dynamic";
 
 const CARD = "rounded-xl border border-[#E4E7EC] bg-white p-4";
-type Tab = "hoje" | "empresas" | "busca" | "contato";
+type Tab = "busca" | "hoje" | "empresas" | "contato";
+/** Busca vem primeiro: é onde tudo começa (e é a aba padrão). Contato é a configuração dos textos. */
 const TABS: { id: Tab; label: string }[] = [
+  { id: "busca", label: "Busca" },
   { id: "hoje", label: "Rotina do dia" },
   { id: "empresas", label: "Empresas" },
-  { id: "busca", label: "Busca" },
   { id: "contato", label: "Contato" },
 ];
+/** Abas que trabalham um nicho por vez (o filtro vai junto ao trocar de aba). */
+const NICHO_TABS: Tab[] = ["hoje", "empresas"];
 const FILTERS: Record<string, { label: string; statuses: ProspectStatus[] }> = {
   lista: { label: "Na lista", statuses: ["NOVO", "CONTATADO", "RESPONDEU"] },
   leads: { label: "Viraram lead", statuses: ["VIROU_LEAD"] },
@@ -45,16 +48,25 @@ function formatPhone(digits: string | null) {
   return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digits;
 }
 
-export default async function ProspeccaoPage({ searchParams }: { searchParams: { aba?: string; filtro?: string; temp?: string } }) {
+export default async function ProspeccaoPage({ searchParams }: { searchParams: { aba?: string; filtro?: string; temp?: string; nicho?: string } }) {
   const { session, membership } = await requireSessionAndMembership();
   if (!session || !membership) redirect("/login");
   if (isClientRole(membership.role)) redirect("/");
   const agencyId = membership.agencyId;
-  const tab: Tab = TABS.find((t) => t.id === searchParams.aba)?.id ?? "hoje";
+  const tab: Tab = TABS.find((t) => t.id === searchParams.aba)?.id ?? "busca";
 
-  const settings = await prisma.prospectingSettings.findUnique({ where: { agencyId } });
+  const [settings, niches] = await Promise.all([prisma.prospectingSettings.findUnique({ where: { agencyId } }), loadNiches(agencyId)]);
   const config = mergeProspectingConfig(settings?.config);
   const pendingRuns = Array.isArray(settings?.pendingRuns) ? settings.pendingRuns.length : 0;
+  // Nicho = o termo buscado no Google Maps (ex.: "imobiliária"). Cada busca vira uma categoria pra trabalhar separado.
+  const nicho = niches.find((n) => n.segment === searchParams.nicho)?.segment ?? null;
+  const tabHref = (id: Tab) => {
+    const params = new URLSearchParams();
+    if (id !== "busca") params.set("aba", id);
+    if (nicho && NICHO_TABS.includes(id)) params.set("nicho", nicho);
+    const q = params.toString();
+    return q ? `/prospeccao?${q}` : "/prospeccao";
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -67,7 +79,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
         {TABS.map((t) => (
           <Link
             key={t.id}
-            href={t.id === "hoje" ? "/prospeccao" : `/prospeccao?aba=${t.id}`}
+            href={tabHref(t.id)}
             className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium ${tab === t.id ? "border-[#FF2B00] text-[#FF2B00]" : "border-transparent text-[#667085] hover:text-[#344054]"}`}
           >
             {t.label}
@@ -78,9 +90,11 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
 
       {pendingRuns > 0 && tab !== "busca" && <PendingSearchWatcher />}
 
-      {tab === "hoje" && <RotinaTab agencyId={agencyId} config={config} />}
+      {NICHO_TABS.includes(tab) && niches.length > 0 && <NichoFilter niches={niches} current={nicho} tab={tab} />}
 
-      {tab === "empresas" && <EmpresasTab agencyId={agencyId} config={config} filtro={searchParams.filtro} temp={searchParams.temp} pendingRuns={pendingRuns} lastSearchAt={settings?.lastSearchAt ?? null} />}
+      {tab === "hoje" && <RotinaTab agencyId={agencyId} config={config} nicho={nicho} />}
+
+      {tab === "empresas" && <EmpresasTab agencyId={agencyId} config={config} nicho={nicho} filtro={searchParams.filtro} temp={searchParams.temp} pendingRuns={pendingRuns} lastSearchAt={settings?.lastSearchAt ?? null} />}
 
       {tab === "busca" && (
         <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -94,6 +108,7 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
             <ProspectSearchButton pending={pendingRuns} ready={Boolean(settings?.apifyTokenEnc) && config.segments.length > 0 && config.cities.length > 0} />
             {settings?.lastSearchError && <p className="mt-3 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">{settings.lastSearchError}</p>}
           </section>
+          <NichesCard niches={niches} />
         </div>
       )}
 
@@ -102,17 +117,18 @@ export default async function ProspeccaoPage({ searchParams }: { searchParams: {
   );
 }
 
-async function EmpresasTab({ agencyId, config, filtro, temp: tempParam, pendingRuns, lastSearchAt }: { agencyId: string; config: ProspectingConfig; filtro?: string; temp?: string; pendingRuns: number; lastSearchAt: Date | null }) {
+async function EmpresasTab({ agencyId, config, nicho, filtro, temp: tempParam, pendingRuns, lastSearchAt }: { agencyId: string; config: ProspectingConfig; nicho: string | null; filtro?: string; temp?: string; pendingRuns: number; lastSearchAt: Date | null }) {
   const filter = filtro && FILTERS[filtro] ? filtro : "lista";
   const temp = TEMPS.find((t) => t.id === tempParam)?.id ?? null;
+  const scope = { agencyId, ...(nicho ? { segment: nicho } : {}) };
   const [prospects, byStatus, hot] = await Promise.all([
     prisma.prospect.findMany({
-      where: { agencyId, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
+      where: { ...scope, status: { in: FILTERS[filter]!.statuses }, ...(temp ? { temperature: temp } : {}) },
       orderBy: [{ score: "desc" }, { createdAt: "desc" }],
       take: 300,
     }),
-    prisma.prospect.groupBy({ by: ["status"], where: { agencyId }, _count: { _all: true } }),
-    prisma.prospect.count({ where: { agencyId, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
+    prisma.prospect.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
+    prisma.prospect.count({ where: { ...scope, temperature: "QUENTE", status: { in: FILTERS.lista!.statuses } } }),
   ]);
   const countOf = (statuses: ProspectStatus[]) => byStatus.filter((g) => statuses.includes(g.status)).reduce((total, g) => total + g._count._all, 0);
   const href = (next: { filtro?: string; temp?: string | null }) => {
@@ -121,6 +137,7 @@ async function EmpresasTab({ agencyId, config, filtro, temp: tempParam, pendingR
     const t = next.temp === undefined ? temp : next.temp;
     if (f !== "lista") params.set("filtro", f);
     if (t) params.set("temp", t);
+    if (nicho) params.set("nicho", nicho);
     return `/prospeccao?${params.toString()}`;
   };
 
@@ -247,8 +264,8 @@ async function ContatoTab({ agencyId, config }: { agencyId: string; config: Pros
   );
 }
 
-async function RotinaTab({ agencyId, config }: { agencyId: string; config: ProspectingConfig }) {
-  const routine = await getMorningRoutine(agencyId, config);
+async function RotinaTab({ agencyId, config, nicho }: { agencyId: string; config: ProspectingConfig; nicho: string | null }) {
+  const routine = await getMorningRoutine(agencyId, config, new Date(), nicho);
   const row = (p: (typeof routine.firstContacts)[number], step: "first" | "followup") => {
     const t = TEMPS.find((x) => x.id === p.temperature)!;
     const text = step === "first" ? whatsappOpenerFor(config, p) : whatsappFollowUpFor(config, p);
@@ -291,10 +308,85 @@ async function RotinaTab({ agencyId, config }: { agencyId: string; config: Prosp
           <ul>{routine.firstContacts.map((p) => row(p, "first"))}</ul>
         ) : (
           <p className="py-3 text-sm text-[#667085]">
-            {routine.remaining === 0 ? "Limite de primeiros contatos de hoje atingido." : <>Nenhuma empresa nova com celular. <Link href="/prospeccao?aba=busca" className="font-semibold text-[#FF2B00] hover:underline">Buscar mais empresas</Link>.</>}
+            {routine.remaining === 0 ? "Limite de primeiros contatos de hoje atingido." : <>Nenhuma empresa nova com celular{nicho ? ` em ${nicho}` : ""}. <Link href="/prospeccao?aba=busca" className="font-semibold text-[#FF2B00] hover:underline">Buscar mais empresas</Link>.</>}
           </p>
         )}
       </section>
     </div>
+  );
+}
+
+type Niche = { segment: string; total: number; onList: number; leads: number };
+const ON_LIST = new Set<ProspectStatus>(FILTERS.lista!.statuses);
+
+/** Nichos = termos já buscados no Google Maps (campo `segment` de cada empresa), com as contagens. */
+async function loadNiches(agencyId: string): Promise<Niche[]> {
+  const groups = await prisma.prospect.groupBy({ by: ["segment", "status"], where: { agencyId }, _count: { _all: true } });
+  const map = new Map<string, Niche>();
+  for (const g of groups) {
+    const n = map.get(g.segment) ?? { segment: g.segment, total: 0, onList: 0, leads: 0 };
+    n.total += g._count._all;
+    if (ON_LIST.has(g.status)) n.onList += g._count._all;
+    if (g.status === "VIROU_LEAD") n.leads += g._count._all;
+    map.set(g.segment, n);
+  }
+  return [...map.values()].sort((a, b) => b.onList - a.onList || a.segment.localeCompare(b.segment, "pt-BR"));
+}
+
+function nichoHref(tab: Tab, segment: string | null) {
+  const params = new URLSearchParams({ aba: tab });
+  if (segment) params.set("nicho", segment);
+  return `/prospeccao?${params.toString()}`;
+}
+
+function NichoFilter({ niches, current, tab }: { niches: Niche[]; current: string | null; tab: Tab }) {
+  const chip = (active: boolean) =>
+    `rounded-full border px-3 py-1 text-xs font-medium ${active ? "border-[#FF2B00] bg-[#FFF4ED] text-[#C4320A]" : "border-[#E4E7EC] bg-white text-[#475467] hover:bg-[#F9FAFB]"}`;
+  const allOnList = niches.reduce((sum, n) => sum + n.onList, 0);
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 text-xs font-medium text-[#667085]">Nicho:</span>
+      <Link href={nichoHref(tab, null)} className={chip(!current)}>
+        Todos ({allOnList})
+      </Link>
+      {niches.map((n) => (
+        <Link key={n.segment} href={nichoHref(tab, n.segment)} className={chip(current === n.segment)}>
+          {n.segment} ({n.onList})
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function NichesCard({ niches }: { niches: Niche[] }) {
+  return (
+    <section className={`${CARD} lg:col-span-2`}>
+      <h2 className="mb-1 text-sm font-semibold text-[#101828]">Nichos buscados</h2>
+      <p className="mb-3 text-xs text-[#667085]">Cada termo buscado vira um nicho. Escolha um pra trabalhar só ele no dia (ex.: odontologia hoje, imobiliárias amanhã).</p>
+      {niches.length === 0 ? (
+        <p className="rounded-lg bg-[#F9FAFB] px-3 py-4 text-center text-sm text-[#667085]">Nenhuma empresa importada ainda. Salve um nicho e clique em Buscar empresas.</p>
+      ) : (
+        <ul className="divide-y divide-[#F2F4F7]">
+          {niches.map((n) => (
+            <li key={n.segment} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-[#101828]">{n.segment}</p>
+                <p className="text-xs text-[#667085]">
+                  {n.onList} na lista · {n.leads} viraram lead · {n.total} no total
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Link href={nichoHref("hoje", n.segment)} className="rounded-lg bg-[#FF2B00] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#E62700]">
+                  Trabalhar hoje
+                </Link>
+                <Link href={nichoHref("empresas", n.segment)} className="rounded-lg border border-[#D0D5DD] px-3 py-1.5 text-xs font-semibold text-[#344054] hover:bg-[#F9FAFB]">
+                  Ver empresas
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
