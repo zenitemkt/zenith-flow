@@ -27,6 +27,8 @@ export interface AppShellProps {
   currentAgencyId?: string;
   onSwitchAgency?: (agencyId: string) => void;
   notifications?: AppNotifications;
+  /** Limpa alertas de sistema a partir do sino do cabeçalho. */
+  onClearSystemAlerts?: Parameters<typeof NotificationCenter>[0]["onClearSystem"];
   children: ReactNode;
 }
 
@@ -41,6 +43,7 @@ export function AppShell({
   currentAgencyId,
   onSwitchAgency,
   notifications,
+  onClearSystemAlerts,
   children,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -135,7 +138,7 @@ export function AppShell({
         >
           Hoje
         </button>
-        <NotificationCenter notifications={notifications} linkComponent={LinkComponent} />
+        <NotificationCenter notifications={notifications} linkComponent={LinkComponent} onClearSystem={onClearSystemAlerts} />
         <button
           type="button"
           data-theme-toggle

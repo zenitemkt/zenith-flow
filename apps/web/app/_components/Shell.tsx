@@ -46,6 +46,15 @@ export function Shell({
     router.refresh();
   }
 
+  async function handleClearSystemAlerts(target: { ids: string[] } | { categories?: string[] }) {
+    await fetch("/api/system-alerts/clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(target),
+    });
+    router.refresh();
+  }
+
   return (
     <AppShell
       groups={navigationGroups}
@@ -58,6 +67,7 @@ export function Shell({
       currentAgencyId={currentAgencyId}
       onSwitchAgency={handleSwitchAgency}
       notifications={notifications}
+      onClearSystemAlerts={handleClearSystemAlerts}
     >
       {children}
     </AppShell>

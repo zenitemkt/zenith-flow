@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Central de alertas — limpar
+
+- No sino do cabeçalho, cada alerta de sistema tem um **×** para limpar, e o topo ganha **Limpar tudo** (ou **Limpar aba**, na aba aberta). Some na hora, sem recarregar.
+- Em `/alertas`, botão **Limpar todos os abertos** (ou só os da categoria filtrada). O link do filtro passou a se chamar "Tirar filtro".
+- Limpar = marcar como resolvido (fica no histórico em Resolvidos). Se o problema continuar, a próxima checagem reabre o alerta. Pendências comerciais não entram: somem quando o lead/proposta é tratado.
+
 ### Milena — robô do outro lado
 
 - Menu com botões, "mensagem inválida, selecione uma opção", "com qual setor deseja falar" e respostas automáticas repetidas são reconhecidos na chegada: a conversa é marcada como robô, a Milena não responde, não vira lead e a empresa sai da prospecção.

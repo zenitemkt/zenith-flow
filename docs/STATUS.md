@@ -86,7 +86,7 @@
   - **Não testado ao vivo**: navegação com dois logins (Kevin/Gabriel) no navegador; depende de os sócios estarem ligados aos logins em Financeiro → Sócios.
   - Fora do escopo: crons, webhooks, portal do cliente e a Milena (assistente por WhatsApp) não filtram; designação de funcionários por cliente fica para uma fatia futura (hoje quem não é sócio não vê os particulares).
 
-- **Central de alertas** (2026-11-12): `SystemAlert` + `lib/system-alerts.ts`, sino com abas por categoria (`packages/ui/src/shell/NotificationCenter.tsx`), página `/alertas` (resolver, ignorar, reabrir, histórico), monitor do site 2x/dia (`lib/site-monitor.ts`, `/api/cron/site-monitor`) e alertas por evento em blog, publicação social, conexão social, mini-chat do Instagram, Lead Ads e Milena.
+- **Central de alertas** (2026-11-12): `SystemAlert` + `lib/system-alerts.ts`, sino com abas por categoria (`packages/ui/src/shell/NotificationCenter.tsx`), página `/alertas` (resolver, ignorar, reabrir, histórico), monitor do site 2x/dia (`lib/site-monitor.ts`, `/api/cron/site-monitor`) e alertas por evento em blog, publicação social, conexão social, mini-chat do Instagram, Lead Ads e Milena. Limpar (2026-11-24): × por alerta e "Limpar tudo/aba" no sino, "Limpar todos os abertos" em `/alertas` (`POST /api/system-alerts/clear`).
 - **Zenite × particular, privacidade entre sócios e repasse do mês (2026-11-12)**: ver `docs/DECISIONS.md` (2026-11-12,
   "Zenite × particular"). Regras em `lib/finance-scope.ts`; repasse em `lib/partner-payouts.ts` + `PUT /api/finance/payouts`;
   vínculo sócio ↔ login no botão "Sócios". Repasse com valor digitado (`POST /api/finance/payouts`, `DELETE /api/finance/payouts/:id`, quadro `PayoutTable`), testado ponta a ponta no ambiente local.

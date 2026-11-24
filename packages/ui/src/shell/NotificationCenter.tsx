@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type ElementType } from "react";
-import { Bell, Bot, Globe, Plug, Share2, Briefcase } from "lucide-react";
+import { useEffect, useState, type ElementType } from "react";
+import { Bell, Bot, Globe, Plug, Share2, Briefcase, X } from "lucide-react";
 
 export type CommercialPriority = "URGENT" | "TODAY" | "FOLLOW_UP" | "NEW";
 export type SystemCategory = "SITE" | "TRACKING" | "BLOG" | "SOCIAL" | "AUTOMATION" | "INTEGRATION";
@@ -39,11 +39,39 @@ function ago(iso: string): string {
 }
 
 /** Sino do cabeçalho: alertas comerciais + alertas de sistema por categoria. */
-export function NotificationCenter({ notifications, linkComponent }: { notifications?: AppNotifications; linkComponent: ElementType }) {
+export function NotificationCenter({
+  notifications,
+  linkComponent,
+  onClearSystem,
+}: {
+  notifications?: AppNotifications;
+  linkComponent: ElementType;
+  /** Limpa alertas de sistema: por ids (um item) ou por categorias (aba atual; sem categorias = todas). */
+  onClearSystem?: (target: { ids: string[] } | { categories?: SystemCategory[] }) => Promise<void>;
+}) {
   const Link = linkComponent;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("all");
-  const system = notifications?.system;
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [cleared, setCleared] = useState<SystemCategory[] | "all">([]);
+  const [clearing, setClearing] = useState(false);
+  const rawSystem = notifications?.system;
+  // Dados novos do servidor já refletem o que foi limpo: zera o filtro local.
+  useEffect(() => {
+    setHidden(new Set());
+    setCleared([]);
+  }, [rawSystem]);
+  // Esconde na hora o que foi limpo, sem esperar o servidor recalcular o resumo.
+  const visibleSystemItems = (rawSystem?.items ?? []).filter((i) => !hidden.has(i.id) && !(cleared === "all" || cleared.includes(i.category)));
+  const touched = hidden.size > 0 || cleared === "all" || cleared.length > 0;
+  const system = rawSystem
+    ? {
+        ...rawSystem,
+        items: visibleSystemItems,
+        count: cleared === "all" ? 0 : Math.max(0, rawSystem.count - (rawSystem.items.length - visibleSystemItems.length)),
+        critical: touched ? visibleSystemItems.filter((i) => i.severity === "CRITICAL").length : rawSystem.critical,
+      }
+    : undefined;
   const commercialCount = notifications?.count ?? 0;
   const total = commercialCount + (system?.count ?? 0);
   const hasCritical = (system?.critical ?? 0) > 0 || (notifications?.items ?? []).some((i) => i.priority === "URGENT");
@@ -55,6 +83,21 @@ export function NotificationCenter({ notifications, linkComponent }: { notificat
   const systemItems = (system?.items ?? []).filter((i) => tab === "all" || (current.categories ?? []).includes(i.category));
   const commercialItems = tab === "all" || tab === "commercial" ? notifications?.items ?? [] : [];
   const close = () => setOpen(false);
+
+  async function dismiss(id: string) {
+    if (!onClearSystem) return;
+    setHidden((prev) => new Set(prev).add(id));
+    await onClearSystem({ ids: [id] }).catch(() => undefined);
+  }
+
+  async function clearTab() {
+    if (!onClearSystem || clearing) return;
+    setClearing(true);
+    const categories = current.categories;
+    setCleared((prev) => (!categories || prev === "all" ? "all" : [...prev, ...categories]));
+    await onClearSystem(categories ? { categories } : {}).catch(() => undefined);
+    setClearing(false);
+  }
 
   return (
     <div className="relative">
@@ -80,9 +123,22 @@ export function NotificationCenter({ notifications, linkComponent }: { notificat
                 {system?.critical ? ` · ${system.critical} crítico(s)` : ""}
               </p>
             </div>
-            <Link href="/alertas" onClick={close} className="text-xs font-semibold text-[#FF2B00]">
-              Ver todos
-            </Link>
+            <div className="flex items-center gap-3">
+              {onClearSystem && systemItems.length > 0 && (
+                <button
+                  type="button"
+                  disabled={clearing}
+                  onClick={clearTab}
+                  className="text-xs font-semibold text-[#475467] hover:text-[#101828] disabled:opacity-50 dark:text-[#CFD3DF] dark:hover:text-white"
+                  title={tab === "all" ? "Marca todos os alertas de sistema como resolvidos" : `Marca os alertas de ${current.label} como resolvidos`}
+                >
+                  {tab === "all" ? "Limpar tudo" : "Limpar aba"}
+                </button>
+              )}
+              <Link href="/alertas" onClick={close} className="text-xs font-semibold text-[#FF2B00]">
+                Ver todos
+              </Link>
+            </div>
           </div>
           <div className="flex gap-1 overflow-x-auto border-b border-[#EEF0F3] px-2 py-2 dark:border-[#303343]">
             {TABS.map((t) => {
@@ -107,7 +163,8 @@ export function NotificationCenter({ notifications, linkComponent }: { notificat
           ) : (
             <div className="max-h-[400px] overflow-y-auto">
               {systemItems.map((item) => (
-                <Link key={item.id} href={item.href} onClick={close} className="block border-b border-[#EEF0F3] px-4 py-3 last:border-0 hover:bg-[#F9FAFB] dark:border-[#303343] dark:hover:bg-[#232532]">
+                <div key={item.id} className="relative border-b border-[#EEF0F3] dark:border-[#303343]">
+                <Link href={item.href} onClick={close} className="block px-4 py-3 pr-10 hover:bg-[#F9FAFB] dark:hover:bg-[#232532]">
                   <div className="flex items-start gap-2">
                     <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${SEVERITY_DOT[item.severity]}`} />
                     <div className="min-w-0">
@@ -120,6 +177,18 @@ export function NotificationCenter({ notifications, linkComponent }: { notificat
                     </div>
                   </div>
                 </Link>
+                {onClearSystem && (
+                  <button
+                    type="button"
+                    onClick={() => dismiss(item.id)}
+                    className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md text-[#98A2B3] hover:bg-[#F2F4F7] hover:text-[#344054] focus:outline-none focus:ring-2 focus:ring-[#FF2B00]/25 dark:hover:bg-[#303343] dark:hover:text-white"
+                    aria-label={`Limpar alerta: ${item.title}`}
+                    title="Limpar (marcar como resolvido)"
+                  >
+                    <X size={14} aria-hidden />
+                  </button>
+                )}
+                </div>
               ))}
               {commercialItems.map((item) => (
                 <Link key={item.id} href={item.href} onClick={close} className="block border-b border-[#EEF0F3] px-4 py-3 last:border-0 hover:bg-[#F9FAFB] dark:border-[#303343] dark:hover:bg-[#232532]">

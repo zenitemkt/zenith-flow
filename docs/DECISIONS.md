@@ -1,3 +1,9 @@
+## 2026-11-24 — Limpar alertas da Central
+
+**Contexto**: alertas já lidos ficavam no sino; só dava para resolver um por um na página `/alertas`.
+
+**Decisão**: "limpar" é o mesmo que resolver manualmente (`RESOLVED`, `autoResolved: false`), sem status novo de "lido" nem migration. Assim o histórico continua em Resolvidos e, se a falha persistir, `raiseSystemAlert` reabre como ocorrência nova — o usuário não perde um problema real. Para silenciar de vez continua existindo "Ignorar" ou desligar o tipo. Rota única `POST /api/system-alerts/clear` aceita `ids` (um item do sino) ou `categories` (aba/filtro); sem nenhum dos dois limpa todos os abertos da agência. O sino esconde os itens de forma otimista e zera esse filtro local quando o servidor devolve o resumo novo. Pendências comerciais ficam de fora: são calculadas do estado dos leads/propostas, não são registros que possam ser dispensados.
+
 ## 2026-11-22 — Tipo de cartão na Operação (Design × tarefa comum)
 
 **Contexto**: o quadro de Operação só servia para peças de design (rede, formato, tamanho, versão, aprovação, publicação). Demandas como ligar para cliente, enviar o fechamento financeiro ou ajustar o site ficavam com campos sem sentido.

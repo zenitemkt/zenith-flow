@@ -7,6 +7,7 @@ import { getCommercialPendencies } from "@/lib/commercial-pendencies";
 import { SYSTEM_ALERT_CATEGORY_LABEL, SYSTEM_ALERT_TYPES, alertTypeOfKey, getDisabledAlertTypes } from "@/lib/system-alerts";
 import { AlertActions } from "./AlertActions";
 import { AlertTypeSettings } from "./AlertTypeSettings";
+import { ClearAlertsButton } from "./ClearAlertsButton";
 import { getHiddenClientIds } from "@/lib/client-access";
 
 const CATEGORIES = Object.keys(SYSTEM_ALERT_CATEGORY_LABEL) as SystemAlertCategory[];
@@ -91,9 +92,10 @@ export default async function AlertsPage({ searchParams }: { searchParams: { cat
         ))}
         {category && (
           <Link href={link({ categoria: undefined })} className="text-sm font-medium text-[#FF2B00]">
-            Limpar categoria ({SYSTEM_ALERT_CATEGORY_LABEL[category]}) ×
+            Tirar filtro ({SYSTEM_ALERT_CATEGORY_LABEL[category]}) ×
           </Link>
         )}
+        {status === "OPEN" && alerts.length > 0 && <ClearAlertsButton category={category} count={alerts.length} />}
       </div>
 
       <section className="overflow-hidden rounded-xl border border-[#E4E7EC] bg-white">
