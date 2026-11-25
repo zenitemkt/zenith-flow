@@ -7,6 +7,7 @@ import type { BlogDraft } from "@zenite-mkt/db";
 import { raiseSystemAlert, resolveSystemAlert } from "./system-alerts";
 import { githubCommitFiles, githubGetFile, githubListDir, githubPutFile, type GithubRepoRef } from "./github-content";
 import { findAndDownloadCommonsPhoto } from "./commons-photo";
+import { notifyIndexNow } from "./indexnow";
 
 export interface PublishBlogDraftInput {
   draft: BlogDraft; // draft.cover precisa ser uma das 12 chaves fixas de arte SVG (seo, indexacao, inbound, ...)
@@ -259,6 +260,7 @@ async function publishBlogDraftInner(ref: GithubRepoRef, input: PublishBlogDraft
       // Vercel), então o site fica parado até alguém publicar manualmente. O Deploy Hook ignora
       // essa checagem e dispara o deploy direto (incidente de 2026-11-18: nada saía no ar desde 09/11).
       await triggerZenitehubDeployHook(input.draft.agencyId);
+      await notifyIndexNow([`https://hubzenite.com.br/blog/${input.draft.slug}/`]);
     }
 
     return { commitPaths: writes.map((w) => w.path) };
